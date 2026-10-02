@@ -1,7 +1,7 @@
 /* Browser and Worker share the same validation rules. User text is never HTML. */
 (function(root){
 'use strict';
-const MAX_NOTICES=2000, MAX_TEXT=4000, MAX_STORED_TEXT=12000;
+const MAX_NOTICES=2000, MAX_TEXT=4000, MAX_STORED_TEXT=12000, MAX_NOTE=4000;
 function object(x){return x && typeof x==='object' && !Array.isArray(x);}
 function text(x,name,max=2000,empty=false){
  if(typeof x!=='string'||x.length>max||(!empty&&!x.trim()))throw new Error(`${name}格式不正确`);
@@ -27,13 +27,20 @@ function timeline(x,strict=false){if(x===undefined)return [];if(!Array.isArray(x
  return {label:text(v.label,'节点名称',200),time:date(v.time),timeText:text(v.timeText,'原文时间',500),location:v.location===null?null:text(v.location,'地点',500)};
 });}
 function task(x,strict=false){
- if(typeof x==='string'&&!strict)return {text:text(x,'任务'),assignee:null,details:[],time:null,timeText:'',location:null};
+ if(typeof x==='string'&&!strict)return {text:text(x,'任务'),assignee:null,scope:'unspecified',condition:'',details:[],time:null,timeText:'',location:null};
  if(!object(x))throw new Error('任务必须为结构化对象');
- const fields=['text','assignee','details','time','timeText','location'];
- if(strict&&(fields.some(k=>!Object.hasOwn(x,k))||Object.keys(x).some(k=>!fields.includes(k))))throw new Error('任务字段不完整或包含多余字段');
+ const required=['text','assignee','details','time','timeText','location'],fields=[...required,'scope','condition'];
+ if(strict&&(required.some(k=>!Object.hasOwn(x,k))||Object.keys(x).some(k=>!fields.includes(k))))throw new Error('任务字段不完整或包含多余字段');
+ if(strict&&(Object.hasOwn(x,'scope')!==Object.hasOwn(x,'condition')))throw new Error('适用范围与条件须同时提供');
+ const scope=x.scope===undefined?'unspecified':x.scope;
+ if(!['all','conditional','role','unspecified'].includes(scope))throw new Error('任务适用范围不正确');
+ const condition=text(x.condition===undefined?'':x.condition,'适用条件',120,true);
+ const assignee=x.assignee==null?null:text(x.assignee,'责任对象',80);
+ if(scope==='conditional'&&!condition)throw new Error('条件任务须写明适用条件');
+ if(scope==='role'&&!assignee)throw new Error('角色任务须写明责任对象');
  const details=strings(x.details===undefined?[]:x.details,'执行细节');
  if(strict&&(details.length>20||details.some(v=>v.length>500)))throw new Error('执行细节过长');
- return {text:text(x.text,'任务名称',strict?60:2000),assignee:x.assignee==null?null:text(x.assignee,'责任对象',80),details,time:date(x.time===undefined?null:x.time),timeText:text(x.timeText===undefined?'':x.timeText,'任务时间',500,true),location:x.location==null?null:text(x.location,'任务地点',500)};
+ return {text:text(x.text,'任务名称',strict?60:2000),assignee,scope,condition,details,time:date(x.time===undefined?null:x.time),timeText:text(x.timeText===undefined?'':x.timeText,'任务时间',500,true),location:x.location==null?null:text(x.location,'任务地点',500)};
 }
 function analysis(x,strict=false){
  if(!object(x))throw new Error('整理结果必须为 JSON 对象');
@@ -55,15 +62,17 @@ function batch(x,strict=false){
 function attachmentIDs(x){if(x===undefined)return [];if(!Array.isArray(x)||x.length>10)throw new Error('每条通知最多10个附件');const ids=x.map(v=>text(v,'附件编号',100));if(new Set(ids).size!==ids.length)throw new Error('附件编号重复');return ids;}
 function notice(x){
  if(!object(x)||!Array.isArray(x.tasks)||x.tasks.length>100||typeof x.completed!=='boolean')throw new Error('通知记录格式不正确');
- const states=x.tasks.map(t=>{if(!object(t)||typeof t.completed!=='boolean')throw new Error('任务完成状态格式不正确');return t.completed;});
+ const states=x.tasks.map(t=>{if(!object(t)||typeof t.completed!=='boolean'||(t.dismissed!==undefined&&typeof t.dismissed!=='boolean'))throw new Error('任务完成状态格式不正确');return {completed:t.completed,dismissed:t.dismissed===undefined?false:t.dismissed};});
  const normalized=analysis(x);
  const createdAt=date(x.createdAt);if(!createdAt)throw new Error('缺少创建时间');
- return {...normalized,id:text(x.id,'通知编号',150),originalText:text(x.originalText,'通知原文',MAX_STORED_TEXT),createdAt,completed:x.completed,attachments:attachmentIDs(x.attachments),tasks:normalized.tasks.map((t,i)=>({...t,completed:states[i]}))};
+ const audienceOverride=x.audienceOverride===undefined?'':x.audienceOverride;
+ if(!['','all'].includes(audienceOverride))throw new Error('本地适用范围设置不正确');
+ return {...normalized,id:text(x.id,'通知编号',150),originalText:text(x.originalText,'通知原文',MAX_STORED_TEXT),createdAt,completed:x.completed,note:text(x.note===undefined?'':x.note,'笔记',MAX_NOTE,true),audienceOverride,attachments:attachmentIDs(x.attachments),tasks:normalized.tasks.map((t,i)=>({...t,...states[i]}))};
 }
 function notices(x){if(!Array.isArray(x)||x.length>MAX_NOTICES)throw new Error(`最多保存 ${MAX_NOTICES} 条通知`);const ids=new Set();return x.map(v=>{const n=notice(v);if(ids.has(n.id))throw new Error('存在重复的通知编号');ids.add(n.id);return n;});}
 function backup(x){if(!object(x)||x.app!=='campus-inbox'||![1,2,3,4].includes(x.version))throw new Error('请选择校园 Inbox 导出的 JSON 备份');return notices(x.notices);}
 function exportBackup(ns){return {app:'campus-inbox',version:4,exportedAt:new Date().toISOString(),notices:notices(ns)};}
-function create(result,originalText){const a=analysis(result);return {...a,id:root.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`,originalText:text(originalText,'通知原文',MAX_TEXT),createdAt:new Date().toISOString(),completed:false,attachments:[],tasks:a.tasks.map(t=>({...t,completed:false}))};}
+function create(result,originalText){const a=analysis(result);return {...a,id:root.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`,originalText:text(originalText,'通知原文',MAX_TEXT),createdAt:new Date().toISOString(),completed:false,note:'',audienceOverride:'',attachments:[],tasks:a.tasks.map(t=>({...t,completed:false,dismissed:false}))};}
 function sort(ns,order){return [...ns].sort((a,b)=>order==='newest'?Date.parse(b.createdAt)-Date.parse(a.createdAt):(a.deadline===null?Infinity:Date.parse(a.deadline))-(b.deadline===null?Infinity:Date.parse(b.deadline))||Date.parse(b.createdAt)-Date.parse(a.createdAt));}
-const api={MAX_TEXT,MAX_NOTICES,date,task,analysis,batch,notice,notices,backup,exportBackup,create,sort};root.CampusData=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
+const api={MAX_TEXT,MAX_NOTE,MAX_NOTICES,date,task,analysis,batch,notice,notices,backup,exportBackup,create,sort};root.CampusData=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(globalThis);

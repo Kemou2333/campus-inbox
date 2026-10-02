@@ -56,3 +56,44 @@ test('new input is capped at 4000 characters while old 12000-character records r
   assert.equal(D.backup({app:'campus-inbox',version:4,notices:[legacy]})[0].originalText.length,12000);
   assert.throws(()=>D.notices([{...legacy,originalText:'字'.repeat(12001)}]));
 });
+
+test('task applicability distinguishes everyone, conditional branches and other roles',()=>{
+  const base=analysis.tasks[0];
+  for(const scope of ['all','conditional','role','unspecified']){
+    const input={...base,scope,condition:scope==='conditional'?'尚未选上该课程的同学':''};
+    assert.equal(D.task(input,true).scope,scope);
+  }
+  const old=D.task(base,true);assert.equal(old.scope,'unspecified');assert.equal(old.condition,'');assert.equal(old.assignee,base.assignee);
+  const invalid=[
+    {...base,scope:'everybody',condition:''},
+    {...base,scope:'conditional',condition:''},
+    {...base,scope:'conditional',condition:'   '},
+    {...base,scope:'role',condition:'',assignee:null},
+    {...base,scope:'all'},
+    {...base,condition:'不完整'},
+    {...base,scope:'conditional',condition:'字'.repeat(121)},
+    {...base,scope:'all',condition:123}
+  ];
+  for(const input of invalid)assert.throws(()=>D.task(input,true));
+  assert.equal(D.task({...base,scope:'conditional',condition:'字'.repeat(120)},true).condition.length,120);
+});
+
+test('notes and not-applicable decisions survive backups without entering the model contract',()=>{
+  const current=D.create(analysis,'原文');
+  assert.equal(current.note,'');assert.equal(current.audienceOverride,'');assert.equal(current.tasks[0].dismissed,false);
+  const local={...current,note:'待联系本人\n确认后再提交',audienceOverride:'all',tasks:[{...current.tasks[0],dismissed:true}]};
+  const [restored]=D.backup(D.exportBackup([local]));
+  assert.equal(restored.note,local.note);assert.equal(restored.audienceOverride,'all');assert.equal(restored.tasks[0].dismissed,true);assert.equal(restored.tasks[0].completed,false);
+  const legacy={...local};delete legacy.note;delete legacy.audienceOverride;legacy.tasks=legacy.tasks.map(({dismissed,...task})=>task);
+  for(const version of [1,2,3,4]){
+    const [old]=D.backup({app:'campus-inbox',version,notices:[legacy]});
+    assert.equal(old.note,'');assert.equal(old.audienceOverride,'');assert.equal(old.tasks[0].dismissed,false);
+  }
+  assert.equal(D.notice({...local,note:'字'.repeat(D.MAX_NOTE)}).note.length,4000);
+  for(const invalid of [{...local,note:'字'.repeat(4001)},{...local,note:123},{...local,audienceOverride:'conditional'},{...local,audienceOverride:null},{...local,tasks:[{...local.tasks[0],dismissed:'yes'}]}])assert.throws(()=>D.notice(invalid));
+  assert.throws(()=>D.analysis({...analysis,note:'模型不得生成笔记'},true));
+  assert.throws(()=>D.analysis({...analysis,audienceOverride:'all'},true));
+  assert.throws(()=>D.analysis({...analysis,tasks:[{...analysis.tasks[0],dismissed:true}]},true));
+  assert.throws(()=>D.analysis({...analysis,tasks:[{...analysis.tasks[0],note:'模型不得生成笔记'}]},true));
+  const normalized=D.analysis(local);assert.ok(!Object.hasOwn(normalized,'note'));assert.ok(!Object.hasOwn(normalized,'audienceOverride'));assert.ok(!Object.hasOwn(normalized.tasks[0],'dismissed'));
+});
