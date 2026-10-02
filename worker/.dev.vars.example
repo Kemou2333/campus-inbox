@@ -1,0 +1,2 @@
+# For local development only. Real values belong in .dev.vars, which is ignored.
+AI_API_KEY=replace-in-private-local-file
