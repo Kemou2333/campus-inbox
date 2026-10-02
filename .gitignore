@@ -1,0 +1,13 @@
+.dev.vars
+.env
+.env.*
+!.env.example
+node_modules/
+.sites-runtime/
+.openai/
+work/
+*.pem
+*.key
+*id_ed25519*
+*credentials*
+*access-code*
