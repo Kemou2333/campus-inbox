@@ -4,7 +4,7 @@
 
 仓库 `Kemou2333/campus-inbox` 的 Pages 使用 GitHub Actions 发布 `dist/`。正式地址为 `https://kemou2333.github.io/campus-inbox/`，不覆盖账号原有博客。
 
-`dist/config.js` 只保存接口地址与功能开关，不含任何密钥。`DEMO_MODE: true` 表示只支持示例；后端 HTTPS 验证通过后再改为 false，并启用 `REQUIRE_ACCESS: true`。
+`dist/config.js` 只保存接口地址与访问码开关，不含任何密钥。`API_ENDPOINT` 为空时整理按钮停用；当前配置为已通过信任链验证的 HTTPS 接口，并启用 `REQUIRE_ACCESS: true`。没有演示模式或示例载入入口。
 
 ## 后端
 
@@ -55,4 +55,4 @@ journalctl -u campus-inbox --since today
 
 ## 当前进度
 
-Node.js 后端已经部署并启动。正式网页是否启用 AI，以 `dist/config.js` 的 `DEMO_MODE` 开关为准；证书未签发或 HTTPS 未验证前保持演示模式，避免显示无法使用的正式整理功能。
+截至 2026-10-02，Node.js 后端和 HTTPS 已启用。信任链校验正常，健康接口返回 200，未经授权的整理请求返回 401 且不调用模型；续期定时器已启用。用户只需打开 github.io 网页，不必在地址栏输入服务器 IP。

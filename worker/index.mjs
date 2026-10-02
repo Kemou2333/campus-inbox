@@ -16,7 +16,7 @@ export default {
  if(!env.AI_API_KEY||!env.AI_BASE_URL||!env.AI_MODEL||!env.AI_RATE_LIMITER)return response({error:'整理服务尚未配置完成。'},503,origin);
  const ip=request.headers.get('CF-Connecting-IP')||'unknown';
  try{if(!(await env.AI_RATE_LIMITER.limit({key:`ip:${ip}`})).success)return response({error:'整理过于频繁，请一分钟后重试。'},429,origin);}catch{return response({error:'整理服务暂时不可用。'},503,origin);}
- let notice;try{const raw=await boundedText(request.body,64000),body=JSON.parse(raw);if(!body||typeof body.notice!=='string'||!body.notice.trim()||body.notice.length>D.MAX_TEXT)throw new Error('INPUT');notice=body.notice.trim();}catch(e){return response({error:e.message==='BODY_LIMIT'?'通知内容过大。':'请提供 1–12,000 字的通知文字。'},e.message==='BODY_LIMIT'?413:400,origin);}
+ let notice;try{const raw=await boundedText(request.body,64000),body=JSON.parse(raw);if(!body||typeof body.notice!=='string'||!body.notice.trim()||body.notice.length>D.MAX_TEXT)throw new Error('INPUT');notice=body.notice.trim();}catch(e){return response({error:e.message==='BODY_LIMIT'?'通知内容过大。':'请提供 1–4,000 字的通知文字。'},e.message==='BODY_LIMIT'?413:400,origin);}
  let endpoint;try{const base=new URL(env.AI_BASE_URL);if(base.protocol!=='https:'||base.username||base.password||base.search||base.hash)throw new Error();endpoint=base.href.replace(/\/$/,'')+'/chat/completions';}catch{return response({error:'整理服务地址配置有误。'},503,origin);}
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),25000);
  try{
