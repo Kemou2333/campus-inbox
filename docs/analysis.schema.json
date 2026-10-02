@@ -127,8 +127,74 @@
                       "type": "null"
                     }
                   ]
+                },
+                "scope": {
+                  "enum": [
+                    "all",
+                    "conditional",
+                    "role",
+                    "unspecified"
+                  ],
+                  "description": "all: 明确面向全体受众的必做行动；conditional: 满足条件才办理；role: 其他角色负责；unspecified: 原文未能确认。为兼容旧v4可与condition一同省略。"
+                },
+                "condition": {
+                  "type": "string",
+                  "maxLength": 120,
+                  "description": "简短、明确的适用条件；无条件为空字符串。新模型输出必须提供，旧v4可与scope一同省略。"
                 }
-              }
+              },
+              "dependentRequired": {
+                "scope": [
+                  "condition"
+                ],
+                "condition": [
+                  "scope"
+                ]
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "required": [
+                      "scope"
+                    ],
+                    "properties": {
+                      "scope": {
+                        "const": "conditional"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "condition": {
+                        "minLength": 1,
+                        "pattern": "\\S"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "required": [
+                      "scope"
+                    ],
+                    "properties": {
+                      "scope": {
+                        "const": "role"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "assignee": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80,
+                        "pattern": "\\S"
+                      }
+                    }
+                  }
+                }
+              ]
             }
           },
           "timeline": {

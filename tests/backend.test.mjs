@@ -35,7 +35,7 @@ test('valid structured result is cached, thinking is disabled, quota survives re
     let calls=0;const modelFetch=async(_url,options)=>{calls++;const payload=JSON.parse(options.body);assert.equal(payload.model,'deepseek-flash');assert.equal(payload.thinking.type,'disabled');assert.equal(payload.max_tokens,4000);return mock();};
     const config={apiKey:'test',accessToken:token,allowedOrigins:[origin],dailyLimit:1,stateFile:file};
     const handler=await createService(config,{modelFetch});
-    const response=await handler(request());assert.equal(response.status,200);assert.deepEqual(await response.json(),result);
+    const response=await handler(request());assert.equal(response.status,200);assert.deepEqual(await response.json(),globalThis.CampusData.batch(result,true));
     assert.equal((await handler(request())).status,200);assert.equal(calls,1);
     assert.equal((await handler(request('另一条通知'))).status,429);
     const state=JSON.parse(await readFile(file,'utf8'));assert.equal(state.requests,1);assert.equal(state.input,100);assert.ok(!JSON.stringify(state).includes('测试通知'));
