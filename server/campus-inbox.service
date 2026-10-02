@@ -1,0 +1,26 @@
+[Unit]
+Description=Campus Inbox AI backend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=campus-inbox
+Group=campus-inbox
+WorkingDirectory=/opt/campus-inbox/current
+EnvironmentFile=/etc/campus-inbox/backend.env
+ExecStart=/usr/bin/node /opt/campus-inbox/current/server/index.mjs
+Restart=on-failure
+RestartSec=5
+StateDirectory=campus-inbox
+StateDirectoryMode=0700
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+MemoryMax=256M
+TasksMax=64
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

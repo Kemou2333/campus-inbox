@@ -1,0 +1,7 @@
+[Unit]
+Description=Renew Campus Inbox HTTPS IP certificate
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/campus-certbot/bin/certbot renew --quiet --deploy-hook "/usr/bin/nginx -t && /usr/bin/systemctl reload nginx"
