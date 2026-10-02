@@ -1,2 +1,1 @@
-// Public AI endpoint is enabled after trusted HTTPS is available.
-window.CAMPUS_CONFIG={API_ENDPOINT:'',REQUIRE_ACCESS:true};
+window.CAMPUS_CONFIG = Object.freeze({ REQUIRE_ACCESS: true, API_ENDPOINT: 'https://123.57.30.129/analyze' });

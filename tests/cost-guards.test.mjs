@@ -16,7 +16,7 @@ const request=(notice='通知',extra={})=>new Request('http://localhost/analyze'
 test('malformed, oversized and non-text requests never reach the paid model',async()=>{
   let calls=0;
   const handler=await createService(config,{modelFetch:async()=>{calls++;return response();}});
-  const inputs=[request('x'.repeat(12001)),request('通知',{files:['private-photo']}),new Request('http://localhost/analyze',{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:'{bad json'}),new Request('http://localhost/analyze',{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+accessToken,'Content-Type':'text/plain'},body:'通知'})];
+  const inputs=[request('x'.repeat(4001)),request('通知',{files:['private-photo']}),new Request('http://localhost/analyze',{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:'{bad json'}),new Request('http://localhost/analyze',{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+accessToken,'Content-Type':'text/plain'},body:'通知'})];
   for(let i=0;i<inputs.length;i++)assert.equal((await handler(inputs[i],'invalid-'+i)).status,i===3?415:400);
   assert.equal(calls,0);
 });

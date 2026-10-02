@@ -47,3 +47,12 @@ test('strict AI timeline rejects extra or missing fields while legacy backup rem
   assert.throws(()=>D.analysis({...analysis,timeline:[missing]},true));
   assert.equal(D.analysis({...analysis,timeline:[{...point,legacy:'ignored'}]}).timeline[0].label,'活动开始');
 });
+
+test('new input is capped at 4000 characters while old 12000-character records remain readable',()=>{
+  assert.equal(D.MAX_TEXT,4000);
+  assert.equal(D.create(analysis,'字'.repeat(4000)).originalText.length,4000);
+  assert.throws(()=>D.create(analysis,'字'.repeat(4001)));
+  const legacy={...D.create(analysis,'旧通知'),originalText:'字'.repeat(12000)};
+  assert.equal(D.backup({app:'campus-inbox',version:4,notices:[legacy]})[0].originalText.length,12000);
+  assert.throws(()=>D.notices([{...legacy,originalText:'字'.repeat(12001)}]));
+});

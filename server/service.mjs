@@ -25,7 +25,7 @@ export async function createService(config,options={}){
     entries.push(t);rates.set(ip,entries);for(const [k,v] of rates)if(!v.some(x=>t-x<60000))rates.delete(k);
     let notice;
     try{const body=JSON.parse(await boundedText(request.body,64000));if(!body||typeof body.notice!=='string'||!body.notice.trim()||body.notice.length>D.MAX_TEXT||Object.keys(body).some(k=>k!=='notice'))throw new Error();notice=body.notice.trim();}
-    catch(e){return reply({error:e instanceof ServiceError?e.message:'请提供 1–12,000 字的通知文字。'},e.status||400);}
+    catch(e){return reply({error:e instanceof ServiceError?e.message:'请提供 1–4,000 字的通知文字。'},e.status||400);}
     const hash=createHash('sha256').update(notice).digest('hex');
     for(const [k,v] of cache)if(t-v.created>15*60000)cache.delete(k);
     const saved=cache.get(hash);if(saved)return reply(saved.result);

@@ -1,7 +1,7 @@
 /* Browser and Worker share the same validation rules. User text is never HTML. */
 (function(root){
 'use strict';
-const MAX_NOTICES=2000, MAX_TEXT=12000;
+const MAX_NOTICES=2000, MAX_TEXT=4000, MAX_STORED_TEXT=12000;
 function object(x){return x && typeof x==='object' && !Array.isArray(x);}
 function text(x,name,max=2000,empty=false){
  if(typeof x!=='string'||x.length>max||(!empty&&!x.trim()))throw new Error(`${name}格式不正确`);
@@ -58,7 +58,7 @@ function notice(x){
  const states=x.tasks.map(t=>{if(!object(t)||typeof t.completed!=='boolean')throw new Error('任务完成状态格式不正确');return t.completed;});
  const normalized=analysis(x);
  const createdAt=date(x.createdAt);if(!createdAt)throw new Error('缺少创建时间');
- return {...normalized,id:text(x.id,'通知编号',150),originalText:text(x.originalText,'通知原文',MAX_TEXT),createdAt,completed:x.completed,attachments:attachmentIDs(x.attachments),tasks:normalized.tasks.map((t,i)=>({...t,completed:states[i]}))};
+ return {...normalized,id:text(x.id,'通知编号',150),originalText:text(x.originalText,'通知原文',MAX_STORED_TEXT),createdAt,completed:x.completed,attachments:attachmentIDs(x.attachments),tasks:normalized.tasks.map((t,i)=>({...t,completed:states[i]}))};
 }
 function notices(x){if(!Array.isArray(x)||x.length>MAX_NOTICES)throw new Error(`最多保存 ${MAX_NOTICES} 条通知`);const ids=new Set();return x.map(v=>{const n=notice(v);if(ids.has(n.id))throw new Error('存在重复的通知编号');ids.add(n.id);return n;});}
 function backup(x){if(!object(x)||x.app!=='campus-inbox'||![1,2,3,4].includes(x.version))throw new Error('请选择校园 Inbox 导出的 JSON 备份');return notices(x.notices);}
