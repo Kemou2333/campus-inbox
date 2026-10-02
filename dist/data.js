@@ -20,8 +20,10 @@ function date(x){
  return x;
 }
 function strings(x,name){if(!Array.isArray(x)||x.length>100)throw new Error(`${name}必须为数组，最多 100 项`);return x.map(v=>text(v,name));}
-function timeline(x){if(x===undefined)return [];if(!Array.isArray(x)||x.length>100)throw new Error('时间节点格式不正确');return x.map(v=>{
+function timeline(x,strict=false){if(x===undefined)return [];if(!Array.isArray(x)||x.length>100)throw new Error('时间节点格式不正确');return x.map(v=>{
  if(!object(v))throw new Error('时间节点格式不正确');
+ const fields=['label','time','timeText','location'];
+ if(strict&&(fields.some(k=>!Object.hasOwn(v,k))||Object.keys(v).some(k=>!fields.includes(k))))throw new Error('时间节点字段不完整或包含多余字段');
  return {label:text(v.label,'节点名称',200),time:date(v.time),timeText:text(v.timeText,'原文时间',500),location:v.location===null?null:text(v.location,'地点',500)};
 });}
 function task(x,strict=false){
@@ -43,7 +45,7 @@ function analysis(x,strict=false){
  if(!['task','reminder','information'].includes(kind))throw new Error('通知类别不正确');
  const reminders=strings(x.reminders===undefined?[]:x.reminders,'提醒');
  if(strict&&((kind==='task')!==!!x.tasks.length||(kind==='reminder'&&!reminders.length)||reminders.length>20||reminders.some(v=>v.length>500)))throw new Error('通知类别与内容不一致');
- return {schemaVersion:4,kind,title:text(x.title,'标题',strict?40:200),summary:text(x.summary,'摘要',strict?140:2000),deadline:date(x.deadline),deadlineText:x.deadlineText===undefined?'':text(x.deadlineText,'截止描述',500,true),timeline:timeline(x.timeline),tasks:x.tasks.map(t=>task(t,strict)),materials:strings(x.materials,'材料清单'),warnings:strings(x.warnings,'注意事项'),reminders};
+ return {schemaVersion:4,kind,title:text(x.title,'标题',strict?40:200),summary:text(x.summary,'摘要',strict?140:2000),deadline:date(x.deadline),deadlineText:x.deadlineText===undefined?'':text(x.deadlineText,'截止描述',500,true),timeline:timeline(x.timeline,strict),tasks:x.tasks.map(t=>task(t,strict)),materials:strings(x.materials,'材料清单'),warnings:strings(x.warnings,'注意事项'),reminders};
 }
 function batch(x,strict=false){
  if(!strict&&object(x)&&Array.isArray(x.tasks))return {schemaVersion:4,notices:[analysis(x)]};
