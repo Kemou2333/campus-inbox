@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: '24'
       - name: Verify backend protections
-        run: node --test tests/backend.test.mjs
+        run: node --test tests/*.test.mjs
       - name: Upload a restricted backend release
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}

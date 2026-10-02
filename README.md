@@ -56,7 +56,7 @@ API Key 留在服务器环境文件中，网页只保存短期访问码。相同
 ## 验证
 
 ```sh
-node --test tests/backend.test.mjs
+node --test tests/*.test.mjs
 ```
 
 测试包含：完整原文时间校验与 24:00 换算；未经授权的请求不会调用模型；缓存不会重复付费；每日限额跨重启保留；思考模式关闭；错误结构和截断输出被拒绝。
@@ -66,3 +66,5 @@ node --test tests/backend.test.mjs
 见 [部署说明](docs/DEPLOYMENT.md)。GitHub Pages 负责网页，阿里云负责模型调用，无需 Cloudflare 账号。
 
 公开仓库方便技术展示，原始通知和个人完成记录不会随代码发布。换网址或浏览器前，请从原网页导出备份，再在新网页恢复。
+
+更多免费检查与视觉参考见 [FREE-CHECKS.md](docs/FREE-CHECKS.md)。
