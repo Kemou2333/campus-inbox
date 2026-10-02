@@ -1,1 +1,2 @@
-window.CAMPUS_CONFIG = Object.freeze({ DEMO_MODE: true, API_ENDPOINT: '' });
+// Public AI endpoint is enabled after trusted HTTPS is available.
+window.CAMPUS_CONFIG={API_ENDPOINT:'',REQUIRE_ACCESS:true};
