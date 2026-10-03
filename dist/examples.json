@@ -1,0 +1,167 @@
+{
+  "app": "campus-inbox",
+  "version": 4,
+  "notices": [
+    {
+      "schemaVersion": 4,
+      "kind": "task",
+      "title": "完成国防知识竞赛",
+      "summary": "国防知识竞赛作为军训学习内容，需在9月22日前完成，军训办将定期通报。",
+      "deadline": null,
+      "deadlineText": "9月22日",
+      "timeline": [],
+      "tasks": [
+        {
+          "text": "完成国防知识竞赛",
+          "assignee": null,
+          "scope": "all",
+          "condition": "",
+          "details": [],
+          "time": null,
+          "timeText": "9月22日前",
+          "location": null,
+          "completed": false,
+          "dismissed": false
+        }
+      ],
+      "materials": [],
+      "warnings": [
+        "军训办将定期通报完成情况。"
+      ],
+      "reminders": [],
+      "id": "example-v1-1",
+      "originalText": "@全体成员 国防知识竞赛作为军训学习内容之一，军训办将定期通报，完成时限9月22日。请各位同学抓紧时间，认真完成。@全体成员 ",
+      "createdAt": "2026-10-02T16:47:10.722Z",
+      "completed": false,
+      "note": "",
+      "audienceOverride": "",
+      "attachments": []
+    },
+    {
+      "schemaVersion": 4,
+      "kind": "task",
+      "title": "上传宿舍门禁照片",
+      "summary": "宿管科提醒尚未在今日校园APP完成照片上传的新生及时上传，以保障人脸识别门禁正常启用和通行。",
+      "deadline": null,
+      "deadlineText": "",
+      "timeline": [],
+      "tasks": [
+        {
+          "text": "在今日校园APP上传照片",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "尚未在今日校园APP完成照片上传的新生",
+          "details": [
+            "渠道：今日校园APP"
+          ],
+          "time": null,
+          "timeText": "",
+          "location": null,
+          "completed": false,
+          "dismissed": false
+        }
+      ],
+      "materials": [],
+      "warnings": [],
+      "reminders": [],
+      "id": "example-v1-2",
+      "originalText": "【转发宿管科提醒】\n后台看到还有很多新生没有在今日校园APP完成照片上传。为保障学生宿舍人脸识别门禁正常启用、新生正常通行，麻烦各位同学及时完成上传！\n@全体成员 ",
+      "createdAt": "2026-10-02T16:47:10.722Z",
+      "completed": false,
+      "note": "",
+      "audienceOverride": "",
+      "attachments": []
+    },
+    {
+      "schemaVersion": 4,
+      "kind": "reminder",
+      "title": "军训期间宿舍安全",
+      "summary": "军训期间宿舍长期无人，需做好断水电、锁门窗、妥置物品等安全事项。",
+      "deadline": null,
+      "deadlineText": "",
+      "timeline": [],
+      "tasks": [],
+      "materials": [],
+      "warnings": [],
+      "reminders": [
+        "关闭排插电源，拔掉电器插头；关紧水龙头等阀门。",
+        "反锁宿舍门，关闭并锁好所有窗户，低层宿舍尤其注意。",
+        "贵重物品、证件随身携带；清理易变质食品，物品有序收纳。"
+      ],
+      "id": "example-v1-3",
+      "originalText": "【军训期间宿舍安全提醒】\n\n各位同学好：\n由于军训期间宿舍长期无人，为杜绝安全隐患、保障财产安全，请做好以下安全事项：\n\n1.断水电：关闭排插电源，拔掉电器插头；关紧水龙头等阀门。\n2.锁门窗：反锁宿舍门，关闭并锁好所有窗户，低层宿舍尤其注意。\n3.妥置物：贵重物品、证件随身携带；清理易变质食品，物品有序收纳。\n\n请大家高度重视，共同守护宿舍安全![表情][表情][表情][表情]",
+      "createdAt": "2026-10-02T16:47:10.722Z",
+      "completed": false,
+      "note": "",
+      "audienceOverride": "",
+      "attachments": []
+    },
+    {
+      "schemaVersion": 4,
+      "kind": "task",
+      "title": "国庆留校查寝安排",
+      "summary": "国庆留校同学中，临时负责人安排男女查寝工作人员每日查寝，23点前将情况汇报班长，班长在工作群上报；留校同学须遵守宿舍管理条例。",
+      "deadline": null,
+      "deadlineText": "每日23点前",
+      "timeline": [],
+      "tasks": [
+        {
+          "text": "安排男女查寝工作人员",
+          "assignee": "临时负责人",
+          "scope": "role",
+          "condition": "有国庆留校同学的班级",
+          "details": [
+            "分别设置1名男女查寝工作人员"
+          ],
+          "time": null,
+          "timeText": "",
+          "location": null,
+          "completed": false,
+          "dismissed": false
+        },
+        {
+          "text": "每日查寝并汇报查寝情况",
+          "assignee": "查寝工作人员",
+          "scope": "role",
+          "condition": "国庆留校期间每日",
+          "details": [
+            "在23点前将查寝情况汇报给各班班长"
+          ],
+          "time": null,
+          "timeText": "每日23点前",
+          "location": null,
+          "completed": false,
+          "dismissed": false
+        },
+        {
+          "text": "在工作群上报查寝情况",
+          "assignee": "班长",
+          "scope": "role",
+          "condition": "收到查寝工作人员汇报后",
+          "details": [
+            "在工作群中上报"
+          ],
+          "time": null,
+          "timeText": "",
+          "location": null,
+          "completed": false,
+          "dismissed": false
+        }
+      ],
+      "materials": [],
+      "warnings": [
+        "留校同学不得晚于23点返回宿舍，如需晚归请告知室友大致回寝时间并给发布者留言。"
+      ],
+      "reminders": [
+        "留校同学须遵守宿舍管理条例。"
+      ],
+      "id": "example-v1-4",
+      "originalText": "@全体成员 【2026年国庆节留校情况】\n各班留校同学中，请临时负责人安排分别设置1名男女查寝工作人员，每日查寝，查寝名单如表所示，并在23点前将查寝情况汇报给各班班长，班长在工作群中上报。\n请各位留校同学遵守宿舍管理条例，不得晚于23点返回宿舍，如需晚归请告知室友大致回寝时间并给我留言。\n以下是留校名单 ：\n\n请各位班干部做好记录和查寝准备。",
+      "createdAt": "2026-10-02T16:47:10.722Z",
+      "completed": false,
+      "note": "",
+      "audienceOverride": "",
+      "attachments": []
+    }
+  ]
+}
