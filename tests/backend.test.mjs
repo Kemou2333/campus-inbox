@@ -32,7 +32,7 @@ test('source dates prevent inferred years and normalize midnight boundaries',()=
 test('valid structured result is cached, thinking is low and bounded, quota survives restart',async()=>{
   const directory=await mkdtemp(join(tmpdir(),'campus-test-')),file=join(directory,'usage.json');
   try{
-    let calls=0;const modelFetch=async(_url,options)=>{calls++;const payload=JSON.parse(options.body);assert.equal(payload.model,'deepseek-flash');assert.equal(payload.thinking.type,'enabled');assert.equal(payload.reasoning_effort,'low');assert.deepEqual(Object.keys(payload.thinking),['type']);assert.ok(!Object.hasOwn(payload,'temperature'));assert.equal(payload.max_tokens,8192);return mock();};
+    let calls=0;const modelFetch=async(_url,options)=>{calls++;const payload=JSON.parse(options.body);assert.equal(payload.model,'deepseek-flash');assert.equal(payload.thinking.type,'enabled');assert.equal(payload.reasoning_effort,'low');assert.deepEqual(Object.keys(payload.thinking),['type']);assert.ok(!Object.hasOwn(payload,'temperature'));assert.ok(!Object.hasOwn(payload,'response_format'));assert.equal(payload.max_tokens,8192);return mock();};
     const config={apiKey:'test',accessToken:token,allowedOrigins:[origin],dailyLimit:1,stateFile:file};
     const handler=await createService(config,{modelFetch});
     const response=await handler(request());assert.equal(response.status,200);assert.deepEqual(await response.json(),globalThis.CampusData.batch(result,true));

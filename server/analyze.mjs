@@ -47,7 +47,7 @@ export async function analyze(notice,config,modelFetch=fetch){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),config.timeoutMs||60000);
   let usage,finishReason;
   try{
-    const payload={model:config.model||'deepseek-flash',thinking:{type:'enabled'},reasoning_effort:'low',max_tokens:8192,response_format:{type:'json_object'},messages:[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:JSON.stringify({notice})}]};
+    const payload={model:config.model||'deepseek-flash',thinking:{type:'enabled'},reasoning_effort:'low',max_tokens:8192,messages:[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:JSON.stringify({notice})}]};
     const upstream=await modelFetch('https://api.deepseek.com/chat/completions',{method:'POST',redirect:'error',headers:{'Content-Type':'application/json','Authorization':`Bearer ${config.apiKey}`},body:JSON.stringify(payload),signal:controller.signal});
     if(!upstream.ok){await upstream.body?.cancel();throw new ServiceError(upstream.status===429?'AI 服务繁忙，请稍后再试。':upstream.status===402?'AI 账户余额不足，请联系维护者。':'AI 请求失败，请联系维护者检查配置。');}
     const envelope=JSON.parse(await boundedText(upstream.body,200000)),choice=envelope?.choices?.[0];
