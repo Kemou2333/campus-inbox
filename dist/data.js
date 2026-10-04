@@ -24,7 +24,7 @@ function timeline(x,strict=false){if(x===undefined)return [];if(!Array.isArray(x
  if(!object(v))throw new Error('时间节点格式不正确');
  const fields=['label','time','timeText','location'];
  if(strict&&(fields.some(k=>!Object.hasOwn(v,k))||Object.keys(v).some(k=>!fields.includes(k))))throw new Error('时间节点字段不完整或包含多余字段');
- return {label:text(v.label,'节点名称',200),time:date(v.time),timeText:text(v.timeText,'原文时间',500),location:v.location===null?null:text(v.location,'地点',500)};
+ return {label:text(v.label,'节点名称',200),time:date(v.time),timeText:text(v.timeText,'原文时间',500,true),location:v.location===null?null:text(v.location,'地点',500)};
 });}
 function step(x,strict=false){
  if(!object(x))throw new Error('步骤必须为结构化对象');
