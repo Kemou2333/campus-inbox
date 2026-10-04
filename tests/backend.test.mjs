@@ -65,7 +65,7 @@ test('paid incomplete or invalid responses retain metering without exposing mode
       const state=JSON.parse(await readFile(file,'utf8'));
       assert.equal(state.requests,1);assert.equal(state.input,91);assert.equal(state.output,640);assert.equal(state.reasoning,600);
       assert.equal(state.lastFinishReason,item.reason==='private-unexpected-finish-reason'?'unknown':item.reason);
-      assert.deepEqual(Object.keys(state).sort(),['day','input','lastFinishReason','output','reasoning','requests'].sort());
+      const expectedKeys=['day','input','lastFinishReason','output','reasoning','requests'];if(item.reason==='stop')expectedKeys.push('lastFailureCode');assert.deepEqual(Object.keys(state).sort(),expectedKeys.sort());if(item.reason==='stop')assert.equal(state.lastFailureCode,item.content.startsWith('{invalid')?'INVALID_JSON':'SCHEMA_INVALID');
       assert.ok(!JSON.stringify({state,body}).includes('private-'));assert.equal(calls,1);
       const restarted=await createService(config,{modelFetch});
       assert.equal((await restarted(request('private-original-notice'))).status,429);assert.equal(calls,1);
@@ -99,4 +99,22 @@ test('structured substeps pass through one mocked AI call and reject injected lo
   const reject=await createService({apiKey:'test',accessToken:token,allowedOrigins:[origin]},{modelFetch:async()=>Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(invalid)}}]})});
   assert.equal((await reject(request())).status,502);
  }
+});
+
+test('undated timeline nodes pass one model call while types, fields and existing backups stay strict',async()=>{
+ const D=globalThis.CampusData,node={label:'苏老师审批',time:null,timeText:'',location:null};
+ const modelResult={...result,notices:[{...notice,timeline:[node]}]};let calls=0;
+ const handler=await createService({apiKey:'test',accessToken:token,allowedOrigins:[origin]},{modelFetch:async()=>{calls++;return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(modelResult)}}]});}});
+ const response=await handler(request('完善请假流程后，由苏老师同意请假。'));
+ assert.equal(response.status,200);assert.equal(calls,1);assert.deepEqual((await response.json()).notices[0].timeline,[node]);
+ for(const change of [v=>v.timeText=null,v=>delete v.timeText,v=>v.unexpected='extra',v=>v.timeText='x'.repeat(501)]){
+  const invalid=structuredClone(modelResult);change(invalid.notices[0].timeline[0]);
+  assert.throws(()=>D.batch(invalid,true),/原文时间|时间节点字段/);
+ }
+ const existingTimeline=[{label:'班级确认',time:'2026-10-07T17:00:00',timeText:'2026年10月7日17:00',location:'办事簿'}];
+ const stored=D.create({...notice,timeline:existingTimeline},'原通知');
+ assert.deepEqual(D.backup({app:'campus-inbox',version:3,notices:[stored]})[0].timeline,existingTimeline);
+ const schema=JSON.parse(await readFile(new URL('../docs/analysis.schema.json',import.meta.url),'utf8'));
+ const timeText=schema.properties.notices.items.properties.timeline.items.properties.timeText;
+ assert.equal(timeText.type,'string');assert.equal(timeText.maxLength,500);assert.ok(!Object.hasOwn(timeText,'minLength'));
 });
