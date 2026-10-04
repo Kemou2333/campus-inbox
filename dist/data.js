@@ -20,11 +20,18 @@ function date(x){
  return x;
 }
 function strings(x,name){if(!Array.isArray(x)||x.length>100)throw new Error(`${name}必须为数组，最多 100 项`);return x.map(v=>text(v,name));}
+function optionalTimeSpec(x,key,raw){
+ if(!Object.hasOwn(x,key))return {};
+ const T=root.CampusTime||(typeof require==='function'?require('./time.js'):null);
+ if(!T)throw new Error('结构化时间模块未载入');
+ return {[key]:T.normalize(x[key],raw)};
+}
 function timeline(x,strict=false){if(x===undefined)return [];if(!Array.isArray(x)||x.length>100)throw new Error('时间节点格式不正确');return x.map(v=>{
  if(!object(v))throw new Error('时间节点格式不正确');
- const fields=['label','time','timeText','location'];
- if(strict&&(fields.some(k=>!Object.hasOwn(v,k))||Object.keys(v).some(k=>!fields.includes(k))))throw new Error('时间节点字段不完整或包含多余字段');
- return {label:text(v.label,'节点名称',200),time:date(v.time),timeText:text(v.timeText,'原文时间',500,true),location:v.location===null?null:text(v.location,'地点',500)};
+ const required=['label','time','timeText','location'],fields=[...required,'timeSpec'];
+ if(strict&&(required.some(k=>!Object.hasOwn(v,k))||Object.keys(v).some(k=>!fields.includes(k))))throw new Error('时间节点字段不完整或包含多余字段');
+ const timeText=text(v.timeText,'原文时间',500,true);
+ return {label:text(v.label,'节点名称',200),time:date(v.time),timeText,location:v.location===null?null:text(v.location,'地点',500),...optionalTimeSpec(v,'timeSpec',timeText)};
 });}
 function step(x,strict=false){
  if(!object(x))throw new Error('步骤必须为结构化对象');
@@ -38,7 +45,7 @@ function steps(x,strict=false){if(x===undefined)return [];if(!Array.isArray(x)||
 function task(x,strict=false){
  if(typeof x==='string'&&!strict)return {text:text(x,'任务'),assignee:null,scope:'unspecified',condition:'',details:[],steps:[],time:null,timeText:'',location:null};
  if(!object(x))throw new Error('任务必须为结构化对象');
- const required=['text','assignee','details','time','timeText','location'],fields=[...required,'scope','condition','steps'];
+ const required=['text','assignee','details','time','timeText','location'],fields=[...required,'scope','condition','steps','timeSpec'];
  if(strict&&(required.some(k=>!Object.hasOwn(x,k))||Object.keys(x).some(k=>!fields.includes(k))))throw new Error('任务字段不完整或包含多余字段');
  if(strict&&(Object.hasOwn(x,'scope')!==Object.hasOwn(x,'condition')))throw new Error('适用范围与条件须同时提供');
  const scope=x.scope===undefined?'unspecified':x.scope;
@@ -49,19 +56,21 @@ function task(x,strict=false){
  if(scope==='role'&&!assignee)throw new Error('角色任务须写明责任对象');
  const details=strings(x.details===undefined?[]:x.details,'执行细节');
  if(strict&&(details.length>20||details.some(v=>v.length>500)))throw new Error('执行细节过长');
- return {text:text(x.text,'任务名称',strict?60:2000),assignee,scope,condition,details,steps:steps(x.steps,strict),time:date(x.time===undefined?null:x.time),timeText:text(x.timeText===undefined?'':x.timeText,'任务时间',500,true),location:x.location==null?null:text(x.location,'任务地点',500)};
+ const timeText=text(x.timeText===undefined?'':x.timeText,'任务时间',500,true);
+ return {text:text(x.text,'任务名称',strict?60:2000),assignee,scope,condition,details,steps:steps(x.steps,strict),time:date(x.time===undefined?null:x.time),timeText,location:x.location==null?null:text(x.location,'任务地点',500),...optionalTimeSpec(x,'timeSpec',timeText)};
 }
 function analysis(x,strict=false){
  if(!object(x))throw new Error('整理结果必须为 JSON 对象');
  if(strict&&x.schemaVersion!==4)throw new Error('需要第4版通知格式');
- const fields=['schemaVersion','kind','title','summary','deadline','deadlineText','timeline','tasks','materials','warnings','reminders'];
- if(strict&&(fields.some(k=>!Object.hasOwn(x,k))||Object.keys(x).some(k=>!fields.includes(k))))throw new Error('通知字段不完整或包含多余字段');
+ const required=['schemaVersion','kind','title','summary','deadline','deadlineText','timeline','tasks','materials','warnings','reminders'],fields=[...required,'deadlineSpec'];
+ if(strict&&(required.some(k=>!Object.hasOwn(x,k))||Object.keys(x).some(k=>!fields.includes(k))))throw new Error('通知字段不完整或包含多余字段');
  if(!Array.isArray(x.tasks)||x.tasks.length>100)throw new Error('任务必须为数组，最多100项');
  const kind=x.kind===undefined?(x.tasks.length?'task':'information'):x.kind;
  if(!['task','reminder','information'].includes(kind))throw new Error('通知类别不正确');
  const reminders=strings(x.reminders===undefined?[]:x.reminders,'提醒');
  if(strict&&((kind==='task')!==!!x.tasks.length||(kind==='reminder'&&!reminders.length)||reminders.length>20||reminders.some(v=>v.length>500)))throw new Error('通知类别与内容不一致');
- return {schemaVersion:4,kind,title:text(x.title,'标题',strict?40:200),summary:text(x.summary,'摘要',strict?140:2000),deadline:date(x.deadline),deadlineText:x.deadlineText===undefined?'':text(x.deadlineText,'截止描述',500,true),timeline:timeline(x.timeline,strict),tasks:x.tasks.map(t=>task(t,strict)),materials:strings(x.materials,'材料清单'),warnings:strings(x.warnings,'注意事项'),reminders};
+ const deadlineText=x.deadlineText===undefined?'':text(x.deadlineText,'截止描述',500,true);
+ return {schemaVersion:4,kind,title:text(x.title,'标题',strict?40:200),summary:text(x.summary,'摘要',strict?140:2000),deadline:date(x.deadline),deadlineText,timeline:timeline(x.timeline,strict),tasks:x.tasks.map(t=>task(t,strict)),materials:strings(x.materials,'材料清单'),warnings:strings(x.warnings,'注意事项'),reminders,...optionalTimeSpec(x,'deadlineSpec',deadlineText)};
 }
 function batch(x,strict=false){
  if(!strict&&object(x)&&Array.isArray(x.tasks))return {schemaVersion:4,notices:[analysis(x)]};

@@ -172,6 +172,9 @@
                       }
                     }
                   }
+                },
+                "timeSpec": {
+                  "$ref": "#/$defs/timeSpec"
                 }
               },
               "dependentRequired": {
@@ -272,6 +275,9 @@
                       "type": "null"
                     }
                   ]
+                },
+                "timeSpec": {
+                  "$ref": "#/$defs/timeSpec"
                 }
               }
             }
@@ -309,6 +315,9 @@
               "minLength": 1,
               "maxLength": 500
             }
+          },
+          "deadlineSpec": {
+            "$ref": "#/$defs/timeSpec"
           }
         },
         "allOf": [
@@ -353,6 +362,201 @@
           }
         ]
       }
+    }
+  },
+  "$defs": {
+    "timeSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "year",
+        "month",
+        "day",
+        "hour",
+        "minute",
+        "rawText"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "date_time",
+            "date",
+            "partial",
+            "relative",
+            "unknown"
+          ]
+        },
+        "year": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1000,
+          "maximum": 9999
+        },
+        "month": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 12
+        },
+        "day": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 31
+        },
+        "hour": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 24
+        },
+        "minute": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 59
+        },
+        "rawText": {
+          "type": "string",
+          "maxLength": 500
+        }
+      },
+      "description": "可选的原文时间分量；缺失信息为null，rawText必须等于对应timeText/deadlineText。保留v4兼容，禁止补年或置信度。",
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "unknown"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "year": {
+                "const": null
+              },
+              "month": {
+                "const": null
+              },
+              "day": {
+                "const": null
+              },
+              "hour": {
+                "const": null
+              },
+              "minute": {
+                "const": null
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "relative"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "year": {
+                "const": null
+              },
+              "month": {
+                "const": null
+              },
+              "day": {
+                "const": null
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "date"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "year": {
+                "type": "integer"
+              },
+              "month": {
+                "type": "integer"
+              },
+              "day": {
+                "type": "integer"
+              },
+              "hour": {
+                "const": null
+              },
+              "minute": {
+                "const": null
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "date_time"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "year": {
+                "type": "integer"
+              },
+              "month": {
+                "type": "integer"
+              },
+              "day": {
+                "type": "integer"
+              },
+              "hour": {
+                "type": "integer"
+              },
+              "minute": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "hour": {
+                "const": 24
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "minute": {
+                "const": 0
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }
