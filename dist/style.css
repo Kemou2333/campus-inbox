@@ -660,3 +660,12 @@ body[data-mode="demo"] .pending-result-banner{display:none;}
 .information-arrangements ul{list-style:none;display:grid;gap:12px;margin:0;padding:0;}
 .information-arrangements li{margin:0;padding-left:13px;border-left:2px solid #9bb9c081;color:#5d6b80;font-size:.96rem;line-height:1.85;overflow-wrap:anywhere;}
 @media(max-width:390px){.information-arrangements{padding:14px;}.information-arrangements li{font-size:.94rem;}}
+
+/* Essential instructions stay beside their action, including original templates. */
+.task-instructions ul,.step-instructions{margin:8px 0 2px;padding:10px 12px 10px 25px;border:1px solid #ffffffc9;border-radius:12px;background:#eff3f8b8;box-shadow:inset 2px 2px 5px #b4bdd32b,inset -2px -2px 5px #fff9;color:#586781;font-size:.89rem;line-height:1.8;overflow-wrap:anywhere;white-space:pre-wrap;}
+.task-instructions li+li,.step-instructions li+li{margin-top:4px;}
+.task-instructions strong,.step-instructions strong{color:#354d72;font-weight:750;}
+.task-instructions code,.step-instructions code{color:#745887;background:#f1eaf5b8;padding:2px 5px;border-radius:5px;font-family:inherit;}
+.task-instructions a,.step-instructions a{text-decoration:underline;text-underline-offset:3px;}
+.step-title{font-weight:600;color:#465b7f;}
+.compose-add-row{flex-wrap:wrap;}
