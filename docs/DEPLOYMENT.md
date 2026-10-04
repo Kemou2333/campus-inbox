@@ -4,7 +4,7 @@
 
 仓库 `Kemou2333/campus-inbox` 的 Pages 使用 GitHub Actions 发布 `dist/`。正式地址为 `https://kemou2333.github.io/campus-inbox/`，不覆盖账号原有博客。
 
-`dist/config.js` 只保存接口地址与访问码开关，不含任何密钥。`API_ENDPOINT` 为空时整理按钮停用；当前配置为已通过信任链验证的 HTTPS 接口，并启用 `REQUIRE_ACCESS: true`。公开网页保留示例入口；?demo=1 可直接进入隔离的本地演示，示例不自动调用模型。正式整理仍需访问码。
+`dist/config.js`仅包含HTTPS接口地址与关闭访问码的开关，不含密钥。网页可直接整理；后端用持久化每日/IP限额、并发控制和高频自动验证防滥用。示例按钮直接追加12条已存结果，无模型费用。
 
 ## 后端
 
