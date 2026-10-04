@@ -25,8 +25,17 @@ export function groundDates(result,notice){
     timeline:Array.isArray(n.timeline)?n.timeline.map(t=>({...t,time:groundedTime(t.time,t.timeText,notice)})):n.timeline
   }))};
 }
+const FINISH_REASONS=new Set(['stop','length','content_filter','insufficient_system_resource','aborted','tool_calls','function_call','unknown']);
+const count=value=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0?value:0;
+function tokenUsage(value){
+  return {input:count(value?.prompt_tokens),output:count(value?.completion_tokens),reasoning:count(value?.completion_tokens_details?.reasoning_tokens)};
+}
 export class ServiceError extends Error {
-  constructor(message,status=502){super(message);this.status=status;}
+  constructor(message,status=502,metadata={}){
+    super(message);this.status=status;
+    if(metadata.usage)this.usage={input:count(metadata.usage.input),output:count(metadata.usage.output),reasoning:count(metadata.usage.reasoning)};
+    if(metadata.finishReason)this.finishReason=FINISH_REASONS.has(metadata.finishReason)?metadata.finishReason:'unknown';
+  }
 }
 export async function boundedText(stream,limit){
   if(!stream)return '';
@@ -36,14 +45,26 @@ export async function boundedText(stream,limit){
 }
 export async function analyze(notice,config,modelFetch=fetch){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),config.timeoutMs||60000);
+  let usage,finishReason;
   try{
-    const payload={model:config.model||'deepseek-flash',thinking:{type:'enabled'},reasoning_effort:'low',max_tokens:6000,response_format:{type:'json_object'},messages:[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:JSON.stringify({notice})}]};
+    const payload={model:config.model||'deepseek-flash',thinking:{type:'enabled'},reasoning_effort:'low',max_tokens:8192,response_format:{type:'json_object'},messages:[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:JSON.stringify({notice})}]};
     const upstream=await modelFetch('https://api.deepseek.com/chat/completions',{method:'POST',redirect:'error',headers:{'Content-Type':'application/json','Authorization':`Bearer ${config.apiKey}`},body:JSON.stringify(payload),signal:controller.signal});
     if(!upstream.ok){await upstream.body?.cancel();throw new ServiceError(upstream.status===429?'AI 服务繁忙，请稍后再试。':upstream.status===402?'AI 账户余额不足，请联系维护者。':'AI 请求失败，请联系维护者检查配置。');}
-    const envelope=JSON.parse(await boundedText(upstream.body,200000)),choice=envelope.choices?.[0];
-    if(choice?.finish_reason!=='stop')throw new ServiceError('通知较长，整理结果未完整生成，请分段整理。');
+    const envelope=JSON.parse(await boundedText(upstream.body,200000)),choice=envelope?.choices?.[0];
+    usage=tokenUsage(envelope?.usage);
+    finishReason=FINISH_REASONS.has(choice?.finish_reason)?choice.finish_reason:'unknown';
+    if(finishReason!=='stop'){
+      const failures={
+        length:['整理结果未完整生成，请减少本次通知数量或分段整理。',502],
+        insufficient_system_resource:['AI 服务暂时繁忙，结果未完整生成，请稍后再试。',503],
+        aborted:['AI 整理已中断，请稍后再试。',503],
+        content_filter:['这条通知暂时无法整理，请调整内容后再试。',502]
+      };
+      const [message,status]=failures[finishReason]||['AI 未返回完整的整理结果，请稍后再试。',502];
+      throw new ServiceError(message,status,{usage,finishReason});
+    }
     const parsed=JSON.parse(choice.message.content);
-    return {result:D.batch(groundDates(parsed,notice),true),usage:{input:Number(envelope.usage?.prompt_tokens)||0,output:Number(envelope.usage?.completion_tokens)||0,reasoning:Number(envelope.usage?.completion_tokens_details?.reasoning_tokens)||0}};
-  }catch(e){if(e instanceof ServiceError)throw e;throw new ServiceError(e.name==='AbortError'?'AI 整理超时，请稍后重试。':'AI 未返回有效的整理结果，请稍后重试。');}
+    return {result:D.batch(groundDates(parsed,notice),true),usage,finishReason};
+  }catch(e){if(e instanceof ServiceError)throw e;throw new ServiceError(e.name==='AbortError'?'AI 整理超时，请稍后重试。':'AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason});}
   finally{clearTimeout(timer);}
 }
