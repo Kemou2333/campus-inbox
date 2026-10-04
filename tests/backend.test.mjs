@@ -4,7 +4,7 @@ import {mkdtemp,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createService} from '../server/service.mjs';
-import {groundDates} from '../server/analyze.mjs';
+import {analyze,groundDates,ServiceError} from '../server/analyze.mjs';
 const origin='https://kemou2333.github.io',token='test-access-code-at-least-twenty-characters';
 const notice={schemaVersion:4,kind:'task',title:'登记通知',summary:'离校同学填写登记。',deadline:null,deadlineText:'9月30日18:00前',tasks:[{text:'填写离校登记表',assignee:'离校同学',details:['填写姓名与学号'],time:null,timeText:'9月30日18:00前',location:null}],timeline:[],materials:['离校登记表'],warnings:[],reminders:[]};
 const result={schemaVersion:4,notices:[notice]};
@@ -32,7 +32,7 @@ test('source dates prevent inferred years and normalize midnight boundaries',()=
 test('valid structured result is cached, thinking is low and bounded, quota survives restart',async()=>{
   const directory=await mkdtemp(join(tmpdir(),'campus-test-')),file=join(directory,'usage.json');
   try{
-    let calls=0;const modelFetch=async(_url,options)=>{calls++;const payload=JSON.parse(options.body);assert.equal(payload.model,'deepseek-flash');assert.equal(payload.thinking.type,'enabled');assert.equal(payload.reasoning_effort,'low');assert.ok(!Object.hasOwn(payload,'temperature'));assert.equal(payload.max_tokens,6000);return mock();};
+    let calls=0;const modelFetch=async(_url,options)=>{calls++;const payload=JSON.parse(options.body);assert.equal(payload.model,'deepseek-flash');assert.equal(payload.thinking.type,'enabled');assert.equal(payload.reasoning_effort,'low');assert.deepEqual(Object.keys(payload.thinking),['type']);assert.ok(!Object.hasOwn(payload,'temperature'));assert.equal(payload.max_tokens,8192);return mock();};
     const config={apiKey:'test',accessToken:token,allowedOrigins:[origin],dailyLimit:1,stateFile:file};
     const handler=await createService(config,{modelFetch});
     const response=await handler(request());assert.equal(response.status,200);assert.deepEqual(await response.json(),globalThis.CampusData.batch(result,true));
@@ -41,6 +41,45 @@ test('valid structured result is cached, thinking is low and bounded, quota surv
     const state=JSON.parse(await readFile(file,'utf8'));assert.equal(state.requests,1);assert.equal(state.input,100);assert.ok(!JSON.stringify(state).includes('测试通知'));
     const restarted=await createService(config,{modelFetch});assert.equal((await restarted(request('新通知'))).status,429);assert.equal(calls,1);
   }finally{await rm(directory,{recursive:true,force:true});}
+});
+
+test('paid incomplete or invalid responses retain metering without exposing model content',async()=>{
+  const cases=[
+    {reason:'length',status:502,message:/减少本次通知数量/},
+    {reason:'insufficient_system_resource',status:503,message:/暂时繁忙/},
+    {reason:'aborted',status:503,message:/已中断/},
+    {reason:'content_filter',status:502,message:/调整内容/},
+    {reason:'private-unexpected-finish-reason',status:502,message:/未返回完整/},
+    {reason:'stop',content:'{invalid json',status:502,message:/有效的整理结果/},
+    {reason:'stop',content:JSON.stringify({...result,notices:[{...notice,tasks:['invalid']}] }),status:502,message:/有效的整理结果/}
+  ];
+  const directory=await mkdtemp(join(tmpdir(),'campus-paid-failures-'));
+  try{
+    for(const [i,item] of cases.entries()){
+      const file=join(directory,`usage-${i}.json`);let calls=0;
+      const modelFetch=async()=>{calls++;return Response.json({choices:[{finish_reason:item.reason,message:{content:item.content||'private-model-result',reasoning_content:'private-reasoning-text'}}],usage:{prompt_tokens:91,completion_tokens:640,completion_tokens_details:{reasoning_tokens:600},private_source:'private-original-notice'}});};
+      const config={apiKey:'test',accessToken:token,allowedOrigins:[origin],dailyLimit:1,stateFile:file};
+      const handler=await createService(config,{modelFetch});
+      const reply=await handler(request('private-original-notice'));
+      assert.equal(reply.status,item.status);const body=await reply.json();assert.deepEqual(Object.keys(body),['error']);assert.match(body.error,item.message);
+      const state=JSON.parse(await readFile(file,'utf8'));
+      assert.equal(state.requests,1);assert.equal(state.input,91);assert.equal(state.output,640);assert.equal(state.reasoning,600);
+      assert.equal(state.lastFinishReason,item.reason==='private-unexpected-finish-reason'?'unknown':item.reason);
+      assert.deepEqual(Object.keys(state).sort(),['day','input','lastFinishReason','output','reasoning','requests'].sort());
+      assert.ok(!JSON.stringify({state,body}).includes('private-'));assert.equal(calls,1);
+      const restarted=await createService(config,{modelFetch});
+      assert.equal((await restarted(request('private-original-notice'))).status,429);assert.equal(calls,1);
+    }
+  }finally{await rm(directory,{recursive:true,force:true});}
+});
+
+test('upstream metering accepts only nonnegative safe integer counts',async()=>{
+  const usage={prompt_tokens:-1,completion_tokens:'640',completion_tokens_details:{reasoning_tokens:1.5}};
+  await assert.rejects(analyze('测试通知',{apiKey:'test'},async()=>Response.json({choices:[{finish_reason:'length',message:{content:'private-result'}}],usage})),e=>{
+    assert.ok(e instanceof ServiceError);assert.deepEqual(e.usage,{input:0,output:0,reasoning:0});assert.equal(e.finishReason,'length');return true;
+  });
+  const error=new ServiceError('safe',502,{usage:{input:Infinity,output:Number.MAX_SAFE_INTEGER+1,reasoning:NaN},finishReason:'private-arbitrary-metadata'});
+  assert.deepEqual(error.usage,{input:0,output:0,reasoning:0});assert.equal(error.finishReason,'unknown');
 });
 test('malformed AI schema and incomplete output are rejected',async()=>{
   for(const choice of [{finish_reason:'length',message:{content:'{}'}},{finish_reason:'stop',message:{content:JSON.stringify({...result,notices:[{...notice,tasks:['invalid legacy task']}]})}},{finish_reason:'stop',message:{content:JSON.stringify({...result,notices:[{...notice,kind:'reminder'}]})}}]){

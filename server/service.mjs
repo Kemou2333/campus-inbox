@@ -8,7 +8,7 @@ export async function createService(config,options={}){
   const now=options.now||Date.now,modelFetch=options.modelFetch||fetch,cache=new Map(),rates=new Map();
   let usage=null,busy=false;
   const day=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(now());
-  if(config.stateFile){try{usage=JSON.parse(await readFile(config.stateFile,'utf8'));if(!usage||typeof usage.day!=='string'||!Number.isInteger(usage.requests)||usage.requests<0)throw new Error('Invalid quota state');}catch(e){if(e.code!=='ENOENT')throw e;}}
+  if(config.stateFile){try{usage=JSON.parse(await readFile(config.stateFile,'utf8'));if(!usage||typeof usage.day!=='string'||!Number.isSafeInteger(usage.requests)||usage.requests<0||['input','output','reasoning'].some(key=>usage[key]!==undefined&&(!Number.isSafeInteger(usage[key])||usage[key]<0)))throw new Error('Invalid quota state');for(const key of ['input','output','reasoning'])usage[key]??=0;}catch(e){if(e.code!=='ENOENT')throw e;}}
   const persist=async()=>{if(config.stateFile){await writeFile(config.stateFile+'.tmp',JSON.stringify(usage),{mode:0o600});await rename(config.stateFile+'.tmp',config.stateFile);}};
   const authorized=header=>{const actual=createHash('sha256').update(header||'').digest(),expected=createHash('sha256').update('Bearer '+config.accessToken).digest();return timingSafeEqual(actual,expected);};
   return async function handle(request,ip='unknown'){
@@ -34,19 +34,32 @@ export async function createService(config,options={}){
     for(const [k,v] of cache)if(t-v.created>15*60000)cache.delete(k);
     const saved=cache.get(hash);if(saved)return reply(saved.result);
     if(busy)return reply({error:'正在整理另一条通知，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
-    if(usage?.day!==day())usage={day:day(),requests:0,input:0,output:0};
+    if(usage?.day!==day())usage={day:day(),requests:0,input:0,output:0,reasoning:0};
     if(usage.requests>=(config.dailyLimit||30)){
       const retryAfter=Math.ceil((86400000-((t+8*3600000)%86400000))/1000);
       return reply({error:'今日整理次数已达上限，明天再试。',code:'DAILY_LIMIT',retryAfterSeconds:retryAfter},429,{'Retry-After':String(retryAfter)});
     }
     busy=true;
+    let tokensRecorded=false;
+    const recordTokens=async(stats,finishReason)=>{
+      // Only numeric metering survives a request, including paid failures.
+      // Completion tokens already include reasoning; keep it as a separate detail.
+      for(const key of ['input','output','reasoning'])usage[key]=Math.min(Number.MAX_SAFE_INTEGER,(usage[key]||0)+(stats[key]||0));
+      if(finishReason)usage.lastFinishReason=finishReason;
+      tokensRecorded=true;await persist();
+    };
     try{
       usage.requests++;await persist();
       const output=await analyze(notice,config,modelFetch);
-      usage.input+=output.usage.input;usage.output+=output.usage.output;usage.reasoning=(usage.reasoning||0)+(output.usage.reasoning||0);await persist();
+      await recordTokens(output.usage,output.finishReason);
       if(cache.size>=50)cache.delete(cache.keys().next().value);
       cache.set(hash,{created:now(),result:output.result});return reply(output.result);
-    }catch(e){return reply({error:e instanceof ServiceError?e.message:'整理服务暂时不可用，请稍后重试。'},e.status||503);}
+    }catch(e){
+      if(e instanceof ServiceError&&e.usage&&!tokensRecorded){
+        try{await recordTokens(e.usage,e.finishReason);}catch{return reply({error:'整理服务暂时不可用，请稍后重试。'},503);}
+      }
+      return reply({error:e instanceof ServiceError?e.message:'整理服务暂时不可用，请稍后重试。'},e.status||503);
+    }
     finally{busy=false;}
   };
 }
