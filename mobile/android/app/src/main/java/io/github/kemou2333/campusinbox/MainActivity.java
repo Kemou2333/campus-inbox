@@ -20,7 +20,6 @@ import android.webkit.CookieManager;
 import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
-import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -31,6 +30,7 @@ import android.window.OnBackInvokedDispatcher;
 
 import androidx.webkit.JavaScriptReplyProxy;
 import androidx.webkit.WebMessageCompat;
+import androidx.webkit.WebResourceErrorCompat;
 import androidx.webkit.WebViewAssetLoader;
 import androidx.webkit.WebViewClientCompat;
 import androidx.webkit.WebViewCompat;
@@ -155,7 +155,7 @@ public final class MainActivity extends Activity {
             @Override public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
                 handler.cancel();
             }
-            @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+            @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceErrorCompat error) {
                 if (!request.isForMainFrame()) return;
                 new AlertDialog.Builder(MainActivity.this).setTitle("页面未能打开")
                         .setMessage("请重试。已经保存的通知会保留在手机中。")
