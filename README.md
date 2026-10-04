@@ -23,12 +23,22 @@
 - 用本机时间区分已截止、24小时内与3天内，可为事项补个人截止；缺少年份或具体时间时保留原文，不猜日期。
 - 办理方式支持安全行内粗体、代码、链接，原文时间自动突出显示。
 - 每个输入模块独立添加附件，避免混挂；附件不进入模型请求。
-- DeepSeek 结构化 JSON 输出，并在服务端严格校验。
+- DeepSeek 结构化 JSON 输出，并在服务端严格校验。时间新增年月日时分结构，缺年份和相对时间保留原文；完整日期无钟点可作为全天日历候选。
 - 信息通知的后续处理安排直接呈现，保留AI原字段内容。
 - 本地紧急事项区显示今天、即将截止与逾期记录，可跳到对应通知；不从不完整日期猜年份。
 - 导出标准ICS日历文件，在手机或电脑日历中确认加入；没有完整日期时由用户确认时间。
 - 固定输入视口、可拖动的持续滚动轨道，以及跟手切换待办/提醒/已完成的滑块。
 - 点击“载入示例通知”追加12条已保存的DeepSeek结果；与真实通知使用同一个列表，可以继续整理、勾选、记笔记和备份。重复载入不会覆盖进度，也不调用模型。
+
+## Android 安装版
+
+[下载 APK 1.0.0](https://github.com/Kemou2333/campus-inbox/releases/download/android-v1.0.0/campus-inbox-1.0.0.apk) · [发布记录](https://github.com/Kemou2333/campus-inbox/releases/tag/android-v1.0.0)
+
+安卓版使用 Material You 扁平色块、浅色/深色及 Android 12+ 系统动态配色，保留同一套通知与清单功能。内置页面支持离线查看本地记录，新增 AI 整理需要联网。支持系统分享文字、选择和保存附件及备份、打开系统日历确认添加。通知保存在应用本地，与浏览器各自独立，可通过备份迁移。
+
+Android 8.0 及以上可安装，安装包约12.4 MB。已完成签名构建及基础检查，尚未进行真实手机安装与系统应用联动测试。后续覆盖升级要保留签名并提高版本号；签名私钥仅放在本机私密配置和 GitHub 加密 Secrets 中。构建与桥接口说明见 [Android README](mobile/android/README.md)。
+
+![Android Material You 界面](docs/android-preview.png)
 
 ## 架构
 
@@ -66,7 +76,8 @@ API Key 留在服务器环境文件中，网页不需要访问码。相同文字
 | `worker/prompt.mjs` | AI 系统提示词 |
 | `docs/AI-CONTRACT.md` | 结构化输出约定 |
 | `docs/analysis.schema.json` | 输出结构定义 |
-| `.github/workflows/` | 网页和后端自动部署 |
+| `mobile/` | Android 容器、Material You 主题与离线打包 |
+| `.github/workflows/` | 网页和后端自动部署、签名 APK 构建 |
 | `tests/` | 鉴权、费用限额、缓存和输出校验测试 |
 
 示例入口：[载入示例通知](https://kemou2333.github.io/campus-inbox/?examples=1)。只追加已有结果，保留个人记录与输入草稿；旧?demo=1链接同样兼容，载入后移除参数以免刷新重复操作。
