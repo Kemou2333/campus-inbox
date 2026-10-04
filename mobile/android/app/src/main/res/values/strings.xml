@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">校园 Inbox</string>
+    <string name="exit_hint">再按一次返回退出</string>
+    <string name="no_browser">手机上暂时没有可打开此链接的应用</string>
+    <string name="no_picker">手机上暂时没有可选择文件的应用</string>
+    <string name="blob_download_hint">请使用页面内的保存按钮</string>
+</resources>

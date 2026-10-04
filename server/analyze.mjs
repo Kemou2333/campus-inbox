@@ -1,6 +1,8 @@
+import '../dist/time.js';
 import '../dist/data.js';
 import {SYSTEM_PROMPT} from '../worker/prompt.mjs';
 const D=globalThis.CampusData;
+const T=globalThis.CampusTime;
 // A cohort year or school year is not evidence for a calendar deadline.
 // Keep the model's wording, but require a complete source timestamp for ISO dates.
 function groundedTime(value,raw,notice){
@@ -21,8 +23,9 @@ export function groundDates(result,notice){
   if(!result||!Array.isArray(result.notices))return result;
   return {...result,notices:result.notices.map(n=>({...n,
     deadline:groundedTime(n.deadline,n.deadlineText,notice),
-    tasks:Array.isArray(n.tasks)?n.tasks.map(t=>({...t,time:groundedTime(t.time,t.timeText,notice)})):n.tasks,
-    timeline:Array.isArray(n.timeline)?n.timeline.map(t=>({...t,time:groundedTime(t.time,t.timeText,notice)})):n.timeline
+    ...(Object.hasOwn(n,'deadlineSpec')?{deadlineSpec:T.ground(n.deadlineSpec,n.deadlineText,notice)}:{}),
+    tasks:Array.isArray(n.tasks)?n.tasks.map(t=>({...t,time:groundedTime(t.time,t.timeText,notice),...(Object.hasOwn(t,'timeSpec')?{timeSpec:T.ground(t.timeSpec,t.timeText,notice)}:{})})):n.tasks,
+    timeline:Array.isArray(n.timeline)?n.timeline.map(t=>({...t,time:groundedTime(t.time,t.timeText,notice),...(Object.hasOwn(t,'timeSpec')?{timeSpec:T.ground(t.timeSpec,t.timeText,notice)}:{})})):n.timeline
   }))};
 }
 const FINISH_REASONS=new Set(['stop','length','content_filter','insufficient_system_resource','aborted','tool_calls','function_call','unknown']);

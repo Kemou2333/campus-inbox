@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """Install only this application's source; called by a restricted deploy key."""
 import io,os,pathlib,subprocess,sys,tarfile,time,urllib.request,uuid
-allowed={'server/index.mjs','server/analyze.mjs','server/service.mjs','worker/prompt.mjs','dist/data.js'}
+allowed={'server/index.mjs','server/analyze.mjs','server/service.mjs','worker/prompt.mjs','dist/data.js','dist/time.js'}
 archive=sys.stdin.buffer.read(2*1024*1024+1)
 if len(archive)>2*1024*1024:raise SystemExit('Release archive is too large')
 files={}
