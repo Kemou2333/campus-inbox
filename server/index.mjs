@@ -2,7 +2,7 @@ import http from 'node:http';
 import {Readable} from 'node:stream';
 import {createService} from './service.mjs';
 const env=process.env;
-const handle=await createService({apiKey:env.DEEPSEEK_API_KEY,accessToken:env.CAMPUS_ACCESS_TOKEN,model:env.AI_MODEL||'deepseek-flash',allowedOrigins:(env.ALLOWED_ORIGINS||'').split(',').map(x=>x.trim()).filter(Boolean),dailyLimit:Number(env.DAILY_REQUEST_LIMIT)||30,stateFile:env.USAGE_STATE_FILE||'/var/lib/campus-inbox/usage.json'});
+const handle=await createService({apiKey:env.DEEPSEEK_API_KEY,accessToken:env.CAMPUS_ACCESS_TOKEN,requireAccess:false,ipDailyLimit:Number(env.IP_DAILY_REQUEST_LIMIT)||10,model:env.AI_MODEL||'deepseek-flash',allowedOrigins:(env.ALLOWED_ORIGINS||'').split(',').map(x=>x.trim()).filter(Boolean),dailyLimit:Number(env.DAILY_REQUEST_LIMIT)||30,stateFile:env.USAGE_STATE_FILE||'/var/lib/campus-inbox/usage.json'});
 const server=http.createServer(async(req,res)=>{
   try{
     const headers=new Headers();for(const [k,v] of Object.entries(req.headers))if(v)headers.set(k,Array.isArray(v)?v.join(','):v);
