@@ -654,3 +654,9 @@ body[data-mode="demo"] #notices:empty::after{content:"";}
 body[data-mode="demo"] .pending-result-banner{display:none;}
 
 .editor-draft-open{display:flex;margin:0 0 14px auto;max-width:100%;}
+
+.information-arrangements{margin:20px 0 0;padding:16px 18px;border:1px solid #ffffffbd;border-radius:18px;background:linear-gradient(135deg,#e9f1f1ad,#f0eef5a1);box-shadow:inset 3px 3px 8px #94a8b126,inset -3px -3px 7px #fff8;}
+.information-arrangements h4{margin:0 0 12px;color:#52727a;font-size:.94rem;font-weight:650;}
+.information-arrangements ul{list-style:none;display:grid;gap:12px;margin:0;padding:0;}
+.information-arrangements li{margin:0;padding-left:13px;border-left:2px solid #9bb9c081;color:#5d6b80;font-size:.96rem;line-height:1.85;overflow-wrap:anywhere;}
+@media(max-width:390px){.information-arrangements{padding:14px;}.information-arrangements li{font-size:.94rem;}}
