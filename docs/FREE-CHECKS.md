@@ -44,3 +44,5 @@ GitHub Actions 在发布后端前运行全部单元测试。
 配色与材质参考 [Apple Materials](https://developer.apple.com/design/human-interface-guidelines/materials) 和 [Soft AI Dashboard · Pastel UI](https://dribbble.com/shots/27274551-Soft-AI-Dashboard-Neumorphism-Pastel-UI)。采用自编 CSS 的半透明表面、成对明暗阴影和静态细纹理，不下载或复制参考作品素材。
 
 2026-10-04 新输入轨道12组、状态滑块桌面/手机3组与主界面9组免费检查通过：拖动时线性跟手、textarea固定、模块删除收缩、撤销、来源附件、触屏竖向滚动、紧急跨分类/搜索跳转及日历导出。
+
+浏览器高频验证握手已用模拟上游检查：第三次提交返回428，自动计算后第二个HTTP请求返回200，正文不变，本次仅一次模拟模型调用；真实AI调用为0。
