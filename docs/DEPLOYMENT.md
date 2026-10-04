@@ -4,7 +4,7 @@
 
 仓库 `Kemou2333/campus-inbox` 的 Pages 使用 GitHub Actions 发布 `dist/`。正式地址为 `https://kemou2333.github.io/campus-inbox/`，不覆盖账号原有博客。
 
-`dist/config.js` 只保存接口地址与访问码开关，不含任何密钥。`API_ENDPOINT` 为空时整理按钮停用；当前配置为已通过信任链验证的 HTTPS 接口，并启用 `REQUIRE_ACCESS: true`。没有演示模式或示例载入入口。
+`dist/config.js` 只保存接口地址与访问码开关，不含任何密钥。`API_ENDPOINT` 为空时整理按钮停用；当前配置为已通过信任链验证的 HTTPS 接口，并启用 `REQUIRE_ACCESS: true`。公开网页保留示例入口；?demo=1 可直接进入隔离的本地演示，示例不自动调用模型。正式整理仍需访问码。
 
 ## 后端
 
@@ -31,9 +31,9 @@
 
 ## HTTPS 与续期
 
-使用 Let's Encrypt 的短期 IP 证书，不需要另购域名。服务器已安装隔离的 Certbot；申请证书需要账号所有者本人接受服务协议。
+使用 Let's Encrypt 的短期 IP 证书，不需要另购域名。服务器已安装隔离的 Certbot；首次申请需要账号所有者确认阅读并同意服务协议；本项目已获得用户的明确同意并完成申请。
 
-首次申请命令（在用户自己的终端执行，交互式确认协议）：
+首次申请示意命令（首次接受协议需先确认；当前证书已签发，不必重复注册）：
 
 ```sh
 ssh -t root@123.57.30.129 '/opt/campus-certbot/bin/certbot certonly --webroot -w /var/www/campus-acme --ip-address 123.57.30.129 --preferred-profile shortlived --cert-name 123.57.30.129 --register-unsafely-without-email'
@@ -55,4 +55,4 @@ journalctl -u campus-inbox --since today
 
 ## 当前进度
 
-截至 2026-10-02，Node.js 后端和 HTTPS 已启用。信任链校验正常，健康接口返回 200，未经授权的整理请求返回 401 且不调用模型；续期定时器已启用。用户只需打开 github.io 网页，不必在地址栏输入服务器 IP。
+截至 2026-10-04，Node.js 后端和 HTTPS 已启用。信任链校验正常，健康接口返回 200，未经授权的整理请求返回 401 且不调用模型；续期定时器已启用。用户只需打开 github.io 网页，不必在地址栏输入服务器 IP。

@@ -124,7 +124,7 @@ test('AI may group necessary same-person actions into steps without accepting lo
  const result=D.analysis({...analysis,tasks:[parent,student]},true);
  assert.equal(result.tasks[0].scope,'role');assert.equal(result.tasks[1].steps.length,3);assert.equal(result.tasks[1].condition,student.condition);
  assert.deepEqual(result.tasks[1].steps[0],student.steps[0]);
- for(const key of ['assignee','condition','scope','completed','note','steps'])assert.throws(()=>D.task({...student,steps:[{...student.steps[0],[key]:'extra'}]},true));
+ for(const key of ['id','assignee','condition','scope','completed','note','steps'])assert.throws(()=>D.task({...student,steps:[{...student.steps[0],[key]:'extra'}]},true));
  assert.throws(()=>D.task({...student,steps:[{text:'未提供细节字段'}]},true));
  assert.throws(()=>D.task({...student,steps:['字符串步骤']},true));
 });
@@ -141,7 +141,7 @@ test('steps validate practical limits and optional v4 compatibility',()=>{
 test('step completion and private notes survive save/export/import without rewriting AI content',()=>{
  const a={...analysis,tasks:[{...analysis.tasks[0],steps:[{text:'提交截图',details:['提交给发布者']},{text:'填写办事簿',details:[]}]}]};
  const local=D.create(a,'通知原文');
- assert.deepEqual(local.tasks[0].steps[0],{...a.tasks[0].steps[0],completed:false,note:''});
+ const {id:firstStepID,...firstStepContent}=local.tasks[0].steps[0];assert.ok(firstStepID);assert.deepEqual(firstStepContent,{...a.tasks[0].steps[0],completed:false,note:''});
  local.tasks[0].note='学生流程笔记';local.tasks[0].steps[0].completed=true;local.tasks[0].steps[0].note='家长刚发了短信，截图已提交';local.tasks[0].steps[1].note='晚饭后填写';
  const before=structuredClone(local);
  const [restored]=D.backup(D.exportBackup([local]));
@@ -155,7 +155,7 @@ test('legacy backups gain empty steps and partially stored steps gain default lo
  const local=D.create(analysis,'通知原文');delete local.tasks[0].steps;
  for(const version of [1,2,3,4])assert.deepEqual(D.backup({app:'campus-inbox',version,notices:[local]})[0].tasks[0].steps,[]);
  local.tasks[0].steps=[{text:'用户补充的步骤',details:[]}];
- assert.deepEqual(D.notice(local).tasks[0].steps,[{text:'用户补充的步骤',details:[],completed:false,note:''}]);
+ const upgraded=D.notice(local).tasks[0].steps;assert.ok(upgraded[0].id);assert.deepEqual(upgraded.map(({id,...s})=>s),[{text:'用户补充的步骤',details:[],completed:false,note:''}]);
  const ready={...local,tasks:[{...local.tasks[0],completed:true,steps:[{text:'仍未勾选的旧步骤',details:[],completed:false,note:'保留用户记录'}]}]};
  assert.equal(D.notice(ready).tasks[0].completed,true);assert.equal(D.notice(ready).tasks[0].steps[0].completed,false);
 });
