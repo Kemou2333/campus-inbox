@@ -28,9 +28,9 @@ export async function createService(config,options={}){
     }
     entries.push(t);rates.set(ip,entries);for(const [k,v] of rates)if(!v.some(x=>t-x<RATE_WINDOW_MS))rates.delete(k);
     let notice;
-    try{const body=JSON.parse(await boundedText(request.body,64000));if(!body||typeof body.notice!=='string'||!body.notice.trim()||body.notice.length>D.MAX_TEXT||Object.keys(body).some(k=>k!=='notice'))throw new Error();notice=body.notice.trim();modelInput(notice);}
+    try{const body=JSON.parse(await boundedText(request.body,64000));if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).length!==1)throw new Error();if(Object.hasOwn(body,'notice')){if(typeof body.notice!=='string'||!body.notice.trim()||body.notice.length>D.MAX_TEXT)throw new Error();notice=body.notice.trim();}else if(Object.hasOwn(body,'sources'))notice=body;else throw new Error();modelInput(notice);}
     catch(e){return reply({error:e instanceof ServiceError?e.message:'请提供 1–4,000 字的通知文字。'},e.status||400);}
-    const hash=createHash('sha256').update(notice).digest('hex');
+    const hash=createHash('sha256').update(JSON.stringify(modelInput(notice))).digest('hex');
     for(const [k,v] of cache)if(t-v.created>15*60000)cache.delete(k);
     const saved=cache.get(hash);if(saved)return reply(saved.result);
     if(busy)return reply({error:'正在整理另一条通知，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
