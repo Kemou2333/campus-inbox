@@ -118,3 +118,31 @@ test('undated timeline nodes pass one model call while types, fields and existin
  const timeText=schema.properties.notices.items.properties.timeline.items.properties.timeText;
  assert.equal(timeText.type,'string');assert.equal(timeText.maxLength,500);assert.ok(!Object.hasOwn(timeText,'minLength'));
 });
+
+test('explicit source boundaries preserve original order, use one call and ground dates per source',async()=>{
+ const first='  请假通知\r\n学生在2026年10月7日17:00前上传截图。  ',second='  返校通知\r\n请按申报时间返校。  ';
+ const input=first+'\r\n \t--- \t\r\n'+second,date='2026-10-07T17:00:00',timeText='2026年10月7日17:00';
+ const dated={...notice,deadline:date,deadlineText:timeText,tasks:[{...notice.tasks[0],time:date,timeText}],timeline:[{label:'审核',time:date,timeText,location:null}]};
+ const batchResult={schemaVersion:4,notices:[dated,{...dated,title:'返校'}]};let calls=0;
+ const output=await analyze(input,{apiKey:'test'},async(_url,options)=>{
+  calls++;const payload=JSON.parse(options.body),user=JSON.parse(payload.messages[1].content);
+  assert.deepEqual(user,{sources:[{sourceId:1,text:first.trim()},{sourceId:2,text:second.trim()}]});
+  assert.ok(!Object.hasOwn(user,'notice'));
+  return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(batchResult)}}],usage:{prompt_tokens:9,completion_tokens:12}});
+ });
+ assert.equal(calls,1);assert.equal(output.result.notices[0].deadline,date);assert.equal(output.result.notices[0].tasks[0].time,date);assert.equal(output.result.notices[0].timeline[0].time,date);
+ assert.equal(output.result.notices[1].deadline,null);assert.equal(output.result.notices[1].tasks[0].time,null);assert.equal(output.result.notices[1].timeline[0].time,null);
+ let badCalls=0;
+ await assert.rejects(analyze(input,{apiKey:'test'},async()=>{badCalls++;return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(result)}}],usage:{prompt_tokens:9,completion_tokens:12,completion_tokens_details:{reasoning_tokens:3}}});}),error=>{
+  assert.ok(error instanceof ServiceError);assert.equal(error.failureCode,'SOURCE_COUNT');assert.equal(error.finishReason,'stop');assert.deepEqual(error.usage,{input:9,output:12,reasoning:3});return true;
+ });
+ assert.equal(badCalls,1);
+ let oversizedCalls=0;
+ await assert.rejects(analyze(Array.from({length:21},(_,i)=>'通知'+i).join('\n---\n'),{apiKey:'test'},async()=>{oversizedCalls++;return mock();}),error=>error instanceof ServiceError&&error.status===400);
+ assert.equal(oversizedCalls,0);
+ for(const original of ['未分段的一条通知。','说明中 inline --- 不是分隔线。','只有一段\n---\n']){
+  let singleCalls=0;
+  await analyze(original,{apiKey:'test'},async(_url,options)=>{singleCalls++;assert.deepEqual(JSON.parse(JSON.parse(options.body).messages[1].content),{notice:original});return mock();});
+  assert.equal(singleCalls,1);
+ }
+});

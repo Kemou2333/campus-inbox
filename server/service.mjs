@@ -1,6 +1,6 @@
 import {createHash,timingSafeEqual} from 'node:crypto';
 import {readFile,writeFile,rename} from 'node:fs/promises';
-import {analyze,boundedText,ServiceError} from './analyze.mjs';
+import {analyze,boundedText,ServiceError,modelInput} from './analyze.mjs';
 const D=globalThis.CampusData;
 const RATE_WINDOW_MS=180000,RATE_LIMIT=5;
 export async function createService(config,options={}){
@@ -28,7 +28,7 @@ export async function createService(config,options={}){
     }
     entries.push(t);rates.set(ip,entries);for(const [k,v] of rates)if(!v.some(x=>t-x<RATE_WINDOW_MS))rates.delete(k);
     let notice;
-    try{const body=JSON.parse(await boundedText(request.body,64000));if(!body||typeof body.notice!=='string'||!body.notice.trim()||body.notice.length>D.MAX_TEXT||Object.keys(body).some(k=>k!=='notice'))throw new Error();notice=body.notice.trim();}
+    try{const body=JSON.parse(await boundedText(request.body,64000));if(!body||typeof body.notice!=='string'||!body.notice.trim()||body.notice.length>D.MAX_TEXT||Object.keys(body).some(k=>k!=='notice'))throw new Error();notice=body.notice.trim();modelInput(notice);}
     catch(e){return reply({error:e instanceof ServiceError?e.message:'请提供 1–4,000 字的通知文字。'},e.status||400);}
     const hash=createHash('sha256').update(notice).digest('hex');
     for(const [k,v] of cache)if(t-v.created>15*60000)cache.delete(k);
