@@ -50,7 +50,7 @@ async function attachmentRow(id,noticeID,parent){
  }catch(e){if(parent.isConnected)parent.append(element('p','attachment-error',e.message));}
 }
 function taskAudience(n,task){
- const scope=n.audienceOverride==='all'?'all':task.scope;
+ const scope=n.audienceOverride==='all'&&task.scope!=='role'?'all':task.scope;
  const label=scope==='all'?'全体同学':scope==='role'?[task.assignee,task.condition].filter(Boolean).join(' · '):(task.condition||task.assignee||'适用对象未说明');
  return {scope,label};
 }
@@ -135,7 +135,7 @@ document.querySelector('.note-save').addEventListener('click',()=>{
 $('note-delete-step').addEventListener('click',async()=>{
  const n=list.find(v=>v.id===noteID),target=noteTarget;if(!n||target?.type!=='step')return;
  const before=structuredClone(n),card=$('notices').querySelector(`[data-id="${CSS.escape(n.id)}"]`);
- if(!changeNotice(n.id,v=>({...v,tasks:v.tasks.map((t,i)=>{if(i!==target.index)return t;const steps=t.steps.filter((_,j)=>j!==target.stepIndex);return {...t,steps,completed:steps.length?steps.every(s=>s.completed):false};})}),false))return;
+ if(!changeNotice(n.id,v=>({...v,tasks:v.tasks.map((t,i)=>{if(i!==target.index)return t;const steps=t.steps.filter((_,j)=>j!==target.stepIndex);return {...t,steps,completed:steps.length?steps.every(s=>s.completed):t.completed};})}),false))return;
  closeNote();const updated=list.find(v=>v.id===n.id);if(!updated.completed&&updated.tasks.every(t=>t.completed||t.dismissed)){await completeNotice(n.id,card,before,'button');}else render();
  setUndo('步骤已删除',()=>changeNotice(n.id,v=>({...v,completed:before.completed,tasks:v.tasks.map((t,i)=>i===target.index?{...t,completed:before.tasks[i].completed,steps:[...t.steps.slice(0,target.stepIndex),before.tasks[i].steps[target.stepIndex],...t.steps.slice(target.stepIndex)]}:t)})));
 });
@@ -195,7 +195,7 @@ function render(animate=false){
       else if(!updated.completed&&updated.tasks.every(t=>t.completed||t.dismissed))completeNotice(n.id,card,before,'checkbox');
      }else check.checked=!checked;
     };
-    let skip=null;if(audience.scope!=='all'){skip=element('button','task-skip',task.dismissed?'恢复':'不适用');skip.dataset.taskAction='skip';skip.setAttribute('aria-label',`${task.dismissed?'恢复':'不适用'} ${task.text}`);skip.addEventListener('click',()=>{const current=list.find(v=>v.id===n.id)?.tasks[i];if(current)updateProgress(false,!current.dismissed);});}
+    let skip=null;if(audience.scope!=='all'){skip=element('button','task-skip',task.dismissed?'恢复':'不适用');skip.dataset.taskAction='skip';skip.setAttribute('aria-label',`${task.dismissed?'恢复':'不适用'} ${task.text}`);skip.addEventListener('click',()=>{const current=list.find(v=>v.id===n.id)?.tasks[i];if(current)updateProgress(current.dismissed&&current.steps.length?current.steps.every(s=>s.completed):false,!current.dismissed,current.steps);});}
     check.addEventListener('change',()=>updateProgress(check.checked,false));const taskActions=element('div','task-actions');taskActions.append(itemNoteButton(n,'task',i,task.note));if(skip)taskActions.append(skip);row.append(check,body,taskActions);
     if(task.steps.length){
      row.classList.add('has-steps');const sub=element('div','task-steps');

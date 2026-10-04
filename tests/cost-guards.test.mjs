@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp, writeFile, rm} from 'node:fs/promises';
+import {mkdtemp, readFile, writeFile, rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createService} from '../server/service.mjs';
@@ -71,6 +71,27 @@ test('failed upstream is not retried or cached and still consumes the daily cap'
   assert.equal(calls,2);
 });
 
+test('paid resource failure and subsequent success are each metered once across restart',async()=>{
+  const directory=await mkdtemp(join(tmpdir(),'campus-metering-test-'));
+  try{
+    const stateFile=join(directory,'usage.json');let calls=0;
+    const modelFetch=async()=>{
+      calls++;
+      if(calls===1)return Response.json({choices:[{finish_reason:'insufficient_system_resource',message:{content:null}}],usage:{prompt_tokens:11,completion_tokens:13,completion_tokens_details:{reasoning_tokens:12}}});
+      return response();
+    };
+    const savedConfig={...config,stateFile,dailyLimit:2};
+    const first=await createService(savedConfig,{modelFetch});
+    const failure=await first(request('同一条通知'),'a');assert.equal(failure.status,503);assert.match((await failure.json()).error,/暂时繁忙/);assert.equal(calls,1);
+    const restarted=await createService(savedConfig,{modelFetch});
+    assert.equal((await restarted(request('同一条通知'),'b')).status,200);assert.equal(calls,2);
+    assert.equal((await restarted(request('同一条通知'),'b')).status,200);assert.equal(calls,2);
+    const state=JSON.parse(await readFile(stateFile,'utf8'));
+    assert.equal(state.requests,2);assert.equal(state.input,13);assert.equal(state.output,16);assert.equal(state.reasoning,12);assert.equal(state.lastFinishReason,'stop');
+    assert.equal((await restarted(request('新通知'),'c')).status,429);assert.equal(calls,2);
+  }finally{await rm(directory,{recursive:true,force:true});}
+});
+
 test('cache expires once, while Shanghai midnight resets the daily allowance',async()=>{
   let time=Date.UTC(2026,9,2,15,59),calls=0;
   const handler=await createService({...config,dailyLimit:1},{now:()=>time,modelFetch:async()=>{calls++;return response();}});
@@ -87,8 +108,11 @@ test('cache expires once, while Shanghai midnight resets the daily allowance',as
 test('unreadable or corrupt saved quota fails closed',async()=>{
   const directory=await mkdtemp(join(tmpdir(),'campus-quota-test-'));
   try{
-    const stateFile=join(directory,'usage.json');await writeFile(stateFile,'{"day":"today","requests":-1}');
-    await assert.rejects(createService({...config,stateFile},{modelFetch:async()=>{throw new Error('must not call upstream');}}),/Invalid quota state/);
+    const stateFile=join(directory,'usage.json');
+    for(const state of [{day:'today',requests:-1},{day:'today',requests:1,input:-1},{day:'today',requests:1,output:'13'}]){
+      await writeFile(stateFile,JSON.stringify(state));
+      await assert.rejects(createService({...config,stateFile},{modelFetch:async()=>{throw new Error('must not call upstream');}}),/Invalid quota state/);
+    }
   }finally{await rm(directory,{recursive:true,force:true});}
 });
 

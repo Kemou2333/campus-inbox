@@ -1,6 +1,6 @@
 # AI 输出与附件约定 v4
 
-网页只把 `{notice:"原文"}` 发送给后端，后端使用 DeepSeek Flash、关闭思考模式与 JSON 输出模式。一次粘贴多个主题，只调用一次模型，由模型拆成独立通知；不会逐条另发请求。后端严格校验结构；截断和无效输出不会保存，也不会自动重试付费调用。
+网页只把 `{notice:"原文"}` 发送给后端，后端使用 DeepSeek Flash、low轻量思考与 JSON 输出模式（生成上限8,192 token，包含思考与最终输出）。一次粘贴多个主题，只调用一次模型，由模型拆成独立通知；不会逐条另发请求。后端严格校验结构；截断和无效输出不会保存，也不会自动重试付费调用。
 
 ## 展示与字段
 
@@ -28,7 +28,7 @@
 
 模型不生成 id、createdAt、completed、dismissed、note、localDeadline、reminderNotes、audienceOverride、originalText 或 attachments，子步骤也不能生成这些本地字段。通知、事项与每个步骤均可独立保存note（最多4,000字）；提醒笔记保存在reminderNotes。tasks[].dismissed为不适用状态，默认false；tasks[].steps[].completed默认为false，steps[].note默认为空字符串。新建AI结果只赋予本地状态，不篡改任务内容。备份导入逐项保留子步骤的勾选和笔记，旧备份无steps时补[]；父事项和子步骤的完成联动由网页操作控制，不在数据校验时覆盖原有状态。用户手动添加的步骤保存在本地，不再次调用AI。
 
-localDeadline为个人设置的通知或事项时间，原文未写完整时间时可由用户补充；不会改写AI的deadline/time字段，也不进入AI请求。audienceOverride为空字符串表示按原文、all表示按用户提供的上下文作为全体必做；不会修改AI原有assignee/scope/condition。以上字段只在本地记录与备份中保存，沿用备份version:4，旧记录缺省时补空值。多主题结果保留整段来源原文，附件归属于这次输入，可分别移除。附件不进入模型请求，也不上传后端，存放在浏览器 IndexedDB。
+localDeadline为个人设置的通知或事项时间，原文未写完整时间时可由用户补充；不会改写AI的deadline/time字段，也不进入AI请求。audienceOverride为空字符串表示按原文、all表示按用户提供的上下文将非role事项作为全体必做，明确的其他角色仍保留；不会修改AI原有assignee/scope/condition。以上字段只在本地记录与备份中保存，沿用备份version:4，旧记录缺省时补空值。多主题结果保留整段来源原文；带附件时逐份选择所属通知，不会自动挂到所有卡片，可分别预览或移除。附件不进入模型请求，也不上传后端，存放在浏览器 IndexedDB。
 
 每条通知最多 10 个附件，单个最多 5 MB、合计最多 20 MB。PNG/JPEG/WebP/GIF校验格式后可预览，PDF使用浏览器原生查看器，文本、SVG、HTML以纯文本预览；其它文件可下载。附件内容不识别、不总结，也不执行脚本。
 
