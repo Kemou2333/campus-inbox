@@ -1,6 +1,8 @@
 # AI 输出与附件约定 v4
 
-网页只把 `{notice:"原文"}` 发送给后端，后端使用 DeepSeek Flash、直接整理（thinking.disabled、reasoning_effort.none）、JSON模式与严格校验（生成上限8,192 token，当前只生成最终输出）。一次粘贴多个主题只调用一次模型。独立整行`---`明确分隔时，后端给模型一次发送sources数组（编号、原文），要求一来源一通知并核对数量、顺序，时间逐来源校验；无明确分隔时按主题识别。超过20段在调用前拒绝，不消耗每日模型额度；不会逐条另发请求，也不会人工合并或改写模型内容。后端严格校验结构；截断和无效输出不会保存，也不会自动重试付费调用。
+网页每次只发送通知文字：无论单条还是多条，输入模块都用 `{sources:[{text:"第一条"},{text:"第二条"}]}` 明确来源。`{notice:"原文"}` 仅保留给旧接口兼容。不发送输入框编号、文件名、附件或笔记。后端使用 DeepSeek Flash、直接整理（thinking.disabled、reasoning_effort.none）、JSON模式与严格校验，生成上限8,192 token；整批共用一次提示词和一次模型调用。
+
+多模块边界由数组明确，一模块对应一卡、顺序不变，原文中的独立`---`不会被再拆。旧notice文字中的整行`---`仍作为显式边界；无明确边界时按主题识别。来源最多20条，原始文字合计最多4,000字，超限、空来源或多余字段均在付费前拒绝。严格校验数量、结构与逐来源日历日期；截断或无效输出不会保存，也不会自动重试。输入格式见 [request.schema.json](request.schema.json)。
 
 ## 展示与字段
 
@@ -26,11 +28,11 @@
 
 ## 本地记录与附件
 
-模型不生成 id、createdAt、completed、dismissed、note、localDeadline、reminderNotes、audienceOverride、originalText 或 attachments，子步骤也不能生成这些本地字段。通知、事项与每个步骤均可独立保存note（最多4,000字）；提醒笔记保存在reminderNotes。tasks[].dismissed为不适用状态，默认false；tasks[].steps[].completed默认为false，steps[].note默认为空字符串。新建AI结果只赋予本地状态，不篡改任务内容。备份导入逐项保留子步骤的勾选和笔记，旧备份无steps时补[]；父事项和子步骤的完成联动由网页操作控制，不在数据校验时覆盖原有状态。用户手动添加的步骤保存在本地，不再次调用AI。
+模型不生成 id、createdAt、completed、dismissed、note、localDeadline、reminderNotes、audienceOverride、originalText 或 attachments，子步骤也不能生成这些本地字段；steps[].id是本地稳定编号，模型严格输出不接受id。通知、事项与每个步骤均可独立保存note（最多4,000字）；提醒笔记保存在reminderNotes。tasks[].dismissed为不适用状态，默认false；tasks[].steps[].completed默认为false，steps[].note默认为空字符串。新建AI结果只赋予本地状态，不篡改任务内容。备份导入逐项保留子步骤的勾选和笔记，旧备份无steps时补[]，无步骤id时确定性迁移；新生成的AI步骤和用户新建步骤取得稳定编号，改名、勾选、删除前序或备份恢复不改变已有编号；父事项和子步骤的完成联动由网页操作控制，不在数据校验时覆盖原有状态。用户手动添加的步骤保存在本地，不再次调用AI。
 
-localDeadline为个人设置的通知或事项时间，原文未写完整时间时可由用户补充；不会改写AI的deadline/time字段，也不进入AI请求。audienceOverride为空字符串表示按原文、all表示按用户提供的上下文将非role事项作为全体必做，明确的其他角色仍保留；不会修改AI原有assignee/scope/condition。以上字段只在本地记录与备份中保存，沿用备份version:4，旧记录缺省时补空值。多主题输入用独立整行---明确分隔时，各卡按相同来源顺序保留自己的原文；未明确分隔时各卡保留整段来源，旧记录不改写。前端对相同原文及已有明确分隔批次的片段提示重复，取消不会调用模型；不做语义去重。带附件时逐份选择所属通知，不会自动挂到所有卡片，可分别预览或移除。附件不进入模型请求，也不上传后端，存放在浏览器 IndexedDB。
+localDeadline为个人设置的通知或事项时间，原文未写完整时间时可由用户补充；不会改写AI的deadline/time字段，也不进入AI请求。audienceOverride为空字符串表示按原文、all表示按用户提供的上下文将非role事项作为全体必做，明确的其他角色仍保留；不会修改AI原有assignee/scope/condition。以上字段只在本地记录与备份中保存，沿用备份version:4，旧记录缺省时补空值。多模块输入与旧文字整行---明确分隔时，各卡按相同来源顺序保留自己的原文；未明确分隔时各卡保留整段来源，旧记录不改写。前端对相同原文及已有明确分隔批次的片段提示重复，取消不会调用模型；不做语义去重。新网页在各输入模块中添加附件，整理后直接保存到对应通知；旧接口的无分隔多主题输入才需要逐份选择所属通知。附件不会挂到所有卡片，可分别预览或移除。附件不进入模型请求，也不上传后端，存放在浏览器 IndexedDB。
 
-每条通知最多 10 个附件，单个最多 5 MB、合计最多 20 MB。PNG/JPEG/WebP/GIF校验格式后可预览，PDF使用浏览器原生查看器，文本、SVG、HTML以纯文本预览；其它文件可下载。附件内容不识别、不总结，也不执行脚本。
+每条通知最多 10 个附件，单个最多 5 MB、合计最多 20 MB；一次整理整批附件合计也不超过20 MB。PNG/JPEG/WebP/GIF校验格式后可预览，PDF使用浏览器原生查看器，文本、SVG、HTML以纯文本预览；其它文件可下载。附件内容不识别、不总结，也不执行脚本。
 
 JSON 备份 version:4 包含通知及 base64 附件，导入兼容旧版 1/2/3。先验证整份备份并保存附件，再替换通知列表；保存失败清理新附件并保留旧记录。复制代码、换域名和浏览器不会同步个人记录，迁移前应导出完整备份。
 
@@ -54,6 +56,7 @@ JSON 备份 version:4 包含通知及 base64 附件，导入兼容旧版 1/2/3�
 输出前简短核对：有sources时逐张检查来源一致、张数与顺序一致；task须有tasks且reminders=[]；reminder/information须tasks=[]、warnings=[]，关键信息放reminders；独立动作、适用条件和例外未遗漏。字段必须齐全，不得有额外字段或本地id/completed/dismissed/note/audienceOverride/createdAt/originalText/attachments。title/summary/text/label必须是非空字符串。缺少assignee/location/time/deadline时只用null；condition/timeText/deadlineText无值只用""；无数组内容用[]，不省略字段。details/materials/warnings/reminders只含非空字符串，按角色归属也在字符串中注明；tasks/steps/timeline才是对象数组。限长：title40、summary140、任务text60、assignee80、condition120、deadlineText/timeText/location500、节点label200；steps最多10项、text60、details每项500最多5项；details/reminders每项500、各最多20项；materials/warnings每项2000。tasks/timeline/materials/warnings各最多100项。所有日期为ISO字符串或null；schemaVersion根及通知均为4。最终回答只输出JSON，不加Markdown代码框或额外说明。
 结构示例（仅示意角色、互斥条件和步骤的层级，不是本次原文，不可复制其中的事实；实际字段内容以各source原文为准）：
 {"schemaVersion":4,"notices":[{"schemaVersion":4,"kind":"task","title":"报名办理","summary":"按对应条件办理。","deadline":null,"deadlineText":"","tasks":[{"text":"签署报名确认书","assignee":"家长","scope":"role","condition":"学生需要报名时","details":[],"steps":[],"time":null,"timeText":"","location":null},{"text":"办理学生报名","assignee":null,"scope":"conditional","condition":"需要报名的学生","details":[],"steps":[{"text":"上传签字页","details":[]},{"text":"填写登记表","details":[]},{"text":"提交线上报名","details":[]}],"time":null,"timeText":"","location":null}],"timeline":[],"materials":[],"warnings":[],"reminders":[]},{"schemaVersion":4,"kind":"task","title":"到场安排","summary":"按对应条件办理。","deadline":null,"deadlineText":"","tasks":[{"text":"更正登记日期","assignee":null,"scope":"conditional","condition":"登记日期填错的同学","details":[],"steps":[],"time":null,"timeText":"","location":null},{"text":"按安排到场","assignee":null,"scope":"conditional","condition":"可以按安排到场的同学","details":[],"steps":[],"time":null,"timeText":"","location":null},{"text":"办理改期","assignee":null,"scope":"conditional","condition":"无法按安排到场的同学","details":[],"steps":[],"time":null,"timeText":"","location":null}],"timeline":[],"materials":[],"warnings":[],"reminders":[]}]}
+例外字段示意：原文若为“需办理登记的同学提交资料，交流生暂缓、等另行通知”，正常行动condition写“需办理登记的同学（不含暂缓办理的交流生）”，summary写“目前需办理登记的同学提交资料，交流生等另行通知”；不能写成“同学（交流生另行通知）”后仍要求全部办理。此例只示意排除关系，不能将登记或交流生复制到实际结果。
 最后核对适用对象：原文有暂缓、无需或等待另行通知的例外时，正常办理任务的condition直接排除这些人群，不只在括号、details或warnings里说明；summary也不能把例外人群写成现在必须办理。原文是“按要求做A，否则做B”时，A的condition明确包含能按要求完成者，B明确包含不能按要求完成者，避免两个互斥行动的受众重叠。只消除原文明示的例外与互斥关系，不自创资格限制。
 最后检查两个常见结构错误：同一行动只出现一次；role任务已包含的行动不得出现在其他人的steps。task的reminders固定[]，若有原文补充提醒则放warnings，不另拆来源。
 timeline每项固定为{"label":"节点","time":null,"timeText":"原文时间","location":null}。

@@ -70,19 +70,33 @@ function batch(x,strict=false){
 }
 function attachmentIDs(x){if(x===undefined)return [];if(!Array.isArray(x)||x.length>10)throw new Error('每条通知最多10个附件');const ids=x.map(v=>text(v,'附件编号',100));if(new Set(ids).size!==ids.length)throw new Error('附件编号重复');return ids;}
 function reminderNotes(x,count){if(x===undefined)return Array(count).fill('');if(!Array.isArray(x)||x.length>count)throw new Error('提醒笔记格式不正确');return Array.from({length:count},(_,i)=>text(x[i]===undefined?'':x[i],'提醒笔记',MAX_NOTE,true));}
+function newID(){return root.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`;}
+function localStepID(value){
+ if(typeof value!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,149}$/.test(value))throw new Error('步骤编号格式不正确');
+ return value;
+}
+function legacyStepID(noticeID,taskIndex,stepIndex,s){
+ // Synchronous identity migration, not a security hash. Including the old index
+ // distinguishes repeated wording; stored IDs survive later deletes and renames.
+ const source=JSON.stringify([noticeID,taskIndex,stepIndex,s.text,s.details]);
+ let first=0x811c9dc5,second=0x9e3779b9;
+ for(let i=0;i<source.length;i++){const code=source.charCodeAt(i);first=Math.imul(first^code,0x01000193);second=Math.imul(second^code,0x85ebca6b);}
+ return `legacy-step-v1-${taskIndex}-${stepIndex}-${(first>>>0).toString(16).padStart(8,'0')}${(second>>>0).toString(16).padStart(8,'0')}`;
+}
 function notice(x){
  if(!object(x)||!Array.isArray(x.tasks)||x.tasks.length>100||typeof x.completed!=='boolean')throw new Error('通知记录格式不正确');
- const states=x.tasks.map(t=>{if(!object(t)||typeof t.completed!=='boolean'||(t.dismissed!==undefined&&typeof t.dismissed!=='boolean'))throw new Error('任务完成状态格式不正确');const stepStates=steps(t.steps).map((s,i)=>{const v=t.steps[i];if(v.completed!==undefined&&typeof v.completed!=='boolean')throw new Error('步骤完成状态格式不正确');return {completed:v.completed===undefined?false:v.completed,note:text(v.note===undefined?'':v.note,'步骤笔记',MAX_NOTE,true)};});return {completed:t.completed,dismissed:t.dismissed===undefined?false:t.dismissed,note:text(t.note===undefined?'':t.note,'事项笔记',MAX_NOTE,true),localDeadline:date(t.localDeadline===undefined?null:t.localDeadline),steps:stepStates};});
+ const noticeID=text(x.id,'通知编号',150);
+ const states=x.tasks.map((t,taskIndex)=>{if(!object(t)||typeof t.completed!=='boolean'||(t.dismissed!==undefined&&typeof t.dismissed!=='boolean'))throw new Error('任务完成状态格式不正确');const ids=new Set(),stepStates=steps(t.steps).map((s,stepIndex)=>{const v=t.steps[stepIndex];if(v.completed!==undefined&&typeof v.completed!=='boolean')throw new Error('步骤完成状态格式不正确');const id=v.id===undefined?legacyStepID(noticeID,taskIndex,stepIndex,s):localStepID(v.id);if(ids.has(id))throw new Error('同一事项内的步骤编号重复');ids.add(id);return {id,completed:v.completed===undefined?false:v.completed,note:text(v.note===undefined?'':v.note,'步骤笔记',MAX_NOTE,true)};});return {completed:t.completed,dismissed:t.dismissed===undefined?false:t.dismissed,note:text(t.note===undefined?'':t.note,'事项笔记',MAX_NOTE,true),localDeadline:date(t.localDeadline===undefined?null:t.localDeadline),steps:stepStates};});
  const normalized=analysis(x);
  const createdAt=date(x.createdAt);if(!createdAt)throw new Error('缺少创建时间');
  const audienceOverride=x.audienceOverride===undefined?'':x.audienceOverride;
  if(!['','all'].includes(audienceOverride))throw new Error('本地适用范围设置不正确');
- return {...normalized,id:text(x.id,'通知编号',150),originalText:text(x.originalText,'通知原文',MAX_STORED_TEXT),createdAt,completed:x.completed,localDeadline:date(x.localDeadline===undefined?null:x.localDeadline),reminderNotes:reminderNotes(x.reminderNotes,normalized.reminders.length),note:text(x.note===undefined?'':x.note,'笔记',MAX_NOTE,true),audienceOverride,attachments:attachmentIDs(x.attachments),tasks:normalized.tasks.map((t,i)=>({...t,...states[i],steps:t.steps.map((s,j)=>({...s,...states[i].steps[j]}))}))};
+ return {...normalized,id:noticeID,originalText:text(x.originalText,'通知原文',MAX_STORED_TEXT),createdAt,completed:x.completed,localDeadline:date(x.localDeadline===undefined?null:x.localDeadline),reminderNotes:reminderNotes(x.reminderNotes,normalized.reminders.length),note:text(x.note===undefined?'':x.note,'笔记',MAX_NOTE,true),audienceOverride,attachments:attachmentIDs(x.attachments),tasks:normalized.tasks.map((t,i)=>({...t,...states[i],steps:t.steps.map((s,j)=>({...s,...states[i].steps[j]}))}))};
 }
 function notices(x){if(!Array.isArray(x)||x.length>MAX_NOTICES)throw new Error(`最多保存 ${MAX_NOTICES} 条通知`);const ids=new Set();return x.map(v=>{const n=notice(v);if(ids.has(n.id))throw new Error('存在重复的通知编号');ids.add(n.id);return n;});}
 function backup(x){if(!object(x)||x.app!=='campus-inbox'||![1,2,3,4].includes(x.version))throw new Error('请选择校园 Inbox 导出的 JSON 备份');return notices(x.notices);}
 function exportBackup(ns){return {app:'campus-inbox',version:4,exportedAt:new Date().toISOString(),notices:notices(ns)};}
-function create(result,originalText){const a=analysis(result);return {...a,id:root.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`,originalText:text(originalText,'通知原文',MAX_TEXT),createdAt:new Date().toISOString(),completed:false,note:'',localDeadline:null,reminderNotes:Array(a.reminders.length).fill(''),audienceOverride:'',attachments:[],tasks:a.tasks.map(t=>({...t,completed:false,dismissed:false,note:'',localDeadline:null,steps:t.steps.map(s=>({...s,completed:false,note:''}))}))};}
+function create(result,originalText){const a=analysis(result);return {...a,id:newID(),originalText:text(originalText,'通知原文',MAX_TEXT),createdAt:new Date().toISOString(),completed:false,note:'',localDeadline:null,reminderNotes:Array(a.reminders.length).fill(''),audienceOverride:'',attachments:[],tasks:a.tasks.map(t=>({...t,completed:false,dismissed:false,note:'',localDeadline:null,steps:t.steps.map(s=>({...s,id:newID(),completed:false,note:''}))}))};}
 function taskDeadline(n,t){
  if(t.localDeadline||n.localDeadline)return t.localDeadline||n.localDeadline;
  // Action times can mean an event start. Only explicit deadline wording is urgent.

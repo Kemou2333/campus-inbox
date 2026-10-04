@@ -50,7 +50,19 @@ export async function boundedText(stream,limit){
   finally{reader.releaseLock();}
 }
 export function modelInput(notice){
-  // Only explicit whole-line separators establish independent source boundaries.
+  if(notice&&typeof notice==='object'&&!Array.isArray(notice)){
+    if(Object.keys(notice).length!==1||!Array.isArray(notice.sources)||!notice.sources.length||notice.sources.length>20)throw new ServiceError('每次请提供 1–20 条通知。',400);
+    let total=0;
+    const sources=notice.sources.map((source,index)=>{
+      if(!source||typeof source!=='object'||Array.isArray(source)||Object.keys(source).length!==1||typeof source.text!=='string'||!source.text.trim())throw new ServiceError('请逐条填写通知文字。',400);
+      total+=source.text.length;
+      return {sourceId:index+1,text:source.text.trim()};
+    });
+    if(total>D.MAX_TEXT)throw new ServiceError('本次通知合计不能超过 4,000 字。',400);
+    return {sources};
+  }
+  if(typeof notice!=='string'||!notice.trim()||notice.length>D.MAX_TEXT)throw new ServiceError('请提供 1–4,000 字的通知文字。',400);
+  // Legacy text input still supports explicit whole-line separators.
   const parts=notice.split(/^[\t ]*---[\t ]*\r?$/m).map(value=>value.trim()).filter(Boolean);
   if(parts.length>20)throw new ServiceError('每次最多整理 20 条通知，请分批提交。',400);
   return parts.length>=2?{sources:parts.map((text,index)=>({sourceId:index+1,text}))}:{notice};
