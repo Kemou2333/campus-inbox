@@ -141,6 +141,37 @@
                   "type": "string",
                   "maxLength": 120,
                   "description": "简短、明确的适用条件；无条件为空字符串。新模型输出必须提供，旧v4可与scope一同省略。"
+                },
+                "steps": {
+                  "type": "array",
+                  "maxItems": 10,
+                  "description": "可选子步骤；仅原文明示、与父事项具有相同责任人、适用条件及共同截止的同一目标动作。旧v4缺省时补空数组。",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "text",
+                      "details"
+                    ],
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 60,
+                        "pattern": "\\S"
+                      },
+                      "details": {
+                        "type": "array",
+                        "maxItems": 5,
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500,
+                          "pattern": "\\S"
+                        }
+                      }
+                    }
+                  }
                 }
               },
               "dependentRequired": {

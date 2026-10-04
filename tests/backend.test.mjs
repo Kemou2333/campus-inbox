@@ -29,10 +29,10 @@ test('source dates prevent inferred years and normalize midnight boundaries',()=
   const wrong={...midnight,notices:[{...midnight.notices[0],deadlineText:'2027年10月20日24:00'}]};
   assert.equal(groundDates(wrong,'截止2026年10月20日24:00').notices[0].deadline,null);
 });
-test('valid structured result is cached, thinking is disabled, quota survives restart',async()=>{
+test('valid structured result is cached, thinking is low and bounded, quota survives restart',async()=>{
   const directory=await mkdtemp(join(tmpdir(),'campus-test-')),file=join(directory,'usage.json');
   try{
-    let calls=0;const modelFetch=async(_url,options)=>{calls++;const payload=JSON.parse(options.body);assert.equal(payload.model,'deepseek-flash');assert.equal(payload.thinking.type,'disabled');assert.equal(payload.max_tokens,4000);return mock();};
+    let calls=0;const modelFetch=async(_url,options)=>{calls++;const payload=JSON.parse(options.body);assert.equal(payload.model,'deepseek-flash');assert.equal(payload.thinking.type,'enabled');assert.equal(payload.reasoning_effort,'low');assert.ok(!Object.hasOwn(payload,'temperature'));assert.equal(payload.max_tokens,6000);return mock();};
     const config={apiKey:'test',accessToken:token,allowedOrigins:[origin],dailyLimit:1,stateFile:file};
     const handler=await createService(config,{modelFetch});
     const response=await handler(request());assert.equal(response.status,200);assert.deepEqual(await response.json(),globalThis.CampusData.batch(result,true));
@@ -47,4 +47,17 @@ test('malformed AI schema and incomplete output are rejected',async()=>{
     const handler=await createService({apiKey:'test',accessToken:token,allowedOrigins:[origin]},{modelFetch:async()=>new Response(JSON.stringify({choices:[choice]}))});
     assert.equal((await handler(request())).status,502);
   }
+});
+
+test('structured substeps pass through one mocked AI call and reject injected local or responsibility fields',async()=>{
+ const grouped={...result,notices:[{...notice,tasks:[{...notice.tasks[0],steps:[{text:'提交短信截图',details:['提交给通知发布者']},{text:'填写办事簿',details:[]}]}]}]};
+ let calls=0;
+ const handler=await createService({apiKey:'test',accessToken:token,allowedOrigins:[origin]},{modelFetch:async()=>{calls++;return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(grouped)}}]});}});
+ const response=await handler(request());assert.equal(response.status,200);const returned=await response.json();
+ assert.deepEqual(returned.notices[0].tasks[0].steps,grouped.notices[0].tasks[0].steps);assert.equal(calls,1);
+ for(const field of ['note','completed','assignee','condition']){
+  const invalid=structuredClone(grouped);invalid.notices[0].tasks[0].steps[0][field]='模型额外字段';
+  const reject=await createService({apiKey:'test',accessToken:token,allowedOrigins:[origin]},{modelFetch:async()=>Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(invalid)}}]})});
+  assert.equal((await reject(request())).status,502);
+ }
 });

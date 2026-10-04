@@ -21,15 +21,34 @@ test('malformed, oversized and non-text requests never reach the paid model',asy
   assert.equal(calls,0);
 });
 
-test('per-address burst control ends at a minute and includes cache hits',async()=>{
+test('per-address rolling window allows five requests in three minutes including cache hits',async()=>{
   let time=Date.UTC(2026,9,2,0),calls=0;
   const handler=await createService(config,{now:()=>time,modelFetch:async()=>{calls++;return response();}});
   for(let i=0;i<5;i++)assert.equal((await handler(request(),'same-address')).status,200);
-  assert.equal((await handler(request(),'same-address')).status,429);
+  const blocked=await handler(request(),'same-address');
+  assert.equal(blocked.status,429);assert.equal(blocked.headers.get('Retry-After'),'180');
+  assert.match(blocked.headers.get('Access-Control-Expose-Headers'),/Retry-After/);
+  assert.equal((await blocked.json()).retryAfterSeconds,180);
   assert.equal(calls,1);
   time+=60000;
+  const stillBlocked=await handler(request(),'same-address');assert.equal(stillBlocked.status,429);assert.equal(stillBlocked.headers.get('Retry-After'),'120');
+  assert.equal((await handler(request(),'different-address')).status,200);
+  time+=120000;
   assert.equal((await handler(request(),'same-address')).status,200);
   assert.equal(calls,1);
+});
+
+test('rolling limit frees only expired requests, not the whole window at a fixed boundary',async()=>{
+  let time=Date.UTC(2026,9,4,0);
+  const handler=await createService(config,{now:()=>time,modelFetch:async()=>response()});
+  assert.equal((await handler(request(),'a')).status,200);
+  time+=30000;
+  for(let i=0;i<4;i++)assert.equal((await handler(request(),'a')).status,200);
+  time+=149999;
+  const finalSecond=await handler(request(),'a');assert.equal(finalSecond.status,429);assert.equal(finalSecond.headers.get('Retry-After'),'1');
+  time++;
+  assert.equal((await handler(request(),'a')).status,200);
+  const remainder=await handler(request(),'a');assert.equal(remainder.status,429);assert.equal(remainder.headers.get('Retry-After'),'30');
 });
 
 test('one in-flight request blocks a second address without calling upstream',async()=>{
@@ -38,7 +57,7 @@ test('one in-flight request blocks a second address without calling upstream',as
   const handler=await createService(config,{modelFetch:async()=>{calls++;started();await gate;return response();}});
   const first=handler(request('第一条'),'address-a');
   await announced;
-  assert.equal((await handler(request('第二条'),'address-b')).status,429);
+  const blocked=await handler(request('第二条'),'address-b');assert.equal(blocked.status,429);assert.equal((await blocked.json()).code,'SERVICE_BUSY');assert.equal(blocked.headers.get('Retry-After'),'3');
   assert.equal(calls,1);
   finish();assert.equal((await first).status,200);
 });
@@ -56,7 +75,7 @@ test('cache expires once, while Shanghai midnight resets the daily allowance',as
   let time=Date.UTC(2026,9,2,15,59),calls=0;
   const handler=await createService({...config,dailyLimit:1},{now:()=>time,modelFetch:async()=>{calls++;return response();}});
   assert.equal((await handler(request('第一条'),'a')).status,200);
-  assert.equal((await handler(request('第二条'),'b')).status,429);
+  const capped=await handler(request('第二条'),'b');assert.equal(capped.status,429);assert.equal(capped.headers.get('Retry-After'),'60');assert.equal((await capped.json()).code,'DAILY_LIMIT');
   time+=60000;
   assert.equal((await handler(request('第二条'),'b')).status,200);
   assert.equal(calls,2);
