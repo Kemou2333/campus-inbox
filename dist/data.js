@@ -26,10 +26,19 @@ function timeline(x,strict=false){if(x===undefined)return [];if(!Array.isArray(x
  if(strict&&(fields.some(k=>!Object.hasOwn(v,k))||Object.keys(v).some(k=>!fields.includes(k))))throw new Error('时间节点字段不完整或包含多余字段');
  return {label:text(v.label,'节点名称',200),time:date(v.time),timeText:text(v.timeText,'原文时间',500),location:v.location===null?null:text(v.location,'地点',500)};
 });}
+function step(x,strict=false){
+ if(!object(x))throw new Error('步骤必须为结构化对象');
+ const fields=['text','details'];
+ if(strict&&(fields.some(k=>!Object.hasOwn(x,k))||Object.keys(x).some(k=>!fields.includes(k))))throw new Error('步骤字段不完整或包含多余字段');
+ const details=x.details===undefined&&!strict?[]:x.details;
+ if(!Array.isArray(details)||details.length>5)throw new Error('步骤细节最多5项');
+ return {text:text(x.text,'步骤名称',60),details:details.map(v=>text(v,'步骤细节',500))};
+}
+function steps(x,strict=false){if(x===undefined)return [];if(!Array.isArray(x)||x.length>10)throw new Error('每个事项最多10个步骤');return x.map(v=>step(v,strict));}
 function task(x,strict=false){
- if(typeof x==='string'&&!strict)return {text:text(x,'任务'),assignee:null,scope:'unspecified',condition:'',details:[],time:null,timeText:'',location:null};
+ if(typeof x==='string'&&!strict)return {text:text(x,'任务'),assignee:null,scope:'unspecified',condition:'',details:[],steps:[],time:null,timeText:'',location:null};
  if(!object(x))throw new Error('任务必须为结构化对象');
- const required=['text','assignee','details','time','timeText','location'],fields=[...required,'scope','condition'];
+ const required=['text','assignee','details','time','timeText','location'],fields=[...required,'scope','condition','steps'];
  if(strict&&(required.some(k=>!Object.hasOwn(x,k))||Object.keys(x).some(k=>!fields.includes(k))))throw new Error('任务字段不完整或包含多余字段');
  if(strict&&(Object.hasOwn(x,'scope')!==Object.hasOwn(x,'condition')))throw new Error('适用范围与条件须同时提供');
  const scope=x.scope===undefined?'unspecified':x.scope;
@@ -40,7 +49,7 @@ function task(x,strict=false){
  if(scope==='role'&&!assignee)throw new Error('角色任务须写明责任对象');
  const details=strings(x.details===undefined?[]:x.details,'执行细节');
  if(strict&&(details.length>20||details.some(v=>v.length>500)))throw new Error('执行细节过长');
- return {text:text(x.text,'任务名称',strict?60:2000),assignee,scope,condition,details,time:date(x.time===undefined?null:x.time),timeText:text(x.timeText===undefined?'':x.timeText,'任务时间',500,true),location:x.location==null?null:text(x.location,'任务地点',500)};
+ return {text:text(x.text,'任务名称',strict?60:2000),assignee,scope,condition,details,steps:steps(x.steps,strict),time:date(x.time===undefined?null:x.time),timeText:text(x.timeText===undefined?'':x.timeText,'任务时间',500,true),location:x.location==null?null:text(x.location,'任务地点',500)};
 }
 function analysis(x,strict=false){
  if(!object(x))throw new Error('整理结果必须为 JSON 对象');
@@ -60,19 +69,29 @@ function batch(x,strict=false){
  return {schemaVersion:4,notices:x.notices.map(n=>analysis(n,strict))};
 }
 function attachmentIDs(x){if(x===undefined)return [];if(!Array.isArray(x)||x.length>10)throw new Error('每条通知最多10个附件');const ids=x.map(v=>text(v,'附件编号',100));if(new Set(ids).size!==ids.length)throw new Error('附件编号重复');return ids;}
+function reminderNotes(x,count){if(x===undefined)return Array(count).fill('');if(!Array.isArray(x)||x.length>count)throw new Error('提醒笔记格式不正确');return Array.from({length:count},(_,i)=>text(x[i]===undefined?'':x[i],'提醒笔记',MAX_NOTE,true));}
 function notice(x){
  if(!object(x)||!Array.isArray(x.tasks)||x.tasks.length>100||typeof x.completed!=='boolean')throw new Error('通知记录格式不正确');
- const states=x.tasks.map(t=>{if(!object(t)||typeof t.completed!=='boolean'||(t.dismissed!==undefined&&typeof t.dismissed!=='boolean'))throw new Error('任务完成状态格式不正确');return {completed:t.completed,dismissed:t.dismissed===undefined?false:t.dismissed};});
+ const states=x.tasks.map(t=>{if(!object(t)||typeof t.completed!=='boolean'||(t.dismissed!==undefined&&typeof t.dismissed!=='boolean'))throw new Error('任务完成状态格式不正确');const stepStates=steps(t.steps).map((s,i)=>{const v=t.steps[i];if(v.completed!==undefined&&typeof v.completed!=='boolean')throw new Error('步骤完成状态格式不正确');return {completed:v.completed===undefined?false:v.completed,note:text(v.note===undefined?'':v.note,'步骤笔记',MAX_NOTE,true)};});return {completed:t.completed,dismissed:t.dismissed===undefined?false:t.dismissed,note:text(t.note===undefined?'':t.note,'事项笔记',MAX_NOTE,true),localDeadline:date(t.localDeadline===undefined?null:t.localDeadline),steps:stepStates};});
  const normalized=analysis(x);
  const createdAt=date(x.createdAt);if(!createdAt)throw new Error('缺少创建时间');
  const audienceOverride=x.audienceOverride===undefined?'':x.audienceOverride;
  if(!['','all'].includes(audienceOverride))throw new Error('本地适用范围设置不正确');
- return {...normalized,id:text(x.id,'通知编号',150),originalText:text(x.originalText,'通知原文',MAX_STORED_TEXT),createdAt,completed:x.completed,note:text(x.note===undefined?'':x.note,'笔记',MAX_NOTE,true),audienceOverride,attachments:attachmentIDs(x.attachments),tasks:normalized.tasks.map((t,i)=>({...t,...states[i]}))};
+ return {...normalized,id:text(x.id,'通知编号',150),originalText:text(x.originalText,'通知原文',MAX_STORED_TEXT),createdAt,completed:x.completed,localDeadline:date(x.localDeadline===undefined?null:x.localDeadline),reminderNotes:reminderNotes(x.reminderNotes,normalized.reminders.length),note:text(x.note===undefined?'':x.note,'笔记',MAX_NOTE,true),audienceOverride,attachments:attachmentIDs(x.attachments),tasks:normalized.tasks.map((t,i)=>({...t,...states[i],steps:t.steps.map((s,j)=>({...s,...states[i].steps[j]}))}))};
 }
 function notices(x){if(!Array.isArray(x)||x.length>MAX_NOTICES)throw new Error(`最多保存 ${MAX_NOTICES} 条通知`);const ids=new Set();return x.map(v=>{const n=notice(v);if(ids.has(n.id))throw new Error('存在重复的通知编号');ids.add(n.id);return n;});}
 function backup(x){if(!object(x)||x.app!=='campus-inbox'||![1,2,3,4].includes(x.version))throw new Error('请选择校园 Inbox 导出的 JSON 备份');return notices(x.notices);}
 function exportBackup(ns){return {app:'campus-inbox',version:4,exportedAt:new Date().toISOString(),notices:notices(ns)};}
-function create(result,originalText){const a=analysis(result);return {...a,id:root.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`,originalText:text(originalText,'通知原文',MAX_TEXT),createdAt:new Date().toISOString(),completed:false,note:'',audienceOverride:'',attachments:[],tasks:a.tasks.map(t=>({...t,completed:false,dismissed:false}))};}
-function sort(ns,order){return [...ns].sort((a,b)=>order==='newest'?Date.parse(b.createdAt)-Date.parse(a.createdAt):(a.deadline===null?Infinity:Date.parse(a.deadline))-(b.deadline===null?Infinity:Date.parse(b.deadline))||Date.parse(b.createdAt)-Date.parse(a.createdAt));}
-const api={MAX_TEXT,MAX_NOTE,MAX_NOTICES,date,task,analysis,batch,notice,notices,backup,exportBackup,create,sort};root.CampusData=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
+function create(result,originalText){const a=analysis(result);return {...a,id:root.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`,originalText:text(originalText,'通知原文',MAX_TEXT),createdAt:new Date().toISOString(),completed:false,note:'',localDeadline:null,reminderNotes:Array(a.reminders.length).fill(''),audienceOverride:'',attachments:[],tasks:a.tasks.map(t=>({...t,completed:false,dismissed:false,note:'',localDeadline:null,steps:t.steps.map(s=>({...s,completed:false,note:''}))}))};}
+function taskDeadline(n,t){
+ if(t.localDeadline||n.localDeadline)return t.localDeadline||n.localDeadline;
+ // Action times can mean an event start. Only explicit deadline wording is urgent.
+ if(t.time&&/(?:截止|之前|(?:\d|日|号|时|分)前|内$)/.test(t.timeText))return t.time;
+ if(t.time||t.timeText&&t.timeText.replace(/[\s：:]/g,'')!==n.deadlineText.replace(/[\s：:]/g,''))return null;
+ return n.deadline;
+}
+function effectiveDeadline(n){if(n.completed||n.kind!=='task')return null;const remaining=n.tasks.filter(t=>!t.completed&&!t.dismissed);if(!remaining.length)return null;const dates=remaining.map(t=>taskDeadline(n,t)).filter(Boolean);return dates.length?dates.reduce((a,b)=>Date.parse(a)<Date.parse(b)?a:b):null;}
+function priority(n,now=Date.now()){const due=effectiveDeadline(n);if(!due)return {level:'unknown',rank:4,due:null,label:''};const diff=Date.parse(due)-now;if(diff<0)return {level:'overdue',rank:0,due,label:'已截止'};if(diff<=86400000)return {level:'soon',rank:1,due,label:'24小时内'};if(diff<=259200000)return {level:'upcoming',rank:2,due,label:'3天内'};return {level:'scheduled',rank:3,due,label:''};}
+function sort(ns,order,now=Date.now()){if(order==='priority')return [...ns].sort((a,b)=>priority(a,now).rank-priority(b,now).rank||(effectiveDeadline(a)===null?Infinity:Date.parse(effectiveDeadline(a)))-(effectiveDeadline(b)===null?Infinity:Date.parse(effectiveDeadline(b)))||Date.parse(b.createdAt)-Date.parse(a.createdAt));return [...ns].sort((a,b)=>order==='newest'?Date.parse(b.createdAt)-Date.parse(a.createdAt):(a.deadline===null?Infinity:Date.parse(a.deadline))-(b.deadline===null?Infinity:Date.parse(b.deadline))||Date.parse(b.createdAt)-Date.parse(a.createdAt));}
+const api={MAX_TEXT,MAX_NOTE,MAX_NOTICES,date,step,task,analysis,batch,notice,notices,backup,exportBackup,create,sort,taskDeadline,effectiveDeadline,priority};root.CampusData=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(globalThis);
