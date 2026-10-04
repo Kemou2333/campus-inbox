@@ -26,7 +26,7 @@ export function groundDates(result,notice){
   }))};
 }
 const FINISH_REASONS=new Set(['stop','length','content_filter','insufficient_system_resource','aborted','tool_calls','function_call','unknown']);
-const FAILURE_CODES=new Set(['INVALID_JSON','TIMELINE_FIELDS','TIMELINE_TIME_TEXT','SUMMARY','ASSIGNEE','LOCATION','TASK_TIME_TEXT','CLASSIFICATION','TASK_FIELDS','STEP_FIELDS','ROOT_FIELDS','SCHEMA_INVALID']);
+const FAILURE_CODES=new Set(['INVALID_JSON','TIMELINE_FIELDS','TIMELINE_TIME_TEXT','SUMMARY','ASSIGNEE','LOCATION','TASK_TIME_TEXT','CLASSIFICATION','TASK_FIELDS','STEP_FIELDS','ROOT_FIELDS','SCHEMA_INVALID','SOURCE_COUNT']);
 function validationCode(error){
   const rules=[[/^时间节点字段/,'TIMELINE_FIELDS'],[/^原文时间/,'TIMELINE_TIME_TEXT'],[/^摘要/,'SUMMARY'],[/^责任对象|^角色任务/,'ASSIGNEE'],[/^地点|^任务地点/,'LOCATION'],[/^任务时间/,'TASK_TIME_TEXT'],[/^通知类别/,'CLASSIFICATION'],[/^任务字段/,'TASK_FIELDS'],[/^步骤字段/,'STEP_FIELDS'],[/^通知字段|^整理结果必须包含/,'ROOT_FIELDS']];
   return rules.find(([pattern])=>pattern.test(error?.message||''))?.[1]||'SCHEMA_INVALID';
@@ -49,11 +49,18 @@ export async function boundedText(stream,limit){
   try{for(;;){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>limit){await reader.cancel();throw new ServiceError('通知内容过大。',413);}text+=decoder.decode(value,{stream:true});}return text+decoder.decode();}
   finally{reader.releaseLock();}
 }
+export function modelInput(notice){
+  // Only explicit whole-line separators establish independent source boundaries.
+  const parts=notice.split(/^[\t ]*---[\t ]*\r?$/m).map(value=>value.trim()).filter(Boolean);
+  if(parts.length>20)throw new ServiceError('每次最多整理 20 条通知，请分批提交。',400);
+  return parts.length>=2?{sources:parts.map((text,index)=>({sourceId:index+1,text}))}:{notice};
+}
 export async function analyze(notice,config,modelFetch=fetch){
+  const input=modelInput(notice),sources=input.sources;
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),config.timeoutMs||60000);
   let usage,finishReason;
   try{
-    const payload={model:config.model||'deepseek-flash',thinking:{type:'disabled'},reasoning_effort:'none',temperature:0.2,max_tokens:8192,response_format:{type:'json_object'},messages:[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:JSON.stringify({notice})}]};
+    const payload={model:config.model||'deepseek-flash',thinking:{type:'disabled'},reasoning_effort:'none',temperature:0.2,max_tokens:8192,response_format:{type:'json_object'},messages:[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:JSON.stringify(input)}]};
     const upstream=await modelFetch('https://api.deepseek.com/chat/completions',{method:'POST',redirect:'error',headers:{'Content-Type':'application/json','Authorization':`Bearer ${config.apiKey}`},body:JSON.stringify(payload),signal:controller.signal});
     if(!upstream.ok){await upstream.body?.cancel();throw new ServiceError(upstream.status===429?'AI 服务繁忙，请稍后再试。':upstream.status===402?'AI 账户余额不足，请联系维护者。':'AI 请求失败，请联系维护者检查配置。');}
     const envelope=JSON.parse(await boundedText(upstream.body,200000)),choice=envelope?.choices?.[0];
@@ -71,7 +78,11 @@ export async function analyze(notice,config,modelFetch=fetch){
     }
     let parsed,result;
     try{parsed=JSON.parse(choice.message.content);}catch{throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:'INVALID_JSON'});}
-    try{result=D.batch(groundDates(parsed,notice),true);}catch(error){throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:validationCode(error)});}
+    if(sources&&(!Array.isArray(parsed?.notices)||parsed.notices.length!==sources.length))throw new ServiceError('AI 未能逐条整理完整通知，请分批提交。',502,{usage,finishReason,failureCode:'SOURCE_COUNT'});
+    try{
+      const grounded=sources?{...parsed,notices:parsed.notices.map((item,index)=>groundDates({notices:[item]},sources[index].text).notices[0])}:groundDates(parsed,notice);
+      result=D.batch(grounded,true);
+    }catch(error){throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:validationCode(error)});}
     return {result,usage,finishReason};
   }catch(e){if(e instanceof ServiceError)throw e;throw new ServiceError(e.name==='AbortError'?'AI 整理超时，请稍后重试。':'AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason});}
   finally{clearTimeout(timer);}
