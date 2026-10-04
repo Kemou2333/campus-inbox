@@ -65,7 +65,7 @@ test('paid incomplete or invalid responses retain metering without exposing mode
       const state=JSON.parse(await readFile(file,'utf8'));
       assert.equal(state.requests,1);assert.equal(state.input,91);assert.equal(state.output,640);assert.equal(state.reasoning,600);
       assert.equal(state.lastFinishReason,item.reason==='private-unexpected-finish-reason'?'unknown':item.reason);
-      const expectedKeys=['day','input','lastFinishReason','output','reasoning','requests'];if(item.reason==='stop')expectedKeys.push('lastFailureCode');assert.deepEqual(Object.keys(state).sort(),expectedKeys.sort());if(item.reason==='stop')assert.equal(state.lastFailureCode,item.content.startsWith('{invalid')?'INVALID_JSON':'SCHEMA_INVALID');
+      const expectedKeys=['day','input','lastFinishReason','output','reasoning','requests'];if(item.reason==='stop')expectedKeys.push('lastFailureCode');assert.deepEqual(Object.keys(state).sort(),expectedKeys.sort());if(item.reason==='stop')assert.equal(state.lastFailureCode,item.content.startsWith('{invalid')?'INVALID_JSON':'TASK_FIELDS');
       assert.ok(!JSON.stringify({state,body}).includes('private-'));assert.equal(calls,1);
       const restarted=await createService(config,{modelFetch});
       assert.equal((await restarted(request('private-original-notice'))).status,429);assert.equal(calls,1);
