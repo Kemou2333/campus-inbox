@@ -669,3 +669,5 @@ body[data-mode="demo"] .pending-result-banner{display:none;}
 .task-instructions a,.step-instructions a{text-decoration:underline;text-underline-offset:3px;}
 .step-title{font-weight:600;color:#465b7f;}
 .compose-add-row{flex-wrap:wrap;}
+
+.calendar-all-day{display:flex;align-items:center;gap:.5rem;margin:.5rem 0 1rem;font-size:1rem;min-height:44px}.calendar-all-day input{width:20px;height:20px;accent-color:var(--accent,#6750a4)}
