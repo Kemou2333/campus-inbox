@@ -26,6 +26,11 @@ export function groundDates(result,notice){
   }))};
 }
 const FINISH_REASONS=new Set(['stop','length','content_filter','insufficient_system_resource','aborted','tool_calls','function_call','unknown']);
+const FAILURE_CODES=new Set(['INVALID_JSON','TIMELINE_FIELDS','TIMELINE_TIME_TEXT','SUMMARY','ASSIGNEE','LOCATION','TASK_TIME_TEXT','CLASSIFICATION','TASK_FIELDS','STEP_FIELDS','ROOT_FIELDS','SCHEMA_INVALID']);
+function validationCode(error){
+  const rules=[[/^时间节点字段/,'TIMELINE_FIELDS'],[/^原文时间/,'TIMELINE_TIME_TEXT'],[/^摘要/,'SUMMARY'],[/^责任对象|^角色任务/,'ASSIGNEE'],[/^地点|^任务地点/,'LOCATION'],[/^任务时间/,'TASK_TIME_TEXT'],[/^通知类别/,'CLASSIFICATION'],[/^任务字段/,'TASK_FIELDS'],[/^步骤字段/,'STEP_FIELDS'],[/^通知字段|^整理结果必须包含/,'ROOT_FIELDS']];
+  return rules.find(([pattern])=>pattern.test(error?.message||''))?.[1]||'SCHEMA_INVALID';
+}
 const count=value=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0?value:0;
 function tokenUsage(value){
   return {input:count(value?.prompt_tokens),output:count(value?.completion_tokens),reasoning:count(value?.completion_tokens_details?.reasoning_tokens)};
@@ -35,6 +40,7 @@ export class ServiceError extends Error {
     super(message);this.status=status;
     if(metadata.usage)this.usage={input:count(metadata.usage.input),output:count(metadata.usage.output),reasoning:count(metadata.usage.reasoning)};
     if(metadata.finishReason)this.finishReason=FINISH_REASONS.has(metadata.finishReason)?metadata.finishReason:'unknown';
+    if(FAILURE_CODES.has(metadata.failureCode))this.failureCode=metadata.failureCode;
   }
 }
 export async function boundedText(stream,limit){
@@ -63,8 +69,10 @@ export async function analyze(notice,config,modelFetch=fetch){
       const [message,status]=failures[finishReason]||['AI 未返回完整的整理结果，请稍后再试。',502];
       throw new ServiceError(message,status,{usage,finishReason});
     }
-    const parsed=JSON.parse(choice.message.content);
-    return {result:D.batch(groundDates(parsed,notice),true),usage,finishReason};
+    let parsed,result;
+    try{parsed=JSON.parse(choice.message.content);}catch{throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:'INVALID_JSON'});}
+    try{result=D.batch(groundDates(parsed,notice),true);}catch(error){throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:validationCode(error)});}
+    return {result,usage,finishReason};
   }catch(e){if(e instanceof ServiceError)throw e;throw new ServiceError(e.name==='AbortError'?'AI 整理超时，请稍后重试。':'AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason});}
   finally{clearTimeout(timer);}
 }

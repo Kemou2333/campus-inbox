@@ -41,11 +41,12 @@ export async function createService(config,options={}){
     }
     busy=true;
     let tokensRecorded=false;
-    const recordTokens=async(stats,finishReason)=>{
+    const recordTokens=async(stats,finishReason,failureCode)=>{
       // Only numeric metering survives a request, including paid failures.
       // Completion tokens already include reasoning; keep it as a separate detail.
       for(const key of ['input','output','reasoning'])usage[key]=Math.min(Number.MAX_SAFE_INTEGER,(usage[key]||0)+(stats[key]||0));
       if(finishReason)usage.lastFinishReason=finishReason;
+      if(failureCode)usage.lastFailureCode=failureCode;else delete usage.lastFailureCode;
       tokensRecorded=true;await persist();
     };
     try{
@@ -56,7 +57,7 @@ export async function createService(config,options={}){
       cache.set(hash,{created:now(),result:output.result});return reply(output.result);
     }catch(e){
       if(e instanceof ServiceError&&e.usage&&!tokensRecorded){
-        try{await recordTokens(e.usage,e.finishReason);}catch{return reply({error:'整理服务暂时不可用，请稍后重试。'},503);}
+        try{await recordTokens(e.usage,e.finishReason,e.failureCode);}catch{return reply({error:'整理服务暂时不可用，请稍后重试。'},503);}
       }
       return reply({error:e instanceof ServiceError?e.message:'整理服务暂时不可用，请稍后重试。'},e.status||503);
     }
