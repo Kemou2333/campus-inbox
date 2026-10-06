@@ -1,10 +1,12 @@
 package io.github.kemou2333.campusinbox;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.net.Uri;
@@ -53,6 +55,7 @@ import java.util.concurrent.Executors;
 public final class MainActivity extends Activity {
     private static final int PICK_FILE = 20;
     private static final int SAVE_FILE = 21;
+    private static final int NOTIFICATION_PERMISSION = 22;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private WebView web;
     private NativeExport exports;
@@ -64,16 +67,28 @@ public final class MainActivity extends Activity {
     private boolean bridgeAvailable;
     private boolean backPending;
     private long lastBack;
+    private NativeReminders reminders;
+    private String openedNotice;
+    private JavaScriptReplyProxy reminderPermissionReply;
+    private JSONObject reminderPermissionPayload;
+    private String reminderPermissionRequest;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        reminders = new NativeReminders(this);
+        reminders.restoreAfterBoot();
         try { exports = new NativeExport(getCacheDir()); } catch (IOException ignored) { exports = null; }
         if (state != null) {
             ArrayList<String> saved = state.getStringArrayList("shareQueue");
             if (saved != null) for (String text : saved) {
                 if (text != null && !text.isEmpty() && text.length() <= 20_000 && shareQueue.size() < 10) shareQueue.addLast(text);
             }
-        } else receiveShare(getIntent());
+            String notice = state.getString("openedNotice");
+            if (NativePolicy.validReminderId(notice)) openedNotice = notice;
+        } else {
+            receiveShare(getIntent());
+            receiveOpenedNotice(getIntent());
+        }
 
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(themeColor("surface"));
@@ -151,6 +166,7 @@ public final class MainActivity extends Activity {
             @Override public void onPageFinished(WebView view, String url) {
                 if (!NativePolicy.isTrustedPage(url)) return;
                 if (!shareQueue.isEmpty()) signalShare();
+                if (openedNotice != null) signalOpenedNotice();
             }
             @Override public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
                 handler.cancel();
@@ -235,7 +251,7 @@ public final class MainActivity extends Activity {
             switch (action) {
                 case "capabilities":
                     respond(reply, id, new JSONObject().put("calendar", calendarIntent().resolveActivity(getPackageManager()) != null)
-                            .put("fileSave", exports != null).put("shareText", true).put("theme", theme()));
+                            .put("fileSave", exports != null).put("shareText", true).put("localReminders", true).put("theme", theme()));
                     break;
                 case "consumeShare":
                     String text = shareQueue.pollFirst();
@@ -243,6 +259,18 @@ public final class MainActivity extends Activity {
                             .put("remaining", shareQueue.size()));
                     break;
                 case "calendar": launchCalendar(payload, reply, id); break;
+                case "consumeOpenedNotice":
+                    String notice = openedNotice;
+                    openedNotice = null;
+                    respond(reply, id, new JSONObject().put("id", notice == null ? JSONObject.NULL : notice));
+                    break;
+                case "scheduleReminder": scheduleReminder(payload, reply, id); break;
+                case "cancelReminder":
+                    String reminderId = checkedText(payload, "id", 100, true);
+                    if (!NativePolicy.validReminderId(reminderId)) throw new IllegalArgumentException("通知编号不正确");
+                    reminders.cancel(reminderId);
+                    respond(reply, id, new JSONObject().put("status", "cancelled"));
+                    break;
                 case "saveBegin": case "saveChunk": case "saveFinish": case "saveCancel":
                     handleSave(action, payload, reply, id); break;
                 default: throw new IllegalArgumentException("暂不支持这项操作");
@@ -251,6 +279,46 @@ public final class MainActivity extends Activity {
     }
 
     private Intent calendarIntent() { return new Intent(Intent.ACTION_INSERT).setData(CalendarContract.Events.CONTENT_URI); }
+
+    private void scheduleReminder(JSONObject payload, JavaScriptReplyProxy reply, String requestId) throws JSONException {
+        String id = checkedText(payload, "id", 100, true);
+        checkedText(payload, "title", 200, true);
+        checkedText(payload, "body", 1000, false);
+        if (!NativePolicy.validReminder(id, checkedLong(payload, "triggerMillis"), System.currentTimeMillis())) {
+            throw new IllegalArgumentException("请确认提醒对应的通知和未来时间");
+        }
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            if (reminderPermissionReply != null) throw new IllegalStateException("请先完成通知权限选择");
+            reminderPermissionReply = reply;
+            reminderPermissionPayload = payload;
+            reminderPermissionRequest = requestId;
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATION_PERMISSION);
+        } else completeReminder(payload, reply, requestId);
+    }
+
+    private void completeReminder(JSONObject payload, JavaScriptReplyProxy reply, String requestId) {
+        try {
+            if (!reminders.enabled()) {
+                respond(reply, requestId, new JSONObject().put("status", "permission-denied").put("approximate", true));
+                return;
+            }
+            reminders.schedule(checkedText(payload, "id", 100, true), checkedText(payload, "title", 200, true),
+                    checkedText(payload, "body", 1000, false), checkedLong(payload, "triggerMillis"));
+            respond(reply, requestId, new JSONObject().put("status", "scheduled").put("approximate", true));
+        } catch (Exception error) { reject(reply, requestId, safeError(error)); }
+    }
+
+    @Override public void onRequestPermissionsResult(int code, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(code, permissions, results);
+        if (code != NOTIFICATION_PERMISSION || reminderPermissionReply == null) return;
+        JavaScriptReplyProxy reply = reminderPermissionReply;
+        JSONObject payload = reminderPermissionPayload;
+        String requestId = reminderPermissionRequest;
+        reminderPermissionReply = null;
+        reminderPermissionPayload = null;
+        reminderPermissionRequest = null;
+        completeReminder(payload, reply, requestId);
+    }
 
     private void launchCalendar(JSONObject payload, JavaScriptReplyProxy reply, String id) throws JSONException {
         String title = checkedText(payload, "title", 200, true);
@@ -382,16 +450,31 @@ public final class MainActivity extends Activity {
         super.onNewIntent(intent);
         setIntent(intent);
         receiveShare(intent);
-        if (web != null && NativePolicy.isTrustedPage(web.getUrl())) signalShare();
+        receiveOpenedNotice(intent);
+        if (web != null && NativePolicy.isTrustedPage(web.getUrl())) {
+            if (!shareQueue.isEmpty()) signalShare();
+            if (openedNotice != null) signalOpenedNotice();
+        }
     }
 
     private void signalShare() {
         web.evaluateJavascript("window.dispatchEvent(new CustomEvent('campus-native-share'));", null);
     }
 
+    private void receiveOpenedNotice(Intent intent) {
+        if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction())) return;
+        String id = intent.getStringExtra("campusNoticeId");
+        if (NativePolicy.validReminderId(id)) openedNotice = id;
+    }
+
+    private void signalOpenedNotice() {
+        web.evaluateJavascript("window.dispatchEvent(new CustomEvent('campus-native-open-notice'));", null);
+    }
+
     @Override protected void onSaveInstanceState(Bundle state) {
         if (web != null) web.saveState(state);
         if (!shareQueue.isEmpty()) state.putStringArrayList("shareQueue", new ArrayList<>(shareQueue));
+        if (openedNotice != null) state.putString("openedNotice", openedNotice);
         super.onSaveInstanceState(state);
     }
 

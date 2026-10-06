@@ -1,0 +1,8 @@
+import {Box,Button,Dialog,DialogActions,DialogContent,DialogTitle,Stack,Typography} from '@mui/material';
+export function HelpDialog({open,onClose}:{open:boolean;onClose:()=>void}){
+ const steps=[['粘贴通知','每条通知放进一个输入框，可一起整理。附件留在本机，方便随时查看。'],['按步骤办理','先看适用对象，再勾选完成的事项。与自己无关的分支可以标记为不适用，每个事项都能记笔记。'],['随时查看','登录后文字和进度自动同步。时间没写清楚的通知不会自动安排日历，请确认后再添加。']];
+ return <Dialog open={open} onClose={onClose}><DialogTitle>如何使用</DialogTitle><DialogContent><Stack spacing={3}>{steps.map(([title,text],i)=><Stack direction="row" spacing={2} key={title}><Box sx={{width:32,height:32,flexShrink:0,borderRadius:'50%',bgcolor:'primary.main',color:'primary.contrastText',display:'grid',placeItems:'center',fontWeight:700}}>{i+1}</Box><Box><Typography variant="h6">{title}</Typography><Typography color="text.secondary" sx={{mt:.5}}>{text}</Typography></Box></Stack>)}<Typography variant="body2" color="text.secondary">AI 整理可能有遗漏，重要事项请核对原文。建议定期导出备份。</Typography></Stack></DialogContent><DialogActions><Button variant="contained" onClick={onClose}>我知道了</Button></DialogActions></Dialog>;
+}
+export function AboutDialog({open,onClose}:{open:boolean;onClose:()=>void}){
+ return <Dialog open={open} onClose={onClose}><DialogTitle>校园 Inbox</DialogTitle><DialogContent><Typography>把校园通知整理成清楚的事项和提醒，少漏一件事。</Typography><Typography color="text.secondary" sx={{mt:2}}>由 Kemou 制作。网页和安卓应用共用同一套通知，附件留在自己的设备上。</Typography><Typography variant="caption" color="text.secondary" sx={{display:'block',mt:2}}>版本 2.0</Typography></DialogContent><DialogActions><Button variant="contained" onClick={onClose}>关闭</Button></DialogActions></Dialog>;
+}

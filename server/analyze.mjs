@@ -1,5 +1,5 @@
-import '../dist/time.js';
-import '../dist/data.js';
+import './contracts/time.js';
+import './contracts/data.js';
 import {SYSTEM_PROMPT} from '../worker/prompt.mjs';
 const D=globalThis.CampusData;
 const T=globalThis.CampusTime;
