@@ -8,6 +8,7 @@ import {createNotice, exportBackup, newID, parseAnalysisBatch, parseBackup, pars
 import type {Notice} from '../domain/types';
 import {createPlatform, type PlatformCapabilities} from '../platform';
 import {loadConfig, type RuntimeConfig} from './config';
+import {readLegacyWork,restoreLegacyDraft,finishLegacyResult} from '../infrastructure/legacy-work';
 import type {ThemePreference} from './theme';
 
 export interface Draft {id:string; text:string; attachments:string[]}
@@ -35,9 +36,13 @@ export function useCampus(){
  const [theme,setThemeState]=useState<ThemePreference>(()=>{
   const t=localStorage.getItem('campus-inbox:theme:v5');return t==='dark'||t==='light'?t:'system';
  });
+ const [legacyWork]=useState(()=>readLegacyWork(localStorage,sessionStorage));
+ const [legacyRecords,setLegacyRecords]=useState(legacyWork.records);
+ const [legacyMissingFiles,setLegacyMissingFiles]=useState(legacyWork.missingFiles);
  const [drafts,setDrafts]=useState<Draft[]>(()=>{
   try{const value=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null');
-   if(Array.isArray(value)&&value.length&&value.length<=20&&value.every(d=>typeof d.id==='string'&&typeof d.text==='string'&&Array.isArray(d.attachments)&&d.attachments.every((a:unknown)=>typeof a==='string')))return value;
+   const current=Array.isArray(value)&&value.length&&value.length<=20&&value.every(d=>typeof d.id==='string'&&typeof d.text==='string'&&Array.isArray(d.attachments)&&d.attachments.every((a:unknown)=>typeof a==='string'))?value:null;
+   const restored=restoreLegacyDraft(localStorage,legacyWork,current);if(restored)return restored;
   }catch{/* An unusable draft is not a notification backup. */}
   return [makeDraft()];
  });
@@ -142,11 +147,12 @@ export function useCampus(){
   const additions=batch.notices.map((a,i)=>({...createNotice(a,value.sources[i].text),id:`ai-${value.sources[i].id}`,attachments:value.sources[i].attachments}));
   save([...current,...additions.filter(n=>!current.some(old=>old.id===n.id))]);
   const consumed=new Set(value.sources.map(d=>d.id));const remaining=draftRef.current.filter(d=>!consumed.has(d.id));replaceDrafts(remaining.length?remaining:[makeDraft()]);
-  localStorage.removeItem(RESULT_KEY);resultRef.current=null;setPending(false);tell(`已整理 ${additions.length} 条通知`);
+  localStorage.removeItem(RESULT_KEY);resultRef.current=null;setPending(false);setLegacyMissingFiles(false);tell(`已整理 ${additions.length} 条通知`);
  }
  async function analyze(){
   if(busy||!config)return false;
   if(pending)throw new Error('还有一份整理结果待恢复，请先保存它。');
+  if(legacyRecords.length)throw new Error('旧版还有整理结果未保存，请先恢复它。');
   if(!cloud?.getKey())throw new Error('请先登录，再使用 AI 整理。');
   const sources=structuredClone(draftRef.current.filter(d=>d.text.trim()));
   if(!sources.length||sources.some(d=>!d.text.trim())||sources.reduce((n,d)=>n+d.text.length,0)>4000)throw new Error('通知总字数需在 1–4,000 之间。');
@@ -159,6 +165,8 @@ export function useCampus(){
   }catch(e){report(e);return false;}finally{setBusy(false);setStage('');abort.current=null;}
  }
  function recoverResult(){try{const raw=localStorage.getItem(RESULT_KEY);const value=resultRef.current||(raw?JSON.parse(raw):null);if(value)commitResult(value);}catch(e){report(e);}}
+ function recoverLegacyResult(){try{const current=repository.load();save([...current,...legacyRecords.filter(n=>!current.some(old=>old.id===n.id))]);finishLegacyResult(localStorage,sessionStorage);setLegacyRecords([]);tell('旧版整理结果已保存');}catch(e){report(e);}}
+ async function exportLegacyWork(){const result=await platform.saveFile(new Blob([legacyWork.text],{type:'text/plain;charset=utf-8'}),'campus-inbox-old-drafts.txt');if(result.status!=='cancelled')tell('旧版草稿已导出');}
  async function loadExamples(){
   const response=await fetch('./examples.json');if(!response.ok)throw new Error('示例暂时无法载入。');
   const records=parseBackup(await response.json());const current=repository.load();
@@ -190,7 +198,7 @@ export function useCampus(){
    if(empty)changeDraft(empty.id,text);else addDraft(text);received=true;
   }return received;}finally{receivingShare.current=false;}
  }
- return {notices,drafts,busy,stage,error,setError,toast,setToast,pending,recoverResult,config,platform,capabilities,cloud,auth,sync,username,theme,setTheme,bootError:boot.error,
+ return {notices,drafts,busy,stage,error,setError,toast,setToast,pending,recoverResult,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,sync,username,theme,setTheme,bootError:boot.error,
   report,tell,update,act,remove,changeDraft,addDraft,attach,detach,removeDraft,analyze,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;
