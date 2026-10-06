@@ -1,0 +1,39 @@
+import {useEffect,useState} from 'react';
+import {Alert,Box,Button,Dialog,DialogActions,DialogContent,DialogTitle,IconButton,Stack,Typography} from '@mui/material';
+import AttachFile from '@mui/icons-material/AttachFile';
+import Close from '@mui/icons-material/Close';
+import Download from '@mui/icons-material/Download';
+import {getFile,type StoredAttachment} from '../../infrastructure/attachment-store';
+import type {PlatformAPI} from '../../platform';
+
+export function AttachmentList({ids,platform,onRemove}:{ids:string[];platform:PlatformAPI;onRemove?:(id:string)=>void}){
+ const [files,setFiles]=useState<(StoredAttachment|null)[]>([]);
+ const [selected,setSelected]=useState<StoredAttachment|null>(null);
+ const [url,setUrl]=useState('');const [error,setError]=useState('');
+ useEffect(()=>{let alive=true;void Promise.all(ids.map(getFile)).then(v=>{if(alive)setFiles(v);}).catch(()=>{if(alive)setError('附件暂时无法读取。');});return()=>{alive=false;};},[ids]);
+ useEffect(()=>{if(!selected)return;const value=URL.createObjectURL(selected.blob);setUrl(value);return()=>URL.revokeObjectURL(value);},[selected]);
+ if(!ids.length)return null;
+ const image=!!selected&&/^image\/(png|jpeg|gif|webp|avif|bmp)$/i.test(selected.type);
+ const pdf=selected?.type==='application/pdf';
+ async function download(){if(!selected)return;try{await platform.saveFile(selected.blob,selected.name);}catch(e){setError(e instanceof Error?e.message:'附件保存失败。');}}
+ return <>
+  <Stack direction="row" sx={{flexWrap:"wrap",gap:1,mt:1.5}}>
+   {ids.map((id,index)=>{const file=files[index];return <Box key={id} sx={{display:'flex',alignItems:'center',border:'1px solid',borderColor:'divider',borderRadius:2,maxWidth:'100%'}}>
+    <Button size="small" startIcon={<AttachFile/>} disabled={!file} onClick={()=>{setError('');setSelected(file);}} sx={{maxWidth:260,minHeight:38,px:1.5}}>
+     <span className="attachment-name">{file?.name||'附件未在此设备保存'}</span>
+    </Button>
+    {onRemove&&<IconButton size="small" aria-label={`移除${file?.name||'附件'}`} onClick={()=>onRemove(id)}><Close fontSize="small"/></IconButton>}
+   </Box>;})}
+  </Stack>
+  <Dialog open={!!selected} onClose={()=>setSelected(null)} maxWidth="md">
+   <DialogTitle>{selected?.name}</DialogTitle>
+   <DialogContent>
+    {error&&<Alert severity="error" sx={{mb:2}}>{error}</Alert>}
+    {image?<Box component="img" src={url} alt={selected?.name} sx={{display:'block',maxWidth:'100%',maxHeight:'65vh',mx:'auto',objectFit:'contain'}}/>:
+     pdf?<Box component="iframe" title={selected?.name} src={url} sandbox="" sx={{width:'100%',height:'65vh',border:0}}/>:
+     <Typography color="text.secondary">这种附件请保存后使用对应应用打开。</Typography>}
+   </DialogContent>
+   <DialogActions><Button onClick={()=>setSelected(null)}>关闭</Button><Button variant="contained" startIcon={<Download/>} onClick={()=>void download()}>保存附件</Button></DialogActions>
+  </Dialog>
+ </>;
+}

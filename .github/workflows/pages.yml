@@ -1,8 +1,8 @@
-name: Publish campus Inbox frontend
+name: Build and publish campus Inbox web
 on:
   push:
     branches: [main]
-    paths: ['dist/**', '.github/workflows/pages.yml']
+    paths: ['src/**', 'public/**', 'server/contracts/email-policy.mjs', 'index.html', 'package.json', 'pnpm-lock.yaml', 'tsconfig*.json', 'vite.config.*', 'tests/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -17,8 +17,19 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Free product checks
+        run: pnpm test
+      - name: Build web
+        run: pnpm build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

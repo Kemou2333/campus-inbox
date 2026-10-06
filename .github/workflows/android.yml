@@ -2,7 +2,7 @@ name: Build signed Android APK
 on:
   push:
     branches: [main]
-    paths: ['mobile/**', 'dist/**', 'tests/**', '.github/workflows/android.yml']
+    paths: ['mobile/**', 'src/**', 'public/**', 'server/contracts/email-policy.mjs', 'index.html', 'package.json', 'pnpm-lock.yaml', 'tsconfig*.json', 'vite.config.*', 'tests/**', '.github/workflows/android.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -12,28 +12,33 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+          cache: pnpm
       - uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '8.13'
-          cache-provider: 'basic'
-      - name: Free data and native boundary checks
+          cache-provider: basic
+      - name: Free product and native boundary checks
         run: |
-          node --test tests/*.test.mjs
+          pnpm install --frozen-lockfile
+          pnpm test
           mkdir -p /tmp/campus-native-checks
           javac -d /tmp/campus-native-checks mobile/android/app/src/main/java/io/github/kemou2333/campusinbox/NativePolicy.java mobile/android/app/src/main/java/io/github/kemou2333/campusinbox/NativeExport.java mobile/android/checks/NativeHostChecks.java
           java -cp /tmp/campus-native-checks io.github.kemou2333.campusinbox.NativeHostChecks
-      - name: Prepare offline web assets
-        run: python3 mobile/prepare-web.py
+      - name: Build and package offline web
+        run: |
+          pnpm build
+          python3 mobile/prepare-web.py
       - name: Build signed APK
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}

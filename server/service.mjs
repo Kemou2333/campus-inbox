@@ -12,7 +12,7 @@ export async function createService(config,options={}){
   const bits=16,sign=value=>createHmac('sha256',config.accessToken).update(value).digest('base64url');
   const day=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(now());
   let usage=null,busy=false,persistQueue=Promise.resolve();
-  if(config.stateFile){try{usage=JSON.parse(await readFile(config.stateFile,'utf8'));if(!usage||typeof usage.day!=='string'||!Number.isSafeInteger(usage.requests)||usage.requests<0||['input','output','reasoning'].some(key=>usage[key]!==undefined&&(!Number.isSafeInteger(usage[key])||usage[key]<0)))throw new Error('Invalid quota state');for(const key of ['input','output','reasoning'])usage[key]??=0;if(usage.clients!==undefined&&(typeof usage.clients!=='object'||!usage.clients||Array.isArray(usage.clients)||Object.entries(usage.clients).some(([k,v])=>!/^[-\w]{43}$/.test(k)||!v||!Number.isSafeInteger(v.requests)||v.requests<0||!Array.isArray(v.times)||v.times.length>5||v.times.some(t=>!Number.isSafeInteger(t)||t<0))))throw new Error('Invalid address quota state');}catch(e){if(e.code!=='ENOENT')throw e;}}
+  if(config.stateFile){try{usage=JSON.parse(await readFile(config.stateFile,'utf8'));if(!usage||typeof usage.day!=='string'||!Number.isSafeInteger(usage.requests)||usage.requests<0||['input','output','reasoning'].some(key=>usage[key]!==undefined&&(!Number.isSafeInteger(usage[key])||usage[key]<0)))throw new Error('Invalid quota state');for(const key of ['input','output','reasoning'])usage[key]??=0;if(usage.clients!==undefined&&(typeof usage.clients!=='object'||!usage.clients||Array.isArray(usage.clients)||Object.entries(usage.clients).some(([k,v])=>!/^[-\w]{43}$/.test(k)||!v||!Number.isSafeInteger(v.requests)||v.requests<0||!Array.isArray(v.times)||v.times.length>5||v.times.some(t=>!Number.isSafeInteger(t)||t<0))))throw new Error('Invalid address quota state');if(usage.accounts!==undefined&&(!usage.accounts||typeof usage.accounts!=='object'||Array.isArray(usage.accounts)||Object.entries(usage.accounts).some(([k,v])=>!/^[-\w]{43}$/.test(k)||!Number.isSafeInteger(v)||v<0)))throw new Error('Invalid identity quota state');}catch(e){if(e.code!=='ENOENT')throw e;}}
   const persist=()=>{if(!config.stateFile)return Promise.resolve();const snapshot=JSON.stringify(usage);const pending=persistQueue.catch(()=>{}).then(async()=>{await writeFile(config.stateFile+'.tmp',snapshot,{mode:0o600});await rename(config.stateFile+'.tmp',config.stateFile);});persistQueue=pending;return pending;};
   const authorized=header=>timingSafeEqual(createHash('sha256').update(header||'').digest(),createHash('sha256').update('Bearer '+config.accessToken).digest());
   const verify=(proof,ipKey,hash,origin,t)=>{
@@ -35,6 +35,12 @@ export async function createService(config,options={}){
     if(request.method==='OPTIONS')return reply({},204);
     if(request.method!=='POST')return reply({error:'请使用 POST 请求。'},405);
     if(!publicMode&&!authorized(request.headers.get('Authorization')))return reply({error:'访问码不正确，请重新输入。'},401);
+    let account=null;
+    if(config.requireIdentity){
+      const token=request.headers.get('Authorization')?.match(/^Bearer ([A-Za-z0-9_-]{43})$/)?.[1];
+      account=token&&options.accountForToken?await options.accountForToken(token):null;
+      if(!account)return reply({error:'请先登录，再整理通知。',code:'AUTH_REQUIRED'},401);
+    }
     if(!(request.headers.get('Content-Type')||'').toLowerCase().startsWith('application/json'))return reply({error:'请求必须使用 JSON。'},415);
     let notice;
     try{const body=JSON.parse(await boundedText(request.body,64000));if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).length!==1)throw new Error();if(Object.hasOwn(body,'notice')){if(typeof body.notice!=='string'||!body.notice.trim()||body.notice.length>D.MAX_TEXT)throw new Error();notice=body.notice.trim();}else if(Object.hasOwn(body,'sources'))notice=body;else throw new Error();modelInput(notice);}
@@ -46,6 +52,8 @@ export async function createService(config,options={}){
     if(busy&&usage?.day!==day())return reply({error:'正在整理另一条通知，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
     if(!usage||usage.day!==day())usage={day:day(),requests:0,input:0,output:0,reasoning:0,...(publicMode?{clients:{}}:{})};
     const requestUsage=usage;
+    const accountKey=account?sign(usage.day+':account:'+account.id):null;
+    const accountLimit=Number.isInteger(config.accountDailyLimit)&&config.accountDailyLimit>0?config.accountDailyLimit:10;
     if(publicMode)usage.clients??={};const ipKey=sign(usage.day+':'+ip),client=usage.clients?.[ipKey]||{requests:0,times:[]};
     const entries=(publicMode?client.times:(rates.get(ip)||[])).filter(v=>t-v<RATE_WINDOW_MS);
     const proof=request.headers.get('X-Campus-Proof');
@@ -61,6 +69,7 @@ export async function createService(config,options={}){
     // Paid failures also consume both caps. Cache reuse does not spend the budget.
     if(!saved&&usage.requests>=(config.dailyLimit||30))return limited('今日整理次数已达上限，明天再试。','DAILY_LIMIT');
     if(publicMode&&!saved&&client.requests>=ipLimit)return limited('此网络今日整理次数已达上限，明天再试。','IP_DAILY_LIMIT');
+    if(accountKey&&!saved&&(usage.accounts?.[accountKey]||0)>=accountLimit)return limited('此账号今日整理次数已达上限，明天再试。','ACCOUNT_DAILY_LIMIT');
     if(publicMode){
       usage.clients[ipKey]=client;
       // Bound the persisted map: paid clients are at most the global daily cap.
@@ -81,6 +90,7 @@ export async function createService(config,options={}){
     if(busy)return reply({error:'正在整理另一条通知，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
     if(usage.requests>=(config.dailyLimit||30))return limited('今日整理次数已达上限，明天再试。','DAILY_LIMIT');
     if(publicMode&&client.requests>=ipLimit)return limited('此网络今日整理次数已达上限，明天再试。','IP_DAILY_LIMIT');
+    if(accountKey&&(usage.accounts?.[accountKey]||0)>=accountLimit)return limited('此账号今日整理次数已达上限，明天再试。','ACCOUNT_DAILY_LIMIT');
     busy=true;let tokensRecorded=false;
     const recordTokens=async(stats,finishReason,failureCode)=>{
       for(const key of ['input','output','reasoning'])usage[key]=Math.min(Number.MAX_SAFE_INTEGER,(usage[key]||0)+(stats[key]||0));
@@ -88,7 +98,7 @@ export async function createService(config,options={}){
       tokensRecorded=true;await persist();
     };
     try{
-      usage.requests++;if(publicMode)client.requests++;await persist();
+      usage.requests++;if(publicMode)client.requests++;if(accountKey){usage.accounts??={};usage.accounts[accountKey]=(usage.accounts[accountKey]||0)+1;}await persist();
       const output=await analyze(notice,config,modelFetch);await recordTokens(output.usage,output.finishReason);
       if(cache.size>=50)cache.delete(cache.keys().next().value);cache.set(hash,{created:now(),result:output.result});return reply(output.result);
     }catch(e){

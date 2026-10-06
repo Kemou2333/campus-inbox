@@ -74,4 +74,12 @@ final class NativePolicy {
     static boolean validCalendar(long start, long end) {
         return start > 0 && start <= MAX_CALENDAR_TIME && end >= start && end <= MAX_CALENDAR_TIME;
     }
+
+    static boolean validReminderId(String id) {
+        return id != null && id.matches("[A-Za-z0-9_.:-]{1,100}");
+    }
+
+    static boolean validReminder(String id, long trigger, long now) {
+        return validReminderId(id) && trigger > now && trigger <= MAX_CALENDAR_TIME;
+    }
 }

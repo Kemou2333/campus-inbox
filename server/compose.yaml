@@ -1,0 +1,39 @@
+name: campus-inbox
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    env_file:
+      - ${CAMPUS_ENV_FILE:-/etc/campus-inbox/backend.env}
+    environment:
+      BIND_HOST: 0.0.0.0
+      PORT: 8787
+      USAGE_STATE_FILE: /var/lib/campus-inbox/usage.json
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - usage:/var/lib/campus-inbox
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    cpus: 0.50
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 75s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    logging:
+      driver: local
+      options:
+        max-size: "5m"
+        max-file: "3"
+volumes:
+  usage:
