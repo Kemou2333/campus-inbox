@@ -15,6 +15,8 @@ export function ComposerPage({app,onDone,onLogin}:{app:CampusController;onDone:(
  return <Stack spacing={2.5} className="page-enter">
   <Box><Typography variant="h4" component="h1">整理通知</Typography><Typography color="text.secondary" sx={{mt:.75}}>粘贴原文，AI 会整理出事项、步骤和提醒。</Typography></Box>
   {app.pending&&<Alert severity="info" action={<Button onClick={app.recoverResult}>保存结果</Button>}>上次整理的结果还没保存，无需再次调用 AI。</Alert>}
+  {!!app.legacyRecords.length&&<Alert severity="info" action={<Button onClick={app.recoverLegacyResult}>保存结果</Button>}>旧版有 {app.legacyRecords.length} 条整理结果未保存，无需重新调用 AI。</Alert>}
+  {app.legacyMissingFiles&&<Alert severity="info" onClose={()=>app.setLegacyMissingFiles(false)}>旧版草稿文字已保留，草稿附件需要重新添加。</Alert>}
   {app.drafts.map((draft,index)=><Paper key={draft.id} variant="outlined" sx={{p:{xs:2,sm:3}}}>
    <Stack direction="row" sx={{alignItems:"center",justifyContent:"space-between",mb:1.5}}>
     <Typography variant="h6">通知 {index+1}</Typography>
@@ -35,7 +37,7 @@ export function ComposerPage({app,onDone,onLogin}:{app:CampusController;onDone:(
     <Typography color={total>4000?'error.main':'text.secondary'} variant="body2">{total.toLocaleString()} / 4,000</Typography>
     <Stack direction="row" spacing={1}>
      {app.busy&&<Button onClick={app.cancel}>取消</Button>}
-     <Button variant="contained" startIcon={!app.busy&&<AutoAwesome/>} disabled={app.busy||adding||!hasContent||total>4000||app.pending||!app.config} onClick={()=>void submit()}>{app.busy?app.stage:'整理通知'}</Button>
+     <Button variant="contained" startIcon={!app.busy&&<AutoAwesome/>} disabled={app.busy||adding||!hasContent||total>4000||app.pending||!!app.legacyRecords.length||!app.config} onClick={()=>void submit()}>{app.busy?app.stage:'整理通知'}</Button>
     </Stack>
    </Stack>
   </Paper>

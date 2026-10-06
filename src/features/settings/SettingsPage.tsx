@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
-  DialogTitle, Divider, Paper, Stack, ToggleButton, ToggleButtonGroup, Typography,
+  DialogTitle, Divider, Paper, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography,
 } from '@mui/material';
 import BackupOutlined from '@mui/icons-material/BackupOutlined';
 import CloudSyncOutlined from '@mui/icons-material/CloudSyncOutlined';
@@ -19,6 +19,7 @@ interface Props {
   onLogin: () => void;
   onHelp: () => void;
   onAbout: () => void;
+  onDialogChange: (open:boolean) => void;
 }
 
 function date(value: string | null): string {
@@ -39,11 +40,13 @@ function Version({ label, record }: { label: string; record: SyncConflict['local
   </Box>;
 }
 
-export function SettingsPage({ app, onLogin, onHelp, onAbout }: Props) {
+export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: Props) {
   const [running, setRunning] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [conflict, setConflict] = useState<SyncConflict | null>(null);
+  const [legacyOpen,setLegacyOpen]=useState(false);
+  useEffect(()=>{onDialogChange(logoutOpen||!!conflict||legacyOpen);return()=>onDialogChange(false);},[logoutOpen,conflict,legacyOpen,onDialogChange]);
   const picker = useRef<HTMLInputElement>(null);
   const busy = !!running || app.busy;
 
@@ -141,6 +144,7 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout }: Props) {
       <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
         未登录时通知保存在本机。登录后同步文字、进度和笔记，附件仅保存在本机。
       </Typography>
+      {!!app.legacyWork.text&&<Button sx={{mt:2}} onClick={()=>setLegacyOpen(true)}>查看旧版未保存编辑</Button>}
     </Paper>
 
     <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
@@ -160,6 +164,14 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout }: Props) {
           await app.logout(); setLogoutOpen(false);
         })}>{running === 'logout' ? '正在退出…' : '退出登录'}</Button>
       </DialogActions>
+    </Dialog>
+
+    <Dialog open={legacyOpen} onClose={()=>setLegacyOpen(false)}>
+      <DialogTitle>旧版未保存编辑</DialogTitle>
+      <DialogContent><Typography color="text.secondary" sx={{mb:2}}>内容已保留，未覆盖当前笔记。</Typography>
+        <TextField multiline minRows={8} maxRows={16} value={app.legacyWork.text} slotProps={{input:{readOnly:true},htmlInput:{'aria-label':'旧版未保存内容'}}}/>
+      </DialogContent>
+      <DialogActions><Button onClick={()=>setLegacyOpen(false)}>关闭</Button><Button variant="contained" onClick={()=>void run('legacy',app.exportLegacyWork)}>导出文字</Button></DialogActions>
     </Dialog>
 
     <Dialog open={!!conflict} onClose={() => { if (!running) setConflict(null); }}>
