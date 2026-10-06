@@ -1,0 +1,126 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp, readFile, writeFile, rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {createService} from '../service.mjs';
+import {boundedText} from '../analyze.mjs';
+
+// Every upstream response is generated here. These tests make no network calls.
+const origin='https://campus.example.test', accessToken='fake-test-access-token-at-least-20-characters';
+const config={apiKey:'fake-test-api-key',accessToken,allowedOrigins:[origin]};
+const result={schemaVersion:4,notices:[{schemaVersion:4,kind:'information',title:'处理进度',summary:'系统正在处理。',deadline:null,deadlineText:'',tasks:[],timeline:[],materials:[],warnings:[],reminders:['系统正在处理。']}]};
+const response=()=>Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(result)}}],usage:{prompt_tokens:2,completion_tokens:3}});
+const request=(notice='通知',extra={})=>new Request('http://localhost/analyze',{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({notice,...extra})});
+
+test('malformed, oversized and non-text requests never reach the paid model',async()=>{
+  let calls=0;
+  const handler=await createService({...config,dailyLimit:1},{modelFetch:async()=>{calls++;return response();}});
+  const inputs=[request('x'.repeat(4001)),request('通知',{files:['private-photo']}),new Request('http://localhost/analyze',{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:'{bad json'}),new Request('http://localhost/analyze',{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+accessToken,'Content-Type':'text/plain'},body:'通知'}),request(Array.from({length:21},(_,i)=>'通知'+i).join('\n---\n'))];
+  for(let i=0;i<inputs.length;i++)assert.equal((await handler(inputs[i],'invalid-'+i)).status,i===3?415:400);
+  assert.equal(calls,0);assert.equal((await handler(request())).status,200);assert.equal(calls,1);
+});
+
+test('per-address rolling window allows five requests in three minutes including cache hits',async()=>{
+  let time=Date.UTC(2026,9,2,0),calls=0;
+  const handler=await createService(config,{now:()=>time,modelFetch:async()=>{calls++;return response();}});
+  for(let i=0;i<5;i++)assert.equal((await handler(request(),'same-address')).status,200);
+  const blocked=await handler(request(),'same-address');
+  assert.equal(blocked.status,429);assert.equal(blocked.headers.get('Retry-After'),'180');
+  assert.match(blocked.headers.get('Access-Control-Expose-Headers'),/Retry-After/);
+  assert.equal((await blocked.json()).retryAfterSeconds,180);
+  assert.equal(calls,1);
+  time+=60000;
+  const stillBlocked=await handler(request(),'same-address');assert.equal(stillBlocked.status,429);assert.equal(stillBlocked.headers.get('Retry-After'),'120');
+  assert.equal((await handler(request(),'different-address')).status,200);
+  time+=120000;
+  assert.equal((await handler(request(),'same-address')).status,200);
+  assert.equal(calls,1);
+});
+
+test('rolling limit frees only expired requests, not the whole window at a fixed boundary',async()=>{
+  let time=Date.UTC(2026,9,4,0);
+  const handler=await createService(config,{now:()=>time,modelFetch:async()=>response()});
+  assert.equal((await handler(request(),'a')).status,200);
+  time+=30000;
+  for(let i=0;i<4;i++)assert.equal((await handler(request(),'a')).status,200);
+  time+=149999;
+  const finalSecond=await handler(request(),'a');assert.equal(finalSecond.status,429);assert.equal(finalSecond.headers.get('Retry-After'),'1');
+  time++;
+  assert.equal((await handler(request(),'a')).status,200);
+  const remainder=await handler(request(),'a');assert.equal(remainder.status,429);assert.equal(remainder.headers.get('Retry-After'),'30');
+});
+
+test('one in-flight request blocks a second address without calling upstream',async()=>{
+  let started,finish,calls=0;
+  const announced=new Promise(resolve=>started=resolve),gate=new Promise(resolve=>finish=resolve);
+  const handler=await createService(config,{modelFetch:async()=>{calls++;started();await gate;return response();}});
+  const first=handler(request('第一条'),'address-a');
+  await announced;
+  const blocked=await handler(request('第二条'),'address-b');assert.equal(blocked.status,429);assert.equal((await blocked.json()).code,'SERVICE_BUSY');assert.equal(blocked.headers.get('Retry-After'),'3');
+  assert.equal(calls,1);
+  finish();assert.equal((await first).status,200);
+});
+
+test('failed upstream is not retried or cached and still consumes the daily cap',async()=>{
+  let calls=0;
+  const handler=await createService({...config,dailyLimit:2},{modelFetch:async()=>{calls++;return new Response('failure',{status:500});}});
+  assert.equal((await handler(request(),'a')).status,502);
+  assert.equal((await handler(request(),'b')).status,502);
+  assert.equal((await handler(request(),'c')).status,429);
+  assert.equal(calls,2);
+});
+
+test('paid resource failure and subsequent success are each metered once across restart',async()=>{
+  const directory=await mkdtemp(join(tmpdir(),'campus-metering-test-'));
+  try{
+    const stateFile=join(directory,'usage.json');let calls=0;
+    const modelFetch=async()=>{
+      calls++;
+      if(calls===1)return Response.json({choices:[{finish_reason:'insufficient_system_resource',message:{content:null}}],usage:{prompt_tokens:11,completion_tokens:13,completion_tokens_details:{reasoning_tokens:12}}});
+      return response();
+    };
+    const savedConfig={...config,stateFile,dailyLimit:2};
+    const first=await createService(savedConfig,{modelFetch});
+    const failure=await first(request('同一条通知'),'a');assert.equal(failure.status,503);assert.match((await failure.json()).error,/暂时繁忙/);assert.equal(calls,1);
+    const restarted=await createService(savedConfig,{modelFetch});
+    assert.equal((await restarted(request('同一条通知'),'b')).status,200);assert.equal(calls,2);
+    assert.equal((await restarted(request('同一条通知'),'b')).status,200);assert.equal(calls,2);
+    const state=JSON.parse(await readFile(stateFile,'utf8'));
+    assert.equal(state.requests,2);assert.equal(state.input,13);assert.equal(state.output,16);assert.equal(state.reasoning,12);assert.equal(state.lastFinishReason,'stop');
+    assert.equal((await restarted(request('新通知'),'c')).status,429);assert.equal(calls,2);
+  }finally{await rm(directory,{recursive:true,force:true});}
+});
+
+test('cache expires once, while Shanghai midnight resets the daily allowance',async()=>{
+  let time=Date.UTC(2026,9,2,15,59),calls=0;
+  const handler=await createService({...config,dailyLimit:1},{now:()=>time,modelFetch:async()=>{calls++;return response();}});
+  assert.equal((await handler(request('第一条'),'a')).status,200);
+  const capped=await handler(request('第二条'),'b');assert.equal(capped.status,429);assert.equal(capped.headers.get('Retry-After'),'60');assert.equal((await capped.json()).code,'DAILY_LIMIT');
+  time+=60000;
+  assert.equal((await handler(request('第二条'),'b')).status,200);
+  assert.equal(calls,2);
+  time+=16*60000;
+  assert.equal((await handler(request('第二条'),'b')).status,429);
+  assert.equal(calls,2);
+});
+
+test('unreadable or corrupt saved quota fails closed',async()=>{
+  const directory=await mkdtemp(join(tmpdir(),'campus-quota-test-'));
+  try{
+    const stateFile=join(directory,'usage.json');
+    for(const state of [{day:'today',requests:-1},{day:'today',requests:1,input:-1},{day:'today',requests:1,output:'13'}]){
+      await writeFile(stateFile,JSON.stringify(state));
+      await assert.rejects(createService({...config,stateFile},{modelFetch:async()=>{throw new Error('must not call upstream');}}),/Invalid quota state/);
+    }
+  }finally{await rm(directory,{recursive:true,force:true});}
+});
+
+test('UTF-8 stream limits use bytes and cancel oversized streams',async()=>{
+  const encoded=new TextEncoder().encode('通知'),chunks=[encoded.slice(0,2),encoded.slice(2)];
+  const stream=new ReadableStream({start(controller){chunks.forEach(chunk=>controller.enqueue(chunk));controller.close();}});
+  assert.equal(await boundedText(stream,6),'通知');
+  let cancelled=false;
+  const excessive=new ReadableStream({start(controller){controller.enqueue(encoded);},cancel(){cancelled=true;}});
+  await assert.rejects(boundedText(excessive,5),e=>e.status===413);assert.equal(cancelled,true);
+});

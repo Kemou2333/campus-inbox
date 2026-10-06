@@ -1,8 +1,8 @@
-name: Deploy AI backend
+name: Deploy compatible AI backend
 on:
   push:
     branches: [main]
-    paths: ['server/**', 'worker/prompt.mjs', 'dist/data.js', 'dist/time.js', 'tests/**', '.github/workflows/backend.yml']
+    paths: ['server/**', 'worker/prompt.mjs', '.github/workflows/backend.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -12,13 +12,14 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Verify backend protections
-        run: node --test tests/*.test.mjs
+      - name: Free protocol and cost checks
+        run: node --test server/tests/*.test.mjs
       - name: Upload a restricted backend release
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
@@ -31,5 +32,5 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/campus-deploy
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/campus-deploy ~/.ssh/known_hosts
-          tar -czf backend-release.tar.gz server/index.mjs server/analyze.mjs server/service.mjs worker/prompt.mjs dist/data.js dist/time.js
+          tar -czf backend-release.tar.gz server/index.mjs server/analyze.mjs server/service.mjs server/sync.mjs server/auth.mjs server/manage-invites.mjs worker/prompt.mjs server/contracts/data.js server/contracts/time.js
           ssh -i ~/.ssh/campus-deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes -p "$SERVER_PORT" "campus-deploy@$SERVER_HOST" deploy-campus-inbox < backend-release.tar.gz

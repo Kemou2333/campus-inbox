@@ -31,6 +31,9 @@ public final class NativeHostChecks {
         check(!NativePolicy.validCalendar(0, 100), "missing calendar time rejected");
         check(!NativePolicy.validCalendar(1_800_000_000_000L, 1), "reversed calendar time rejected");
         check(!NativePolicy.validCalendar(5_000_000_000_000L, 5_000_003_600_000L), "out of range calendar time rejected");
+        check(NativePolicy.validReminder("notice-v5:1", 1_800_000_060_000L, 1_800_000_000_000L), "future reminder accepted");
+        check(!NativePolicy.validReminder("notice-v5:1", 1_800_000_000_000L, 1_800_000_000_000L), "past reminder rejected");
+        check(!NativePolicy.validReminder("../secret", 1_800_000_060_000L, 1_800_000_000_000L), "unsafe reminder id rejected");
         fails(() -> NativePolicy.decodeChunk("not base64!"), "invalid chunk rejected");
         fails(() -> NativePolicy.decodeChunk("A".repeat(NativePolicy.MAX_CHUNK_CHARS + 4)), "oversized chunk rejected");
 
