@@ -26,8 +26,9 @@ export default function App(){
  const app=useCampus();const wide=useMediaQuery('(min-width:900px)');const systemDark=useMediaQuery('(prefers-color-scheme:dark)');
  const [page,setPage]=useState(0);const [login,setLogin]=useState(false);const [help,setHelp]=useState(()=>localStorage.getItem('campus-inbox:tutorial:v2')!=='seen');
  const [about,setAbout]=useState(false);const [note,setNote]=useState<NoteEditor|null>(null);const [details,setDetails]=useState<string|null>(null);const [calendar,setCalendar]=useState<CalendarSelection|null>(null);const [focusID,setFocusID]=useState<string|null>(null);
+ const [settingsDialog,setSettingsDialog]=useState(false);
  const dark=app.theme==='system'?(app.capabilities?.theme?.dark??systemDark):app.theme==='dark';const theme=makeTheme(dark,app.capabilities?.theme??null);
- const modalRef=useRef(false);modalRef.current=login||help||about||!!note||!!details||!!calendar;
+ const modalRef=useRef(false);modalRef.current=login||help||about||!!note||!!details||!!calendar||settingsDialog;
  const lastNotices=useRef(app.notices);
  function closeHelp(){setHelp(false);localStorage.setItem('campus-inbox:tutorial:v2','seen');}
  function navigate(next:number){setPage(next);window.scrollTo({top:0,behavior:'instant'});}
@@ -36,9 +37,10 @@ export default function App(){
   const receive=()=>{if(modalRef.current||app.busy)return;void app.receiveShare().then(received=>{if(received)navigate(1);}).catch(app.report);};
   const openNotice=()=>{void app.platform.getOpenedNotice().then(id=>{if(id){setPage(0);setFocusID(id);}}).catch(app.report);};
   const offShare=app.platform.onShare(receive);const offNotice=app.platform.onOpenNotice(openNotice);receive();openNotice();return()=>{offShare();offNotice();};
- },[app.platform,app.busy,login,help,about,note,details,calendar]);
+ },[app.platform,app.busy,login,help,about,note,details,calendar,settingsDialog]);
  useEffect(()=>app.platform.onBack(()=>{
-  if(modalRef.current){const dialog=Array.from(document.querySelectorAll('[role="dialog"]')).at(-1);dialog?.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',code:'Escape',bubbles:true}));return !!dialog;}
+  const dialog=Array.from(document.querySelectorAll('[role="dialog"]')).at(-1);
+  if(dialog){dialog.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',code:'Escape',bubbles:true}));return true;}
   if(page!==0){navigate(0);return true;}return false;
  }),[app.platform,page]);
  useEffect(()=>{if(details&&!app.notices.some(n=>n.id===details))setDetails(null);},[app.notices,details]);
@@ -62,7 +64,7 @@ export default function App(){
    {app.bootError?<Alert severity="error" action={<Button onClick={()=>void rescue().catch(app.report)}>保存原始数据</Button>}>原来的通知无法读取：{app.bootError}。数据仍在本机，暂未覆盖。</Alert>:
     page===0?<FeedPage app={app} actions={actions} onCompose={()=>navigate(1)} focusID={focusID}/>:
     page===1?<ComposerPage app={app} onDone={()=>navigate(0)} onLogin={()=>setLogin(true)}/>:
-    <SettingsPage app={app} onLogin={()=>setLogin(true)} onHelp={()=>setHelp(true)} onAbout={()=>setAbout(true)}/>}
+    <SettingsPage app={app} onLogin={()=>setLogin(true)} onHelp={()=>setHelp(true)} onAbout={()=>setAbout(true)} onDialogChange={setSettingsDialog}/>}
    <Typography variant="caption" color="text.secondary" sx={{display:'block',mt:5,textAlign:'center'}}>通知先保存在本机；登录后文字和进度自动同步，附件留在当前设备。</Typography>
   </Container>
   {!wide&&<Paper sx={{position:'fixed',bottom:0,left:0,right:0,borderTop:'1px solid',borderColor:'divider',pb:'env(safe-area-inset-bottom)',zIndex:10}}>
