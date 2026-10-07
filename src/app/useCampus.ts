@@ -50,6 +50,7 @@ export function useCampus(){
  const [stage,setStage]=useState('');
  const [toast,setToast]=useState<Toast|null>(null);
  const [pending,setPending]=useState(()=>!!localStorage.getItem(RESULT_KEY));
+ const [latestAddedID,setLatestAddedID]=useState<string|null>(null);
  const resultRef=useRef<{sources:Draft[];result:unknown}|null>(null);
  const abort=useRef<AbortController|null>(null);
  const draftRef=useRef(drafts);draftRef.current=drafts;
@@ -121,6 +122,7 @@ export function useCampus(){
  }
  function replaceDrafts(next:Draft[]){draftRef.current=next;setDrafts(next);}
  function changeDraft(id:string,text:string){replaceDrafts(draftRef.current.map(d=>d.id===id?{...d,text}:d));}
+ function pasteDraft(id:string,text:string){const target=draftRef.current.find(d=>d.id===id);if(!target||target.text||busy){tell('输入框已有内容，请新建通知后再粘贴。');return;}changeDraft(id,text);}
  function addDraft(text=''){if(draftRef.current.length>=20){tell('一次最多整理 20 条通知。');return;}replaceDrafts([...draftRef.current,{...makeDraft(),text}]);}
  async function attach(id:string,files:File[]){
   const target=draftRef.current.find(d=>d.id===id);if(!target||busy)return;
@@ -136,8 +138,16 @@ export function useCampus(){
   await cleanupFiles([fileID],[...noticeRef.current,...next.map(d=>({attachments:d.attachments}) as Notice)]);
  }
  async function removeDraft(id:string){
-  const removed=draftRef.current.find(d=>d.id===id);const next=draftRef.current.filter(d=>d.id!==id);const final=next.length?next:[makeDraft()];replaceDrafts(final);
-  if(removed)await cleanupFiles(removed.attachments,[...noticeRef.current,...final.map(d=>({attachments:d.attachments}) as Notice)]);
+  const current=draftRef.current,index=current.findIndex(d=>d.id===id),removed=current[index];if(!removed)return;
+  const next=current.filter(d=>d.id!==id),final=next.length?next:[makeDraft()],placeholder=next.length?null:final[0].id;replaceDrafts(final);
+  if(removed.text||removed.attachments.length)tell('已移除草稿',()=>{
+   const live=draftRef.current.filter(d=>d.id!==placeholder||d.text.trim()||d.attachments.length);
+   if(live.some(d=>d.id===removed.id))return;
+   if(live.length>=20){tell('草稿已满，先移除一条再恢复。');return;}
+   live.splice(Math.min(index,live.length),0,removed);replaceDrafts(live);tell('已恢复草稿');
+  });
+  // Give undo time to restore the same files; do not delete a restored attachment.
+  if(removed.attachments.length)setTimeout(()=>void cleanupFiles(removed.attachments,[...noticeRef.current,...draftRef.current.map(d=>({attachments:d.attachments}) as Notice)]).catch(report),20_000);
  }
  function commitResult(value:{sources:Draft[];result:unknown}){
   const batch=parseAnalysisBatch(value.result);
@@ -146,6 +156,7 @@ export function useCampus(){
   // Fixed IDs make recovering a result after refresh idempotent.
   const additions=batch.notices.map((a,i)=>({...createNotice(a,value.sources[i].text),id:`ai-${value.sources[i].id}`,attachments:value.sources[i].attachments}));
   save([...current,...additions.filter(n=>!current.some(old=>old.id===n.id))]);
+  if(additions.length)setLatestAddedID(additions[0].id);
   const consumed=new Set(value.sources.map(d=>d.id));const remaining=draftRef.current.filter(d=>!consumed.has(d.id));replaceDrafts(remaining.length?remaining:[makeDraft()]);
   localStorage.removeItem(RESULT_KEY);resultRef.current=null;setPending(false);setLegacyMissingFiles(false);tell(`已整理 ${additions.length} 条通知`);
  }
@@ -170,8 +181,9 @@ export function useCampus(){
  async function loadExamples(){
   const response=await fetch('./examples.json');if(!response.ok)throw new Error('示例暂时无法载入。');
   const records=parseBackup(await response.json());const current=repository.load();
-  const added=records.filter(n=>!current.some(old=>old.originalText===n.originalText&&old.title===n.title));
+  const added=records.filter(n=>!current.some(old=>old.id===n.id||old.originalText===n.originalText));
   save([...current,...added]);tell(added.length?`已载入 ${added.length} 条示例通知`:'这些示例已经载入。');
+  if(added.length)setLatestAddedID(added[0].id);
  }
  async function backup(){
   const records=repository.load();const files=await exportFiles(records);const data=exportBackup(records,files);
@@ -198,7 +210,7 @@ export function useCampus(){
    if(empty)changeDraft(empty.id,text);else addDraft(text);received=true;
   }return received;}finally{receivingShare.current=false;}
  }
- return {notices,drafts,busy,stage,error,setError,toast,setToast,pending,recoverResult,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,sync,username,theme,setTheme,bootError:boot.error,
-  report,tell,update,act,remove,changeDraft,addDraft,attach,detach,removeDraft,analyze,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,receiveShare};
+ return {notices,drafts,busy,stage,error,setError,toast,setToast,pending,recoverResult,latestAddedID,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,sync,username,theme,setTheme,bootError:boot.error,
+  report,tell,update,act,remove,changeDraft,pasteDraft,addDraft,attach,detach,removeDraft,analyze,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;

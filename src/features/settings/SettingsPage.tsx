@@ -133,7 +133,7 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
           onClick={() => void run('backup', app.backup)}>{running === 'backup' ? '正在导出…' : '导出备份'}</Button>
         <Button variant="outlined" startIcon={<UploadOutlined />} disabled={busy} onClick={() => picker.current?.click()}>
           {running === 'import' ? '正在导入…' : '导入备份'}</Button>
-        <Button variant="text" startIcon={<AutoStoriesOutlined />} disabled={busy}
+        <Button variant="outlined" startIcon={<AutoStoriesOutlined />} disabled={busy}
           onClick={() => void run('examples', app.loadExamples)}>{running === 'examples' ? '正在载入…' : '载入示例通知'}</Button>
       </Stack>
       <input ref={picker} type="file" accept="application/json,.json" hidden aria-label="选择通知备份"
@@ -141,9 +141,6 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
           const file = event.target.files?.[0]; event.target.value = '';
           if (file) void run('import', () => app.importBackup(file));
         }} />
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-        未登录时通知保存在本机。登录后同步文字、进度和笔记，附件仅保存在本机。
-      </Typography>
       {!!app.legacyWork.text&&<Button sx={{mt:2}} onClick={()=>setLegacyOpen(true)}>查看旧版未保存编辑</Button>}
     </Paper>
 
