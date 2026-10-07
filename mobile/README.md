@@ -8,7 +8,7 @@
 2. 运行 `python3 mobile/prepare-web.py`。
 3. 使用 JDK 17、Gradle 8.13、Android SDK 36，在 `mobile/android/` 运行 `gradle :app:assembleRelease`。
 
-APK 发布版本为 `2.0.0`、`versionCode=2`，应用 ID 延续 `io.github.kemou2333.campusinbox`。沿用第一版的私密签名密钥才能覆盖安装并保留已有通知。签名配置仅从 `ANDROID_KEYSTORE_PATH`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD` 环境变量读取，不进入仓库。
+APK 发布版本为 `2.1.0`、`versionCode=3`，应用 ID 延续 `io.github.kemou2333.campusinbox`。沿用第一版的私密签名密钥才能覆盖安装并保留已有通知。签名配置仅从 `ANDROID_KEYSTORE_PATH`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD` 环境变量读取，不进入仓库。
 
 ## 平台能力
 
@@ -22,9 +22,9 @@ APK 发布版本为 `2.0.0`、`versionCode=2`，应用 ID 延续 `io.github.kemo
 
 原生桥只对 APK 内置的 HTTPS 顶层入口开放，外部链接交给浏览器；没有文件跨域访问、远程脚本更新或 SSL 忽略。云同步通过独立基础设施接口接入，原生宿主不直接连接数据库；只有登录后才同步文字、进度与笔记，附件仍留在本机。
 
-## 以后接入其他设备
+## 布局与主题
 
-`PlatformAPI` 是设备能力边界。以后可以增加 iOS 适配器，接入系统文件、分享、日历编辑和本地提醒；通知业务和 React 界面不改写。新适配器须返回真实能力和操作状态，保持分享仅填入草稿、日历需要用户确认、通知需要主动授权这些行为。
+当前只维护网页和 Android，其他平台暂缓。手机竖屏使用单栏；低高度横屏压缩导航；宽屏并列新增与查看。方屏根据当前窗口宽度自动切换，不锁定方向。宿主消费系统栏、刘海和键盘安全区，WebView 不重复留白；手动明暗模式同步系统栏颜色。动态色用于操作重点，正文使用稳定的中性色。
 
 本地提醒统一使用 `{id,title,body?,triggerMillis}`，由稳定通知 ID 对应一项提醒；重新设置会替换原提醒。网页 `scheduleReminder` 返回 `unsupported`，不会显示一个实际上不能工作的后台提醒。Android 的 `onOpenNotice` 与 `getOpenedNotice` 将系统通知点击传给应用导航，不直接改写业务记录。
 

@@ -58,6 +58,7 @@ public final class MainActivity extends Activity {
     private static final int NOTIFICATION_PERMISSION = 22;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private WebView web;
+    private FrameLayout root;
     private NativeExport exports;
     private ValueCallback<Uri[]> fileCallback;
     private volatile JavaScriptReplyProxy saveReply;
@@ -90,7 +91,7 @@ public final class MainActivity extends Activity {
             receiveOpenedNotice(getIntent());
         }
 
-        FrameLayout root = new FrameLayout(this);
+        root = new FrameLayout(this);
         root.setBackgroundColor(themeColor("surface"));
         web = new WebView(this);
         web.setBackgroundColor(themeColor("surface"));
@@ -110,10 +111,11 @@ public final class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 30) {
             getWindow().setDecorFitsSystemWindows(false);
             root.setOnApplyWindowInsetsListener((view, insets) -> {
-                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
                 android.graphics.Insets keyboard = insets.getInsets(WindowInsets.Type.ime());
                 view.setPadding(bars.left, bars.top, bars.right, Math.max(bars.bottom, keyboard.bottom));
-                return insets;
+                // WebView must not reapply already handled bars/cutout insets.
+                return WindowInsets.CONSUMED;
             });
             WindowInsetsController controller = getWindow().getInsetsController();
             if (controller != null) controller.setSystemBarsAppearance(
@@ -126,8 +128,27 @@ public final class MainActivity extends Activity {
             getWindow().getDecorView().setSystemUiVisibility(isDark() ? 0 :
                     View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
         }
-        getWindow().setStatusBarColor(themeColor("surface"));
-        getWindow().setNavigationBarColor(themeColor("surface"));
+        applyAppearance(isDark());
+        root.requestApplyInsets();
+    }
+
+    @SuppressWarnings("deprecation")
+    private void applyAppearance(boolean dark) {
+        int surface = Color.parseColor(dark ? "#111417" : "#F7F9FA");
+        root.setBackgroundColor(surface);
+        web.setBackgroundColor(surface);
+        getWindow().setStatusBarColor(surface);
+        getWindow().setNavigationBarColor(surface);
+        if (Build.VERSION.SDK_INT >= 29) getWindow().setNavigationBarContrastEnforced(false);
+        if (Build.VERSION.SDK_INT >= 30) {
+            WindowInsetsController controller = getWindow().getInsetsController();
+            int light = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                    | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+            if (controller != null) controller.setSystemBarsAppearance(dark ? 0 : light, light);
+        } else {
+            getWindow().getDecorView().setSystemUiVisibility(dark ? 0 :
+                    View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+        }
     }
 
     @SuppressWarnings("deprecation")
@@ -251,7 +272,12 @@ public final class MainActivity extends Activity {
             switch (action) {
                 case "capabilities":
                     respond(reply, id, new JSONObject().put("calendar", calendarIntent().resolveActivity(getPackageManager()) != null)
-                            .put("fileSave", exports != null).put("shareText", true).put("localReminders", true).put("theme", theme()));
+                            .put("fileSave", exports != null).put("shareText", true).put("localReminders", true).put("appearance", true).put("theme", theme()));
+                    break;
+                case "appearance":
+                    if (!(payload.opt("dark") instanceof Boolean)) throw new IllegalArgumentException("主题模式不正确");
+                    applyAppearance(payload.getBoolean("dark"));
+                    respond(reply, id, new JSONObject());
                     break;
                 case "consumeShare":
                     String text = shareQueue.pollFirst();
