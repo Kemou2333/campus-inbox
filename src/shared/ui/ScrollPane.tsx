@@ -2,7 +2,7 @@ import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {Box} from '@mui/material';
 
 /** A visible, draggable scrollbar even on systems with auto-hidden native bars. */
-export function ScrollPane({id,label,children}:{id:string;label:string;children:ReactNode}){
+export function ScrollPane({id,label,children,onFocus}:{id:string;label:string;children:ReactNode;onFocus?:()=>void}){
  const viewport=useRef<HTMLDivElement>(null),content=useRef<HTMLDivElement>(null);
  const drag=useRef<{y:number;top:number}|null>(null);
  const [size,setSize]=useState({height:0,total:0,top:0});
@@ -16,7 +16,7 @@ export function ScrollPane({id,label,children}:{id:string;label:string;children:
  const max=Math.max(0,size.total-size.height);const thumb=max?Math.max(32,size.height*size.height/size.total):size.height;
  const travel=Math.max(0,size.height-thumb);const position=max?size.top/max*travel:0;
  const scroll=(top:number)=>{if(viewport.current)viewport.current.scrollTop=Math.min(max,Math.max(0,top));};
- return <Box component="section" aria-label={label} id={id} sx={{position:'relative',minWidth:0,minHeight:0}}>
+ return <Box component="section" aria-label={label} id={id} onFocusCapture={onFocus} sx={{position:'relative',minWidth:0,minHeight:0}}>
   <Box ref={viewport} id={`${id}-content`} className="workspace-pane" sx={{height:'100%',overflowY:'auto',overscrollBehavior:'contain',pr:2.5,scrollbarWidth:'none','&::-webkit-scrollbar':{display:'none'}}}>
    <Box ref={content}>{children}</Box>
   </Box>
