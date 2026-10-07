@@ -71,14 +71,13 @@ export default function App(){
   </AppBar>
   <Container maxWidth={false} component="main" sx={{maxWidth:split&&page!==2?1440:900,px:{xs:1,sm:3},pt:{xs:1.5,sm:3},pb:wide?3:'calc(104px + var(--safe-bottom))'}}>
    {app.bootError?<Alert severity="error" action={<Button onClick={()=>void rescue().catch(app.report)}>保存原始数据</Button>}>原来的通知无法读取：{app.bootError}。数据仍在本机，暂未覆盖。</Alert>:
-    split&&page!==2?<Box className="workspace" sx={{display:'grid',gridTemplateColumns:'minmax(300px, 360px) minmax(0, 1fr)',gap:3,height:'calc(100dvh - 150px - var(--safe-top))',minHeight:220}}>
+    split&&page!==2?<Box className="workspace" sx={{display:'grid',gridTemplateColumns:'minmax(300px, 360px) minmax(0, 1fr)',gap:3,height:'calc(100dvh - 113px - var(--safe-top))',minHeight:160}}>
      <ScrollPane id="compose-pane" label="新增通知" onFocus={()=>setPage(1)}><ComposerPage app={app} embedded onDone={()=>setPage(0)} onLogin={()=>setLogin(true)}/></ScrollPane>
      <ScrollPane id="feed-pane" label="已保存通知" onFocus={()=>setPage(0)}><FeedPage app={app} embedded actions={actions} onCompose={()=>navigate(1)} focusID={focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView}/></ScrollPane>
     </Box>:
     page===0?<FeedPage app={app} actions={actions} onCompose={()=>navigate(1)} focusID={focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView}/>:
     page===1?<ComposerPage app={app} onDone={()=>navigate(0)} onLogin={()=>setLogin(true)}/>:
     <SettingsPage app={app} onLogin={()=>setLogin(true)} onHelp={()=>setHelp(true)} onAbout={()=>setAbout(true)} onDialogChange={setSettingsDialog}/>}
-   <Typography variant="caption" color="text.secondary" sx={{display:'block',mt:3,textAlign:'center'}}>通知先保存在本机；登录后文字和进度自动同步，附件留在当前设备。</Typography>
   </Container>
   {!wide&&<Paper sx={{position:'fixed',bottom:0,left:0,right:0,borderTop:'1px solid',borderColor:'divider',pb:'var(--safe-bottom)',zIndex:10}}>
    <BottomNavigation value={page} onChange={(_,value)=>navigate(value)} showLabels sx={{bgcolor:'background.paper',minHeight:72,height:'auto','& .MuiBottomNavigationAction-root':{minWidth:0,maxWidth:180,gap:.5,py:1,color:'text.secondary'},'& .MuiBottomNavigationAction-root.Mui-selected':{color:'primary.main'},'& .MuiBottomNavigationAction-label':{fontSize:'.75rem',fontWeight:600},'& .MuiBottomNavigationAction-label.Mui-selected':{fontSize:'.75rem'}}}>{nav.map(item=><BottomNavigationAction key={item.label} label={item.label} icon={<Box sx={{width:64,height:30,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:4,bgcolor:page===nav.indexOf(item)?'action.selected':'transparent'}}>{item.icon}</Box>}/>)}</BottomNavigation>

@@ -20,7 +20,12 @@ export function RichText({text,inline=false}:{text:string;inline?:boolean}){
    unwrapDisallowed={inline}
    components={{
     p:({children})=>inline?<span>{children}</span>:<p>{children}</p>,
-    a:({href,children})=>href?<Link href={href} target="_blank" rel="noopener noreferrer" underline="always">{children}</Link>:<span>{children}</span>,
+    a:({href,children})=>{
+     if(!href)return <span>{children}</span>;
+     const words=typeof children==='string'?children:Array.isArray(children)&&children.every(item=>typeof item==='string')?children.join(''):'';
+     const bare=words===href||safeMarkdownURL(words)===href;
+     return <Link href={href} title={bare?href:undefined} target="_blank" rel="noopener noreferrer" underline="always">{bare?new URL(href).host:children}</Link>;
+    },
     img:()=>null,
     input:()=>null
    }}>{text}</Markdown>

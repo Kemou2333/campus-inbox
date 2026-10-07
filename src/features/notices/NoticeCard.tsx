@@ -13,7 +13,7 @@ import type {CampusController} from '../../app/useCampus';
 import {RichText} from '../../shared/ui/RichText';
 import {AttachmentList} from '../attachments/AttachmentList';
 import {plainReadingText} from '../../domain/reading';
-import {formatDate,matchesHiddenDetail,noticeOverview} from './notice-overview';
+import {matchesHiddenDetail,noticeOverview} from './notice-overview';
 
 export interface NoticeActions {
  note:(notice:Notice,target:NoteTarget,title:string,text:string)=>void;
@@ -28,8 +28,8 @@ export function NoticeCard({notice:n,app,actions,now,expanded,onExpandedChange,s
  const overview=noticeOverview(n);const reducedMotion=useMediaQuery('(prefers-reduced-motion: reduce)');
  const bodyID=`notice-body-${n.id}`;
  const expandLabel=expanded?'收起':matchesHiddenDetail(n,searchQuery)?'查看匹配':'展开';
- const noteButton=(target:NoteTarget,title:string,text:string)=><Button size="small" variant="outlined" startIcon={<EditNote fontSize="small"/>} aria-label={`给${title}写笔记`} disabled={disabled} onClick={()=>actions.note(n,target,title,text)} color={text?'primary':'inherit'} sx={{color:text?'primary.main':'text.secondary'}}>笔记{text?' · 已记':''}</Button>;
- return <Paper component="article" variant="outlined" id={`notice-${n.id}`} className="notice-card" inert={disabled||undefined} aria-labelledby={`notice-heading-${n.id}`} sx={{p:{xs:1.5,sm:2.5},borderColor:p.level==='overdue'&&!done?'error.main':'divider',pointerEvents:disabled?'none':undefined,opacity:done?.88:1}}>
+ const noteButton=(target:NoteTarget,title:string,text:string)=><Tooltip title={text?'编辑笔记':'写笔记'}><span><IconButton aria-label={`给${title}写笔记`} disabled={disabled} onClick={()=>actions.note(n,target,title,text)} sx={{border:'1px solid',borderColor:text?'primary.main':'divider',color:text?'primary.main':'text.secondary'}}><EditNote/></IconButton></span></Tooltip>;
+ return <Paper component="article" variant="outlined" id={`notice-${n.id}`} className="notice-card" inert={disabled||undefined} aria-labelledby={`notice-heading-${n.id}`} sx={{p:{xs:1.5,sm:2.5},borderColor:'divider',pointerEvents:disabled?'none':undefined,opacity:done?.88:1}}>
   <Stack direction="row" sx={{alignItems:'flex-start',justifyContent:'space-between',gap:1,mb:1}}>
    <Stack direction="row" sx={{flexWrap:'wrap',gap:1,minWidth:0}}>
     {p.label&&!done?<Chip size="small" label={p.label} color={p.level==='overdue'?'error':'warning'}/>:<Chip size="small" label={done?(status==='dismissed'?'不适用':'已完成'):n.kind==='task'?'待办':'提醒'} color={done?'default':n.kind==='task'?'primary':'secondary'} variant="outlined"/>}
@@ -39,7 +39,7 @@ export function NoticeCard({notice:n,app,actions,now,expanded,onExpandedChange,s
     {overview.total>0&&<Typography variant="body2" color="text.secondary" sx={{fontVariantNumeric:'tabular-nums',fontWeight:600}} aria-label={`已完成${overview.completed}项任务，共${overview.total}项任务`}>任务 {overview.completed}/{overview.total}</Typography>}
    </Stack>
   </Stack>
-  <Typography variant="h5" component="h2" id={`notice-heading-${n.id}`} sx={{overflowWrap:'anywhere'}}>{n.title}</Typography>
+  <Typography variant="h5" component="h2" id={`notice-heading-${n.id}`} sx={{overflowWrap:'anywhere',fontSize:{xs:'1.5rem',sm:'1.75rem'},fontWeight:700,lineHeight:1.35}}>{n.title}</Typography>
   {n.kind!=='task'&&n.summary&&plainReadingText(n.summary)!==n.title&&<Typography component="div" variant="body2" color="text.secondary" sx={{mt:.5,display:'-webkit-box',WebkitLineClamp:1,WebkitBoxOrient:'vertical',overflow:'hidden'}}><RichText text={n.summary} inline/></Typography>}
   {!!overview.audiences.length&&<Stack direction="row" className="notice-audiences" sx={{flexWrap:'wrap',gap:.75,mt:1}}>{overview.audiences.slice(0,3).map(label=><Chip key={label} size="small" label={label} color={label==='全体同学'?'primary':'warning'} variant="outlined"/>)}{overview.audiences.length>3&&<Button size="small" variant="outlined" onClick={()=>{if(!expanded)onExpandedChange();}} disabled={disabled} sx={{minHeight:28,py:.25,color:'text.secondary'}}>{`另 ${overview.audiences.length-3} 类对象`}</Button>}</Stack>}
   {!!(overview.times.length||overview.locations.length)&&<Stack className="notice-overview" spacing={.5} sx={{mt:1}}>
@@ -98,7 +98,6 @@ export function NoticeCard({notice:n,app,actions,now,expanded,onExpandedChange,s
   <Stack direction="row" sx={{gap:1,mt:2,flexWrap:'wrap'}}>
    <Button size="small" variant="outlined" onClick={()=>actions.details(n)} disabled={disabled}>详情原文</Button>
    {n.kind==='task'&&!done&&<Button size="small" variant="outlined" startIcon={<Event fontSize="small"/>} onClick={()=>actions.calendar(n)} disabled={disabled}>日历与提醒</Button>}
-   <Typography variant="caption" color="text.secondary" sx={{alignSelf:'center',ml:'auto',fontVariantNumeric:'tabular-nums'}}>{formatDate(n.createdAt,true)}</Typography>
   </Stack>
   </Box>
   </Collapse>

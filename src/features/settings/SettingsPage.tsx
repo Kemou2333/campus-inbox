@@ -143,6 +143,7 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
           const file = event.target.files?.[0]; event.target.value = '';
           if (file) void run('import', () => app.importBackup(file));
         }} />
+      <Typography variant="body2" color="text.secondary" sx={{mt:2}}>通知先保存在本机，登录后文字与进度自动同步；附件留在当前设备。</Typography>
       {!!app.legacyWork.text&&<Button sx={{mt:2}} onClick={()=>setLegacyOpen(true)}>查看旧版未保存编辑</Button>}
     </Paper>
 
