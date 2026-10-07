@@ -75,7 +75,10 @@ function normalize(value,timeText){
  return out;
 }
 function ground(value,timeText,source){
- validate(value);const text=raw(timeText);
+ // No numeric parts means no confirmed precision. Keep this safe empty output
+ // usable without guessing a date or discarding the whole paid response.
+ const candidate=value?.type==='partial'&&PARTS.every(key=>value[key]===null)?{...value,type:'unknown'}:value;
+ validate(candidate);const text=raw(timeText);
  if(typeof source!=='string')return empty(text);
  // "号" and "日" are equivalent date markers; no other facts are borrowed.
  const compact=s=>s.replace(/\s/g,'').replace(/号/g,'日');
