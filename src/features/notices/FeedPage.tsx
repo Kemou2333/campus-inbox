@@ -5,7 +5,7 @@ import Add from '@mui/icons-material/Add';
 import ArrowForward from '@mui/icons-material/ArrowForward';
 import Close from '@mui/icons-material/Close';
 import {IconButton} from '@mui/material';
-import {getNoticeStatus,pendingTasks,priority,sortNotices} from '../../domain/notice';
+import {getNoticeStatus,priority,sortNotices} from '../../domain/notice';
 import type {Notice,SortOrder} from '../../domain/types';
 import type {CampusController} from '../../app/useCampus';
 import {NoticeCard,type NoticeActions} from './NoticeCard';
@@ -41,7 +41,7 @@ export function FeedPage({app,actions,onCompose,focusID,onFocusHandled,embedded=
  const pending=app.notices.filter(n=>getNoticeStatus(n)==='pending');
  const reminders=app.notices.filter(n=>getNoticeStatus(n)==='reminder');
  const complete=app.notices.filter(n=>['completed','dismissed'].includes(getNoticeStatus(n)));
- const urgent=sortNotices(pending.filter(n=>priority(n,now).rank<=2),'priority',now).slice(0,4);
+ const urgent=sortNotices(pending.filter(n=>{const level=priority(n,now).level;return level==='today'||level==='upcoming';}),'priority',now).slice(0,4);
  const records=useMemo(()=>{
   const status=tab===0?'pending':tab===1?'reminder':'completed';const needle=query.trim().toLocaleLowerCase();
   return sortNotices(app.notices.filter(n=>(status==='completed'?['completed','dismissed'].includes(getNoticeStatus(n)):getNoticeStatus(n)===status)&&(!needle||[n.title,n.summary,n.originalText,n.note,...n.tasks.flatMap(t=>[t.text,t.note,...t.steps.flatMap(s=>[s.text,s.note])]),...n.reminders.flatMap(r=>[r.text,r.note])].join('\n').toLocaleLowerCase().includes(needle))),sort,now);
@@ -61,11 +61,11 @@ export function FeedPage({app,actions,onCompose,focusID,onFocusHandled,embedded=
  },[focusID,app.notices,onFocusHandled]);
  return <Stack spacing={2} className="page-enter">
   <Box ref={controls} className="feed-controls" sx={{position:embedded?'sticky':'static',top:0,zIndex:3,bgcolor:'background.default',pb:embedded?1.5:0}}>
-  <Stack direction="row" sx={{alignItems:"center",justifyContent:"space-between",gap:2}}>
-   <Box sx={{display:'flex',flexDirection:embedded?'row':'column',alignItems:embedded?'center':'flex-start',flexWrap:'wrap',gap:embedded?1.5:0}}><Typography variant={embedded?'h5':'h4'} component="h1">通知</Typography><Stack direction="row" sx={{flexWrap:"wrap",gap:1,mt:embedded?0:1}}><Chip label={`未完成：${pending.reduce((n,v)=>n+pendingTasks(v).length,0)}`} color="primary"/><Chip label={`提醒：${reminders.length}`} color="secondary" variant="outlined"/></Stack></Box>
-   {!embedded&&<Button startIcon={<Add/>} variant="contained" onClick={onCompose} sx={{flexShrink:0}}>新增</Button>}
-  </Stack>
-  <Tabs value={tab} onChange={(_,value)=>setTab(value)} variant="fullWidth" aria-label="通知分类" sx={{borderBottom:'1px solid',borderColor:'divider',mt:1.5}}>
+  {!embedded&&<Stack direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:2}}>
+   <Typography variant="h4" component="h1">通知</Typography>
+   <Button startIcon={<Add/>} variant="contained" onClick={onCompose} sx={{flexShrink:0}}>新增</Button>
+  </Stack>}
+  <Tabs value={tab} onChange={(_,value)=>setTab(value)} variant="fullWidth" aria-label="通知分类" sx={{borderBottom:'1px solid',borderColor:'divider',mt:embedded?0:1.5}}>
    <Tab label={`待办 ${pending.length}`}/><Tab label={`提醒 ${reminders.length}`}/><Tab label={`已完成 ${complete.length}`}/>
   </Tabs>
   <Stack direction="row" sx={{gap:1,mt:1.5}}>

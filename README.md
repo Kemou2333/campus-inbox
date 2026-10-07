@@ -37,7 +37,9 @@ python3 mobile/prepare-web.py
 | `worker/prompt.mjs` | 版本化结构化提示词 |
 | `mobile/android` | Android 原生壳、文件、分享、日历与提醒 |
 
-2.2 版默认折叠通知，保留分类、搜索和展开状态；手机弹窗与正文进一步加宽，原文随整个弹窗滚动。支持轻度 Markdown 的加粗、列表和链接，本机 PDF 可直接翻页预览，备份可选择包含附件或仅保留文字。Android 只处理一次屏幕安全区，手动切换主题时系统栏也随之切换；手机横屏、平板和方屏按可用宽度布局。iOS 暂不开发。
+2.3 版进一步精简界面：分类栏只显示一套计数，通知标题加大，笔记、粘贴与新增使用带提示的图标。字数在输入框下方，整理按钮占一整行；数据说明移到设置，深色界面使用中性的蓝灰底色。裸网址显示域名，点击仍打开完整原链接。
+
+通知默认折叠，保留分类、搜索和展开状态；手机弹窗与正文加宽，原文随整个弹窗滚动。支持轻度 Markdown 的加粗、列表和链接，本机 PDF 可直接翻页预览，备份可选择包含附件或仅保留文字。Android 只处理一次屏幕安全区，手动切换主题时系统栏也随之切换；手机横屏、平板和方屏按可用宽度布局。iOS 暂不开发。
 
 界面参考 [Material 3 字体层级](https://m3.material.io/styles/typography/applying-type)、[按钮规范](https://m3.material.io/components/buttons/guidelines)与 [Android edge-to-edge](https://developer.android.com/develop/ui/views/layout/edge-to-edge)，触控目标保持至少 48px。
 
@@ -55,6 +57,7 @@ python3 mobile/prepare-web.py
 
 本版还修复了删除卡片时的位置跳动、旧搜索隐藏新增结果等交互问题。空白草稿可直接粘贴；误删草稿可恢复文字和附件。宽屏分类和搜索保持可见，HTML 等附件按文字预览，不执行内容。
 
+- [2.3 验收记录](docs/VALIDATION-2.3.md)
 - [2.2 验收记录](docs/VALIDATION-2.2.md)
 - [验证码与后续公开注册](docs/PUBLIC-ACCESS-PLAN.md)
 - [2.1 验收记录](docs/VALIDATION-2.1.md)
