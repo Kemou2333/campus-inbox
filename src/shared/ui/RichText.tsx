@@ -1,19 +1,28 @@
-import {Fragment} from 'react';
 import {Box,Link} from '@mui/material';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
-/** A small Markdown subset. HTML and executable links are never rendered. */
-export function RichText({text}:{text:string}){
- const tokens=text.split(/(\*\*[^*\n]+\*\*|`[^`\n]+`|\[[^\]\n]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s<>「」【】]+|\d{1,4}年\d{1,2}月\d{1,2}[日号](?:\s*\d{1,2}[:：]\d{2})?|\d{1,2}月\d{1,2}[日号](?:\s*\d{1,2}[:：]\d{2})?|\d{1,2}[:：]\d{2})/g);
- return <Box component="span" sx={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{tokens.map((token,i)=>{
-  if(token.startsWith('**'))return <strong key={i}>{token.slice(2,-2)}</strong>;
-  if(token.startsWith('`'))return <Box component="code" key={i} sx={{fontFamily:'inherit',bgcolor:'action.hover',px:.6,borderRadius:1}}>{token.slice(1,-1)}</Box>;
-  const markdown=token.match(/^\[([^\]]+)\]\((https?:\/\/[^)]+)\)$/);
-  if(markdown)return <Link key={i} href={markdown[2]} target="_blank" rel="noopener noreferrer">{markdown[1]}</Link>;
-  if(/^https?:\/\//.test(token)){
-   const url=token.replace(/[。，、；：！？）]+$/,'');const tail=token.slice(url.length);
-   return <Fragment key={i}><Link href={url} target="_blank" rel="noopener noreferrer">{url}</Link>{tail}</Fragment>;
-  }
-  if(/^\d/.test(token)&&/[月:：]/.test(token))return <Box component="strong" key={i} sx={{color:'primary.main',fontWeight:650}}>{token}</Box>;
-  return <Fragment key={i}>{token}</Fragment>;
- })}</Box>;
+export function safeMarkdownURL(value:string){
+ try {const url=new URL(value);return ['https:','http:'].includes(url.protocol)?url.href:'';}catch{return '';}
+}
+/** Text and safe links only: no HTML execution or remote image downloads. */
+export function RichText({text,inline=false}:{text:string;inline?:boolean}){
+ return <Box component={inline?'span':'div'} className="rich-text" sx={{overflowWrap:'anywhere',
+  '& p':{m:0,whiteSpace:'pre-wrap'},'& p + p':{mt:.75},'& strong':{fontWeight:700,color:'text.primary'},
+  '& ul, & ol':{my:.75,pl:2.5},'& li + li':{mt:.35},'& li > p':{display:'inline'},
+  '& code':{fontFamily:'inherit',fontSize:'.95em',bgcolor:'action.hover',px:.5,borderRadius:.5},
+  '& pre':{whiteSpace:'pre-wrap',p:1.5,bgcolor:'action.hover',borderRadius:2,overflow:'auto'},
+  '& blockquote':{m:0,my:.75,pl:1.5,borderLeft:'3px solid',borderColor:'divider'},
+  '& table':{display:'block',overflowX:'auto',borderCollapse:'collapse',my:1},'& th, & td':{border:'1px solid',borderColor:'divider',p:1,textAlign:'left'},
+  '& h1, & h2, & h3, & h4, & h5, & h6':{fontSize:'1em',fontWeight:700,mt:1,mb:.5}}}>
+  <Markdown remarkPlugins={[remarkGfm]} skipHtml urlTransform={safeMarkdownURL}
+   allowedElements={inline?['p','strong','em','del','code','a','br']:undefined}
+   unwrapDisallowed={inline}
+   components={{
+    p:({children})=>inline?<span>{children}</span>:<p>{children}</p>,
+    a:({href,children})=>href?<Link href={href} target="_blank" rel="noopener noreferrer" underline="always">{children}</Link>:<span>{children}</span>,
+    img:()=>null,
+    input:()=>null
+   }}>{text}</Markdown>
+ </Box>;
 }

@@ -47,6 +47,8 @@ export type ReminderResult = { status: 'scheduled' | 'permission-denied' | 'unsu
 export interface PlatformAPI {
   readonly kind: 'browser' | 'android';
   readonly ready: Promise<PlatformCapabilities>;
+  /** Keep native system bars in the same light/dark mode as the web surface. */
+  setAppearance?(dark:boolean):Promise<void>;
   /** Takes one item from the native queue. Never triggers AI or alters a draft. */
   getSharedText(): Promise<string | null>;
   onShare(listener: () => void): () => void;

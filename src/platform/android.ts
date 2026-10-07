@@ -41,6 +41,7 @@ export function createAndroidPlatform(bridge: NativeBridge): PlatformAPI {
   let sequence = 0;
   let disposed = false;
   let saving = false;
+  let appearanceSupported = false;
 
   const receive = (event: { data: string }) => {
     let reply: NativeReply;
@@ -73,13 +74,13 @@ export function createAndroidPlatform(bridge: NativeBridge): PlatformAPI {
   };
 
   const ready: Promise<PlatformCapabilities> = call<Record<string, unknown>>('capabilities', {}, 10_000)
-    .then(value => ({
+    .then(value => { appearanceSupported=value.appearance===true;return {
       calendar: value.calendar === true,
       fileSave: value.fileSave === true,
       shareText: value.shareText === true,
       localReminders: value.localReminders === true,
       theme: readTheme(value.theme),
-    }));
+    };});
 
   const share = () => { for (const listener of shareListeners) listener(); };
   const openNotice = () => { for (const listener of noticeListeners) listener(); };
@@ -94,6 +95,10 @@ export function createAndroidPlatform(bridge: NativeBridge): PlatformAPI {
 
   const api: PlatformAPI = {
     kind: 'android', ready,
+    async setAppearance(dark) {
+      await ready;
+      if(appearanceSupported)await call('appearance',{dark});
+    },
     async getSharedText() {
       if (!(await ready).shareText) return null;
       const value = await call<{ text: string | null }>('consumeShare');
