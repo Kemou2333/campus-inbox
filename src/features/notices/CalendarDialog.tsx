@@ -4,6 +4,7 @@ import type {CampusController} from '../../app/useCampus';
 import type {Notice,Task} from '../../domain/types';
 import {effectiveDeadline,taskDeadline} from '../../domain/notice';
 import {timeFromText,timeSpecToDate} from '../../domain/time';
+import {plainReadingText} from '../../domain/reading';
 export interface CalendarSelection {notice:Notice;task?:Task}
 const localInput=(value:string)=>{
  const d=new Date(value),pad=(n:number)=>String(n).padStart(2,'0');
@@ -17,10 +18,10 @@ export function CalendarDialog({selection,app,onClose}:{selection:CalendarSelect
  const title=selection?.task?.text||selection?.notice.title||'';
  function millis(){const value=new Date(allDay?`${date}T00:00:00`:date).getTime();if(!date||!Number.isFinite(value))throw new Error('请先填写明确的日期和时间。');return value;}
  function savePersonal(){if(!personal||allDay||!selection)return;app.update(selection.notice.id,n=>({...n,updatedAt:new Date().toISOString(),...(selection.task?{tasks:n.tasks.map(t=>t.id===selection.task!.id?{...t,localDeadline:`${date}:00`}:t)}:{localDeadline:`${date}:00`})}));}
- async function calendar(){setBusy(true);setError('');try{const startMillis=millis();const n=selection!.notice;const result=await app.platform.openCalendar({title,startMillis,allDay,location:selection?.task?.location||undefined,description:[n.summary,...(selection?.task?[selection.task]:n.tasks).flatMap(t=>[t.text,...t.steps.map((s,i)=>`${i+1}. ${s.text}`)])].filter(Boolean).join('\n')});
+ async function calendar(){setBusy(true);setError('');try{const startMillis=millis();const n=selection!.notice;const result=await app.platform.openCalendar({title,startMillis,allDay,location:selection?.task?.location||undefined,description:[n.summary,...(selection?.task?[selection.task]:n.tasks).flatMap(t=>[t.text,...t.steps.map((s,i)=>`${i+1}. ${s.text}`)])].filter(Boolean).map(plainReadingText).join('\n')});
   if(result.status!=='cancelled'){savePersonal();app.tell(result.status==='opened'?'已打开日历，请在日历中确认保存。':'已下载日历文件，请导入你的日历。');onClose();}
  }catch(e){setError(e instanceof Error?e.message:'日历暂时无法使用。');}finally{setBusy(false);}}
- async function reminder(){setBusy(true);setError('');try{const triggerMillis=millis()-lead*60_000;if(triggerMillis<=Date.now())throw new Error('提醒时间已经过去，请调整时间。');const n=selection!.notice;const result=await app.platform.scheduleReminder({id:n.id,title,body:selection?.task?.text||n.summary,triggerMillis});
+ async function reminder(){setBusy(true);setError('');try{const triggerMillis=millis()-lead*60_000;if(triggerMillis<=Date.now())throw new Error('提醒时间已经过去，请调整时间。');const n=selection!.notice;const result=await app.platform.scheduleReminder({id:n.id,title,body:plainReadingText(selection?.task?.text||n.summary),triggerMillis});
   if(result.status==='scheduled'){savePersonal();app.tell('已设置本机提醒');onClose();}else setError(result.status==='permission-denied'?'请允许应用发送通知后再试。':'此设备暂不支持本地提醒，可以添加到日历。');
  }catch(e){setError(e instanceof Error?e.message:'提醒暂时无法设置。');}finally{setBusy(false);}}
  return <Dialog open={!!selection} onClose={busy?undefined:onClose}>
