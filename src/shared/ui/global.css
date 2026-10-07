@@ -10,4 +10,5 @@ button:focus-visible,a:focus-visible{outline:3px solid #629e96;outline-offset:3p
 @media(max-height:500px) and (min-width:600px){.MuiToolbar-root{min-height:48px!important}.notice-card{scroll-margin-top:60px}}
 
 html[data-theme="dark"]{--scroll-thumb:#798591;--scroll-track:#293138}
+.notice-card{scroll-margin-top:8px}
 @supports not selector(::-webkit-scrollbar){.workspace-pane{scrollbar-width:thin;scrollbar-color:#89939c transparent}}
