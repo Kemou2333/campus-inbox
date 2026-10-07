@@ -6,15 +6,24 @@
       "schemaVersion": 4,
       "kind": "task",
       "title": "8号普通请假办理",
-      "summary": "需办理8号普通请假的同学须在10月7日17:00前完善请假流程。",
+      "summary": "需要办理8号普通请假的同学须在10月7号17:00前完善请假流程，家长发短信给苏老师，学生截图发给通知发布者并填写办事薄、在智慧学工请假。",
       "deadline": null,
       "deadlineText": "10月7号17:00前",
       "timeline": [
         {
-          "label": "10月7号17:00后通知发布者将在办事薄依次确认办理",
+          "label": "通知发布者依次确认办理",
           "time": null,
           "timeText": "10月7号17:00后",
-          "location": null
+          "location": null,
+          "timeSpec": {
+            "type": "partial",
+            "year": null,
+            "month": 10,
+            "day": 7,
+            "hour": 17,
+            "minute": 0,
+            "rawText": "10月7号17:00后"
+          }
         },
         {
           "label": "苏老师同意请假",
@@ -25,25 +34,29 @@
       ],
       "tasks": [
         {
-          "text": "发送请假短信",
+          "text": "发送请假短信给苏老师",
           "assignee": "家长",
           "scope": "role",
-          "condition": "学生需要办理8号普通请假时",
+          "condition": "学生需要办理8号普通请假",
           "details": [
-            "家长发短信给苏老师",
-            "审批时将依次核对手机号，请确保请假短信由家长发送"
+            "短信须由**家长发送**，审批时将依次核对手机号"
           ],
           "steps": [],
           "time": null,
-          "timeText": "",
+          "timeText": "10月7号17:00前",
           "location": null,
-          "completed": false,
-          "dismissed": false,
-          "note": "",
-          "localDeadline": null
+          "timeSpec": {
+            "type": "partial",
+            "year": null,
+            "month": 10,
+            "day": 7,
+            "hour": 17,
+            "minute": 0,
+            "rawText": "10月7号17:00前"
+          }
         },
         {
-          "text": "完善请假流程",
+          "text": "办理8号普通请假",
           "assignee": null,
           "scope": "conditional",
           "condition": "需要办理8号普通请假的同学",
@@ -54,46 +67,55 @@
           "steps": [
             {
               "text": "将家长短信截图发给通知发布者",
-              "details": [],
-              "id": "44a6265f-1bc9-44c6-b107-bbe3238a0276",
-              "completed": false,
-              "note": ""
+              "details": []
             },
             {
               "text": "填写办事薄",
-              "details": [],
-              "id": "b8dcfd66-b3e4-4596-9ec4-34c736244a55",
-              "completed": false,
-              "note": ""
+              "details": [
+                "请假事由与去向地点写清楚：因xx事前往xx地点"
+              ]
             },
             {
               "text": "在智慧学工上请假",
-              "details": [],
-              "id": "ef8cee22-942d-45af-8719-9943e8e946e3",
-              "completed": false,
-              "note": ""
+              "details": [
+                "去向地点要写详细，不能只写省市和区县"
+              ]
             }
           ],
           "time": null,
-          "timeText": "",
+          "timeText": "10月7号17:00前",
           "location": null,
-          "completed": false,
-          "dismissed": false,
-          "note": "",
-          "localDeadline": null
+          "timeSpec": {
+            "type": "partial",
+            "year": null,
+            "month": 10,
+            "day": 7,
+            "hour": 17,
+            "minute": 0,
+            "rawText": "10月7号17:00前"
+          }
         }
       ],
       "materials": [],
       "warnings": [
-        "请假不规范会影响批假，请务必检查是否在截止时间前按照要求请假"
+        "请假不规范会影响批假，请务必检查是否在截止时间前按照以上要求请假"
       ],
       "reminders": [],
-      "id": "example-v1-v7-1",
+      "deadlineSpec": {
+        "type": "partial",
+        "year": null,
+        "month": 10,
+        "day": 7,
+        "hour": 17,
+        "minute": 0,
+        "rawText": "10月7号17:00前"
+      },
+      "id": "example-reading-v21-0",
       "originalText": "请需要办理8号普通请假的同学务必在10月7号17:00前完善好请假流程:\n\n①家长发短信给苏老师，再把短信截图发给我，并及时填写办事薄，以及在智慧学工上请假。⚠️⚠️⚠️请确保请假短信由家长发送，审批时将依次核对手机号\n\n②去向地点要写详细，不能只写省市和区县\n\n③办事薄里请假事由与去向地点写清楚:因xx事前往xx地点\n\n10月7号17:00后我将在办事薄依次确认办理，然后再由苏老师同意请假\n\n⚠️注意，请假不规范会影响批假，所以请各位同学务必检查是否在截止时间前按照以上要求请假",
-      "createdAt": "2026-10-04T00:00:00.000Z",
+      "createdAt": "2026-10-07T02:13:58.284Z",
       "completed": false,
+      "dismissed": false,
       "localDeadline": null,
-      "reminderNotes": [],
       "note": "",
       "audienceOverride": "",
       "attachments": []
@@ -101,8 +123,8 @@
     {
       "schemaVersion": 4,
       "kind": "task",
-      "title": "国庆离校返校时间调整",
-      "summary": "国庆节假期离校名单已公布，相关同学须按申报时间按时返校，部分同学需修改返校时间或办理请假。",
+      "title": "国庆离校返校安排",
+      "summary": "公布国庆节假期离校名单，请同学注意安全并按申报时间按时返校，返校时间填写有误或不能按期返校者需按条件处理。",
       "deadline": null,
       "deadlineText": "",
       "timeline": [],
@@ -116,11 +138,7 @@
           "steps": [],
           "time": null,
           "timeText": "",
-          "location": null,
-          "completed": false,
-          "dismissed": false,
-          "note": "",
-          "localDeadline": null
+          "location": null
         },
         {
           "text": "按10月7日返校",
@@ -131,11 +149,7 @@
           "steps": [],
           "time": null,
           "timeText": "",
-          "location": null,
-          "completed": false,
-          "dismissed": false,
-          "note": "",
-          "localDeadline": null
+          "location": null
         },
         {
           "text": "办理请假手续",
@@ -143,30 +157,26 @@
           "scope": "conditional",
           "condition": "填写2026年10月8日返校但不能按要求10月7日返校的同学",
           "details": [
-            "请假必须有正当理由，否则不予批准"
+            "请假必须有**正当理由**，否则不予批准"
           ],
           "steps": [],
           "time": null,
           "timeText": "",
-          "location": null,
-          "completed": false,
-          "dismissed": false,
-          "note": "",
-          "localDeadline": null
+          "location": null
         }
       ],
       "materials": [],
       "warnings": [
-        "请各位同学注意安全，按申报时间按时返校",
+        "请各位同学**注意安全**，按申报时间按时返校",
         "具体名单详见附件公示"
       ],
       "reminders": [],
-      "id": "example-v1-v7-2",
+      "id": "example-reading-v21-1",
       "originalText": "@全体成员 【2026年国庆节去离校准假名单】\n现将国庆节假期离校名单予以公布，请各位同学 注意安全，按申报时间按时返校！\n具体名单详见附件公示。\n注意：\n请填写2027年返校的同学，修改返校时间！\n请填写2026年10月8日返校的同学，按照要求10月7日返校，否者请按照【请假流程】办理【请假手续】。\n【请假必须有正当理由，否则不予批准】",
-      "createdAt": "2026-10-04T00:00:00.000Z",
+      "createdAt": "2026-10-07T02:14:55.889Z",
       "completed": false,
+      "dismissed": false,
       "localDeadline": null,
-      "reminderNotes": [],
       "note": "",
       "audienceOverride": "",
       "attachments": []
@@ -174,19 +184,28 @@
     {
       "schemaVersion": 4,
       "kind": "information",
-      "title": "助学贷款发放与入账",
-      "summary": "国家开发银行生源地助学贷款正陆续发放，学校预计十月中旬完成入账处理，二次缴费将统一退还。",
+      "title": "助学贷款入账处理",
+      "summary": "国家开发银行生源地助学贷款正陆续发放，学校预计十月中旬完成入账处理，二次缴费将统一退还至绑定银行卡。",
       "deadline": null,
       "deadlineText": "",
       "timeline": [
         {
-          "label": "学校预计于十月中旬完成入账处理（届时本科生选课新增学分学费将一并结算）",
+          "label": "学校预计完成入账处理（本科生选课新增学分学费一并结算）",
           "time": null,
           "timeText": "十月中旬",
-          "location": null
+          "location": null,
+          "timeSpec": {
+            "type": "partial",
+            "year": null,
+            "month": 10,
+            "day": null,
+            "hour": null,
+            "minute": null,
+            "rawText": "十月中旬"
+          }
         },
         {
-          "label": "财务处将在入账处理完毕后，统一退还二次缴费至学生财务系统绑定的银行卡中",
+          "label": "财务处统一退还二次缴费至学生财务系统绑定的银行卡",
           "time": null,
           "timeText": "",
           "location": null
@@ -200,16 +219,12 @@
         "学校将贷款资金转为学费入账需要一定处理时间，学生收到短信后仍显示欠费属于正常情况",
         "部分学生在学校录入回执后，又自行缴纳了学费或住宿费，贷款放款后便造成二次缴费"
       ],
-      "id": "example-v1-v7-3",
+      "id": "example-reading-v21-2",
       "originalText": "@全体成员 【转发资助中心消息】\n当前，国家开发银行生源地助学贷款正陆续发放，学生也将陆续收到短信提醒。\n同学们：\n贷款到账短信不等于学费已缴。学校将贷款资金转为学费入账需要一定处理时间，因此学生收到短信后仍显示欠费属于正常情况。学校预计于十月中旬完成入账处理（届时本科生选课新增学分学费将一并结算）。\n此外，部分学生在学校录入回执后，又自行缴纳了学费或住宿费，贷款放款后便造成二次缴费。财务处将在入账处理完毕后，统一退还至学生财务系统绑定的银行卡中。",
-      "createdAt": "2026-10-04T00:00:00.000Z",
+      "createdAt": "2026-10-07T02:13:58.284Z",
       "completed": false,
+      "dismissed": false,
       "localDeadline": null,
-      "reminderNotes": [
-        "",
-        "",
-        ""
-      ],
       "note": "",
       "audienceOverride": "",
       "attachments": []
@@ -221,45 +236,53 @@
       "summary": "2026级新生须在10月15号前完成网上电子注册学籍核对，港澳台新生另行通知。",
       "deadline": null,
       "deadlineText": "10月15号前",
-      "timeline": [
-        {
-          "label": "2026级港澳台新生待学信网数据更新后另行通知学生进行注册",
-          "time": null,
-          "timeText": "",
-          "location": null
-        }
-      ],
+      "timeline": [],
       "tasks": [
         {
           "text": "完成学籍电子注册",
           "assignee": null,
           "scope": "conditional",
-          "condition": "2026级新生（不含2026级港澳台新生）",
+          "condition": "2026级新生（不含待学信网数据更新后另行通知的港澳台新生）",
           "details": [
-            "在“中国高等教育学生信息网”注册",
-            "链接：https://jwc.cqu.edu.cn/info/1080/6186.htm"
+            "在**中国高等教育学生信息网**注册完毕",
+            "新生通过学籍电子注册才能获得学籍，具有学籍的学生才能获得毕业证书",
+            "通知链接：https://jwc.cqu.edu.cn/info/1080/6186.htm"
           ],
           "steps": [],
           "time": null,
-          "timeText": "",
+          "timeText": "10月15号前",
           "location": null,
-          "completed": false,
-          "dismissed": false,
-          "note": "",
-          "localDeadline": null
+          "timeSpec": {
+            "type": "partial",
+            "year": null,
+            "month": 10,
+            "day": 15,
+            "hour": null,
+            "minute": null,
+            "rawText": "10月15号前"
+          }
         }
       ],
       "materials": [],
       "warnings": [
-        "新生通过学籍电子注册才能获得学籍，具有学籍的学生才能获得毕业证书"
+        "2026级港澳台新生待学信网数据更新后另行通知学生进行注册"
       ],
       "reminders": [],
-      "id": "example-v1-v7-4",
+      "deadlineSpec": {
+        "type": "partial",
+        "year": null,
+        "month": 10,
+        "day": 15,
+        "hour": null,
+        "minute": null,
+        "rawText": "10月15号前"
+      },
+      "id": "example-reading-v21-3",
       "originalText": "@全体成员\n关于开展2026级新生网上电子注册学籍核对的通知https://jwc.cqu.edu.cn/info/1080/6186.htm\n要求必须10月15号前在“中国高等教育学生信息网”注册完毕，新生通过学籍电子注册才能获得学籍，具有学籍的学生才能获得毕业证书（2026级港澳台新生待学信网数据更新后另行通知学生进行注册）。",
-      "createdAt": "2026-10-04T00:00:00.000Z",
+      "createdAt": "2026-10-07T02:14:55.889Z",
       "completed": false,
+      "dismissed": false,
       "localDeadline": null,
-      "reminderNotes": [],
       "note": "",
       "audienceOverride": "",
       "attachments": []
@@ -268,89 +291,115 @@
       "schemaVersion": 4,
       "kind": "task",
       "title": "学生评教",
-      "summary": "本科生评教系统已开放，请在课程结束前完成评教。通知见QQ群文件。",
+      "summary": "本科生评教系统已开放，学生须在课程结束前及时评教。",
       "deadline": null,
-      "deadlineText": "课程结束前",
+      "deadlineText": "",
       "timeline": [],
       "tasks": [
         {
           "text": "完成课程评教",
-          "assignee": "学生",
+          "assignee": null,
+          "scope": "all",
+          "condition": "",
           "details": [
-            "使用微信搜索并关注“重庆大学服务号”，点击菜单“功能”->“评教”，输入统一认证号和密码（或者扫描二维码）进入系统。",
-            "若忘记密码，在统一认证界面点击“忘记密码”按照指引操作。"
+            "使用微信搜索并关注“**重庆大学服务号**”，点击菜单“功能”->“评教”，输入统一认证号和密码（或者扫描二维码）即可进入系统",
+            "若忘记密码，在统一认证界面点击“忘记密码”按照指引操作即可"
           ],
+          "steps": [],
           "time": null,
           "timeText": "课程结束前",
           "location": null,
-          "completed": false,
-          "dismissed": false,
-          "note": "",
-          "localDeadline": null
+          "timeSpec": {
+            "type": "unknown",
+            "year": null,
+            "month": null,
+            "day": null,
+            "hour": null,
+            "minute": null,
+            "rawText": "课程结束前"
+          }
         }
       ],
       "materials": [],
-      "warnings": [
-        "学生评教以匿名方式反映，评教时不要有所顾虑。"
+      "warnings": [],
+      "reminders": [
+        "学生评教都将以【**匿名**】的方式反映，请同学们在评教时不要有所顾虑",
+        "《关于开展2026—2027学年第一学期学生评教的通知》见QQ群文件"
       ],
-      "reminders": [],
-      "id": "example-v1-v7-5",
+      "id": "example-reading-v21-4",
       "originalText": "本科生评教系统已经开放了，请提醒学生（在课程结束前）及时评教。《关于开展2026—2027学年第一学期学生评教的通知》见QQ群文件[表情][表情]\n\n学生评教方式：\n使用微信搜索并关注“重庆大学服务号”，点击菜单“功能”->“评教”，输入统一认证号和密码（或者扫描二维码）即可进入系统。若忘记密码，在统一认证界面点击“忘记密码”按照指引操作即可。\n\n温馨提示：学生评教都将以【匿名】的方式反映，请同学们在评教时不要有所顾虑。",
-      "createdAt": "2026-10-04T00:00:00.000Z",
+      "createdAt": "2026-10-07T02:13:58.284Z",
       "completed": false,
-      "attachments": [],
-      "note": "",
+      "dismissed": false,
       "localDeadline": null,
-      "reminderNotes": []
+      "note": "",
+      "audienceOverride": "",
+      "attachments": []
     },
     {
       "schemaVersion": 4,
       "kind": "task",
-      "title": "2026级SRTP项目申报",
-      "summary": "2026级大学生科研训练计划（SRTP）项目申报已启动，需在截止时间前完成申报。",
+      "title": "SRTP项目申报",
+      "summary": "2026级大学生科研训练计划（SRTP）项目申报已启动，有意申报者可按两种方式之一组队申报。",
       "deadline": "2026-10-21T00:00:00",
       "deadlineText": "2026年10月20日24:00",
       "timeline": [],
       "tasks": [
         {
-          "text": "完成SRTP项目申报",
-          "assignee": "2026级学生",
+          "text": "申报SRTP项目",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "有意申报SRTP项目的同学",
           "details": [
-            "申报方式二选一：选择老师发布的现有项目，自行找队友组队参加；或自己拟定题目，联系心仪的老师担任指导老师，招募队友组队。",
-            "申报平台：新版重庆大学大学生创新创业项目管理平台 https://sxic.cqu.edu.cn/upm/",
-            "通知详情：https://sxic.cqu.edu.cn/content/news-detail?menuIds=64,66&params=3308e6d4b0564815b91b3f596ff0207c （需使用校园网访问）"
+            "申报平台：**新版重庆大学大学生创新创业项目管理平台** https://sxic.cqu.edu.cn/upm/",
+            "两种方式二选一：选择老师发布的现有项目，自行找队友组队参加；或自己拟定题目，联系心仪的老师担任指导老师，招募队友组队",
+            "通知链接：https://sxic.cqu.edu.cn/content/news-detail?menuIds=64,66&params=3308e6d4b0564815b91b3f596ff0207c （需使用校园网访问）"
           ],
+          "steps": [],
           "time": null,
-          "timeText": "",
+          "timeText": "2026年10月20日24:00",
           "location": null,
-          "completed": false,
-          "dismissed": false,
-          "note": "",
-          "localDeadline": null
+          "timeSpec": {
+            "type": "date_time",
+            "year": 2026,
+            "month": 10,
+            "day": 20,
+            "hour": 24,
+            "minute": 0,
+            "rawText": "2026年10月20日24:00"
+          }
         }
       ],
       "materials": [],
       "warnings": [
-        "项目结题后可获得2个创新学分，直接满足毕业要求的创新学分。",
-        "获得基础的科研训练经历，为后续竞赛、保研、进课题组打基础。",
-        "原则上完成校级SRTP后，大二才有资格申报国家级、市级大创项目。"
+        "项目结题后可获得**2个创新学分**，直接满足毕业要求的创新学分",
+        "原则上完成校级SRTP后，大二才有资格申报国家级、市级大创项目"
       ],
       "reminders": [],
-      "id": "example-v1-v7-6",
+      "deadlineSpec": {
+        "type": "date_time",
+        "year": 2026,
+        "month": 10,
+        "day": 20,
+        "hour": 24,
+        "minute": 0,
+        "rawText": "2026年10月20日24:00"
+      },
+      "id": "example-reading-v21-5",
       "originalText": "各位同学好，2026级大学生科研训练计划（SRTP）项目申报已经正式启动！@全体成员\n\n《关于组织申报2026级“大学生科研训练计划”（SRTP）项目的通知》\nhttps://sxic.cqu.edu.cn/content/news-detail?menuIds=64,66&params=3308e6d4b0564815b91b3f596ff0207c\n（需使用校园网访问）\n\n📌 参与SRTP的作用\n1. 项目结题后可获得 2个创新学分，直接满足毕业要求的创新学分；\n2. 获得基础的科研训练经历，为后续竞赛、保研、进课题组打基础；\n3. 原则上完成校级SRTP后，大二才有资格申报国家级、市级大创项目。\n\n📌 申报方式\n两种方式二选一即可：\n- 选择老师发布的现有项目，自行找队友组队参加；\n- 自己拟定题目，联系心仪的老师担任指导老师，招募队友组队。\n\n⚠️ 关键时间与平台\n1. 申报平台：新版重庆大学大学生创新创业项目管理平台\nhttps://sxic.cqu.edu.cn/upm/\n2. 截止时间：2026年10月20日24:00",
-      "createdAt": "2026-10-04T00:00:00.000Z",
+      "createdAt": "2026-10-07T02:14:55.889Z",
       "completed": false,
-      "attachments": [],
-      "audienceOverride": "all",
-      "note": "",
+      "dismissed": false,
       "localDeadline": null,
-      "reminderNotes": []
+      "note": "",
+      "audienceOverride": "",
+      "attachments": []
     },
     {
       "schemaVersion": 4,
       "kind": "reminder",
-      "title": "军训期间外出与住宿纪律",
-      "summary": "军训期间无特殊情况不得请假外出或夜不归宿，仅因病就医复查可例外。",
+      "title": "军训期间外出纪律",
+      "summary": "军训期间无特殊情况不能请假外出夜不归宿，因病就医需提交医院证明。",
       "deadline": null,
       "deadlineText": "",
       "timeline": [],
@@ -358,22 +407,18 @@
       "materials": [],
       "warnings": [],
       "reminders": [
-        "军训期间无特殊情况不能请假外出、夜不归宿。",
-        "因病去医院检查复查并提交医院证明的，可作为例外。",
-        "除因病就医复查外，其他情况均不允许请假外出。"
+        "军训期间**无特殊情况不能请假外出夜不归宿**",
+        "除非因病去医院检查复查，并**提交医院证明**，其他情况都不允许"
       ],
-      "id": "example-v1-v7-7",
+      "id": "example-reading-v21-6",
       "originalText": "各位注意，军训期间无特殊情况不能请假外出夜不归宿。除非因病去医院检查复查，并提交医院证明，其他情况都不允许。@全体成员",
-      "createdAt": "2026-10-04T00:00:00.000Z",
+      "createdAt": "2026-10-07T02:14:55.889Z",
       "completed": false,
-      "attachments": [],
-      "note": "",
+      "dismissed": false,
       "localDeadline": null,
-      "reminderNotes": [
-        "",
-        "",
-        ""
-      ]
+      "note": "",
+      "audienceOverride": "",
+      "attachments": []
     },
     {
       "schemaVersion": 4,
@@ -715,6 +760,43 @@
         "",
         ""
       ]
+    },
+    {
+      "schemaVersion": 4,
+      "kind": "task",
+      "title": "补选人工智能通识课",
+      "summary": "学校已协调名额，尚未选上人工智能通识课程的同学尽快选课，选课时避开001教学班。",
+      "deadline": null,
+      "deadlineText": "",
+      "timeline": [],
+      "tasks": [
+        {
+          "text": "选人工智能通识课",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "还没有选上人工智能通识课程的同学",
+          "details": [
+            "选择时**避开001教学班**",
+            "除001教学班外其余为线上课程，**不用在意开课校区**"
+          ],
+          "steps": [],
+          "time": null,
+          "timeText": "",
+          "location": null
+        }
+      ],
+      "materials": [],
+      "warnings": [],
+      "reminders": [],
+      "id": "example-reading-v21-12",
+      "originalText": "@全体成员 各位还没有选上人工智能通识课程的同学，我们已经请求学校协调了名额，大家尽快选上。\n由于人工智能通识课除了001教学班外，其余都是线上课程，所以大家再选择的时候，避开001教学班，并且不用在意开课校区。",
+      "createdAt": "2026-10-07T02:14:55.889Z",
+      "completed": false,
+      "dismissed": false,
+      "localDeadline": null,
+      "note": "",
+      "audienceOverride": "",
+      "attachments": []
     }
   ]
 }

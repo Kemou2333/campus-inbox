@@ -1,5 +1,5 @@
-import {useEffect,useRef,useState} from 'react';
-import {Alert,AppBar,BottomNavigation,BottomNavigationAction,Box,Button,CircularProgress,Container,CssBaseline,Divider,IconButton,Paper,Snackbar,Stack,Toolbar,Typography,useMediaQuery} from '@mui/material';
+import {useCallback,useEffect,useRef,useState} from 'react';
+import {Alert,AppBar,BottomNavigation,BottomNavigationAction,Box,Button,CircularProgress,Container,CssBaseline,Divider,IconButton,Paper,Snackbar,Stack,Toolbar,Tooltip,Typography,useMediaQuery} from '@mui/material';
 import {ThemeProvider} from '@mui/material/styles';
 import Inbox from '@mui/icons-material/Inbox';
 import AddCircleOutline from '@mui/icons-material/AddCircleOutlineOutlined';
@@ -25,9 +25,13 @@ import {getNoticeStatus} from '../domain/notice';
 const nav=[{label:'通知',icon:<Inbox/>},{label:'整理',icon:<AddCircleOutline/>},{label:'设置',icon:<SettingsOutlined/>}];
 export default function App(){
  const app=useCampus();const wide=useMediaQuery('(min-width:960px), (min-width:600px) and (max-height:500px)');const split=useMediaQuery('(min-width:960px)');const systemDark=useMediaQuery('(prefers-color-scheme:dark)');
- const [page,setPage]=useState(0);const [login,setLogin]=useState(false);const [help,setHelp]=useState(()=>localStorage.getItem('campus-inbox:tutorial:v2')!=='seen');
+ const exampleRequest=useRef(new URLSearchParams(location.search).get('examples')==='1'),exampleStarted=useRef(false);
+ const [page,setPage]=useState(0);const [login,setLogin]=useState(false);const [help,setHelp]=useState(()=>!exampleRequest.current&&localStorage.getItem('campus-inbox:tutorial:v2')!=='seen');
  const [about,setAbout]=useState(false);const [note,setNote]=useState<NoteEditor|null>(null);const [details,setDetails]=useState<string|null>(null);const [calendar,setCalendar]=useState<CalendarSelection|null>(null);const [focusID,setFocusID]=useState<string|null>(null);
  const [settingsDialog,setSettingsDialog]=useState(false);
+ const consumeFocus=useCallback((id:string)=>setFocusID(value=>value===id?null:value),[]);
+ useEffect(()=>{if(!exampleRequest.current||exampleStarted.current||app.bootError)return;exampleStarted.current=true;void app.loadExamples().catch(app.report);},[app.bootError]);
+ useEffect(()=>{if(app.latestAddedID){setPage(0);setFocusID(app.latestAddedID);}},[app.latestAddedID]);
  const dark=app.theme==='system'?(app.capabilities?.theme?.dark??systemDark):app.theme==='dark';const theme=makeTheme(dark,app.capabilities?.theme??null);
  useEffect(()=>{document.documentElement.dataset.platform=app.platform.kind;document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.style.colorScheme=dark?'dark':'light';document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme.palette.background.default);if(app.platform.setAppearance)void app.platform.setAppearance(dark).catch(app.report);},[app.platform,dark]);
  const modalRef=useRef(false);modalRef.current=login||help||about||!!note||!!details||!!calendar||settingsDialog;
@@ -57,18 +61,18 @@ export default function App(){
    <Toolbar sx={{maxWidth:1440,width:'100%',mx:'auto',gap:{xs:.5,sm:1},minHeight:{xs:56,sm:64},px:{xs:1.5,sm:3}}}>
     <Button onClick={()=>setAbout(true)} sx={{px:0,minWidth:0,color:'text.primary',gap:1.25}}><Box component="img" src="./icon.svg" width={32} height={32} alt=""/><Typography sx={{fontWeight:700,fontSize:'1.125rem',lineHeight:1.4}}>校园 Inbox</Typography></Button>
     <Box sx={{flex:1}}/>
-    {wide&&nav.map((item,i)=>split?<Button key={item.label} startIcon={item.icon} variant={page===i?'contained':'text'} onClick={()=>navigate(i)} sx={{px:2}}>{item.label}</Button>:<IconButton key={item.label} aria-label={item.label} onClick={()=>navigate(i)} sx={{color:page===i?'primary.main':'text.secondary',bgcolor:page===i?'action.selected':undefined}}>{item.icon}</IconButton>)}
-    <IconButton aria-label={app.sync.connected?'查看同步状态':'登录与同步'} onClick={()=>app.sync.connected?navigate(2):setLogin(true)}>{cloudIcon}</IconButton>
-    <IconButton aria-label="使用帮助" onClick={()=>setHelp(true)}><HelpOutline/></IconButton>
+    {wide&&nav.map((item,i)=>split?i===1?null:<Button key={item.label} startIcon={item.icon} variant={(i===0?page!==2:page===2)?'contained':'text'} onClick={()=>navigate(i)} sx={{px:2}}>{item.label}</Button>:<Tooltip key={item.label} title={item.label}><IconButton aria-label={item.label} onClick={()=>navigate(i)} sx={{color:page===i?'primary.main':'text.secondary',bgcolor:page===i?'action.selected':undefined}}>{item.icon}</IconButton></Tooltip>)}
+    <Tooltip title={app.sync.connected?'账号与同步':'登录后可以使用 AI 并同步通知'}><Button size="small" variant="outlined" aria-label={app.sync.connected?'查看同步状态':'登录与同步'} startIcon={wide?cloudIcon:undefined} onClick={()=>app.sync.connected?navigate(2):setLogin(true)} sx={{minWidth:64,px:1.5}}><Box component="span" sx={{maxWidth:wide?120:64,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{app.sync.connected?(wide&&app.username?app.username:'同步'):'登录'}</Box></Button></Tooltip>
+    <Tooltip title="使用帮助"><IconButton aria-label="使用帮助" onClick={()=>setHelp(true)}><HelpOutline/></IconButton></Tooltip>
    </Toolbar>
   </AppBar>
   <Container maxWidth={false} component="main" sx={{maxWidth:split&&page!==2?1440:900,px:{xs:1.5,sm:3},pt:{xs:2,sm:3},pb:wide?3:'calc(104px + var(--safe-bottom))'}}>
    {app.bootError?<Alert severity="error" action={<Button onClick={()=>void rescue().catch(app.report)}>保存原始数据</Button>}>原来的通知无法读取：{app.bootError}。数据仍在本机，暂未覆盖。</Alert>:
     split&&page!==2?<Box className="workspace" sx={{display:'grid',gridTemplateColumns:'minmax(300px, 360px) minmax(0, 1fr)',gap:3,height:'calc(100dvh - 150px - var(--safe-top))',minHeight:220}}>
      <ScrollPane id="compose-pane" label="新增通知" onFocus={()=>setPage(1)}><ComposerPage app={app} embedded onDone={()=>setPage(0)} onLogin={()=>setLogin(true)}/></ScrollPane>
-     <ScrollPane id="feed-pane" label="已保存通知" onFocus={()=>setPage(0)}><FeedPage app={app} embedded actions={actions} onCompose={()=>navigate(1)} focusID={focusID}/></ScrollPane>
+     <ScrollPane id="feed-pane" label="已保存通知" onFocus={()=>setPage(0)}><FeedPage app={app} embedded actions={actions} onCompose={()=>navigate(1)} focusID={focusID} onFocusHandled={consumeFocus}/></ScrollPane>
     </Box>:
-    page===0?<FeedPage app={app} actions={actions} onCompose={()=>navigate(1)} focusID={focusID}/>:
+    page===0?<FeedPage app={app} actions={actions} onCompose={()=>navigate(1)} focusID={focusID} onFocusHandled={consumeFocus}/>:
     page===1?<ComposerPage app={app} onDone={()=>navigate(0)} onLogin={()=>setLogin(true)}/>:
     <SettingsPage app={app} onLogin={()=>setLogin(true)} onHelp={()=>setHelp(true)} onAbout={()=>setAbout(true)} onDialogChange={setSettingsDialog}/>}
    <Typography variant="caption" color="text.secondary" sx={{display:'block',mt:3,textAlign:'center'}}>通知先保存在本机；登录后文字和进度自动同步，附件留在当前设备。</Typography>
@@ -80,8 +84,8 @@ export default function App(){
   <DetailDialog notice={app.notices.find(n=>n.id===details)??null} app={app} onClose={()=>setDetails(null)}/>
   <CalendarDialog selection={calendar} app={app} onClose={()=>setCalendar(null)}/>
   <LoginDialog open={login} app={app} onClose={()=>setLogin(false)}/>
-  <HelpDialog open={help} onClose={closeHelp}/><AboutDialog open={about} onClose={()=>setAbout(false)}/>
-  <Snackbar open={!!app.toast} key={app.toast?.id} autoHideDuration={6500} onClose={(_,reason)=>{if(reason!=='clickaway')app.setToast(null);}} message={app.toast?.text} action={app.toast?.undo?<Button color="inherit" onClick={()=>{const undo=app.toast?.undo;app.setToast(null);undo?.();}}>撤销</Button>:undefined} anchorOrigin={{vertical:'bottom',horizontal:'center'}} sx={{bottom:{xs:84,md:24}}}/>
+  <HelpDialog open={help} onClose={closeHelp} onExamples={()=>void app.loadExamples().then(closeHelp).catch(app.report)}/><AboutDialog open={about} onClose={()=>setAbout(false)}/>
+  <Snackbar open={!!app.toast} key={app.toast?.id} autoHideDuration={6500} onClose={(_,reason)=>{if(reason!=='clickaway')app.setToast(null);}} message={app.toast?.text} action={app.toast?.undo?<Button color="inherit" onClick={()=>{const undo=app.toast?.undo;app.setToast(null);undo?.();}}>撤销</Button>:undefined} anchorOrigin={{vertical:'bottom',horizontal:'center'}} sx={{bottom:wide?24:84}}/>
   <Snackbar open={!!app.error} onClose={()=>app.setError('')} anchorOrigin={{vertical:'top',horizontal:'center'}}><Alert severity="error" onClose={()=>app.setError('')} variant="filled" sx={{maxWidth:560}}>{app.error}</Alert></Snackbar>
  </ThemeProvider>;
 }

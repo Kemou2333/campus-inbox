@@ -10,8 +10,11 @@ export function AttachmentList({ids,platform,onRemove}:{ids:string[];platform:Pl
  const [files,setFiles]=useState<(StoredAttachment|null)[]>([]);
  const [selected,setSelected]=useState<StoredAttachment|null>(null);
  const [url,setUrl]=useState('');const [error,setError]=useState('');
+ const [textPreview,setTextPreview]=useState<string|null>(null);
+ const textFile=!!selected&&(/^(text\/|application\/(json|xml))/i.test(selected.type)||/\.(txt|md|csv|json|log|html?|svg|xml)$/i.test(selected.name));
  useEffect(()=>{let alive=true;void Promise.all(ids.map(getFile)).then(v=>{if(alive)setFiles(v);}).catch(()=>{if(alive)setError('附件暂时无法读取。');});return()=>{alive=false;};},[ids]);
  useEffect(()=>{if(!selected)return;const value=URL.createObjectURL(selected.blob);setUrl(value);return()=>URL.revokeObjectURL(value);},[selected]);
+ useEffect(()=>{setTextPreview(null);if(!selected||!textFile||selected.size>200_000)return;let alive=true;void selected.blob.text().then(text=>{if(alive)setTextPreview(text);}).catch(()=>{if(alive)setError('附件文字暂时无法读取。');});return()=>{alive=false;};},[selected,textFile]);
  if(!ids.length)return null;
  const image=!!selected&&/^image\/(png|jpeg|gif|webp|avif|bmp)$/i.test(selected.type);
  const pdf=selected?.type==='application/pdf';
@@ -31,7 +34,8 @@ export function AttachmentList({ids,platform,onRemove}:{ids:string[];platform:Pl
     {error&&<Alert severity="error" sx={{mb:2}}>{error}</Alert>}
     {image?<Box component="img" src={url} alt={selected?.name} sx={{display:'block',maxWidth:'100%',maxHeight:'65vh',mx:'auto',objectFit:'contain'}}/>:
      pdf?<Box component="iframe" title={selected?.name} src={url} sandbox="" sx={{width:'100%',height:'65vh',border:0}}/>:
-     <Typography color="text.secondary">这种附件请保存后使用对应应用打开。</Typography>}
+     textFile&&selected&&selected.size<=200_000?<Box component="pre" sx={{m:0,p:2,maxHeight:'65vh',overflow:'auto',whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontFamily:'inherit',fontSize:14,bgcolor:'action.hover',borderRadius:2}}>{textPreview??'正在读取…'}</Box>:
+     <Typography color="text.secondary">{textFile?'文件较大，请保存后查看。':'这种附件请保存后使用对应应用打开。'}</Typography>}
    </DialogContent>
    <DialogActions><Button onClick={()=>setSelected(null)}>关闭</Button><Button variant="contained" startIcon={<Download/>} onClick={()=>void download()}>保存附件</Button></DialogActions>
   </Dialog>

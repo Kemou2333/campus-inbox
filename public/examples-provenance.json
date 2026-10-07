@@ -1,0 +1,84 @@
+{
+  "model": "deepseek-flash",
+  "thinking": "disabled",
+  "promptSha256": "66434c6fc81ae3d475eba3bf22007f0759f7d477cd5279aa803a61cb3141c248",
+  "paidCallsForLatestResults": 2,
+  "sourceCount": 8,
+  "generationCommit": "aa3ee1244d186c80125845cd6f5ad9c28ac2032a",
+  "generationMethod": "Normal public UI submissions; one model call per batch; returned wording retained. Only local record metadata and source-grounded time normalization are added.",
+  "results": [
+    {
+      "exampleId": "example-reading-v21-0",
+      "title": "8号普通请假办理",
+      "batchSize": 3,
+      "sourceIndex": 1,
+      "testedAt": "2026-10-07T02:13:58.284Z",
+      "resultSha256": "17836dd76a7002c77cf8f5c671a70d3642cdd01a116713255412a687e46e890e",
+      "manualWordEdits": false
+    },
+    {
+      "exampleId": "example-reading-v21-4",
+      "title": "学生评教",
+      "batchSize": 3,
+      "sourceIndex": 2,
+      "testedAt": "2026-10-07T02:13:58.284Z",
+      "resultSha256": "a48802a1f3ffe6181b9f7aa25d104c16ad2b3d59c7a159d1cb8e6541ac18f859",
+      "manualWordEdits": false
+    },
+    {
+      "exampleId": "example-reading-v21-2",
+      "title": "助学贷款入账处理",
+      "batchSize": 3,
+      "sourceIndex": 3,
+      "testedAt": "2026-10-07T02:13:58.284Z",
+      "resultSha256": "17786bd277b70324588cd3b92d0e6bae7a152df26a65a11f3a300cb1a440b8bc",
+      "manualWordEdits": false
+    },
+    {
+      "exampleId": "example-reading-v21-1",
+      "title": "国庆离校返校安排",
+      "batchSize": 5,
+      "sourceIndex": 1,
+      "testedAt": "2026-10-07T02:14:55.889Z",
+      "resultSha256": "0b23cb5c9559a5da5b3f8c607c0e87dc544ab4341aaeb02ce3d7e84c249ec2f5",
+      "manualWordEdits": false
+    },
+    {
+      "exampleId": "example-reading-v21-12",
+      "title": "补选人工智能通识课",
+      "batchSize": 5,
+      "sourceIndex": 2,
+      "testedAt": "2026-10-07T02:14:55.889Z",
+      "resultSha256": "b0c06f9020d69612a99b42044d84981c3adc633bde0e9e566645c6be917b1a08",
+      "manualWordEdits": false
+    },
+    {
+      "exampleId": "example-reading-v21-3",
+      "title": "新生学籍电子注册核对",
+      "batchSize": 5,
+      "sourceIndex": 3,
+      "testedAt": "2026-10-07T02:14:55.889Z",
+      "resultSha256": "e234ba2d8a51ef87535d92887b93e6a584329c9824db1d5d6b2e13719b1380b1",
+      "manualWordEdits": false
+    },
+    {
+      "exampleId": "example-reading-v21-6",
+      "title": "军训期间外出纪律",
+      "batchSize": 5,
+      "sourceIndex": 4,
+      "testedAt": "2026-10-07T02:14:55.889Z",
+      "resultSha256": "02a657fc36f3bab9699f07377c6dffec8ee6034420b2b8fef162e710fb4036ec",
+      "manualWordEdits": false
+    },
+    {
+      "exampleId": "example-reading-v21-5",
+      "title": "SRTP项目申报",
+      "batchSize": 5,
+      "sourceIndex": 5,
+      "testedAt": "2026-10-07T02:14:55.889Z",
+      "resultSha256": "f25d15b58c809e5e40b26eefd7d985173f34a037ef8a6660ac4edbed5ecf64f2",
+      "manualWordEdits": false
+    }
+  ],
+  "historicalExamplesKept": 5
+}

@@ -3,6 +3,7 @@
 把群里的通知整理成清楚的待办和提醒，分清谁需要办理、截止时间和具体步骤。网页与 Android 共用 Material You 界面，登录同一账号后自动同步通知文字、进度和笔记。
 
 - [打开网页](https://kemou2333.github.io/campus-inbox/)
+- [免注册查看示例](https://kemou2333.github.io/campus-inbox/?examples=1)
 - [Android 安装包](https://github.com/Kemou2333/campus-inbox/releases)
 
 ## 使用
@@ -49,3 +50,7 @@ python3 mobile/prepare-web.py
 - [部署、回滚与服务器迁移](docs/DEPLOYMENT.md)
 - [邀请码与账号](docs/INVITE-LOGIN.md)
 - [服务器容量估算](docs/CAPACITY.md)
+
+本版还修复了删除卡片时的位置跳动、旧搜索隐藏新增结果等交互问题。空白草稿可直接粘贴；误删草稿可恢复文字和附件。宽屏分类和搜索保持可见，HTML 等附件按文字预览，不执行内容。
+
+- [2.1 验收记录](docs/VALIDATION-2.1.md)
