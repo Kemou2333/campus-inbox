@@ -1,3 +1,7 @@
+import { parseHumanVerificationRequest } from './verification-challenge';
+import type { HumanVerificationHandler, HumanVerificationRequest } from './verification-challenge';
+export type { HumanVerificationHandler, HumanVerificationRequest } from './verification-challenge';
+
 /** Only new notice text is sent. Existing records, notes and attachments stay local. */
 export const DEFAULT_AI_ENDPOINT = 'https://123.57.30.129/analyze';
 export interface AnalysisSource { text: string }
@@ -9,6 +13,7 @@ export interface AnalyzeOptions {
   timeoutMs?: number;
   fetcher?: typeof fetch;
   sessionKey?: string;
+  onHumanVerification?: HumanVerificationHandler;
 }
 
 export class AnalysisError extends Error {
@@ -20,6 +25,25 @@ export class AnalysisError extends Error {
 }
 
 interface Challenge { token: string; bits: number; expires: number }
+
+/** The transport can cancel even if a host dialog forgets to settle its promise. */
+function humanResponse(request: HumanVerificationRequest, handler: HumanVerificationHandler, signal: AbortSignal): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const abort = () => finish(undefined, new DOMException('Aborted', 'AbortError'));
+    let finished = false;
+    const finish = (value?: string, error?: unknown) => {
+      if (finished) return;
+      finished = true;
+      signal.removeEventListener('abort', abort);
+      if (error !== undefined) reject(error);
+      else resolve(value!);
+    };
+    if (signal.aborted) return abort();
+    signal.addEventListener('abort', abort, { once: true });
+    Promise.resolve().then(() => signal.aborted ? Promise.reject(new DOMException('Aborted', 'AbortError')) : handler(request, signal))
+      .then(value => finish(value), error => finish(undefined, error));
+  });
+}
 
 /** This is a computational speed bump, not a claim that the visitor is human. */
 export async function solveProof(value: unknown, signal?: AbortSignal): Promise<string> {
@@ -85,12 +109,45 @@ export async function analyzeSources(sources: AnalysisSource[], options: Analyze
     let value = await responseBody(response);
     if (response.status === 428 && value.code === 'VERIFICATION_REQUIRED') {
       options.onStage?.('verifying');
-      const proof = await solveProof(value.challenge, controller.signal);
-      if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
-      options.onStage?.('requesting');
-      // 428 occurs before a provider call. One handshake, no automatic paid retry.
-      response = await send(proof);
-      value = await responseBody(response);
+      if (value.challenge && typeof value.challenge === 'object' && (value.challenge as Record<string, unknown>).type === 'image') {
+        const challenge = parseHumanVerificationRequest(value.challenge);
+        if (!challenge) throw new AnalysisError('安全验证信息不完整，请重新提交。', 'INVALID_CHALLENGE');
+        if (!options.onHumanVerification) throw new AnalysisError('请打开新版网页或更新应用，完成验证码后再整理。', 'HUMAN_VERIFICATION_REQUIRED', 428);
+        let error: string | undefined, remaining = 5;
+        for (let attempt = 0; attempt < 5; attempt++) {
+          if (Date.now() >= challenge.expires) throw new AnalysisError('验证码已过期，请重新提交。', 'VERIFICATION_EXPIRED');
+          if (attempt > 0) options.onStage?.('verifying');
+          const input = await humanResponse({ ...challenge, ...(error ? { error } : {}) }, options.onHumanVerification, controller.signal);
+          const answer = typeof input === 'string' ? input.trim() : '';
+          if (!/^\d{4}$/.test(answer)) throw new AnalysisError('请填写图片中的 4 位数字。', 'INVALID_HUMAN_ANSWER');
+          if (Date.now() >= challenge.expires) throw new AnalysisError('验证码已过期，请重新提交。', 'VERIFICATION_EXPIRED');
+          if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+          options.onStage?.('requesting');
+          response = await send(JSON.stringify({ token: challenge.token, answer }));
+          value = await responseBody(response);
+          const next = value.remainingAttempts;
+          // This code is emitted only before the model dispatch. Never retry any provider failure or new challenge.
+          if (response.status === 400 && value.code === 'CAPTCHA_INCORRECT'
+            && typeof next === 'number' && Number.isSafeInteger(next) && next > 0 && next < remaining) {
+            remaining = next;
+            error = typeof value.error === 'string' ? value.error : '数字不正确，请再试一次。';
+            continue;
+          }
+          break;
+        }
+      } else {
+        if (value.challenge && typeof value.challenge === 'object'
+          && (value.challenge as Record<string, unknown>).type !== undefined
+          && (value.challenge as Record<string, unknown>).type !== 'pow') {
+          throw new AnalysisError('此版本暂不支持该安全验证，请更新应用。', 'INVALID_CHALLENGE');
+        }
+        const proof = await solveProof(value.challenge, controller.signal);
+        if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+        options.onStage?.('requesting');
+        // 428 occurs before a provider call. One PoW handshake, no automatic paid retry.
+        response = await send(proof);
+        value = await responseBody(response);
+      }
     }
     if (!response.ok) {
       const seconds = Number(value.retryAfterSeconds ?? response.headers.get('Retry-After'));
@@ -102,6 +159,7 @@ export async function analyzeSources(sources: AnalysisSource[], options: Analyze
     return value;
   } catch (error) {
     if (controller.signal.aborted) throw new AnalysisError(timedOut ? '整理超时，请稍后重试。' : '已取消整理。', timedOut ? 'TIMEOUT' : 'CANCELLED');
+    if (error instanceof DOMException && error.name === 'AbortError') throw new AnalysisError('已取消整理。', 'CANCELLED');
     if (error instanceof TypeError) throw new AnalysisError('无法连接整理服务，请检查网络。', 'NETWORK_ERROR');
     throw error;
   } finally {

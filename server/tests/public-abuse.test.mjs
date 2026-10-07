@@ -9,7 +9,7 @@ import {createService} from '../service.mjs';
 // Isolated, free tests: all AI replies are fabricated here, no real credentials or network.
 const origin='https://public.campus.example',otherOrigin='https://other.campus.example';
 const accessToken='fake-internal-signing-secret-at-least-twenty-characters';
-const config={apiKey:'fake-model-secret',accessToken,requireAccess:false,allowedOrigins:[origin,otherOrigin],dailyLimit:30,ipDailyLimit:10};
+const config={apiKey:'fake-model-secret',accessToken,requireAccess:false,captchaMode:'pow',allowedOrigins:[origin,otherOrigin],dailyLimit:30,ipDailyLimit:10};
 const result={schemaVersion:4,notices:[{schemaVersion:4,kind:'information',title:'处理进度',summary:'原文说明处理进度。',deadline:null,deadlineText:'',tasks:[],timeline:[],materials:[],warnings:[],reminders:['原文说明处理进度。']}]};
 const modelResponse=()=>Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(result)}}],usage:{prompt_tokens:2,completion_tokens:3}});
 const request=(notice='原始通知',extra={})=>new Request('http://localhost/analyze',{method:'POST',headers:{Origin:extra.origin||origin,'Content-Type':'application/json',...(extra.proof?{'X-Campus-Proof':typeof extra.proof==='string'?extra.proof:JSON.stringify(extra.proof)}:{})},body:extra.rawBody??JSON.stringify(extra.body??{notice})});

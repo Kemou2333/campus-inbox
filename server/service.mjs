@@ -1,12 +1,16 @@
 import {createHash,createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
 import {readFile,writeFile,rename} from 'node:fs/promises';
 import {analyze,boundedText,ServiceError,modelInput} from './analyze.mjs';
+import {createImageCaptcha,captchaAnswerHash} from './image-captcha.mjs';
 const D=globalThis.CampusData;
 const RATE_WINDOW_MS=180000,RATE_LIMIT=5;
 export async function createService(config,options={}){
   if(!config.apiKey||!config.accessToken||config.accessToken.length<20)throw new Error('Server secrets are missing or too short');
   // Legacy private mode is retained for isolated tests; production is explicitly public.
   const publicMode=config.requireAccess===false,now=options.now||Date.now,modelFetch=options.modelFetch||fetch;
+  const verificationMode=config.captchaMode||'image';
+  if(!['image','pow'].includes(verificationMode))throw new Error('CAPTCHA_MODE must be image or pow');
+  const imageCaptcha=options.imageCaptcha||createImageCaptcha;
   const cache=new Map(),rates=new Map(),challenges=new Map();
   const ipLimit=Number.isInteger(config.ipDailyLimit)&&config.ipDailyLimit>0?config.ipDailyLimit:10;
   const bits=16,sign=value=>createHmac('sha256',config.accessToken).update(value).digest('base64url');
@@ -15,13 +19,26 @@ export async function createService(config,options={}){
   if(config.stateFile){try{usage=JSON.parse(await readFile(config.stateFile,'utf8'));if(!usage||typeof usage.day!=='string'||!Number.isSafeInteger(usage.requests)||usage.requests<0||['input','output','reasoning'].some(key=>usage[key]!==undefined&&(!Number.isSafeInteger(usage[key])||usage[key]<0)))throw new Error('Invalid quota state');for(const key of ['input','output','reasoning'])usage[key]??=0;if(usage.clients!==undefined&&(typeof usage.clients!=='object'||!usage.clients||Array.isArray(usage.clients)||Object.entries(usage.clients).some(([k,v])=>!/^[-\w]{43}$/.test(k)||!v||!Number.isSafeInteger(v.requests)||v.requests<0||!Array.isArray(v.times)||v.times.length>5||v.times.some(t=>!Number.isSafeInteger(t)||t<0))))throw new Error('Invalid address quota state');if(usage.accounts!==undefined&&(!usage.accounts||typeof usage.accounts!=='object'||Array.isArray(usage.accounts)||Object.entries(usage.accounts).some(([k,v])=>!/^[-\w]{43}$/.test(k)||!Number.isSafeInteger(v)||v<0)))throw new Error('Invalid identity quota state');}catch(e){if(e.code!=='ENOENT')throw e;}}
   const persist=()=>{if(!config.stateFile)return Promise.resolve();const snapshot=JSON.stringify(usage);const pending=persistQueue.catch(()=>{}).then(async()=>{await writeFile(config.stateFile+'.tmp',snapshot,{mode:0o600});await rename(config.stateFile+'.tmp',config.stateFile);});persistQueue=pending;return pending;};
   const authorized=header=>timingSafeEqual(createHash('sha256').update(header||'').digest(),createHash('sha256').update('Bearer '+config.accessToken).digest());
-  const verify=(proof,ipKey,hash,origin,t)=>{
+  const verify=(proof,ipKey,hash,origin,t,accountKey)=>{
     try{
-      if(proof.length>2000)throw 0;const p=JSON.parse(proof);
-      if(!p||typeof p.token!=='string'||!Number.isSafeInteger(p.nonce)||p.nonce<0||p.nonce>10000000)throw 0;
+      if(proof.length>4096)throw 0;const p=JSON.parse(proof);
+      if(!p||typeof p.token!=='string'||p.token.length>1800)throw 0;
       const [payload,signature,...extra]=p.token.split('.');if(extra.length||!signature||signature.length!==43||!timingSafeEqual(Buffer.from(signature),Buffer.from(sign(payload))))throw 0;
       const value=JSON.parse(Buffer.from(payload,'base64url').toString());
-      if(value.ip!==ipKey||value.hash!==hash||value.origin!==origin||value.expires<=t||value.bits!==bits||!challenges.has(value.id))throw 0;
+      const challenge=challenges.get(value.id);
+      if(value.ip!==ipKey||value.hash!==hash||value.origin!==origin||value.account!==accountKey||value.expires<=t||!challenge)throw 0;
+      if(value.type==='image'){
+        if(verificationMode!=='image'||challenge.type!=='image')throw 0;
+        if(Object.keys(p).some(key=>!['token','answer'].includes(key)))throw 0;
+        challenge.attempts++;
+        const matches=typeof p.answer==='string'&&/^\d{4}$/.test(p.answer)
+          &&timingSafeEqual(Buffer.from(captchaAnswerHash(value.id,p.answer),'hex'),Buffer.from(challenge.answerHash,'hex'));
+        if(!matches){if(challenge.attempts>=5)challenges.delete(value.id);return {remainingAttempts:Math.max(0,5-challenge.attempts)};}
+        // Synchronous consume happens before any persistence/model await, including simultaneous submissions.
+        challenges.delete(value.id);return true;
+      }
+      if(verificationMode!=='pow'||value.type!=='pow'||challenge.type!=='pow'||value.bits!==bits||p.type&&p.type!=='pow'
+        ||!Number.isSafeInteger(p.nonce)||p.nonce<0||p.nonce>10000000)throw 0;
       const digest=createHash('sha256').update(p.token+':'+p.nonce).digest();if(digest[0]!==0||digest[1]!==0)throw 0;
       challenges.delete(value.id);return true;
     }catch{return false;}
@@ -57,7 +74,14 @@ export async function createService(config,options={}){
     if(publicMode)usage.clients??={};const ipKey=sign(usage.day+':'+ip),client=usage.clients?.[ipKey]||{requests:0,times:[]};
     const entries=(publicMode?client.times:(rates.get(ip)||[])).filter(v=>t-v<RATE_WINDOW_MS);
     const proof=request.headers.get('X-Campus-Proof');
-    if(proof){if(!publicMode||!verify(proof,ipKey,hash,origin,t))return reply({error:'安全验证已失效，请重新提交。',code:'INVALID_PROOF'},400);}
+    if(proof){
+      const verified=publicMode?verify(proof,ipKey,hash,origin,t,accountKey):false;
+      if(verified!==true){
+        if(verified&&typeof verified==='object')return reply({error:verified.remainingAttempts>0?'数字不正确，请再试一次。':'验证码尝试次数已用完，请重新提交。',
+          code:'CAPTCHA_INCORRECT',remainingAttempts:verified.remainingAttempts},400);
+        return reply({error:verificationMode==='image'?'验证码已过期，请重新提交。':'安全验证已失效，请重新提交。',code:'INVALID_PROOF'},400);
+      }
+    }
     else{
       if(entries.length>=RATE_LIMIT){const seconds=Math.max(1,Math.ceil((entries[0]+RATE_WINDOW_MS-t)/1000));return reply({error:`每 3 分钟最多整理 ${RATE_LIMIT} 次，请 ${seconds} 秒后再试。`,code:'IP_RATE_LIMIT',retryAfterSeconds:seconds},429,{'Retry-After':String(seconds)});}
       entries.push(t);
@@ -80,17 +104,22 @@ export async function createService(config,options={}){
     if(requestUsage!==usage||usage.day!==day())return reply({error:'整理服务时间已更新，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
     if(saved)return reply(saved.result);
     if(publicMode&&!proof&&entries.length>=3){
-      for(const [id,expires] of challenges)if(expires<=t)challenges.delete(id);
+      for(const [id,challenge] of challenges)if(challenge.expires<=t)challenges.delete(id);
       if(challenges.size>=2000)return reply({error:'服务繁忙，请稍后再试。'},503);
-      const id=randomBytes(16).toString('hex'),expires=t+120000;
-      const payload=Buffer.from(JSON.stringify({id,ip:ipKey,hash,origin,expires,bits})).toString('base64url');challenges.set(id,expires);
-      return reply({code:'VERIFICATION_REQUIRED',challenge:{token:payload+'.'+sign(payload),bits,expires}},428);
+      const id=randomBytes(16).toString('hex'),expires=t+120000,type=verificationMode;
+      const image=type==='image'?imageCaptcha(id):null;
+      const payload=Buffer.from(JSON.stringify({id,ip:ipKey,hash,origin,expires,account:accountKey,type,
+        ...(type==='pow'?{bits}:{})})).toString('base64url');
+      challenges.set(id,{type,expires,attempts:0,...(image?{answerHash:image.answerHash}:{})});
+      const token=payload+'.'+sign(payload);
+      return reply({code:'VERIFICATION_REQUIRED',challenge:image?{type,token,image:image.image,expires}:{type,token,bits,expires}},428);
     }
     // Recheck after asynchronous persistence; two arrivals must never start two model calls.
     if(busy)return reply({error:'正在整理另一条通知，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
     if(usage.requests>=(config.dailyLimit||30))return limited('今日整理次数已达上限，明天再试。','DAILY_LIMIT');
     if(publicMode&&client.requests>=ipLimit)return limited('此网络今日整理次数已达上限，明天再试。','IP_DAILY_LIMIT');
     if(accountKey&&(usage.accounts?.[accountKey]||0)>=accountLimit)return limited('此账号今日整理次数已达上限，明天再试。','ACCOUNT_DAILY_LIMIT');
+    if(request.signal.aborted)return reply({error:'整理已取消，请重新提交。',code:'CANCELLED'},499);
     busy=true;let tokensRecorded=false;
     const recordTokens=async(stats,finishReason,failureCode)=>{
       for(const key of ['input','output','reasoning'])usage[key]=Math.min(Number.MAX_SAFE_INTEGER,(usage[key]||0)+(stats[key]||0));
@@ -99,6 +128,7 @@ export async function createService(config,options={}){
     };
     try{
       usage.requests++;if(publicMode)client.requests++;if(accountKey){usage.accounts??={};usage.accounts[accountKey]=(usage.accounts[accountKey]||0)+1;}await persist();
+      if(request.signal.aborted)throw new ServiceError('整理已取消，请重新提交。',499);
       const output=await analyze(notice,config,modelFetch);await recordTokens(output.usage,output.finishReason);
       if(cache.size>=50)cache.delete(cache.keys().next().value);cache.set(hash,{created:now(),result:output.result});return reply(output.result);
     }catch(e){
