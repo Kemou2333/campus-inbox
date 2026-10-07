@@ -2,9 +2,9 @@ import {useEffect, useRef, useState} from 'react';
 import {createLocalRepository} from '../infrastructure/local-repository';
 import {createCloudSync, type CloudSync, type SyncState} from '../infrastructure/sync-client';
 import {createAuthClient, type AuthClient, type AuthSession} from '../infrastructure/auth-client';
-import {analyzeSources} from '../infrastructure/ai-client';
+import {analyzeSources,AnalysisError,type AnalyzeOptions} from '../infrastructure/ai-client';
 import {addFiles, cleanupFiles, exportFiles, getFile, restoreFiles, MAX_NOTICE_FILES, MAX_NOTICE_FILE_BYTES} from '../infrastructure/attachment-store';
-import {createNotice, exportBackup, newID, parseAnalysisBatch, parseBackup, parseNotices} from '../domain/notice';
+import {createNotice, exportBackup, exportTextBackup, newID, parseAnalysisBatch, parseBackup, parseNotices} from '../domain/notice';
 import type {Notice} from '../domain/types';
 import {createPlatform, type PlatformCapabilities} from '../platform';
 import {loadConfig, type RuntimeConfig} from './config';
@@ -21,7 +21,7 @@ const message=(e:unknown)=>e instanceof Error?e.message:'操作未完成，请�
 const initialSync:SyncState={connected:false,status:'disconnected',lastSyncedAt:null,error:null,pendingChanges:0,hasMore:false,conflicts:[]};
 
 /** Business operations live here; presentation components do not write storage or call AI. */
-export function useCampus(){
+export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={}){
  const [platform]=useState(createPlatform);
  const [repository]=useState(createLocalRepository);
  const [boot]=useState(()=>{try{return {notices:repository.load(),error:''};}catch(e){return {notices:[] as Notice[],error:message(e)};}});
@@ -48,11 +48,13 @@ export function useCampus(){
  });
  const [busy,setBusy]=useState(false);
  const [stage,setStage]=useState('');
+ const [retryAt,setRetryAt]=useState(0);
  const [toast,setToast]=useState<Toast|null>(null);
  const [pending,setPending]=useState(()=>!!localStorage.getItem(RESULT_KEY));
  const [latestAddedID,setLatestAddedID]=useState<string|null>(null);
  const resultRef=useRef<{sources:Draft[];result:unknown}|null>(null);
  const abort=useRef<AbortController|null>(null);
+ const analyzing=useRef(false);
  const draftRef=useRef(drafts);draftRef.current=drafts;
  const noticeRef=useRef(notices);noticeRef.current=notices;
  const draftWriteError=useRef(false);
@@ -67,15 +69,18 @@ export function useCampus(){
    const after=change(before);save(current.map(n=>n.id===id?after:n));return {before,after};
   }catch(e){report(e);}
  }
- function undoChange(before:Notice,after:Notice|null){
+ function undoChange(before:Notice,after:Notice|null,position?:number){
   try{const current=repository.load(),found=current.find(n=>n.id===before.id);
    if(after?JSON.stringify(found)!==JSON.stringify(after):!!found){tell('这条通知已有新修改，无法撤销旧操作。');return;}
-   save([...current.filter(n=>n.id!==before.id),{...before,updatedAt:new Date().toISOString()}]);tell('已撤销');
+   const restored={...before,updatedAt:new Date().toISOString()};
+   if(after)save(current.map(n=>n.id===before.id?restored:n));
+   else{const next=[...current];next.splice(Math.min(position??next.length,next.length),0,restored);save(next);}
+   tell('已撤销');
   }catch(e){report(e);}
  }
  function remove(id:string){
-  try{const current=repository.load(),before=current.find(n=>n.id===id);if(!before)return;
-   save(current.filter(n=>n.id!==id));tell('已删除',()=>undoChange(before,null));
+  try{const current=repository.load(),position=current.findIndex(n=>n.id===id),before=current[position];if(!before)return;
+   save(current.filter(n=>n.id!==id));tell('已删除',()=>undoChange(before,null,position));
   }catch(e){report(e);}
  }
  function act(id:string,change:(n:Notice)=>Notice,text:string){const result=update(id,change);if(result)tell(text,()=>undoChange(result.before,result.after));}
@@ -161,19 +166,24 @@ export function useCampus(){
   localStorage.removeItem(RESULT_KEY);resultRef.current=null;setPending(false);setLegacyMissingFiles(false);tell(`已整理 ${additions.length} 条通知`);
  }
  async function analyze(){
-  if(busy||!config)return false;
+  if(analyzing.current||busy||!config)return false;
+  if(retryAt>Date.now())return false;
   if(pending)throw new Error('还有一份整理结果待恢复，请先保存它。');
   if(legacyRecords.length)throw new Error('旧版还有整理结果未保存，请先恢复它。');
   if(!cloud?.getKey())throw new Error('请先登录，再使用 AI 整理。');
   const sources=structuredClone(draftRef.current.filter(d=>d.text.trim()));
   if(!sources.length||sources.some(d=>!d.text.trim())||sources.reduce((n,d)=>n+d.text.length,0)>4000)throw new Error('通知总字数需在 1–4,000 之间。');
   if(draftRef.current.some(d=>!d.text.trim()&&d.attachments.length))throw new Error('有附件的通知还没填写原文，请补上后再整理。');
-  setBusy(true);setStage('正在整理');abort.current=new AbortController();
-  try{const result=await analyzeSources(sources.map(d=>({text:d.text})),{endpoint:config.apiEndpoint,sessionKey:cloud.getKey()!,signal:abort.current.signal,onStage:s=>setStage(s==='verifying'?'正在验证':'正在整理')});
+  analyzing.current=true;setBusy(true);setStage('整理中');abort.current=new AbortController();
+  try{const result=await analyzeSources(sources.map(d=>({text:d.text})),{endpoint:config.apiEndpoint,sessionKey:cloud.getKey()!,signal:abort.current.signal,onHumanVerification:options.onHumanVerification,onStage:s=>setStage(s==='verifying'?'验证中':'整理中')});
    const value={sources,result};resultRef.current=value;setPending(true);
    try{localStorage.setItem(RESULT_KEY,JSON.stringify(value));}catch{/* The in-memory result remains recoverable without another paid call. */}
    commitResult(value);return true;
-  }catch(e){report(e);return false;}finally{setBusy(false);setStage('');abort.current=null;}
+  }catch(e){
+   if(e instanceof AnalysisError&&e.status===429&&e.retryAfterSeconds)setRetryAt(Date.now()+e.retryAfterSeconds*1000);
+   if(e instanceof AnalysisError&&e.code==='AUTH_REQUIRED')cloud?.disconnect();
+   report(e);return false;
+  }finally{analyzing.current=false;setBusy(false);setStage('');abort.current=null;}
  }
  function recoverResult(){try{const raw=localStorage.getItem(RESULT_KEY);const value=resultRef.current||(raw?JSON.parse(raw):null);if(value)commitResult(value);}catch(e){report(e);}}
  function recoverLegacyResult(){try{const current=repository.load();save([...current,...legacyRecords.filter(n=>!current.some(old=>old.id===n.id))]);finishLegacyResult(localStorage,sessionStorage);setLegacyRecords([]);tell('旧版整理结果已保存');}catch(e){report(e);}}
@@ -183,11 +193,10 @@ export function useCampus(){
   const records=parseBackup(await response.json());const current=repository.load();
   const added=records.filter(n=>!current.some(old=>old.id===n.id||old.originalText===n.originalText));
   save([...current,...added]);tell(added.length?`已载入 ${added.length} 条示例通知`:'这些示例已经载入。');
-  if(added.length)setLatestAddedID(added[0].id);
  }
- async function backup(){
-  const records=repository.load();const files=await exportFiles(records);const data=exportBackup(records,files);
-  const result=await platform.saveFile(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),`campus-inbox-${new Date().toISOString().slice(0,10)}.json`);
+ async function backup(includeAttachments=true){
+  const records=repository.load();const data=includeAttachments?exportBackup(records,await exportFiles(records)):exportTextBackup(records);
+  const result=await platform.saveFile(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),`campus-inbox-${includeAttachments?'':'text-'}${new Date().toISOString().slice(0,10)}.json`);
   if(result.status!=='cancelled')tell(result.status==='saved'?'备份已保存':'备份已下载');
  }
  async function importBackup(file:File){
@@ -210,7 +219,7 @@ export function useCampus(){
    if(empty)changeDraft(empty.id,text);else addDraft(text);received=true;
   }return received;}finally{receivingShare.current=false;}
  }
- return {notices,drafts,busy,stage,error,setError,toast,setToast,pending,recoverResult,latestAddedID,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,sync,username,theme,setTheme,bootError:boot.error,
+ return {notices,drafts,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,sync,username,theme,setTheme,bootError:boot.error,
   report,tell,update,act,remove,changeDraft,pasteDraft,addDraft,attach,detach,removeDraft,analyze,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;

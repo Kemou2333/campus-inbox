@@ -7,6 +7,8 @@ const batch = { schemaVersion: 4, notices: [{ title: '真实返回，领域层�
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 describe('AI transport', () => {
+  const humanChallenge = () => ({ type: 'image', image: 'data:image/png;base64,iVBORw0KGgoAAA==',
+    token: 'server-signed-context', expires: Date.now() + 120_000 });
   it('sends only new source text and returns the untouched wire result', async () => {
     const fetcher = vi.fn(async () => json(batch));
     const sources = [{ text: '请提交申请', attachments: ['private-file'], note: 'private-note' }];
@@ -44,6 +46,120 @@ describe('AI transport', () => {
     expect(stages).toEqual(['requesting', 'verifying', 'requesting']);
     expect(encoded).toContain('signed-challenge:3');
     expect(fetcher.mock.calls[0][1]?.body).toBe(fetcher.mock.calls[1][1]?.body);
+  });
+
+  it('delegates an image challenge once and sends only its answer plus the same signed context and source body', async () => {
+    const challenge = humanChallenge();
+    const fetcher = vi.fn(async (_url: RequestInfo | URL, request?: RequestInit) => {
+      const proof = (request?.headers as Record<string, string>)['X-Campus-Proof'];
+      if (!proof) return json({ code: 'VERIFICATION_REQUIRED', challenge }, 428);
+      expect(JSON.parse(proof)).toEqual({ token: challenge.token, answer: '0123' });
+      return json(batch);
+    });
+    const onHumanVerification = vi.fn(async () => ' 0123 ');
+    const stages: string[] = [];
+    expect(await analyzeSources([{ text: '请提交申请' }], { fetcher, sessionKey: 'device-key',
+      onHumanVerification, onStage: stage => stages.push(stage) })).toEqual(batch);
+    expect(onHumanVerification).toHaveBeenCalledTimes(1);
+    expect(onHumanVerification).toHaveBeenCalledWith(challenge, expect.any(AbortSignal));
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(fetcher.mock.calls[0][1]?.body).toBe(fetcher.mock.calls[1][1]?.body);
+    expect(fetcher.mock.calls[1][1]?.headers).toMatchObject({ Authorization: 'Bearer device-key' });
+    expect(stages).toEqual(['requesting', 'verifying', 'requesting']);
+  });
+
+  it('does not fall back to PoW or submit a paid request when the host has no human verification callback', async () => {
+    const fetcher = vi.fn(async () => json({ code: 'VERIFICATION_REQUIRED', challenge: humanChallenge() }, 428));
+    await expect(analyzeSources([{ text: '通知' }], { fetcher })).rejects.toMatchObject({ code: 'HUMAN_VERIFICATION_REQUIRED', status: 428 });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancels an outstanding verification dialog even if its host ignores the AbortSignal', async () => {
+    const challenge = humanChallenge(), controller = new AbortController();
+    const fetcher = vi.fn(async () => json({ code: 'VERIFICATION_REQUIRED', challenge }, 428));
+    let started!: () => void;
+    const ready = new Promise<void>(resolve => { started = resolve; });
+    const onHumanVerification = vi.fn((_request, signal: AbortSignal) => { started();
+      expect(signal.aborted).toBe(false); return new Promise<string>(() => {}); });
+    const pending = analyzeSources([{ text: '通知' }], { fetcher, signal: controller.signal, onHumanVerification });
+    const check = expect(pending).rejects.toMatchObject({ code: 'CANCELLED' });
+    await ready; controller.abort(); await check;
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(onHumanVerification.mock.calls[0][1].aborted).toBe(true);
+  });
+
+  it('rejects malformed image challenges before opening a dialog or contacting the server again', async () => {
+    for (const replacement of [{ image: 'https://untrusted.test/image.png' }, { image: 'data:image/svg+xml,<svg />' }, { image: 'x'.repeat(16001) },
+      { expires: Date.now() - 1 }, { expires: Date.now() + 600_000 }, { token: 'x'.repeat(1801) }]) {
+      const fetcher = vi.fn(async () => json({ code: 'VERIFICATION_REQUIRED', challenge: { ...humanChallenge(), ...replacement } }, 428));
+      const onHumanVerification = vi.fn(async () => '1234');
+      await expect(analyzeSources([{ text: '通知' }], { fetcher, onHumanVerification })).rejects.toMatchObject({ code: 'INVALID_CHALLENGE' });
+      expect(fetcher).toHaveBeenCalledTimes(1); expect(onHumanVerification).not.toHaveBeenCalled();
+    }
+  });
+
+  it('rejects answers other than four digits and a response that outlives the signed challenge', async () => {
+    for (const answer of ['', ' ', '123', '12345', '12a4']) {
+      const fetcher = vi.fn(async () => json({ code: 'VERIFICATION_REQUIRED', challenge: humanChallenge() }, 428));
+      await expect(analyzeSources([{ text: '通知' }], { fetcher, onHumanVerification: async () => answer }))
+        .rejects.toMatchObject({ code: 'INVALID_HUMAN_ANSWER' });
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    }
+    vi.useFakeTimers();
+    const challenge = humanChallenge(), fetcher = vi.fn(async () => json({ code: 'VERIFICATION_REQUIRED', challenge }, 428));
+    await expect(analyzeSources([{ text: '通知' }], { fetcher, onHumanVerification: async () => {
+      vi.setSystemTime(challenge.expires); return '1234';
+    } })).rejects.toMatchObject({ code: 'VERIFICATION_EXPIRED' });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not retry rejected human verification or a second challenge response', async () => {
+    for (const status of [400, 503, 428]) {
+      const challenge = humanChallenge(); let attempt = 0;
+      const fetcher = vi.fn(async () => ++attempt === 1
+        ? json({ code: 'VERIFICATION_REQUIRED', challenge }, 428)
+        : json({ code: status === 428 ? 'VERIFICATION_REQUIRED' : 'INVALID_PROOF', challenge, error: '验证未完成' }, status));
+      const onHumanVerification = vi.fn(async () => '1234');
+      await expect(analyzeSources([{ text: '通知' }], { fetcher, onHumanVerification })).rejects.toMatchObject({ status });
+      expect(fetcher).toHaveBeenCalledTimes(2); expect(onHumanVerification).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it('lets a wrong image answer retry the same context without requesting a new challenge or making a second paid call', async () => {
+    const challenge = humanChallenge(); let paid = 0,attempt = 0;
+    const fetcher = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const proof = (init?.headers as Record<string, string>)['X-Campus-Proof'];
+      if (!proof) return json({ code: 'VERIFICATION_REQUIRED', challenge }, 428);
+      const answer = JSON.parse(proof);
+      expect(answer.token).toBe(challenge.token);
+      if (++attempt === 1) return json({ code: 'CAPTCHA_INCORRECT', remainingAttempts: 4, error: '数字不正确，请再试一次。' }, 400);
+      paid++; return json(batch);
+    });
+    const onHumanVerification = vi.fn(async () => attempt ? '0123' : '9999');
+    expect(await analyzeSources([{ text: '通知' }], { fetcher, onHumanVerification })).toEqual(batch);
+    expect(paid).toBe(1); expect(fetcher).toHaveBeenCalledTimes(3); expect(onHumanVerification).toHaveBeenCalledTimes(2);
+    expect(onHumanVerification.mock.calls[1]).toEqual([{ ...challenge, error: '数字不正确，请再试一次。' }, expect.any(AbortSignal)]);
+    expect(fetcher.mock.calls.map(call => call[1]?.body)).toEqual(Array(3).fill(JSON.stringify({ sources: [{ text: '通知' }] })));
+  });
+
+  it('allows at most five wrong-answer dialog attempts and never treats malformed remaining counts or server errors as retryable', async () => {
+    let attempts = 0;
+    const fetcher = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      if (!(init?.headers as Record<string, string>)['X-Campus-Proof']) return json({ code: 'VERIFICATION_REQUIRED', challenge: humanChallenge() }, 428);
+      return json({ code: 'CAPTCHA_INCORRECT', remainingAttempts: 5 - ++attempts, error: '数字不正确' }, 400);
+    });
+    const onHumanVerification = vi.fn(async () => '9999');
+    await expect(analyzeSources([{ text: '通知' }], { fetcher, onHumanVerification })).rejects.toMatchObject({ code: 'CAPTCHA_INCORRECT', status: 400 });
+    expect(onHumanVerification).toHaveBeenCalledTimes(5); expect(fetcher).toHaveBeenCalledTimes(6);
+    for (const [remainingAttempts, status] of [[5,400],[100,400],['4',400],[4,502]]) {
+      let count = 0;
+      const failed = vi.fn(async () => ++count === 1
+        ? json({ code: 'VERIFICATION_REQUIRED', challenge: humanChallenge() }, 428)
+        : json({ code: 'CAPTCHA_INCORRECT', remainingAttempts }, status as number));
+      const callback = vi.fn(async () => '9999');
+      await expect(analyzeSources([{ text: '通知' }], { fetcher: failed, onHumanVerification: callback })).rejects.toMatchObject({ status });
+      expect(callback).toHaveBeenCalledTimes(1);expect(failed).toHaveBeenCalledTimes(2);
+    }
   });
 
   it('does not loop when proof verification is rejected', async () => {

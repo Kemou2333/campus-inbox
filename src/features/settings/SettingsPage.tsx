@@ -13,6 +13,7 @@ import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import type { CampusController } from '../../app/useCampus';
 import type { SyncConflict } from '../../infrastructure/sync-client';
 import type { ThemePreference } from '../../app/theme';
+import {BackupDialog} from './BackupDialog';
 
 interface Props {
   app: CampusController;
@@ -46,7 +47,8 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [conflict, setConflict] = useState<SyncConflict | null>(null);
   const [legacyOpen,setLegacyOpen]=useState(false);
-  useEffect(()=>{onDialogChange(logoutOpen||!!conflict||legacyOpen);return()=>onDialogChange(false);},[logoutOpen,conflict,legacyOpen,onDialogChange]);
+  const [backupOpen,setBackupOpen]=useState(false);
+  useEffect(()=>{onDialogChange(logoutOpen||!!conflict||legacyOpen||backupOpen);return()=>onDialogChange(false);},[logoutOpen,conflict,legacyOpen,backupOpen,onDialogChange]);
   const picker = useRef<HTMLInputElement>(null);
   const busy = !!running || app.busy;
 
@@ -130,7 +132,7 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
       </Stack>
       <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1 }}>
         <Button variant="outlined" startIcon={<DownloadOutlined />} disabled={busy}
-          onClick={() => void run('backup', app.backup)}>{running === 'backup' ? '正在导出…' : '导出备份'}</Button>
+          onClick={() => app.notices.some(notice=>notice.attachments.length)?setBackupOpen(true):void run('backup', () => app.backup(false))}>{running === 'backup' ? '正在导出…' : '导出备份'}</Button>
         <Button variant="outlined" startIcon={<UploadOutlined />} disabled={busy} onClick={() => picker.current?.click()}>
           {running === 'import' ? '正在导入…' : '导入备份'}</Button>
         <Button variant="outlined" startIcon={<AutoStoriesOutlined />} disabled={busy}
@@ -149,6 +151,7 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
       <Button startIcon={<InfoOutlined />} onClick={onAbout}>关于校园 Inbox</Button>
     </Stack>
 
+    <BackupDialog open={backupOpen} app={app} onClose={()=>setBackupOpen(false)}/>
     <Dialog open={logoutOpen} onClose={() => { if (!running) setLogoutOpen(false); }}>
       <DialogTitle>退出登录？</DialogTitle>
       <DialogContent>

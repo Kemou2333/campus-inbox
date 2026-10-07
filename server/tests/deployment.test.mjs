@@ -11,7 +11,7 @@ import {once} from 'node:events';
 // manifest, node_modules, model requests, or real server credentials.
 test('the complete production release boots without dist or frontend dependencies',async()=>{
   const folder=await mkdtemp(join(tmpdir(),'campus-release-'));
-  const files=['server/index.mjs','server/analyze.mjs','server/service.mjs','server/auth.mjs','server/sync.mjs','server/manage-invites.mjs','worker/prompt.mjs','server/contracts/data.js','server/contracts/time.js'];
+  const files=['server/index.mjs','server/analyze.mjs','server/service.mjs','server/image-captcha.mjs','server/auth.mjs','server/sync.mjs','server/manage-invites.mjs','worker/prompt.mjs','server/contracts/data.js','server/contracts/time.js'];
   const project=new URL('../../',import.meta.url);
   let child;
   try{

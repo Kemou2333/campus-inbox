@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { createNotice, effectiveDeadline, exportBackup, getNoticeStatus, parseAnalysis, parseAnalysisBatch, parseBackup, parseDate, parseNotice, pendingTasks, priority, setNoticeCompleted, setTaskApplicable, sortNotices, toggleStep, toggleTask, updateNote } from '../src/domain/notice';
+import { createNotice, effectiveDeadline, exportBackup, exportTextBackup, getNoticeStatus, parseAnalysis, parseAnalysisBatch, parseBackup, parseDate, parseNotice, pendingTasks, priority, setNoticeCompleted, setTaskApplicable, sortNotices, toggleStep, toggleTask, updateNote } from '../src/domain/notice';
 import { parseTimeSpec, timeFromText, timeSpecToDate, timeSpecToISO } from '../src/domain/time';
 import type { NoticeAnalysis } from '../src/domain/types';
 import { LocalRepository } from '../src/infrastructure/local-repository';
@@ -91,6 +91,14 @@ describe('migration and stable child identity', () => {
     let n = record(); n = updateNote(n, { type: 'step', taskId: n.tasks[0].id, stepId: n.tasks[0].steps[0].id }, '已联系家长');
     expect(parseBackup(exportBackup([n]))).toEqual([n]);
     expect(() => parseBackup({ app: 'different-app', version: 5, notices: [] })).toThrow();
+  });
+  test('text-only backup restores progress without missing local files and leaves the live notice intact', () => {
+    let n=record();n.attachments=['only-on-other-device'];
+    n=toggleStep(n,n.tasks[0].id,n.tasks[0].steps[0].id);
+    n=updateNote(n,{type:'step',taskId:n.tasks[0].id,stepId:n.tasks[0].steps[0].id},'已发给通知发布者');
+    const before=structuredClone(n),backup=exportTextBackup([n]);
+    expect(parseBackup(backup)).toEqual([{...n,attachments:[]}]);
+    expect(n).toEqual(before);expect(backup.attachments).toBeUndefined();
   });
 });
 
