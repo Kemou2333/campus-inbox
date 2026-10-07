@@ -1,10 +1,11 @@
-import {useEffect,useState} from 'react';
-import {Alert,Box,Button,Dialog,DialogActions,DialogContent,DialogTitle,IconButton,Stack,Typography} from '@mui/material';
+import {lazy,Suspense,useEffect,useState} from 'react';
+import {Alert,Box,Button,CircularProgress,Dialog,DialogActions,DialogContent,DialogTitle,IconButton,Stack,Typography} from '@mui/material';
 import AttachFile from '@mui/icons-material/AttachFile';
 import Close from '@mui/icons-material/Close';
 import Download from '@mui/icons-material/Download';
 import {getFile,type StoredAttachment} from '../../infrastructure/attachment-store';
 import type {PlatformAPI} from '../../platform';
+const PdfPreview=lazy(()=>import('./PdfPreview'));
 
 export function AttachmentList({ids,platform,onRemove}:{ids:string[];platform:PlatformAPI;onRemove?:(id:string)=>void}){
  const [files,setFiles]=useState<(StoredAttachment|null)[]>([]);
@@ -33,8 +34,8 @@ export function AttachmentList({ids,platform,onRemove}:{ids:string[];platform:Pl
    <DialogContent>
     {error&&<Alert severity="error" sx={{mb:2}}>{error}</Alert>}
     {image?<Box component="img" src={url} alt={selected?.name} sx={{display:'block',maxWidth:'100%',maxHeight:'65vh',mx:'auto',objectFit:'contain'}}/>:
-     pdf?<Box component="iframe" title={selected?.name} src={url} sandbox="" sx={{width:'100%',height:'65vh',border:0}}/>:
-     textFile&&selected&&selected.size<=200_000?<Box component="pre" sx={{m:0,p:2,maxHeight:'65vh',overflow:'auto',whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontFamily:'inherit',fontSize:14,bgcolor:'action.hover',borderRadius:2}}>{textPreview??'正在读取…'}</Box>:
+     pdf&&selected?<Suspense fallback={<Box sx={{display:'grid',placeItems:'center',minHeight:120}}><CircularProgress size={28} aria-label="正在加载 PDF 预览"/></Box>}><PdfPreview blob={selected.blob} name={selected.name}/></Suspense>:
+     textFile&&selected&&selected.size<=200_000?<Box component="pre" sx={{m:0,whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontFamily:'inherit',fontSize:16,lineHeight:1.7}}>{textPreview??'正在读取…'}</Box>:
      <Typography color="text.secondary">{textFile?'文件较大，请保存后查看。':'这种附件请保存后使用对应应用打开。'}</Typography>}
    </DialogContent>
    <DialogActions><Button onClick={()=>setSelected(null)}>关闭</Button><Button variant="contained" startIcon={<Download/>} onClick={()=>void download()}>保存附件</Button></DialogActions>

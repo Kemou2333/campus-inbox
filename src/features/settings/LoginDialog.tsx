@@ -85,7 +85,7 @@ export function LoginDialog({ open, app, onClose }: Props) {
             ? <FormControlLabel sx={{ alignItems: 'flex-start', m: 0 }} control={<Checkbox checked={transferApproved}
               disabled={working} onChange={event => setTransferApproved(event.target.checked)} />}
               label="把本机已有通知同步到这个账号" />
-            : <Typography variant="body2" color="text.secondary">登录后自动同步通知、进度和笔记。</Typography>}
+            : <Typography variant="body2" color="text.secondary">{mode==='register'?'请记好密码，当前暂不支持找回。':'登录后自动同步通知、进度和笔记。'}</Typography>}
         </Stack>
       </Box>
     </DialogContent>

@@ -14,7 +14,7 @@ from unittest.mock import patch
 Path = type(pathlib.Path())
 INSTALLER = Path(__file__).resolve().parents[1] / 'install-release.py'
 FILES = {
-    'server/index.mjs', 'server/analyze.mjs', 'server/service.mjs',
+    'server/index.mjs', 'server/analyze.mjs', 'server/service.mjs', 'server/image-captcha.mjs',
     'server/sync.mjs', 'server/auth.mjs', 'server/manage-invites.mjs',
     'worker/prompt.mjs', 'server/contracts/data.js', 'server/contracts/time.js',
 }

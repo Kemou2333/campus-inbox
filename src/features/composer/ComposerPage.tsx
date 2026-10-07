@@ -1,5 +1,5 @@
-import {useRef,useState} from 'react';
-import {Alert,Box,Button,IconButton,LinearProgress,Paper,Stack,TextField,Typography} from '@mui/material';
+import {useEffect,useRef,useState} from 'react';
+import {Alert,Box,Button,IconButton,LinearProgress,Paper,Stack,TextField,Typography,useMediaQuery} from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
 import AutoAwesome from '@mui/icons-material/AutoAwesome';
@@ -10,6 +10,12 @@ import {AttachmentList} from '../attachments/AttachmentList';
 
 export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusController;onDone:()=>void;onLogin:()=>void;embedded?:boolean}){
  const input=useRef<HTMLInputElement>(null);const [target,setTarget]=useState<string|null>(null);const [adding,setAdding]=useState(false);const [pasting,setPasting]=useState(false);
+ const topNavigation=useMediaQuery('(min-width:960px), (min-width:600px) and (max-height:500px)');
+ const shortViewport=useMediaQuery('(max-height:500px)');
+ const [clock,setClock]=useState(Date.now());
+ useEffect(()=>{setClock(Date.now());if(app.retryAt<=Date.now())return;const timer=setInterval(()=>{const value=Date.now();setClock(value);if(value>=app.retryAt)clearInterval(timer);},1000);return()=>clearInterval(timer);},[app.retryAt]);
+ const retrySeconds=Math.max(0,Math.ceil((app.retryAt-clock)/1000));
+ const retryText=retrySeconds>3600?'稍后再试':retrySeconds>=60?`${Math.ceil(retrySeconds/60)} 分钟后`:`${retrySeconds} 秒后`;
  const total=app.drafts.reduce((n,d)=>n+d.text.length,0);const hasContent=app.drafts.some(d=>d.text.trim());
  async function submit(){if(!app.cloud?.getKey()){onLogin();return;}try{if(await app.analyze())onDone();}catch(e){app.report(e);}}
  async function picked(files:FileList|null){const id=target;if(!files||!id)return;setAdding(true);try{await app.attach(id,Array.from(files));}catch(e){app.report(e);}finally{setAdding(false);if(input.current)input.current.value='';}}
@@ -19,7 +25,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
   {app.pending&&<Alert severity="info" action={<Button onClick={app.recoverResult}>保存结果</Button>}>上次整理的结果还没保存，无需再次调用 AI。</Alert>}
   {!!app.legacyRecords.length&&<Alert severity="info" action={<Button onClick={app.recoverLegacyResult}>保存结果</Button>}>旧版有 {app.legacyRecords.length} 条整理结果未保存，无需重新调用 AI。</Alert>}
   {app.legacyMissingFiles&&<Alert severity="info" onClose={()=>app.setLegacyMissingFiles(false)}>旧版草稿文字已保留，草稿附件需要重新添加。</Alert>}
-  {app.drafts.map((draft,index)=><Paper key={draft.id} variant="outlined" sx={{p:2}}>
+  {app.drafts.map((draft,index)=><Paper key={draft.id} variant="outlined" sx={{p:{xs:1.5,sm:2}}}>
    <Stack direction="row" sx={{alignItems:"center",justifyContent:"space-between",mb:1.5}}>
     <Typography variant="h6">通知 {index+1}</Typography>
     <Stack direction="row" sx={{gap:.5,alignItems:'center'}}>
@@ -36,13 +42,13 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
   </Paper>)}
   <input hidden ref={input} type="file" multiple onChange={e=>void picked(e.target.files)}/>
   <Button variant="outlined" startIcon={<Add/>} disabled={app.busy||adding||app.drafts.length>=20} onClick={()=>app.addDraft()} sx={{alignSelf:'flex-start'}}>再加一条</Button>
-  <Paper variant="outlined" sx={{p:2,position:'sticky',bottom:embedded?0:{xs:'calc(80px + var(--safe-bottom))',md:16},zIndex:2,bgcolor:'background.paper'}}>
+  <Paper variant="outlined" className="composer-actions" sx={{p:{xs:1.5,sm:2},position:shortViewport&&!embedded?'static':'sticky',bottom:embedded?0:topNavigation?16:'calc(80px + var(--safe-bottom))',zIndex:2,bgcolor:'background.paper'}}>
    {app.busy&&<LinearProgress sx={{mb:2,borderRadius:1}}/>}
-   <Stack direction="row" sx={{alignItems:"center",justifyContent:"space-between",gap:2}}>
-    <Typography color={total>4000?'error.main':'text.secondary'} variant="body2">{total.toLocaleString()} / 4,000 字</Typography>
+   <Stack direction="row" sx={{alignItems:"center",justifyContent:"space-between",gap:1}}>
+    <Typography color={total>4000?'error.main':'text.secondary'} variant="body2" sx={{whiteSpace:'nowrap',fontVariantNumeric:'tabular-nums'}}>{total.toLocaleString()} / 4,000 字</Typography>
     <Stack direction="row" spacing={1}>
      {app.busy&&<Button onClick={app.cancel}>取消</Button>}
-     <Button variant="contained" startIcon={!app.busy&&<AutoAwesome/>} disabled={app.busy||adding||!hasContent||total>4000||app.pending||!!app.legacyRecords.length||!app.config} onClick={()=>void submit()}>{app.busy?app.stage:'整理通知'}</Button>
+     <Button variant="contained" startIcon={!app.busy&&!retrySeconds&&<AutoAwesome/>} sx={{whiteSpace:'nowrap'}} disabled={app.busy||adding||!!retrySeconds||!hasContent||total>4000||app.pending||!!app.legacyRecords.length||!app.config} onClick={()=>void submit()}>{app.busy?app.stage:retrySeconds?retryText:'整理通知'}</Button>
     </Stack>
    </Stack>
   </Paper>

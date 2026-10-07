@@ -189,6 +189,10 @@ export function parseBackup(value: unknown): Notice[] {
 export function exportBackup(notices: Notice[], attachments?: BackupAttachment[]): Backup {
   return { app: 'campus-inbox', version: 5, exportedAt: new Date().toISOString(), notices: structuredClone(notices), ...(attachments ? { attachments } : {}) };
 }
+/** Text-only backups remain restorable on devices that do not hold the original files. */
+export function exportTextBackup(notices: Notice[]): Backup {
+  return exportBackup(notices.map(notice => ({ ...notice, attachments: [] })));
+}
 
 export function pendingTasks(n: Notice): Task[] { return n.tasks.filter(t => !t.completed && !t.dismissed); }
 export function getNoticeStatus(n: Notice): NoticeStatus {
