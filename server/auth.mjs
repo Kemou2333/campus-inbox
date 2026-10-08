@@ -4,6 +4,7 @@ import {promisify} from 'node:util';
 import {mkdir,chmod} from 'node:fs/promises';
 import {dirname} from 'node:path';
 import {boundedText,ServiceError} from './analyze.mjs';
+import {createEmailAuth} from './email-auth.mjs';
 
 const scrypt=promisify(derive),DAY=86400000,SESSION_TTL=30*DAY;
 const ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -73,7 +74,8 @@ export async function createAuthService(config,options={}){
     if(!validKey(issued?.key))throw new ServiceError('登录暂时不可用，请稍后重试。',503);
     const t=now(),expires=t+SESSION_TTL;
     transaction(()=>{stmt.insertSession.run(sha(issued.key),user.id,t,expires);stmt.pruneSessions.run(user.id,user.id);});
-    return {key:issued.key,username:user.username,expiresAt:new Date(expires).toISOString()};
+    const email=emailAuth.emailForUser(user.id);
+    return {key:issued.key,username:user.username,expiresAt:new Date(expires).toISOString(),...(email?{email}:{})};
   }
   async function register(body,ip){
     const username=canonicalUsername(body.username),password=passwordValue(body.password),invite=inviteValue(body.invite),codeHash=sha(invite),network=hashSubject('ip:'+ip);
@@ -92,15 +94,19 @@ export async function createAuthService(config,options={}){
       rate('register-day',network,limits.registerIPDay,DAY);
       stmt.insertUser.run(user.id,username,salt,passwordHash,now());stmt.useInvite.run(user.id,now(),codeHash);
     });
-    return sessionFor(user,ip);
+    try{return await sessionFor(user,ip);}
+    catch(error){
+      const issue=new ServiceError('账号已创建。请稍后使用用户名和密码登录。',error.status||503);
+      issue.code='ACCOUNT_CREATED_LOGIN_PENDING';throw issue;
+    }
   }
   async function login(body,ip){
     const username=canonicalUsername(body.username),password=passwordValue(body.password);
     transaction(()=>{clean();rate('login-ip',hashSubject('ip:'+ip),limits.loginIPMinute,60000);rate('login-user',hashSubject('user:'+username),limits.loginUserMinute,60000);});
-    const user=stmt.user.get(username),salt=user?.salt||'00000000000000000000000000000000';
-    const actual=await hashPassword(password,salt),expected=user?Buffer.from(user.password_hash,'hex'):Buffer.alloc(64);
+    const user=stmt.user.get(username),hasPassword=!!user&&/^[a-f0-9]{128}$/.test(user.password_hash),salt=hasPassword?user.salt:'00000000000000000000000000000000';
+    const actual=await hashPassword(password,salt),expected=hasPassword?Buffer.from(user.password_hash,'hex'):Buffer.alloc(64);
     const matches=timingSafeEqual(actual,expected);
-    if(!user||!matches)throw new ServiceError('用户名或密码不正确。',401);
+    if(!hasPassword||!matches)throw new ServiceError('用户名或密码不正确。',401);
     return sessionFor(user,ip);
   }
   /** Private CLI only: no HTTP endpoint or admin page issues invitations. */
@@ -116,12 +122,23 @@ export async function createAuthService(config,options={}){
     if(!session)return null;
     if(session.expires<=t){stmt.deleteSession.run(hash);return null;}
     let expires=session.expires;if(expires-t<15*DAY){expires=t+SESSION_TTL;stmt.renewSession.run(expires,hash);}
-    return {provider:'invite',subject:session.id,username:session.username,expiresAt:new Date(expires).toISOString()};
+    const email=emailAuth.emailForUser(session.id);
+    return {provider:'invite',subject:session.id,username:session.username,expiresAt:new Date(expires).toISOString(),...(email?{email}:{})};
   }
+  const emailAuth=createEmailAuth({db,signingSecret:config.signingSecret,now,limits:options.limits,sendCode:options.sendCode,getIdentity,sessionFor,
+    createUser(){
+      if(stmt.count.get().count>=limits.accountLimit)throw new ServiceError('当前注册容量已满，请联系维护者。',507);
+      let username;do{username='同学_'+randomBytes(8).toString('hex');}while(stmt.user.get(username));
+      const user={id:randomUUID(),username};
+      // Empty credentials explicitly designate an email-only account. Password
+      // login runs its dummy hash and rejects it without comparing empty buffers.
+      stmt.insertUser.run(user.id,username,'','',now());return user;
+    }
+  });
   async function handle(request,ip='unknown'){
     const origin=request.headers.get('Origin'),allowed=(config.allowedOrigins||[]).includes(origin),path=new URL(request.url).pathname;
     const reply=(body,status=200)=>new Response(status===204?null:JSON.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Vary':'Origin',...(allowed?{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Max-Age':'600'}:{})}});
-    if(!['/auth/register','/auth/login','/auth/status','/auth/logout'].includes(path))return reply({error:'接口不存在。'},404);
+    if(!['/auth/register','/auth/login','/auth/status','/auth/logout','/auth/options','/auth/email/request','/auth/email/verify'].includes(path))return reply({error:'接口不存在。'},404);
     if(!allowed)return reply({error:'此应用未获准登录。'},403);
     if(request.method==='OPTIONS')return reply({},204);
     if(request.method!=='POST')return reply({error:'请使用 POST 登录。'},405);
@@ -129,13 +146,18 @@ export async function createAuthService(config,options={}){
     try{
       let body;try{body=JSON.parse(await boundedText(request.body,4096));}catch(error){if(error.status===413)throw new ServiceError('登录请求内容过大。',413);throw new ServiceError('登录请求不是有效 JSON。',400);}
       if(!body||typeof body!=='object'||Array.isArray(body))throw new ServiceError('登录内容格式不正确。',400);
+      if(path==='/auth/options')return reply(emailAuth.options());
       if(path==='/auth/register')return reply(await register(body,ip));
       if(path==='/auth/login')return reply(await login(body,ip));
       const key=request.headers.get('Authorization')?.match(/^Bearer ([A-Za-z0-9_-]{43})$/)?.[1];
+      if(path==='/auth/email/request')return reply(await emailAuth.request(body,ip,key));
+      if(path==='/auth/email/verify')return reply(await emailAuth.verify(body,ip,key));
       if(path==='/auth/logout'){if(key)stmt.deleteSession.run(sha(key));return reply({ok:true});}
       const identity=getIdentity(key);if(!identity)return reply({error:'登录已过期，请重新登录。'},401);
-      return reply({username:identity.username,expiresAt:identity.expiresAt});
-    }catch(error){return reply({error:error instanceof ServiceError?error.message:'登录暂时不可用，请稍后再试。'},error.status||503);}
+      return reply({username:identity.username,expiresAt:identity.expiresAt,...(identity.email?{email:identity.email}:{})});
+    }catch(error){return reply({error:error instanceof ServiceError?error.message:'登录暂时不可用，请稍后再试。',
+      ...(error instanceof ServiceError&&error.code?{code:error.code}:{}),
+      ...(error instanceof ServiceError&&error.retryAfterSeconds?{retryAfterSeconds:error.retryAfterSeconds}:{})},error.status||503);}
   }
   return {handle,getIdentity,issueInvites,close:()=>db.close()};
 }

@@ -144,5 +144,5 @@ test('captcha success does not expand account, network, global or rolling reques
   assert.equal((await f.handler(request('消息三',proof),'203.0.113.1')).status,200);
   for(let count=0;count<2;count++)assert.equal((await f.handler(request('消息三'),'203.0.113.1')).status,200);
   const sixth=await f.handler(request('消息三'),'203.0.113.1');assert.equal(sixth.status,429);
-  assert.equal((await sixth.json()).code,'IP_RATE_LIMIT');assert.equal(f.calls(),3);
+  assert.equal((await sixth.json()).code,'ACCOUNT_RATE_LIMIT');assert.equal(f.calls(),3);
 });

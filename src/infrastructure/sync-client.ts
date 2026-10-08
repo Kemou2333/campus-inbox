@@ -78,7 +78,7 @@ function parseReply(value: unknown): SyncReply {
   const o = value as Partial<SyncReply> | null;
   if (!o || !Number.isSafeInteger(o.cursor) || Number(o.cursor) < 0 || typeof o.hasMore !== 'boolean' || !Array.isArray(o.accepted) || !Array.isArray(o.updates) || !Array.isArray(o.conflicts)) throw new Error('云同步返回格式不正确');
   const accepted = o.accepted.map(a => {
-    if (!a || typeof a.id !== 'string' || !Number.isSafeInteger(a.version) || a.version < 1) throw new Error('云同步确认格式不正确');
+    if (!a || typeof a.id !== 'string' || !a.id || a.id.length > 150 || !Number.isSafeInteger(a.version) || a.version < 0) throw new Error('云同步确认格式不正确');
     return { id: a.id, version: a.version };
   });
   return { cursor: o.cursor!, accepted, updates: o.updates.map(parseUpdate), conflicts: o.conflicts.map(parseUpdate), hasMore: o.hasMore };

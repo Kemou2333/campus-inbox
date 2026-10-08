@@ -15,15 +15,17 @@ Path = type(pathlib.Path())
 INSTALLER = Path(__file__).resolve().parents[1] / 'install-release.py'
 FILES = {
     'server/index.mjs', 'server/analyze.mjs', 'server/service.mjs', 'server/image-captcha.mjs',
-    'server/sync.mjs', 'server/auth.mjs', 'server/manage-invites.mjs',
+    'server/sync.mjs', 'server/auth.mjs', 'server/email-auth.mjs', 'server/mail-sender.mjs', 'server/manage-invites.mjs',
     'worker/prompt.mjs', 'server/contracts/data.js', 'server/contracts/time.js',
+    'server/contracts/email-policy.mjs', 'server/vendor/nodemailer-10.0.16.mjs',
+    'server/vendor/NODEMAILER-LICENSE', 'server/vendor/NODEMAILER-SOURCE.md',
 }
 
 
-def archive(extra=None):
+def archive(extra=None, missing=None):
     stream = io.BytesIO()
     with tarfile.open(fileobj=stream, mode='w:gz') as tar:
-        for name in sorted(FILES | ({extra} if extra else set())):
+        for name in sorted((FILES - ({missing} if missing else set())) | ({extra} if extra else set())):
             content = b'export {};\n'
             info = tarfile.TarInfo(name)
             info.size = len(content)
@@ -32,7 +34,7 @@ def archive(extra=None):
 
 
 class InstallerTests(unittest.TestCase):
-    def exercise(self, mode='success', extra=None):
+    def exercise(self, mode='success', extra=None, missing=None):
         with tempfile.TemporaryDirectory() as directory:
             fake = Path(directory).resolve()
             root = fake / 'opt/campus-inbox'
@@ -70,16 +72,16 @@ class InstallerTests(unittest.TestCase):
                 return Healthy()
 
             output = io.StringIO()
-            with patch('pathlib.Path', host_path), patch('subprocess.run', command), patch('urllib.request.urlopen', health), patch('time.sleep', lambda _: None), patch.object(sys, 'stdin', type('Input', (), {'buffer': io.BytesIO(archive(extra))})()), contextlib.redirect_stdout(output):
+            with patch('pathlib.Path', host_path), patch('subprocess.run', command), patch('urllib.request.urlopen', health), patch('time.sleep', lambda _: None), patch.object(sys, 'stdin', type('Input', (), {'buffer': io.BytesIO(archive(extra, missing))})()), contextlib.redirect_stdout(output):
                 with self.assertRaises(SystemExit) as result:
                     runpy.run_path(str(INSTALLER), run_name='__main__')
-            if mode == 'success' and not extra:
+            if mode == 'success' and not extra and not missing:
                 self.assertEqual(result.exception.code, 0)
                 self.assertNotEqual(current.resolve(), old)
                 self.assertEqual(set(str(path.relative_to(current.resolve())) for path in current.resolve().rglob('*') if path.is_file()), FILES)
                 self.assertEqual(len(calls), 1)
                 self.assertIn('release deployed', output.getvalue())
-            elif extra:
+            elif extra or missing:
                 self.assertEqual(current.resolve(), old)
                 self.assertEqual(calls, [])
                 self.assertEqual(list((root / 'releases').iterdir()), [old])
@@ -94,6 +96,7 @@ class InstallerTests(unittest.TestCase):
     def test_restart_failure_restores_previous_release(self): self.exercise('restart-failure')
     def test_failed_health_restores_previous_release(self): self.exercise('health-failure')
     def test_extra_file_is_rejected_before_mutation(self): self.exercise(extra='../../private.env')
+    def test_missing_mail_bundle_is_rejected_before_mutation(self): self.exercise(missing='server/vendor/nodemailer-10.0.16.mjs')
 
 
 if __name__ == '__main__': unittest.main()

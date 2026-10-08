@@ -17,7 +17,7 @@
 | 用量文件 | `/var/lib/campus-inbox/usage.json`，保存匿名化计数，不保存通知正文。 |
 | TLS | 宿主 Nginx 负责现有 IP HTTPS 证书及续期。 |
 
-每个设备先保存本地数据，登录后同步文字、笔记和状态。附件仅保存在添加它的设备与用户导出的备份中，不上传服务器。退出登录不删除本地通知。注册使用一次性 8 位邀请码、用户名和密码，后续用账号登录；不启用邮件、公开匿名账号创建或新的付费资源。邀请发行步骤见 [INVITE-LOGIN.md](INVITE-LOGIN.md)。
+每个设备先保存本地数据，登录后同步文字、笔记和状态。附件仅保存在添加它的设备与用户导出的备份中，不上传服务器。退出登录不删除本地通知。保留邀请码注册与用户名密码登录；配置现有发信邮箱后支持邮箱验证码，默认关闭，不自动创建付费资源。邀请发行见 [INVITE-LOGIN.md](INVITE-LOGIN.md)，发信配置见 [EMAIL-LOGIN.md](EMAIL-LOGIN.md)。
 
 ## 本地构建与免费检查
 
@@ -33,7 +33,7 @@ python3 mobile/prepare-web.py
 
 锁文件确定依赖版本。网页使用相对资源路径，避免 GitHub Pages 子目录与 Android 离线入口的差异造成资源 404。APK 只包含新版 `dist/`，不叠加旧字体或主题补丁。
 
-免费检查使用假模型响应与临时数据库，覆盖一次批量调用、缓存、付费失败计量、时间校验、账号限额、邀请码、登录、图片验证码、冲突和删除同步。发行检查把十个运行文件单独放入临时目录，启动服务；不依赖网页 `dist/`、package.json、包管理器或 node_modules。这些检查不证明所有真实通知都能正确提取，也不替代安卓真机检查。
+免费检查使用假模型响应、模拟邮件和临时数据库，覆盖一次批量调用、缓存、付费失败计量、时间校验、账号限额、邀请码、邮箱验证和绑定、图片验证码、冲突和删除同步。发行检查把完整 16 文件包单独放入临时目录，启动服务；不依赖网页 `dist/`、package.json、包管理器或 node_modules。这些检查不证明真实邮件投递或所有真实通知都能正确提取，也不替代安卓真机检查。
 
 ## 三条 CI
 
@@ -45,7 +45,7 @@ python3 mobile/prepare-web.py
 
 `backend.yml` 用 Node 24 运行 `server/tests/`，再使用受限发布账户。Actions Secrets 为 `SERVER_HOST`、`SERVER_PORT`、`DEPLOY_SSH_PRIVATE_KEY`、`SSH_KNOWN_HOSTS`；该账户不能进入 root shell 或转发端口。
 
-发行包只包含十个运行文件：
+发行包只包含以下 16 个运行与依赖说明文件：
 
 ```text
 server/index.mjs
@@ -54,18 +54,24 @@ server/service.mjs
 server/image-captcha.mjs
 server/sync.mjs
 server/auth.mjs
+server/email-auth.mjs
+server/mail-sender.mjs
 server/manage-invites.mjs
 worker/prompt.mjs
 server/contracts/data.js
 server/contracts/time.js
+server/contracts/email-policy.mjs
+server/vendor/nodemailer-10.0.16.mjs
+server/vendor/NODEMAILER-LICENSE
+server/vendor/NODEMAILER-SOURCE.md
 ```
 
-受限安装器检查清单、文件类型、路径、大小和语法，再切换发行目录并检查 `/health`；失败恢复上一个代码版本。旧 `dist/data.js` 与 `dist/time.js` 已原样移入后端合同目录，因此后端不依赖新版前端产物。当前运行文件均只使用 Node 内置模块，不需要安装第三方后端依赖；Node 24 提供内置 SQLite。[Node SQLite 文档](https://nodejs.org/docs/latest-v24.x/api/sqlite.html)
+受限安装器检查清单、文件类型、路径、大小和语法，再切换发行目录并检查 `/health`；失败恢复上一个代码版本。旧 `dist/data.js` 与 `dist/time.js` 已原样移入后端合同目录，因此后端不依赖新版前端产物。SMTP 使用固定版本的完整 Nodemailer 离线 bundle，发布包保留许可证和来源记录；服务器无需安装 node_modules。Node 24 提供内置 SQLite。[Node SQLite 文档](https://nodejs.org/docs/latest-v24.x/api/sqlite.html)
 
 **首次升级新版需由维护者先完成以下宿主准备，再发布：**
 
 1. 安装本应用独立的 Node 24，保持系统运行时不变。
-2. 更新受限安装器的十文件清单和语法检查运行时。
+2. 更新宿主受限安装器的 16 文件清单和语法检查运行时；原十文件安装器会拒绝新发布包。
 3. 备份并更新 systemd 的 ExecStart、私密环境配置，创建服务拥有的状态目录。
 4. 检查并更新 Nginx 的 `/auth/` 与 `/sync` 路由；同步请求体上限为 1 MiB。
 5. 运行免费接口验收后，在项目目录外私密生成邀请码，再发布网页和 APK。
@@ -82,7 +88,7 @@ server/contracts/time.js
 
 ## 环境与状态
 
-`server/.env.example` 只有占位值。真实环境文件包含模型 Key、长期随机服务器签名密钥、允许的 origin、费用限额，以及用量/登录/同步状态路径。`CAMPUS_ACCESS_TOKEN` 沿用旧字段名，现为服务器签名与匿名化计数密钥；用户不用填写访问码。
+`server/.env.example` 只有占位值。真实环境文件包含模型 Key、长期随机服务器签名密钥、允许的 origin、费用限额，以及用量/登录/同步状态路径。`CAMPUS_ACCESS_TOKEN` 沿用旧字段名，现为服务器签名与匿名化计数密钥；用户不用填写访问码。邮箱登录只有 `MAIL_LOGIN_ENABLED=true` 且发信配置完整时才启用；未启用时不读取 OAuth 状态或连接邮箱，原登录仍正常。
 
 systemd 默认 `BIND_HOST=127.0.0.1`、`PORT=8787`，通过 Nginx 对外。服务状态目录权限 700，私密文件 600。换模型 Key 后重启服务即可，不必重建客户端；重启时保留所有状态文件。服务为一个实例，避免两套独立计数绕过预算。
 
@@ -101,7 +107,7 @@ docker compose -f server/compose.yaml up -d
 
 默认读取仓库外的 `/etc/campus-inbox/backend.env`，其他路径用 `CAMPUS_ENV_FILE` 指定。容器监听 `0.0.0.0`，宿主只映射 `127.0.0.1:8787`。Nginx 留在宿主处理 TLS；不能同时启动占用同一端口的 systemd 与容器。
 
-名为 `usage` 的数据卷保留目录内的用量文件和两个 SQLite 数据库。容器只读运行，预算 256 MB、0.5 核，日志最多约 15 MB。切换时必须迁移这个卷的全部状态；重新建立空卷会造成账号和云通知丢失，不能作为普通升级步骤。
+名为 `usage` 的数据卷保留目录内的用量文件和两个 SQLite 数据库，启用 Outlook 时也保存 OAuth refresh token 状态。使用 OAuth 时目录权限须为 700、状态文件为 600。容器只读运行，预算 256 MB、0.5 核，日志最多约 15 MB。切换时必须迁移这个卷的全部状态；重新建立空卷会造成账号和云通知丢失，不能作为普通升级步骤。
 
 ## 2027 年 3 月前的搬家清单
 

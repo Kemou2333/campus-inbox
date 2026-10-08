@@ -3,13 +3,6 @@ import {
   Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
   DialogTitle, Divider, Paper, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography,
 } from '@mui/material';
-import BackupOutlined from '@mui/icons-material/BackupOutlined';
-import CloudSyncOutlined from '@mui/icons-material/CloudSyncOutlined';
-import DownloadOutlined from '@mui/icons-material/DownloadOutlined';
-import UploadOutlined from '@mui/icons-material/UploadOutlined';
-import AutoStoriesOutlined from '@mui/icons-material/AutoStoriesOutlined';
-import HelpOutline from '@mui/icons-material/HelpOutlineOutlined';
-import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import type { CampusController } from '../../app/useCampus';
 import type { SyncConflict } from '../../infrastructure/sync-client';
 import type { ThemePreference } from '../../app/theme';
@@ -92,27 +85,26 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
 
     <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 2 }}>
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-          <CloudSyncOutlined color="primary" />
-          <Typography component="h2" variant="h6">账号与同步</Typography>
-        </Stack>
+        <Typography component="h2" variant="h6">账号与同步</Typography>
         <Chip label={status} color={statusColor} size="small" />
       </Stack>
       {app.sync.connected ? <>
         <Typography sx={{ fontWeight: 650, overflowWrap: 'anywhere' }}>{app.username}</Typography>
+        {!!app.email&&<Typography variant="body2" color="text.secondary" sx={{mt:.5,overflowWrap:'anywhere'}}>{app.email}</Typography>}
         <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>
           {app.sync.lastSyncedAt ? `上次同步 ${date(app.sync.lastSyncedAt)}` : '通知和办理进度会自动同步。'}
         </Typography>
         {app.sync.error && <Alert severity="warning" sx={{ mt: 2 }}>{app.sync.error}</Alert>}
         <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap', mt: 2 }}>
           <Button variant="contained" disabled={busy || app.sync.status === 'syncing'}
-            startIcon={running === 'sync' || app.sync.status === 'syncing' ? <CircularProgress size={18} color="inherit" /> : <CloudSyncOutlined />}
+            startIcon={running === 'sync' || app.sync.status === 'syncing' ? <CircularProgress size={18} color="inherit" /> : undefined}
             onClick={() => void run('sync', syncNow)}>立即同步</Button>
           <Button variant="outlined" disabled={busy} onClick={() => { setError(''); setLogoutOpen(true); }}>退出登录</Button>
+          {app.authOptions?.emailEnabled&&!app.email&&<Button variant="outlined" disabled={busy} onClick={onLogin}>绑定邮箱</Button>}
         </Stack>
       </> : <>
         <Typography color="text.secondary">登录后，手机和网页可以共用通知与进度。</Typography>
-        <Button variant="contained" disabled={busy || !app.auth} onClick={onLogin} sx={{ mt: 2 }}>登录 / 注册</Button>
+        <Button variant="contained" disabled={busy || !app.auth} onClick={onLogin} sx={{ mt: 2 }}>登录</Button>
       </>}
       {!!app.sync.conflicts.length && <Box sx={{ mt: 3 }}>
         <Divider sx={{ mb: 2 }} />
@@ -127,16 +119,14 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
     </Paper>
 
     <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
-      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: 2 }}>
-        <BackupOutlined color="primary" /><Typography component="h2" variant="h6">数据与示例</Typography>
-      </Stack>
+      <Typography component="h2" variant="h6" sx={{ mb: 2 }}>数据与示例</Typography>
       <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1 }}>
-        <Button variant="outlined" startIcon={<DownloadOutlined />} disabled={busy}
+        <Button variant="outlined" disabled={busy}
           onClick={() => app.notices.some(notice=>notice.attachments.length)?setBackupOpen(true):void run('backup', () => app.backup(false))}>{running === 'backup' ? '正在导出…' : '导出备份'}</Button>
-        <Button variant="outlined" startIcon={<UploadOutlined />} disabled={busy} onClick={() => picker.current?.click()}>
+        <Button variant="outlined" disabled={busy} onClick={() => picker.current?.click()}>
           {running === 'import' ? '正在导入…' : '导入备份'}</Button>
-        <Button variant="outlined" startIcon={<AutoStoriesOutlined />} disabled={busy}
-          onClick={() => void run('examples', app.loadExamples)}>{running === 'examples' ? '正在载入…' : '载入示例通知'}</Button>
+        <Button variant="outlined" disabled={busy}
+          onClick={() => void run('examples', app.loadExamples)}>{running === 'examples' ? '正在载入…' : '载入示例'}</Button>
       </Stack>
       <input ref={picker} type="file" accept="application/json,.json" hidden aria-label="选择通知备份"
         onChange={event => {
@@ -148,8 +138,8 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
     </Paper>
 
     <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
-      <Button startIcon={<HelpOutline />} onClick={onHelp}>使用帮助</Button>
-      <Button startIcon={<InfoOutlined />} onClick={onAbout}>关于校园 Inbox</Button>
+      <Button onClick={onHelp}>帮助</Button>
+      <Button onClick={onAbout}>关于</Button>
     </Stack>
 
     <BackupDialog open={backupOpen} app={app} onClose={()=>setBackupOpen(false)}/>

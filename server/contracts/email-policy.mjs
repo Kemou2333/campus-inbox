@@ -3,7 +3,7 @@ export const ALLOWED_EMAIL_DOMAINS = Object.freeze(['qq.com','163.com','126.com'
 export function canonicalEmail(value){
   if(typeof value!=='string'||value.length>254)throw new Error('请填写支持的邮箱地址。');
   const email=value.trim().toLowerCase(),parts=email.split('@');
-  if(parts.length!==2||!ALLOWED_EMAIL_DOMAINS.includes(parts[1]))throw new Error('此邮箱暂不支持，请使用页面列出的邮箱。');
+  if(parts.length!==2||!ALLOWED_EMAIL_DOMAINS.includes(parts[1]))throw new Error('此邮箱暂不支持，请使用 QQ、163、Gmail 或重庆大学邮箱。');
   let [local,domain]=parts;
   if(domain==='qq.com'){
     if(!/^[1-9]\d{4,11}$/.test(local))throw new Error('QQ 邮箱请填写数字 QQ 号@qq.com。');
