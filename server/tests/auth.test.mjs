@@ -37,6 +37,14 @@ test('registration consumes its invitation and provisions a stable account ident
   assert.equal(first.username,'test_同学');assert.equal(first.key.length,43);assert.equal(f.auth.getIdentity(first.key).provider,'invite');
   assert.equal((await f.request('register',{invite,username:'another',password})).response.status,400);assert.equal(f.identities.length,1);assert.match(f.identities[0].subject,/^[a-f0-9-]{36}$/);
 });
+test('registration provisioning failure reports the committed account and consumed invitation',async t=>{
+  let unavailable=true;
+  const f=await fixture({service:{provision:()=>{if(unavailable){const error=new Error('fixture provisioning limit');error.status=429;throw error;}return {key:randomBytes(32).toString('base64url')};}}});t.after(()=>f.auth.close());
+  const invite=f.auth.issueInvites(1)[0],result=await f.request('register',{invite,username:'created-user',password});
+  assert.equal(result.response.status,429);assert.equal(result.body.code,'ACCOUNT_CREATED_LOGIN_PENDING');assert.match(result.body.error,/账号已创建/);
+  assert.equal((await f.request('register',{invite,username:'other-user',password})).response.status,400);
+  unavailable=false;assert.equal((await f.request('login',{username:'created-user',password})).response.status,200);
+});
 test('duplicate usernames and bad invitations do not bypass registration',async t=>{
   const f=await fixture();t.after(()=>f.auth.close());await f.register('kemou');const invite=f.auth.issueInvites(1)[0];
   assert.equal((await f.request('register',{invite,username:'ＫＥＭＯＵ',password})).response.status,409);

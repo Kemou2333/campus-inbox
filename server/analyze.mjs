@@ -29,7 +29,31 @@ export function groundDates(result,notice){
   }))};
 }
 const FINISH_REASONS=new Set(['stop','length','content_filter','insufficient_system_resource','aborted','tool_calls','function_call','unknown']);
-const FAILURE_CODES=new Set(['INVALID_JSON','TIMELINE_FIELDS','TIMELINE_TIME_TEXT','SUMMARY','ASSIGNEE','LOCATION','TASK_TIME_TEXT','CLASSIFICATION','TASK_FIELDS','STEP_FIELDS','ROOT_FIELDS','SCHEMA_INVALID','SOURCE_COUNT']);
+const FAILURE_CODES=new Set(['INVALID_JSON','TIMELINE_FIELDS','TIMELINE_TIME_TEXT','SUMMARY','ASSIGNEE','LOCATION','TASK_TIME_TEXT','CLASSIFICATION','TASK_FIELDS','STEP_FIELDS','ROOT_FIELDS','SCHEMA_INVALID','SOURCE_COUNT','CONTENT_BOUNDARY','SOURCE_LINK']);
+const CONTENT_MESSAGE='这里只能整理校园通知，请提供原通知中的事项、安全提醒或学习信息。';
+function contentBoundary(metadata={}){return new ServiceError(CONTENT_MESSAGE,422,{...metadata,failureCode:'CONTENT_BOUNDARY'});}
+// Only direct, obvious generation requests are screened here. Campus safety,
+// prevention and education notices still reach the existing single model call.
+function checkContent(text){
+  const direct=text.trim();
+  if(/通知|安全提醒|反诈骗|反诈|性教育|健康教育|预防|防范|禁止|举报|危害|案例分析/.test(direct))return;
+  const sexual=/^(?:(?:请(?:帮我)?|麻烦|帮我|给我|为我)\s*)?(?:写|创作|生成|扩写|续写)(?:一(?:篇|段|个|部))?(?:露骨(?:的)?|色情(?:的)?|黄色(?:的)?|淫秽(?:的)?)(?:小说|故事|性爱描写|性行为描写)/u;
+  const illegal=/^(?:请(?:教我|帮我)?|麻烦|帮我|给我|教我|我想|我要|如何|怎么|怎样)\s*[^\r\n。！？]{0,12}(?:盗取(?:他人|别人)(?:的)?(?:账号|账户|密码)|入侵(?:他人|别人)(?:的)?(?:账号|账户|电脑|网站)|(?:制作|制造)(?:炸弹|毒品)|(?:编写|生成)(?:诈骗话术|钓鱼邮件)|(?:进行|操作|实施)洗钱)/u;
+  const english=/^(?:please\s+)?(?:write|generate|create)\s+(?:an?\s+)?(?:explicit\s+)?(?:pornographic|erotic)\s+(?:story|novel|sex scene)\b/i;
+  if(sexual.test(direct)||illegal.test(direct)||english.test(direct))throw contentBoundary();
+}
+function links(text){return text.match(/https?:\/\/[^\s<>"'`*()[\]{}，。！？；：、]+/giu)?.map(value=>value.replace(/[.,;!?]+$/,''))||[];}
+function ownSourceLinks(value,source){
+  const allowed=links(source);
+  // Unicode links must match completely. For an ASCII URL in the original,
+  // adjacent Chinese prose can form a word boundary without a separating space.
+  // Only allow an exact ASCII prefix followed by Han text; never shorten a
+  // Unicode hostname/path or infer, decode, normalize, or fetch a destination.
+  const matches=link=>allowed.some(original=>original===link||/^[\x21-\x7E]+$/.test(link)&&original.startsWith(link)&&/^\p{Script=Han}/u.test(original.slice(link.length)));
+  const walk=item=>typeof item==='string'?links(item).every(matches):
+    Array.isArray(item)?item.every(walk):item&&typeof item==='object'?Object.values(item).every(walk):true;
+  return walk(value);
+}
 function validationCode(error){
   const rules=[[/^时间节点字段/,'TIMELINE_FIELDS'],[/^原文时间/,'TIMELINE_TIME_TEXT'],[/^摘要/,'SUMMARY'],[/^责任对象|^角色任务/,'ASSIGNEE'],[/^地点|^任务地点/,'LOCATION'],[/^任务时间/,'TASK_TIME_TEXT'],[/^通知类别/,'CLASSIFICATION'],[/^任务字段/,'TASK_FIELDS'],[/^步骤字段/,'STEP_FIELDS'],[/^通知字段|^整理结果必须包含/,'ROOT_FIELDS']];
   return rules.find(([pattern])=>pattern.test(error?.message||''))?.[1]||'SCHEMA_INVALID';
@@ -59,28 +83,34 @@ export function modelInput(notice){
     const sources=notice.sources.map((source,index)=>{
       if(!source||typeof source!=='object'||Array.isArray(source)||Object.keys(source).length!==1||typeof source.text!=='string'||!source.text.trim())throw new ServiceError('请逐条填写通知文字。',400);
       total+=source.text.length;
+      checkContent(source.text);
       return {sourceId:index+1,text:source.text.trim()};
     });
     if(total>D.MAX_TEXT)throw new ServiceError('本次通知合计不能超过 4,000 字。',400);
     return {sources};
   }
   if(typeof notice!=='string'||!notice.trim()||notice.length>D.MAX_TEXT)throw new ServiceError('请提供 1–4,000 字的通知文字。',400);
+  checkContent(notice);
   // Legacy text input still supports explicit whole-line separators.
   const parts=notice.split(/^[\t ]*---[\t ]*\r?$/m).map(value=>value.trim()).filter(Boolean);
   if(parts.length>20)throw new ServiceError('每次最多整理 20 条通知，请分批提交。',400);
   return parts.length>=2?{sources:parts.map((text,index)=>({sourceId:index+1,text}))}:{notice};
 }
-export async function analyze(notice,config,modelFetch=fetch){
+export async function analyze(notice,config,modelFetch=fetch,signal){
   const input=modelInput(notice),sources=input.sources;
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),config.timeoutMs||60000);
+  const cancel=()=>controller.abort();
+  if(signal?.aborted)cancel();else signal?.addEventListener('abort',cancel,{once:true});
   let usage,finishReason;
   try{
+    if(signal?.aborted)throw new ServiceError('整理已取消，请重新提交。',499);
     const payload={model:config.model||'deepseek-flash',thinking:{type:'disabled'},reasoning_effort:'none',temperature:0.2,max_tokens:8192,response_format:{type:'json_object'},messages:[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:JSON.stringify(input)}]};
     const upstream=await modelFetch('https://api.deepseek.com/chat/completions',{method:'POST',redirect:'error',headers:{'Content-Type':'application/json','Authorization':`Bearer ${config.apiKey}`},body:JSON.stringify(payload),signal:controller.signal});
     if(!upstream.ok){await upstream.body?.cancel();throw new ServiceError(upstream.status===429?'AI 服务繁忙，请稍后再试。':upstream.status===402?'AI 账户余额不足，请联系维护者。':'AI 请求失败，请联系维护者检查配置。');}
     const envelope=JSON.parse(await boundedText(upstream.body,200000)),choice=envelope?.choices?.[0];
     usage=tokenUsage(envelope?.usage);
     finishReason=FINISH_REASONS.has(choice?.finish_reason)?choice.finish_reason:'unknown';
+    if(signal?.aborted)throw new ServiceError('整理已取消，请重新提交。',499,{usage,finishReason});
     if(finishReason!=='stop'){
       const failures={
         length:['整理结果未完整生成，请减少本次通知数量或分段整理。',502],
@@ -93,12 +123,16 @@ export async function analyze(notice,config,modelFetch=fetch){
     }
     let parsed,result;
     try{parsed=JSON.parse(choice.message.content);}catch{throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:'INVALID_JSON'});}
+    if(parsed?.schemaVersion===4&&parsed.refusal==='UNSUPPORTED_REQUEST'&&Object.keys(parsed).length===2)throw contentBoundary({usage,finishReason});
+    if(parsed&&Object.hasOwn(parsed,'refusal'))throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:'SCHEMA_INVALID'});
+    if(choice.message.tool_calls||choice.message.function_call)throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:'SCHEMA_INVALID'});
     if(sources&&(!Array.isArray(parsed?.notices)||parsed.notices.length!==sources.length))throw new ServiceError('AI 未能逐条整理完整通知，请分批提交。',502,{usage,finishReason,failureCode:'SOURCE_COUNT'});
     try{
       const grounded=sources?{...parsed,notices:parsed.notices.map((item,index)=>groundDates({notices:[item]},sources[index].text).notices[0])}:groundDates(parsed,notice);
       result=D.batch(grounded,true);
     }catch(error){throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:validationCode(error)});}
+    if(!result.notices.every((item,index)=>ownSourceLinks(item,sources?sources[index].text:notice)))throw new ServiceError('AI 返回的链接无法对应原通知，请稍后重试。',502,{usage,finishReason,failureCode:'SOURCE_LINK'});
     return {result,usage,finishReason};
-  }catch(e){if(e instanceof ServiceError)throw e;throw new ServiceError(e.name==='AbortError'?'AI 整理超时，请稍后重试。':'AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason});}
-  finally{clearTimeout(timer);}
+  }catch(e){if(e instanceof ServiceError)throw e;if(signal?.aborted)throw new ServiceError('整理已取消，请重新提交。',499,{usage,finishReason});throw new ServiceError(e.name==='AbortError'?'AI 整理超时，请稍后重试。':'AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason});}
+  finally{clearTimeout(timer);signal?.removeEventListener('abort',cancel);}
 }

@@ -138,6 +138,22 @@ describe('conflicts preserve both devices until a choice is made', () => {
 });
 
 describe('pagination, acknowledgements and storage', () => {
+  test('a server no-op deletion acknowledges version zero without repeating forever', async () => {
+    const server = new SyncServer(), n = record(), first = device(server);
+    first.storage.setItem('campus-inbox:sync:v1:https://example.test/sync', JSON.stringify({
+      version: 1, key: server.key, cursor: 0, versions: { [n.id]: 0 },
+      hashes: { [n.id]: recordHash(n) }, conflicts: [], lastSyncedAt: null, hasMore: false,
+    }));
+    const requests: Body[] = [];
+    const fetcher = (async (_: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as Body; requests.push(body);
+      return Response.json({ cursor: 0, accepted: body.changes.map(c => ({ id: c.id, version: 0 })), updates: [], conflicts: [], hasMore: false });
+    }) as typeof fetch;
+    const sync = createCloudSync(first.repository, 'https://example.test', { storage: first.storage, fetch: fetcher });
+    await sync.syncNow(); expect(sync.getState().status).toBe('idle'); expect(sync.getState().pendingChanges).toBe(0);
+    expect(requests[0].changes).toEqual([{ id: n.id, baseVersion: 0, record: null }]);
+    await sync.syncNow(); expect(requests[1].changes).toEqual([]);
+  });
   test('accepted versions stop retransmitting changes before their update page arrives', async () => {
     const server = new SyncServer(); server.pageSize = 1;
     const first = device(server, [record(), record(), record()]); await first.sync.connect(server.key);

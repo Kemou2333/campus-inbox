@@ -25,7 +25,7 @@ export function CalendarDialog({selection,app,onClose}:{selection:CalendarSelect
   if(result.status==='scheduled'){savePersonal();app.tell('已设置本机提醒');onClose();}else setError(result.status==='permission-denied'?'请允许应用发送通知后再试。':'此设备暂不支持本地提醒，可以添加到日历。');
  }catch(e){setError(e instanceof Error?e.message:'提醒暂时无法设置。');}finally{setBusy(false);}}
  return <Dialog open={!!selection} onClose={busy?undefined:onClose}>
-  <DialogTitle>日历与提醒</DialogTitle>
+  <DialogTitle>创建提醒</DialogTitle>
   <DialogContent><Stack spacing={2}><Typography>{title}</Typography>
    {error&&<Alert severity="error">{error}</Alert>}
    {!date&&<Alert severity="info">原文没有完整日期，请确认后填写。</Alert>}

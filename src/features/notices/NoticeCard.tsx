@@ -1,6 +1,5 @@
 import {Box,Button,Checkbox,Chip,Collapse,IconButton,Paper,Stack,Tooltip,Typography,useMediaQuery} from '@mui/material';
 import EditNote from '@mui/icons-material/EditNote';
-import Event from '@mui/icons-material/Event';
 import Check from '@mui/icons-material/Check';
 import Undo from '@mui/icons-material/Undo';
 import DeleteOutline from '@mui/icons-material/DeleteOutlined';
@@ -36,7 +35,7 @@ export function NoticeCard({notice:n,app,actions,now,expanded,onExpandedChange,s
    </Stack>
    <Stack direction="row" sx={{alignItems:'center',gap:1,flexShrink:0,minHeight:28}}>
     {overview.notes&&<Tooltip title="已有笔记"><Box component="span" aria-label="已有笔记" sx={{display:'flex',color:'text.secondary'}}><EditNote fontSize="small"/></Box></Tooltip>}
-    {overview.total>0&&<Typography variant="body2" color="text.secondary" sx={{fontVariantNumeric:'tabular-nums',fontWeight:600}} aria-label={`已完成${overview.completed}项任务，共${overview.total}项任务`}>任务 {overview.completed}/{overview.total}</Typography>}
+    {overview.total>0&&<Typography variant="body2" color="text.secondary" sx={{fontVariantNumeric:'tabular-nums',fontWeight:600}} aria-label={`已完成${overview.completed}项任务，共${overview.total}项任务`}>{overview.completed}/{overview.total}</Typography>}
    </Stack>
   </Stack>
   <Typography variant="h5" component="h2" id={`notice-heading-${n.id}`} sx={{overflowWrap:'anywhere',fontSize:{xs:'1.5rem',sm:'1.75rem'},fontWeight:700,lineHeight:1.35}}>{n.title}</Typography>
@@ -47,9 +46,9 @@ export function NoticeCard({notice:n,app,actions,now,expanded,onExpandedChange,s
    {!!overview.locations.length&&<Stack direction="row" sx={{alignItems:'flex-start',gap:.75}}><PlaceOutlined sx={{fontSize:18,mt:.3,color:'text.secondary'}}/><Typography variant="body2" color="text.secondary" sx={{overflowWrap:'anywhere'}}>{overview.locations.slice(0,2).join(' · ')}{overview.locations.length>2?` · +${overview.locations.length-2}`:''}</Typography></Stack>}
   </Stack>}
   <Stack direction="row" className="notice-actions" sx={{alignItems:'center',gap:.5,mt:2,pt:1.5,borderTop:'1px solid',borderColor:'divider',flexWrap:'wrap'}}>
-   <Button size="small" className="notice-expand" variant="outlined" endIcon={<ExpandMore sx={{transform:expanded?'rotate(180deg)':'none',transition:reducedMotion?'none':'transform 240ms cubic-bezier(.2,0,0,1)'}}/>} onClick={onExpandedChange} disabled={disabled} aria-expanded={expanded} aria-controls={bodyID} aria-label={`${expandLabel}${n.title}`}>{expandLabel}</Button>
+   <Tooltip title={expandLabel}><span><IconButton className="notice-expand" onClick={onExpandedChange} disabled={disabled} aria-expanded={expanded} aria-controls={bodyID} aria-label={`${expandLabel}${n.title}`} sx={{border:'1px solid',borderColor:'divider',color:'primary.main'}}><ExpandMore sx={{fontSize:28,transform:expanded?'rotate(180deg)':'none',transition:reducedMotion?'none':'transform 240ms cubic-bezier(.2,0,0,1)'}}/></IconButton></span></Tooltip>
    <Box sx={{flex:1,minWidth:0}}/>
-   <Button size="small" variant="contained" startIcon={done?<Undo fontSize="small"/>:<Check fontSize="small"/>} onClick={()=>app.act(n.id,v=>setNoticeCompleted(v,!done),done?'已恢复':'已完成')} disabled={disabled} sx={{bgcolor:'action.selected',color:'primary.main','&:hover':{bgcolor:'action.hover'}}}>{done?'恢复':n.kind==='task'?'完成':'知悉'}</Button>
+   <Tooltip title={done?'恢复':n.kind==='task'?'完成':'知悉'}><span><IconButton className="notice-complete" aria-label={done?'恢复':n.kind==='task'?'完成':'知悉'} onClick={()=>app.act(n.id,v=>setNoticeCompleted(v,!done),done?'已恢复':'已完成')} disabled={disabled} sx={{bgcolor:'action.selected',color:'primary.main','&:hover':{bgcolor:'action.hover'}}}>{done?<Undo sx={{fontSize:28}}/>:<Check sx={{fontSize:28}}/>}</IconButton></span></Tooltip>
    <Tooltip title="删除"><IconButton aria-label={`删除${n.title}`} onClick={()=>app.remove(n.id)} disabled={disabled} sx={{color:'text.secondary'}}><DeleteOutline fontSize="small"/></IconButton></Tooltip>
   </Stack>
   <Box id={bodyID} className="notice-body" aria-hidden={!expanded}>
@@ -96,8 +95,8 @@ export function NoticeCard({notice:n,app,actions,now,expanded,onExpandedChange,s
   {!!n.note&&<Note text={n.note} onClick={()=>actions.note(n,{type:'notice'},n.title,n.note)}/>}
   <AttachmentList ids={n.attachments} platform={app.platform}/>
   <Stack direction="row" sx={{gap:1,mt:2,flexWrap:'wrap'}}>
-   <Button size="small" variant="outlined" onClick={()=>actions.details(n)} disabled={disabled}>详情原文</Button>
-   {n.kind==='task'&&!done&&<Button size="small" variant="outlined" startIcon={<Event fontSize="small"/>} onClick={()=>actions.calendar(n)} disabled={disabled}>日历与提醒</Button>}
+   <Button size="small" variant="outlined" onClick={()=>actions.details(n)} disabled={disabled}>原文</Button>
+   {n.kind==='task'&&!done&&<Button size="small" variant="outlined" onClick={()=>actions.calendar(n)} disabled={disabled}>创建提醒</Button>}
   </Stack>
   </Box>
   </Collapse>

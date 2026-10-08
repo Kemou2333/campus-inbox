@@ -2,7 +2,6 @@ import {lazy,Suspense,useEffect,useState} from 'react';
 import {Alert,Box,Button,CircularProgress,Dialog,DialogActions,DialogContent,DialogTitle,IconButton,Stack,Typography} from '@mui/material';
 import AttachFile from '@mui/icons-material/AttachFile';
 import Close from '@mui/icons-material/Close';
-import Download from '@mui/icons-material/Download';
 import {getFile,type StoredAttachment} from '../../infrastructure/attachment-store';
 import type {PlatformAPI} from '../../platform';
 const PdfPreview=lazy(()=>import('./PdfPreview'));
@@ -38,7 +37,7 @@ export function AttachmentList({ids,platform,onRemove}:{ids:string[];platform:Pl
      textFile&&selected&&selected.size<=200_000?<Box component="pre" sx={{m:0,whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontFamily:'inherit',fontSize:16,lineHeight:1.7}}>{textPreview??'正在读取…'}</Box>:
      <Typography color="text.secondary">{textFile?'文件较大，请保存后查看。':'这种附件请保存后使用对应应用打开。'}</Typography>}
    </DialogContent>
-   <DialogActions><Button onClick={()=>setSelected(null)}>关闭</Button><Button variant="contained" startIcon={<Download/>} onClick={()=>void download()}>保存附件</Button></DialogActions>
+   <DialogActions><Button onClick={()=>setSelected(null)}>关闭</Button><Button variant="contained" onClick={()=>void download()}>保存附件</Button></DialogActions>
   </Dialog>
  </>;
 }
