@@ -35,7 +35,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
    <TextField className="composer-text" placeholder="将群里的通知粘贴到这里…" multiline minRows={5} maxRows={embedded?9:13} value={draft.text} disabled={app.busy} onChange={e=>app.changeDraft(draft.id,e.target.value)} slotProps={{htmlInput:{'aria-label':`通知${index+1}原文`}}} error={total>4000}/>
    <Stack direction="row" spacing={1} sx={{alignItems:"center",justifyContent:'space-between',mt:1}}>
     <Tooltip title="添加附件 · 仅存本机"><span><IconButton sx={{border:'1px solid',borderColor:'divider'}} aria-label={`给通知${index+1}添加附件`} disabled={app.busy||adding} onClick={()=>{setTarget(draft.id);input.current?.click();}}><AttachFile/></IconButton></span></Tooltip>
-    {index===app.drafts.length-1&&<Typography className="composer-count" aria-label="本次通知总字数" color={total>4000?'error.main':'text.secondary'} variant="body2" sx={{whiteSpace:'nowrap',fontVariantNumeric:'tabular-nums'}}>{total.toLocaleString()} / 4,000 字</Typography>}
+    {index===app.drafts.length-1&&<Typography className="composer-count" aria-label={`本次通知总字数 ${total}，上限4000`} color={total>4000?'error.main':'text.secondary'} variant="body2" sx={{whiteSpace:'nowrap',fontVariantNumeric:'tabular-nums'}}>{total}/4000</Typography>}
    </Stack>
    <AttachmentList ids={draft.attachments} platform={app.platform} onRemove={app.busy?undefined:id=>void app.detach(draft.id,id).catch(app.report)}/>
   </Paper>)}

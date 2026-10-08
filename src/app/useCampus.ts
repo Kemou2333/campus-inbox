@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {createLocalRepository} from '../infrastructure/local-repository';
 import {createCloudSync, type CloudSync, type SyncState} from '../infrastructure/sync-client';
-import {createAuthClient, type AuthClient, type AuthSession} from '../infrastructure/auth-client';
+import {createAuthClient, type AuthClient, type AuthSession, type AuthOptions} from '../infrastructure/auth-client';
 import {analyzeSources,AnalysisError,type AnalyzeOptions} from '../infrastructure/ai-client';
 import {addFiles, cleanupFiles, exportFiles, getFile, restoreFiles, MAX_NOTICE_FILES, MAX_NOTICE_FILE_BYTES} from '../infrastructure/attachment-store';
 import {createNotice, exportBackup, exportTextBackup, newID, parseAnalysisBatch, parseBackup, parseNotices} from '../domain/notice';
@@ -31,6 +31,8 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  const [capabilities,setCapabilities]=useState<PlatformCapabilities|null>(null);
  const [cloud,setCloud]=useState<CloudSync|null>(null);
  const [auth,setAuth]=useState<AuthClient|null>(null);
+ const [authOptions,setAuthOptions]=useState<AuthOptions|null>(null);
+ const [email,setEmail]=useState<string|null>(null);
  const [sync,setSync]=useState(initialSync);
  const [username,setUsername]=useState(()=>localStorage.getItem(USERNAME_KEY)||'');
  const [theme,setThemeState]=useState<ThemePreference>(()=>{
@@ -100,8 +102,9 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   const a=createAuthClient(config.syncEndpoint);setCloud(c);setAuth(a);
   const unsubscribe=c.subscribe(setSync);
   let alive=true;
+  void a.options().then(value=>{if(alive)setAuthOptions(value);}).catch(()=>{if(alive)setAuthOptions({emailEnabled:false,inviteEnabled:true,domains:[]});});
   const key=c.getKey();
-  if(key)void a.status(key).then(status=>{if(!alive)return;if(status){setUsername(status.username);localStorage.setItem(USERNAME_KEY,status.username);void c.syncNow();}
+  if(key)void a.status(key).then(status=>{if(!alive)return;if(status){setUsername(status.username);setEmail(status.email??null);localStorage.setItem(USERNAME_KEY,status.username);void c.syncNow();}
    else {c.disconnect();tell('登录已过期，请重新登录。');}
   }).catch(()=>{/* Offline work remains available; server authenticates every request. */});
   return()=>{alive=false;unsubscribe();};
@@ -116,14 +119,18 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
 
  async function login(session:AuthSession){
   if(!cloud)throw new Error('同步服务尚未准备好。');
-  setUsername(session.username);localStorage.setItem(USERNAME_KEY,session.username);
+  setUsername(session.username);setEmail(session.email??null);localStorage.setItem(USERNAME_KEY,session.username);
   await cloud.connect(session.key);tell('已登录，通知会自动同步。');
+ }
+ async function bindEmail(challengeId:string,code:string){
+  const key=cloud?.getKey();if(!key||!auth)throw new Error('请先登录原账号。');
+  const status=await auth.bindEmail(challengeId,code,key);setEmail(status.email??null);tell('已绑定邮箱');
  }
  async function logout(){
   const key=cloud?.getKey();
   // Revoke first. A network failure must not leave a supposedly revoked session usable.
   if(key&&auth)await auth.logout(key);
-  cloud?.disconnect();tell('已退出，本机通知仍然保留。');
+  cloud?.disconnect();setEmail(null);tell('已退出，本机通知仍然保留。');
  }
  function replaceDrafts(next:Draft[]){draftRef.current=next;setDrafts(next);}
  function changeDraft(id:string,text:string){replaceDrafts(draftRef.current.map(d=>d.id===id?{...d,text}:d));}
@@ -219,7 +226,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
    if(empty)changeDraft(empty.id,text);else addDraft(text);received=true;
   }return received;}finally{receivingShare.current=false;}
  }
- return {notices,drafts,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,sync,username,theme,setTheme,bootError:boot.error,
-  report,tell,update,act,remove,changeDraft,pasteDraft,addDraft,attach,detach,removeDraft,analyze,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,receiveShare};
+ return {notices,drafts,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,bootError:boot.error,
+  report,tell,update,act,remove,changeDraft,pasteDraft,addDraft,attach,detach,removeDraft,analyze,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;
