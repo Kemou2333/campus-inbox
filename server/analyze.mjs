@@ -34,7 +34,7 @@ function timeSpec(item,key,raw,source){
   return typeof raw==='string'&&raw.trim()?{[key]:T.ground(T.fromText(raw),raw,source)}:{};
 }
 const FINISH_REASONS=new Set(['stop','length','content_filter','insufficient_system_resource','aborted','tool_calls','function_call','unknown']);
-const FAILURE_CODES=new Set(['INVALID_JSON','TIMELINE_FIELDS','TIMELINE_TIME_TEXT','SUMMARY','ASSIGNEE','LOCATION','TASK_TIME_TEXT','CLASSIFICATION','TASK_FIELDS','STEP_FIELDS','ROOT_FIELDS','SCHEMA_INVALID','SOURCE_COUNT','CONTENT_BOUNDARY','SOURCE_LINK']);
+const FAILURE_CODES=new Set(['INVALID_JSON','TIMELINE_FIELDS','TIMELINE_TIME_TEXT','SUMMARY','ASSIGNEE','LOCATION','TASK_TIME_TEXT','CLASSIFICATION','TASK_FIELDS','STEP_FIELDS','ROOT_FIELDS','SCHEMA_INVALID','SOURCE_COUNT','CONTENT_BOUNDARY','SOURCE_LINK','TITLE','TASK_TEXT','TASK_SCOPE','TASK_CONDITION','TASK_DETAILS','TASK_LIST','STEP_TEXT','STEP_DETAILS','STEP_COUNT','STRUCTURED_TIME','ISO_TIME','DEADLINE_TEXT','TIMELINE_LABEL','TIMELINE_FORMAT','MATERIALS','WARNINGS','REMINDERS','SCHEMA_VERSION']);
 const CONTENT_MESSAGE='这里只能整理校园通知，请提供原通知中的事项、安全提醒或学习信息。';
 function contentBoundary(metadata={}){return new ServiceError(CONTENT_MESSAGE,422,{...metadata,failureCode:'CONTENT_BOUNDARY'});}
 // Only direct, obvious generation requests are screened here. Campus safety,
@@ -60,7 +60,15 @@ function ownSourceLinks(value,source){
   return walk(value);
 }
 function validationCode(error){
-  const rules=[[/^时间节点字段/,'TIMELINE_FIELDS'],[/^原文时间/,'TIMELINE_TIME_TEXT'],[/^摘要/,'SUMMARY'],[/^责任对象|^角色任务/,'ASSIGNEE'],[/^地点|^任务地点/,'LOCATION'],[/^任务时间/,'TASK_TIME_TEXT'],[/^通知类别/,'CLASSIFICATION'],[/^任务字段/,'TASK_FIELDS'],[/^步骤字段/,'STEP_FIELDS'],[/^通知字段|^整理结果必须包含/,'ROOT_FIELDS']];
+  // Persist only a finite category. Never retain the validator message, model
+  // response, user text, field value or a dynamic path in diagnostics.
+  const rules=[
+    [/^结构化时间/,'STRUCTURED_TIME'],[/^(?:时间格式|时间必须|日期或时间|日期无法|时区格式)/,'ISO_TIME'],
+    [/^标题/,'TITLE'],[/^任务名称/,'TASK_TEXT'],[/^任务适用范围|^适用范围与条件/,'TASK_SCOPE'],[/^适用条件|^条件任务/,'TASK_CONDITION'],[/^执行细节/,'TASK_DETAILS'],[/^任务必须为数组/,'TASK_LIST'],
+    [/^步骤名称/,'STEP_TEXT'],[/^步骤细节/,'STEP_DETAILS'],[/^每个事项最多/,'STEP_COUNT'],
+    [/^截止描述/,'DEADLINE_TEXT'],[/^节点名称/,'TIMELINE_LABEL'],[/^时间节点格式/,'TIMELINE_FORMAT'],[/^材料清单/,'MATERIALS'],[/^注意事项/,'WARNINGS'],[/^提醒/,'REMINDERS'],[/^需要第4版/,'SCHEMA_VERSION'],
+    [/^时间节点字段/,'TIMELINE_FIELDS'],[/^原文时间/,'TIMELINE_TIME_TEXT'],[/^摘要/,'SUMMARY'],[/^责任对象|^角色任务/,'ASSIGNEE'],[/^地点|^任务地点/,'LOCATION'],[/^任务时间/,'TASK_TIME_TEXT'],[/^通知类别/,'CLASSIFICATION'],[/^任务字段|^任务必须为结构化对象/,'TASK_FIELDS'],[/^步骤字段|^步骤必须为结构化对象/,'STEP_FIELDS'],[/^通知字段|^整理结果必须包含|^整理结果必须为/,'ROOT_FIELDS']
+  ];
   return rules.find(([pattern])=>pattern.test(error?.message||''))?.[1]||'SCHEMA_INVALID';
 }
 const count=value=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0?value:0;
