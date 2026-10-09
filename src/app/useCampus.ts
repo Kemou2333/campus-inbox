@@ -13,6 +13,7 @@ import {readLegacyWork,restoreLegacyDraft,finishLegacyResult} from '../infrastru
 import type {ThemePreference} from './theme';
 
 export interface Draft {id:string; text:string; attachments:string[]}
+export interface DraftSelection {start:number;end:number;expectedText:string}
 export interface Toast {id:number; text:string; undo?:()=>void}
 const DRAFT_KEY='campus-inbox:draft:v5';
 const RESULT_KEY='campus-inbox:pending-analysis:v5';
@@ -58,6 +59,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  const resultRef=useRef<{sources:Draft[];result:unknown}|null>(null);
  const abort=useRef<AbortController|null>(null);
  const analyzing=useRef(false);
+ const attaching=useRef(new Set<string>());
  const draftRef=useRef(drafts);draftRef.current=drafts;
  const noticeRef=useRef(notices);noticeRef.current=notices;
  const draftWriteError=useRef(false);
@@ -136,15 +138,26 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  function replaceDrafts(next:Draft[]){draftRef.current=next;setDrafts(next);}
  function changeDraft(id:string,text:string){replaceDrafts(draftRef.current.map(d=>d.id===id?{...d,text}:d));}
  function pasteDraft(id:string,text:string){const target=draftRef.current.find(d=>d.id===id);if(!target||target.text||busy){tell('输入框已有内容，请新建通知后再粘贴。');return;}changeDraft(id,text);}
+ function insertDraft(id:string,text:string,selection?:DraftSelection){
+  const target=draftRef.current.find(d=>d.id===id);if(!target||busy||analyzing.current)throw new Error('这条草稿暂时不能粘贴。');
+  if(selection&&target.text!==selection.expectedText)throw new Error('原文已改变，请重新粘贴。');
+  const start=selection?Math.min(Math.max(selection.start,0),target.text.length):target.text.length;
+  const end=selection?Math.min(Math.max(selection.end,start),target.text.length):start;
+  changeDraft(id,target.text.slice(0,start)+(!selection&&target.text&&text?'\n':'')+text+target.text.slice(end));
+ }
  function addDraft(text=''){if(draftRef.current.length>=20){tell('一次最多整理 20 条通知。');return;}replaceDrafts([...draftRef.current,{...makeDraft(),text}]);}
  async function attach(id:string,files:File[]){
-  const target=draftRef.current.find(d=>d.id===id);if(!target||busy)return;
+  const target=draftRef.current.find(d=>d.id===id);if(!target||busy||analyzing.current)throw new Error('当前不能保存附件，请稍后重试。');
+  if(attaching.current.has(id))throw new Error('附件正在保存，请稍后再添加。');
+  attaching.current.add(id);
+  try{
   if(target.attachments.length+files.length>MAX_NOTICE_FILES)throw new Error(`每条通知最多 ${MAX_NOTICE_FILES} 个附件。`);
   const existing=await Promise.all(target.attachments.map(getFile));
   if(existing.reduce((n,f)=>n+(f?.size??0),0)+files.reduce((n,f)=>n+f.size,0)>MAX_NOTICE_FILE_BYTES)throw new Error('每条通知的附件总大小最多 20 MB。');
   const ids=await addFiles(files);const current=draftRef.current;
-  if(!current.some(d=>d.id===id)){await cleanupFiles(ids,[...noticeRef.current,...current.map(d=>({attachments:d.attachments}) as Notice)]);return;}
+  if(!current.some(d=>d.id===id)){await cleanupFiles(ids,[...noticeRef.current,...current.map(d=>({attachments:d.attachments}) as Notice)]);throw new Error('草稿已移除，附件没有保存。');}
   replaceDrafts(current.map(d=>d.id===id?{...d,attachments:[...d.attachments,...ids]}:d));
+  }finally{attaching.current.delete(id);}
  }
  async function detach(draftID:string,fileID:string){
   const next=draftRef.current.map(d=>d.id===draftID?{...d,attachments:d.attachments.filter(id=>id!==fileID)}:d);replaceDrafts(next);
@@ -181,6 +194,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   if(analyzing.current||busy||!config)return false;
   if(retryAt>Date.now())return false;
   if(pending)throw new Error('还有一份整理结果待恢复，请先保存它。');
+  if(attaching.current.size)throw new Error('请等附件保存后再整理。');
   if(legacyRecords.length)throw new Error('旧版还有整理结果未保存，请先恢复它。');
   if(!cloud?.getKey())throw new Error('请先登录，再使用 AI 整理。');
   const sources=structuredClone(draftRef.current.filter(d=>d.text.trim()));
@@ -236,6 +250,6 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   }return received;}finally{receivingShare.current=false;}
  }
  return {notices,drafts,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,bootError:boot.error,
-  report,tell,update,act,remove,changeDraft,pasteDraft,addDraft,attach,detach,removeDraft,analyze,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
+  report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,attach,detach,removeDraft,analyze,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;
