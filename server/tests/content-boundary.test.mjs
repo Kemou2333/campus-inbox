@@ -53,7 +53,7 @@ test('injection remains user data; model messages contain no service secrets, lo
     assert.deepEqual(payload.messages.map(message=>message.role),['system','user']);assert.equal(payload.messages[0].content,SYSTEM_PROMPT);
     assert.deepEqual(JSON.parse(payload.messages[1].content),{sources:[{sourceId:1,text}]});
     for(const secret of [config.apiKey,token,'private-local-secret','private-smtp-password'])assert.equal(JSON.stringify(payload.messages).includes(secret),false);
-    assert.match(SYSTEM_PROMPT,/refusal.*UNSUPPORTED_REQUEST/);assert.match(SYSTEM_PROMPT,/正常的校园安全警示/);
+    assert.match(SYSTEM_PROMPT,/refusal.*UNSUPPORTED_REQUEST/);assert.match(SYSTEM_PROMPT,/正常校园反诈、纪律、性教育/);
     return envelope();
   });
   await assert.rejects(analyze('正常通知',config,async()=>Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(normal),tool_calls:[{function:{name:'fetch_url'}}]}}]})),error=>error.failureCode==='SCHEMA_INVALID');
@@ -109,4 +109,13 @@ test('a late completion after cancellation is not cached, but reported token usa
 
 test('an invalid daily limit cannot silently remove the cost ceiling',async()=>{
   for(const dailyLimit of [0,-1,Infinity,NaN,'30',null])await assert.rejects(createService({...config,dailyLimit}),/Daily AI budget/);
+});
+
+test('Chinese parentheses and quotes delimit original links without inventing a destination',async()=>{
+ const raw='校园资料：http://zhxg.cqu.edu.cn/）。资料：https://campus.example/a（来源说明）';
+ const value={schemaVersion:4,notices:[item(['入口 http://zhxg.cqu.edu.cn/。资料 https://campus.example/a'])]};
+ const result=await analyze({sources:[{text:raw}]},config,async()=>envelope(value));
+ assert.equal(result.result.notices.length,1);
+ const wrong=structuredClone(value);wrong.notices[0].reminders=['http://zhxg.cqu.edu.cn/evil'];
+ await assert.rejects(analyze({sources:[{text:raw}]},config,async()=>envelope(wrong)),error=>error.failureCode==='SOURCE_LINK');
 });

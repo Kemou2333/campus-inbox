@@ -28,6 +28,7 @@ function classify(value){
 }
 function fromText(value){
  const out=empty(value),s=out.rawText;
+ if(new RegExp(`(?:月|日|号|时|点)\\s*[-~～—–至到]\\s*(?:\\d|[一二三四五六七八九十])`).test(s))return out;
  if(!s||/(?:每(?:天|日|周|星期|月|年)|隔周|逢周)/.test(s))return out;
  if(new RegExp(`(?:\\d{1,4}|[一二三四五六七八九十]{1,3})\\s*(?:至|到|[-~～—–])\\s*(?:\\d{1,4}|[一二三四五六七八九十]{1,3})(?:年|月|日|号|时|点)`).test(s))return out;
  // A range is not a single confirmed deadline. Keep its complete wording.

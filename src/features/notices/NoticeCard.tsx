@@ -10,9 +10,8 @@ import {getNoticeStatus,priority,setNoticeCompleted,setTaskApplicable,taskAudien
 import type {Notice,NoteTarget,Task} from '../../domain/types';
 import type {CampusController} from '../../app/useCampus';
 import {RichText} from '../../shared/ui/RichText';
-import {AttachmentList} from '../attachments/AttachmentList';
 import {plainReadingText} from '../../domain/reading';
-import {matchesHiddenDetail,noticeOverview} from './notice-overview';
+import {formatDate,matchesHiddenDetail,noticeOverview} from './notice-overview';
 
 export interface NoticeActions {
  note:(notice:Notice,target:NoteTarget,title:string,text:string)=>void;
@@ -26,7 +25,16 @@ export function NoticeCard({notice:n,app,actions,now,expanded,onExpandedChange,s
  const status=getNoticeStatus(n);const p=priority(n,now);const done=status==='completed'||status==='dismissed';
  const overview=noticeOverview(n);const reducedMotion=useMediaQuery('(prefers-reduced-motion: reduce)');
  const bodyID=`notice-body-${n.id}`;
- const expandLabel=expanded?'收起':matchesHiddenDetail(n,searchQuery)?'查看匹配':'展开';
+ const hasTasks=n.tasks.length>0;
+ const expandLabel=expanded?'收起步骤':matchesHiddenDetail(n,searchQuery)?'查看匹配':'查看步骤';
+ const summary=plainReadingText(n.summary).trim();
+ const reminderTexts=new Set(n.reminders.map(r=>plainReadingText(r.text).trim()));
+ const showSummary=!!summary&&summary!==plainReadingText(n.title).trim()&&!reminderTexts.has(summary);
+ const timeKey=(value:string)=>plainReadingText(value).replace(/[\s：:]/g,'').replace(/^截止/,'');
+ const timelineTimes=new Set(n.timeline.flatMap(item=>{const time=item.timeText||(item.time?formatDate(item.time):'');return time?[timeKey(time),timeKey(item.label+'：'+time)]:[];}));
+ const timelineLocations=new Set(n.timeline.map(item=>item.location).filter(Boolean));
+ const headlineTimes=overview.times.filter(time=>!timelineTimes.has(timeKey(time)));
+ const headlineLocations=overview.locations.filter(location=>!timelineLocations.has(location));
  const noteButton=(target:NoteTarget,title:string,text:string)=><Tooltip title={text?'编辑笔记':'写笔记'}><span><IconButton aria-label={`给${title}写笔记`} disabled={disabled} onClick={()=>actions.note(n,target,title,text)} sx={{border:'1px solid',borderColor:text?'primary.main':'divider',color:text?'primary.main':'text.secondary'}}><EditNote/></IconButton></span></Tooltip>;
  return <Paper component="article" variant="outlined" id={`notice-${n.id}`} className="notice-card" inert={disabled||undefined} aria-labelledby={`notice-heading-${n.id}`} sx={{p:{xs:1.5,sm:2.5},borderColor:'divider',pointerEvents:disabled?'none':undefined,opacity:done?.88:1}}>
   <Stack direction="row" sx={{alignItems:'flex-start',justifyContent:'space-between',gap:1,mb:1}}>
@@ -39,22 +47,37 @@ export function NoticeCard({notice:n,app,actions,now,expanded,onExpandedChange,s
    </Stack>
   </Stack>
   <Typography variant="h5" component="h2" id={`notice-heading-${n.id}`} sx={{overflowWrap:'anywhere',fontSize:{xs:'1.5rem',sm:'1.75rem'},fontWeight:700,lineHeight:1.35}}>{n.title}</Typography>
-  {n.kind!=='task'&&n.summary&&plainReadingText(n.summary)!==n.title&&<Typography component="div" variant="body2" color="text.secondary" sx={{mt:.5,display:'-webkit-box',WebkitLineClamp:1,WebkitBoxOrient:'vertical',overflow:'hidden'}}><RichText text={n.summary} inline/></Typography>}
-  {!!overview.audiences.length&&<Stack direction="row" className="notice-audiences" sx={{flexWrap:'wrap',gap:.75,mt:1}}>{overview.audiences.slice(0,3).map(label=><Chip key={label} size="small" label={label} color={label==='全体同学'?'primary':'warning'} variant="outlined"/>)}{overview.audiences.length>3&&<Button size="small" variant="outlined" onClick={()=>{if(!expanded)onExpandedChange();}} disabled={disabled} sx={{minHeight:28,py:.25,color:'text.secondary'}}>{`另 ${overview.audiences.length-3} 类对象`}</Button>}</Stack>}
-  {!!(overview.times.length||overview.locations.length)&&<Stack className="notice-overview" spacing={.5} sx={{mt:1}}>
-   {!!overview.times.length&&<Stack direction="row" sx={{alignItems:'flex-start',gap:.75}}><Schedule sx={{fontSize:18,mt:.3,color:p.level==='overdue'&&!done?'error.main':'primary.main'}}/><Typography variant="body2" color={p.level==='overdue'&&!done?'error.main':'primary.main'} sx={{fontWeight:600,fontVariantNumeric:'tabular-nums',overflowWrap:'anywhere'}}>{overview.times.slice(0,2).join(' · ')}{overview.times.length>2?` · +${overview.times.length-2}`:''}</Typography></Stack>}
-   {!!overview.locations.length&&<Stack direction="row" sx={{alignItems:'flex-start',gap:.75}}><PlaceOutlined sx={{fontSize:18,mt:.3,color:'text.secondary'}}/><Typography variant="body2" color="text.secondary" sx={{overflowWrap:'anywhere'}}>{overview.locations.slice(0,2).join(' · ')}{overview.locations.length>2?` · +${overview.locations.length-2}`:''}</Typography></Stack>}
+  {!!overview.audiences.length&&<Stack direction="row" className="notice-audiences" sx={{flexWrap:'wrap',gap:.75,mt:1}}>{overview.audiences.map(label=><Chip key={label} size="small" label={label} color={label==='全体同学'?'primary':'warning'} variant="outlined"/>)}</Stack>}
+  {!!(headlineTimes.length||headlineLocations.length)&&<Stack className="notice-overview" spacing={.5} sx={{mt:1}}>
+   {!!headlineTimes.length&&<Stack direction="row" sx={{alignItems:'flex-start',gap:.75}}><Schedule sx={{fontSize:18,mt:.3,color:p.level==='overdue'&&!done?'error.main':'primary.main'}}/><Typography variant="body2" color={p.level==='overdue'&&!done?'error.main':'primary.main'} sx={{fontWeight:600,fontVariantNumeric:'tabular-nums',overflowWrap:'anywhere'}}>{headlineTimes.join(' · ')}</Typography></Stack>}
+   {!!headlineLocations.length&&<Stack direction="row" sx={{alignItems:'flex-start',gap:.75}}><PlaceOutlined sx={{fontSize:18,mt:.3,color:'text.secondary'}}/><Typography variant="body2" color="text.secondary" sx={{overflowWrap:'anywhere'}}>{headlineLocations.join(' · ')}</Typography></Stack>}
   </Stack>}
-  <Stack direction="row" className="notice-actions" sx={{alignItems:'center',gap:.5,mt:2,pt:1.5,borderTop:'1px solid',borderColor:'divider',flexWrap:'wrap'}}>
-   <Tooltip title={expandLabel}><span><IconButton className="notice-expand" onClick={onExpandedChange} disabled={disabled} aria-expanded={expanded} aria-controls={bodyID} aria-label={`${expandLabel}${n.title}`} sx={{border:'1px solid',borderColor:'divider',color:'primary.main'}}><ExpandMore sx={{fontSize:28,transform:expanded?'rotate(180deg)':'none',transition:reducedMotion?'none':'transform 240ms cubic-bezier(.2,0,0,1)'}}/></IconButton></span></Tooltip>
+  <Stack className="notice-details" spacing={1.5} sx={{mt:showSummary||n.timeline.length||n.materials.length||n.warnings.length||n.reminders.length?1.5:0}}>
+   {showSummary&&<Typography component="div" color="text.secondary" className="notice-summary"><RichText text={n.summary}/></Typography>}
+   {!!n.timeline.length&&<Stack className="notice-timeline" spacing={1} sx={{pl:1.5,borderLeft:'2px solid',borderColor:'divider'}}>{n.timeline.map((item,index)=><Box key={index}>
+    <Typography component="div" variant="body2" sx={{fontWeight:600}}><RichText text={item.label} inline/></Typography>
+    {!!(item.timeText||item.time||item.location)&&<Typography variant="body2" color="text.secondary" sx={{mt:.25,overflowWrap:'anywhere'}}>{[item.timeText||(item.time?formatDate(item.time):''),item.location].filter(Boolean).join(' · ')}</Typography>}
+   </Box>)}</Stack>}
+   {!!n.materials.length&&<Box className="notice-materials"><Typography component="h3" variant="subtitle1" sx={{mb:.5}}>准备</Typography><Box component="ul" sx={{my:0,pl:2.5}}>{n.materials.map((text,index)=><Box component="li" key={index} sx={{color:'text.secondary',mt:index?.5:0}}><RichText text={text}/></Box>)}</Box></Box>}
+   {!!n.warnings.length&&<Box className="notice-warnings" sx={{p:1.5,borderRadius:2,bgcolor:'action.hover'}}><Typography component="h3" variant="subtitle1" sx={{mb:.5,color:'warning.main'}}>注意</Typography><Box component="ul" sx={{my:0,pl:2.5}}>{n.warnings.map((text,index)=><Box component="li" key={index} sx={{mt:index?.5:0}}><RichText text={text}/></Box>)}</Box></Box>}
+   {n.reminders.map((r,index)=><Box key={r.id} className="reminder-item" sx={{pt:index?1.5:0,borderTop:index?'1px solid':'none',borderColor:'divider'}}>
+    <Typography component="div"><RichText text={r.text}/></Typography>
+    <Note text={r.note} onClick={()=>actions.note(n,{type:'reminder',reminderId:r.id},r.text,r.note)}/>
+    <Box sx={{display:'flex',justifyContent:'flex-end',mt:.5}}>{noteButton({type:'reminder',reminderId:r.id},r.text,r.note)}</Box>
+   </Box>)}
+   {!!n.note&&<Note text={n.note} onClick={()=>actions.note(n,{type:'notice'},n.title,n.note)}/>}
+  </Stack>
+  <Stack direction="row" className="notice-actions" sx={{alignItems:'center',gap:.75,mt:2,pt:1.5,borderTop:'1px solid',borderColor:'divider',flexWrap:'wrap'}}>
+   {hasTasks&&<Tooltip title={expandLabel}><span><IconButton className="notice-expand" onClick={onExpandedChange} disabled={disabled} aria-expanded={expanded} aria-controls={bodyID} aria-label={`${expandLabel}${n.title}`} sx={{border:'1px solid',borderColor:'divider',color:'primary.main'}}><ExpandMore sx={{fontSize:28,transform:expanded?'rotate(180deg)':'none',transition:reducedMotion?'none':'transform 240ms cubic-bezier(.2,0,0,1)'}}/></IconButton></span></Tooltip>}
+   <Button size="small" variant="outlined" onClick={()=>actions.details(n)} disabled={disabled}>原文</Button>
+   {n.kind==='task'&&!done&&<Button size="small" variant="outlined" onClick={()=>actions.calendar(n)} disabled={disabled}>创建提醒</Button>}
    <Box sx={{flex:1,minWidth:0}}/>
    <Tooltip title={done?'恢复':n.kind==='task'?'完成':'知悉'}><span><IconButton className="notice-complete" aria-label={done?'恢复':n.kind==='task'?'完成':'知悉'} onClick={()=>app.act(n.id,v=>setNoticeCompleted(v,!done),done?'已恢复':'已完成')} disabled={disabled} sx={{bgcolor:'action.selected',color:'primary.main','&:hover':{bgcolor:'action.hover'}}}>{done?<Undo sx={{fontSize:28}}/>:<Check sx={{fontSize:28}}/>}</IconButton></span></Tooltip>
    <Tooltip title="删除"><IconButton aria-label={`删除${n.title}`} onClick={()=>app.remove(n.id)} disabled={disabled} sx={{color:'text.secondary'}}><DeleteOutline fontSize="small"/></IconButton></Tooltip>
   </Stack>
-  <Box id={bodyID} className="notice-body" aria-hidden={!expanded}>
-  <Collapse in={expanded} timeout={reducedMotion?0:240} unmountOnExit>
+  <Box id={bodyID} className="notice-body" aria-hidden={!hasTasks||!expanded}>
+  <Collapse in={hasTasks&&expanded} timeout={reducedMotion?0:240} unmountOnExit>
   <Box sx={{mt:2,pt:2,borderTop:'1px solid',borderColor:'divider'}}>
-  {n.kind!=='task'&&n.summary&&!n.reminders.length&&<Typography component="div"><RichText text={n.summary}/></Typography>}
   <Stack spacing={2}>
    {n.tasks.map((t,taskIndex)=><Box key={t.id} className="task-item" sx={{opacity:t.dismissed?.6:1,pt:taskIndex?2:0,borderTop:taskIndex?'1px solid':'none',borderColor:'divider'}}>
     {(n.tasks.length>1||!overview.audiences.length)&&<Chip size="small" label={t.scope==='role'&&t.condition?`${taskAudience(t)} · ${t.condition}`:taskAudience(t)} color={t.scope==='all'?'primary':'warning'} variant="outlined" sx={{mb:.75}}/>}
@@ -86,17 +109,6 @@ export function NoticeCard({notice:n,app,actions,now,expanded,onExpandedChange,s
      {noteButton({type:'task',taskId:t.id},t.text,t.note)}
     </Stack>
    </Box>)}
-   {n.reminders.map((r,index)=><Box key={r.id} sx={{pt:index?1.5:0,borderTop:index?'1px solid':'none',borderColor:'divider'}}>
-    <Typography component="div"><RichText text={r.text}/></Typography>
-    <Note text={r.note} onClick={()=>actions.note(n,{type:'reminder',reminderId:r.id},r.text,r.note)}/>
-    <Box sx={{display:'flex',justifyContent:'flex-end',mt:.5}}>{noteButton({type:'reminder',reminderId:r.id},r.text,r.note)}</Box>
-   </Box>)}
-  </Stack>
-  {!!n.note&&<Note text={n.note} onClick={()=>actions.note(n,{type:'notice'},n.title,n.note)}/>}
-  <AttachmentList ids={n.attachments} platform={app.platform}/>
-  <Stack direction="row" sx={{gap:1,mt:2,flexWrap:'wrap'}}>
-   <Button size="small" variant="outlined" onClick={()=>actions.details(n)} disabled={disabled}>原文</Button>
-   {n.kind==='task'&&!done&&<Button size="small" variant="outlined" onClick={()=>actions.calendar(n)} disabled={disabled}>创建提醒</Button>}
   </Stack>
   </Box>
   </Collapse>

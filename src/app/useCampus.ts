@@ -5,6 +5,7 @@ import {createAuthClient, type AuthClient, type AuthSession, type AuthOptions} f
 import {analyzeSources,AnalysisError,type AnalyzeOptions} from '../infrastructure/ai-client';
 import {addFiles, cleanupFiles, exportFiles, getFile, restoreFiles, MAX_NOTICE_FILES, MAX_NOTICE_FILE_BYTES} from '../infrastructure/attachment-store';
 import {createNotice, exportBackup, exportTextBackup, newID, parseAnalysisBatch, parseBackup, parseNotices} from '../domain/notice';
+import {mergeExamples} from '../domain/examples';
 import type {Notice} from '../domain/types';
 import {createPlatform, type PlatformCapabilities} from '../platform';
 import {loadConfig, type RuntimeConfig} from './config';
@@ -163,10 +164,14 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  }
  function commitResult(value:{sources:Draft[];result:unknown}){
   const batch=parseAnalysisBatch(value.result);
-  if(batch.notices.length!==value.sources.length)throw new Error('整理结果未与原文逐条对应，请分批提交。');
+  const indexes=batch.sourceIndexes??batch.notices.map((_,index)=>index);
+  if(indexes.length!==batch.notices.length||indexes.some((v,i)=>v>=value.sources.length||i>0&&v<indexes[i-1])||new Set(indexes).size!==value.sources.length)throw new Error('整理结果未完整对应本次原文。');
   const current=repository.load();
   // Fixed IDs make recovering a result after refresh idempotent.
-  const additions=batch.notices.map((a,i)=>({...createNotice(a,value.sources[i].text),id:`ai-${value.sources[i].id}`,attachments:value.sources[i].attachments}));
+  const additions=batch.notices.map((a,i)=>{
+   const source=value.sources[indexes[i]],ordinal=indexes.slice(0,i).filter(v=>v===indexes[i]).length;
+   return {...createNotice(a,source.text),id:`ai-${source.id}${ordinal?`-${ordinal}`:''}`,attachments:source.attachments};
+  });
   save([...current,...additions.filter(n=>!current.some(old=>old.id===n.id))]);
   if(additions.length)setLatestAddedID(additions[0].id);
   const consumed=new Set(value.sources.map(d=>d.id));const remaining=draftRef.current.filter(d=>!consumed.has(d.id));replaceDrafts(remaining.length?remaining:[makeDraft()]);
@@ -197,9 +202,13 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  async function exportLegacyWork(){const result=await platform.saveFile(new Blob([legacyWork.text],{type:'text/plain;charset=utf-8'}),'campus-inbox-old-drafts.txt');if(result.status!=='cancelled')tell('旧版草稿已导出');}
  async function loadExamples(){
   const response=await fetch('./examples.json');if(!response.ok)throw new Error('示例暂时无法载入。');
-  const records=parseBackup(await response.json());const current=repository.load();
-  const added=records.filter(n=>!current.some(old=>old.id===n.id||old.originalText===n.originalText));
-  save([...current,...added]);tell(added.length?`已载入 ${added.length} 条示例通知`:'这些示例已经载入。');
+  const records=parseBackup(await response.json());let registry:unknown=null;
+  try{const response=await fetch('./examples-legacy-2.4.json',{signal:AbortSignal.timeout(5000)});if(response.ok)registry=await response.json();}catch{/* Existing records stay intact when legacy fingerprints are unavailable. */}
+  const current=repository.load(),merged=await mergeExamples(current,records,registry);
+  // Hashing yields to other edits. Do not overwrite changes made while it ran.
+  if(JSON.stringify(repository.load())!==JSON.stringify(current))throw new Error('通知正在更新，请稍后再载入示例。');
+  if(merged.added||merged.replaced)save(merged.notices);
+  tell(merged.replaced?'已更新示例':merged.added?`已载入 ${merged.added} 条示例`:'示例已载入');
  }
  async function backup(includeAttachments=true){
   const records=repository.load();const data=includeAttachments?exportBackup(records,await exportFiles(records)):exportTextBackup(records);

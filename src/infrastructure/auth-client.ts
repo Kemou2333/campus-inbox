@@ -5,6 +5,7 @@ export interface AuthSession { key: string; username: string; expiresAt: string;
 export interface AuthStatus { username: string; expiresAt: string; email?: string | null }
 export interface AuthOptions { emailEnabled: boolean; inviteEnabled: boolean; domains: string[] }
 export interface EmailChallenge { challengeId: string; retryAfterSeconds: number; expiresAt: string }
+export type EmailPurpose = 'login' | 'bind' | 'register' | 'password';
 interface AuthErrorDetails { code?: string; retryAfterSeconds?: number; username?: string }
 export class AuthError extends Error {
   code?: string;
@@ -101,8 +102,8 @@ export class AuthClient {
       || value.domains.length > 50 || !value.domains.every(domain => typeof domain === 'string' && domain.length <= 254 && /^[a-z0-9][a-z0-9.-]*\.[a-z0-9-]+$/.test(domain))) throw formatError();
     return { emailEnabled: value.emailEnabled, inviteEnabled: value.inviteEnabled, domains: [...value.domains] as string[] };
   }
-  async requestEmail(email: string, purpose: 'login' | 'bind' = 'login', key?: string): Promise<EmailChallenge> {
-    if (purpose !== 'login' && purpose !== 'bind') throw new AuthError('请选择登录或绑定邮箱。');
+  async requestEmail(email: string, purpose: EmailPurpose = 'login', key?: string): Promise<EmailChallenge> {
+    if (!['login', 'bind', 'register', 'password'].includes(purpose)) throw new AuthError('请选择注册或绑定邮箱。');
     if (purpose === 'bind' && !key) throw new AuthError('请先登录原账号，再绑定邮箱。', { code: 'AUTH_REQUIRED' });
     const value = await this.request('email/request', { email: emailValue(email), purpose }, key);
     if (!value || typeof value.challengeId !== 'string' || !keyPattern.test(value.challengeId) || !validExpiry(value.expiresAt)
@@ -111,6 +112,17 @@ export class AuthClient {
   }
   async verifyEmail(challengeId: string, code: string): Promise<AuthSession> {
     return this.session(await this.request('email/verify', this.verification(challengeId, code)));
+  }
+  async registerEmail(challengeId: string, code: string, username: string, password: string): Promise<AuthSession> {
+    this.password(password);
+    return this.session(await this.request('email/verify', { ...this.verification(challengeId, code), username, password }));
+  }
+  async setEmailPassword(challengeId: string, code: string, password: string): Promise<AuthSession> {
+    this.password(password);
+    return this.session(await this.request('email/verify', { ...this.verification(challengeId, code), password }));
+  }
+  private password(value: string): void {
+    if (typeof value !== 'string' || value.length < 8 || value.length > 128) throw new AuthError('密码需为 8–128 个字符。');
   }
   async bindEmail(challengeId: string, code: string, key: string): Promise<AuthStatus> {
     if (!key) throw new AuthError('请先登录原账号，再绑定邮箱。', { code: 'AUTH_REQUIRED' });
