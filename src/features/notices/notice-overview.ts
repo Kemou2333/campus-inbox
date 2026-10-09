@@ -42,6 +42,6 @@ export function matchesHiddenDetail(n:Notice,query:string):boolean{
  const needle=query.trim().toLocaleLowerCase();if(!needle)return false;
  const match=(value:string)=>plainReadingText(value).toLocaleLowerCase().includes(needle);
  const overview=noticeOverview(n);
- if([n.title,n.summary,...overview.audiences,...overview.times,...overview.locations].some(match))return false;
- return [n.originalText,n.note,...n.materials,...n.warnings,...n.tasks.flatMap(task=>[task.text,task.note,...task.details,...task.steps.flatMap(step=>[step.text,step.note,...step.details])]),...n.reminders.flatMap(reminder=>[reminder.text,reminder.note])].some(match);
+ if([n.title,n.summary,n.note,...overview.audiences,...overview.times,...overview.locations,...n.materials,...n.warnings,...n.timeline.flatMap(entry=>[entry.label,entry.timeText,entry.location??'']),...n.reminders.flatMap(reminder=>[reminder.text,reminder.note])].some(match))return false;
+ return [n.originalText,...n.tasks.flatMap(task=>[task.text,task.note,...task.details,...task.steps.flatMap(step=>[step.text,step.note,...step.details])])].some(match);
 }

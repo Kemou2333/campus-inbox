@@ -8,6 +8,7 @@ const T=globalThis.CampusTime;
 function groundedTime(value,raw,notice){
   if(value===null)return null;
   if(typeof value!=='string'||typeof raw!=='string')return value;
+  if(T.fromText(raw).type!=='date_time')return null;
   const match=raw.match(/(\d{4})(?:年|[-/])(\d{1,2})(?:月|[-/])(\d{1,2})(?:日|号|\s|T)\s*(\d{1,2})(?:[:：]|时)(\d{2})(?:分)?/);
   if(!match||!notice.replace(/\s/g,'').includes(match[0].replace(/\s/g,'')))return null;
   const [y,m,d,h,mi]=match.slice(1).map(Number);
@@ -23,10 +24,14 @@ export function groundDates(result,notice){
   if(!result||!Array.isArray(result.notices))return result;
   return {...result,notices:result.notices.map(n=>({...n,
     deadline:groundedTime(n.deadline,n.deadlineText,notice),
-    ...(Object.hasOwn(n,'deadlineSpec')?{deadlineSpec:T.ground(n.deadlineSpec,n.deadlineText,notice)}:{}),
-    tasks:Array.isArray(n.tasks)?n.tasks.map(t=>({...t,time:groundedTime(t.time,t.timeText,notice),...(Object.hasOwn(t,'timeSpec')?{timeSpec:T.ground(t.timeSpec,t.timeText,notice)}:{})})):n.tasks,
-    timeline:Array.isArray(n.timeline)?n.timeline.map(t=>({...t,time:groundedTime(t.time,t.timeText,notice),...(Object.hasOwn(t,'timeSpec')?{timeSpec:T.ground(t.timeSpec,t.timeText,notice)}:{})})):n.timeline
+    ...timeSpec(n,'deadlineSpec',n.deadlineText,notice),
+    tasks:Array.isArray(n.tasks)?n.tasks.map(t=>({...t,time:groundedTime(t.time,t.timeText,notice),...timeSpec(t,'timeSpec',t.timeText,notice)})):n.tasks,
+    timeline:Array.isArray(n.timeline)?n.timeline.map(t=>({...t,time:groundedTime(t.time,t.timeText,notice),...timeSpec(t,'timeSpec',t.timeText,notice)})):n.timeline
   }))};
+}
+function timeSpec(item,key,raw,source){
+  if(Object.hasOwn(item,key))return {[key]:T.ground(item[key],raw,source)};
+  return typeof raw==='string'&&raw.trim()?{[key]:T.ground(T.fromText(raw),raw,source)}:{};
 }
 const FINISH_REASONS=new Set(['stop','length','content_filter','insufficient_system_resource','aborted','tool_calls','function_call','unknown']);
 const FAILURE_CODES=new Set(['INVALID_JSON','TIMELINE_FIELDS','TIMELINE_TIME_TEXT','SUMMARY','ASSIGNEE','LOCATION','TASK_TIME_TEXT','CLASSIFICATION','TASK_FIELDS','STEP_FIELDS','ROOT_FIELDS','SCHEMA_INVALID','SOURCE_COUNT','CONTENT_BOUNDARY','SOURCE_LINK']);
@@ -42,7 +47,7 @@ function checkContent(text){
   const english=/^(?:please\s+)?(?:write|generate|create)\s+(?:an?\s+)?(?:explicit\s+)?(?:pornographic|erotic)\s+(?:story|novel|sex scene)\b/i;
   if(sexual.test(direct)||illegal.test(direct)||english.test(direct))throw contentBoundary();
 }
-function links(text){return text.match(/https?:\/\/[^\s<>"'`*()[\]{}，。！？；：、]+/giu)?.map(value=>value.replace(/[.,;!?]+$/,''))||[];}
+function links(text){return text.match(/https?:\/\/[^\s<>"'`*()[\]{}（）【】“”，。！？；：、]+/giu)?.map(value=>value.replace(/[.,;!?]+$/,''))||[];}
 function ownSourceLinks(value,source){
   const allowed=links(source);
   // Unicode links must match completely. For an ASCII URL in the original,
@@ -62,10 +67,12 @@ const count=value=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=
 function tokenUsage(value){
   return {input:count(value?.prompt_tokens),output:count(value?.completion_tokens),reasoning:count(value?.completion_tokens_details?.reasoning_tokens)};
 }
+function validUsage(value){return ['prompt_tokens','completion_tokens'].every(key=>Number.isSafeInteger(value?.[key])&&value[key]>=0);}
 export class ServiceError extends Error {
   constructor(message,status=502,metadata={}){
     super(message);this.status=status;
     if(metadata.usage)this.usage={input:count(metadata.usage.input),output:count(metadata.usage.output),reasoning:count(metadata.usage.reasoning)};
+    this.usageAvailable=metadata.usageAvailable===true;
     if(metadata.finishReason)this.finishReason=FINISH_REASONS.has(metadata.finishReason)?metadata.finishReason:'unknown';
     if(FAILURE_CODES.has(metadata.failureCode))this.failureCode=metadata.failureCode;
   }
@@ -96,19 +103,39 @@ export function modelInput(notice){
   if(parts.length>20)throw new ServiceError('每次最多整理 20 条通知，请分批提交。',400);
   return parts.length>=2?{sources:parts.map((text,index)=>({sourceId:index+1,text}))}:{notice};
 }
+/** Shared with the cost guard so it reserves the same bounded provider payload. */
+export function modelPayload(notice,config={}){
+  return {model:config.model||'deepseek-flash',thinking:{type:config.thinkingMode==='low'?'enabled':'disabled'},...(config.thinkingMode==='low'?{reasoning_effort:'low'}:{}),max_tokens:config.thinkingMode==='low'?32768:12288,response_format:{type:'json_object'},messages:[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:JSON.stringify(modelInput(notice))}]};
+}
+function sourceMapping(parsed,sources){
+  if(!Array.isArray(parsed?.notices)||!parsed.notices.length||parsed.notices.length>20)throw new Error('source');
+  const hasIDs=parsed.notices.some(item=>Object.hasOwn(item||{},'sourceId'));
+  if(!hasIDs){
+    if(sources&&parsed.notices.length!==sources.length)throw new Error('source');
+    return {parsed,indexes:parsed.notices.map((_,index)=>sources?index:0)};
+  }
+  const limit=sources?.length||1;
+  const indexes=parsed.notices.map(item=>{
+    if(!item||!Number.isSafeInteger(item.sourceId)||item.sourceId<1||item.sourceId>limit)throw new Error('source');
+    return item.sourceId-1;
+  });
+  if(indexes.some((value,index)=>index>0&&value<indexes[index-1])||new Set(indexes).size!==limit)throw new Error('source');
+  return {parsed:{...parsed,notices:parsed.notices.map(({sourceId,...item})=>item)},indexes};
+}
 export async function analyze(notice,config,modelFetch=fetch,signal){
   const input=modelInput(notice),sources=input.sources;
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),config.timeoutMs||60000);
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),config.timeoutMs||(config.thinkingMode==='low'?180000:45000));
   const cancel=()=>controller.abort();
   if(signal?.aborted)cancel();else signal?.addEventListener('abort',cancel,{once:true});
-  let usage,finishReason;
+  let usage,finishReason,usageAvailable=false;
   try{
     if(signal?.aborted)throw new ServiceError('整理已取消，请重新提交。',499);
-    const payload={model:config.model||'deepseek-flash',thinking:{type:'disabled'},reasoning_effort:'none',temperature:0.2,max_tokens:8192,response_format:{type:'json_object'},messages:[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:JSON.stringify(input)}]};
+    const payload=modelPayload(notice,config);
     const upstream=await modelFetch('https://api.deepseek.com/chat/completions',{method:'POST',redirect:'error',headers:{'Content-Type':'application/json','Authorization':`Bearer ${config.apiKey}`},body:JSON.stringify(payload),signal:controller.signal});
     if(!upstream.ok){await upstream.body?.cancel();throw new ServiceError(upstream.status===429?'AI 服务繁忙，请稍后再试。':upstream.status===402?'AI 账户余额不足，请联系维护者。':'AI 请求失败，请联系维护者检查配置。');}
     const envelope=JSON.parse(await boundedText(upstream.body,200000)),choice=envelope?.choices?.[0];
     usage=tokenUsage(envelope?.usage);
+    usageAvailable=validUsage(envelope?.usage);
     finishReason=FINISH_REASONS.has(choice?.finish_reason)?choice.finish_reason:'unknown';
     if(signal?.aborted)throw new ServiceError('整理已取消，请重新提交。',499,{usage,finishReason});
     if(finishReason!=='stop'){
@@ -126,13 +153,16 @@ export async function analyze(notice,config,modelFetch=fetch,signal){
     if(parsed?.schemaVersion===4&&parsed.refusal==='UNSUPPORTED_REQUEST'&&Object.keys(parsed).length===2)throw contentBoundary({usage,finishReason});
     if(parsed&&Object.hasOwn(parsed,'refusal'))throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:'SCHEMA_INVALID'});
     if(choice.message.tool_calls||choice.message.function_call)throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:'SCHEMA_INVALID'});
-    if(sources&&(!Array.isArray(parsed?.notices)||parsed.notices.length!==sources.length))throw new ServiceError('AI 未能逐条整理完整通知，请分批提交。',502,{usage,finishReason,failureCode:'SOURCE_COUNT'});
+    let mapping;
+    try{mapping=sourceMapping(parsed,sources);parsed=mapping.parsed;}catch{throw new ServiceError('AI 没有完整对应本次原文，请稍后重试。',502,{usage,finishReason,failureCode:'SOURCE_COUNT'});}
     try{
-      const grounded=sources?{...parsed,notices:parsed.notices.map((item,index)=>groundDates({notices:[item]},sources[index].text).notices[0])}:groundDates(parsed,notice);
+      const grounded=sources?{...parsed,notices:parsed.notices.map((item,index)=>groundDates({notices:[item]},sources[mapping.indexes[index]].text).notices[0])}:groundDates(parsed,notice);
       result=D.batch(grounded,true);
     }catch(error){throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:validationCode(error)});}
-    if(!result.notices.every((item,index)=>ownSourceLinks(item,sources?sources[index].text:notice)))throw new ServiceError('AI 返回的链接无法对应原通知，请稍后重试。',502,{usage,finishReason,failureCode:'SOURCE_LINK'});
-    return {result,usage,finishReason};
-  }catch(e){if(e instanceof ServiceError)throw e;if(signal?.aborted)throw new ServiceError('整理已取消，请重新提交。',499,{usage,finishReason});throw new ServiceError(e.name==='AbortError'?'AI 整理超时，请稍后重试。':'AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason});}
+    if(!result.notices.every((item,index)=>ownSourceLinks(item,sources?sources[mapping.indexes[index]].text:notice)))throw new ServiceError('AI 返回的链接无法对应原通知，请稍后重试。',502,{usage,finishReason,failureCode:'SOURCE_LINK'});
+    // Old clients still accept ordinary one-source/one-card batches unchanged.
+    if(sources&&(mapping.indexes.length!==sources.length||mapping.indexes.some((value,index)=>value!==index)))result={...result,sourceIndexes:mapping.indexes};
+    return {result,usage,usageAvailable,finishReason};
+  }catch(e){if(e instanceof ServiceError){e.usageAvailable=usageAvailable;throw e;}if(signal?.aborted)throw new ServiceError('整理已取消，请重新提交。',499,{usage,usageAvailable,finishReason});throw new ServiceError(e.name==='AbortError'?'AI 整理超时，请稍后重试。':'AI 未返回有效的整理结果，请稍后重试。',502,{usage,usageAvailable,finishReason});}
   finally{clearTimeout(timer);signal?.removeEventListener('abort',cancel);}
 }

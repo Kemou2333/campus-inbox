@@ -1,17 +1,33 @@
 {
   "app": "campus-inbox",
-  "version": 4,
+  "version": 5,
+  "exportedAt": "2026-10-08T16:26:43.632Z",
   "notices": [
     {
-      "schemaVersion": 4,
+      "schemaVersion": 5,
       "kind": "task",
       "title": "8号普通请假办理",
-      "summary": "需要办理8号普通请假的同学须在10月7号17:00前完善请假流程，家长发短信给苏老师，学生截图发给通知发布者并填写办事薄、在智慧学工请假。",
+      "summary": "需要办理8号普通请假的同学须在10月7号17:00前完善请假流程，家长发短信，学生提交截图、填写办事薄并在智慧学工请假。",
       "deadline": null,
       "deadlineText": "10月7号17:00前",
       "timeline": [
         {
-          "label": "通知发布者依次确认办理",
+          "label": "请假流程完善截止",
+          "time": null,
+          "timeText": "10月7号17:00前",
+          "location": null,
+          "timeSpec": {
+            "type": "partial",
+            "year": null,
+            "month": 10,
+            "day": 7,
+            "hour": 17,
+            "minute": 0,
+            "rawText": "10月7号17:00前"
+          }
+        },
+        {
+          "label": "发布者在办事薄依次确认办理",
           "time": null,
           "timeText": "10月7号17:00后",
           "location": null,
@@ -37,49 +53,49 @@
           "text": "发送请假短信给苏老师",
           "assignee": "家长",
           "scope": "role",
-          "condition": "学生需要办理8号普通请假",
+          "condition": "需要办理8号普通请假同学的家长",
           "details": [
-            "短信须由**家长发送**，审批时将依次核对手机号"
+            "审批时将依次核对手机号"
           ],
           "steps": [],
           "time": null,
-          "timeText": "10月7号17:00前",
+          "timeText": "",
           "location": null,
-          "timeSpec": {
-            "type": "partial",
-            "year": null,
-            "month": 10,
-            "day": 7,
-            "hour": 17,
-            "minute": 0,
-            "rawText": "10月7号17:00前"
-          }
+          "id": "616108ee-0c8d-4c5b-8e71-569c9e23dc6c",
+          "completed": false,
+          "dismissed": false,
+          "note": "",
+          "localDeadline": null
         },
         {
-          "text": "办理8号普通请假",
+          "text": "完善请假流程",
           "assignee": null,
           "scope": "conditional",
           "condition": "需要办理8号普通请假的同学",
-          "details": [
-            "去向地点要写详细，不能只写省市和区县",
-            "办事薄里请假事由与去向地点写清楚：因xx事前往xx地点"
-          ],
+          "details": [],
           "steps": [
             {
-              "text": "将家长短信截图发给通知发布者",
-              "details": []
+              "text": "发送短信截图给通知发布者",
+              "details": [],
+              "id": "99faab23-bd24-4735-a057-e7a0915220d0",
+              "completed": false,
+              "note": ""
             },
             {
               "text": "填写办事薄",
               "details": [
                 "请假事由与去向地点写清楚：因xx事前往xx地点"
-              ]
+              ],
+              "id": "022dba43-89d9-42fe-9902-bd7473ae2ade",
+              "completed": false,
+              "note": ""
             },
             {
               "text": "在智慧学工上请假",
-              "details": [
-                "去向地点要写详细，不能只写省市和区县"
-              ]
+              "details": [],
+              "id": "bc9b68b8-e99c-438d-acf8-d0fe957b16bd",
+              "completed": false,
+              "note": ""
             }
           ],
           "time": null,
@@ -93,12 +109,22 @@
             "hour": 17,
             "minute": 0,
             "rawText": "10月7号17:00前"
-          }
+          },
+          "id": "a9041901-8d3e-4e2e-bff9-45ae18297986",
+          "completed": false,
+          "dismissed": false,
+          "note": "",
+          "localDeadline": null
         }
       ],
-      "materials": [],
+      "materials": [
+        "需要办理8号普通请假的同学：家长短信截图"
+      ],
       "warnings": [
-        "请假不规范会影响批假，请务必检查是否在截止时间前按照以上要求请假"
+        "请假短信必须由家长发送",
+        "去向地点要写详细，不能只写省市和区县",
+        "请假不规范会影响批假",
+        "请务必检查是否在截止时间前按照要求请假"
       ],
       "reminders": [],
       "deadlineSpec": {
@@ -110,252 +136,66 @@
         "minute": 0,
         "rawText": "10月7号17:00前"
       },
-      "id": "example-reading-v21-0",
+      "id": "example-reading-v25-0",
       "originalText": "请需要办理8号普通请假的同学务必在10月7号17:00前完善好请假流程:\n\n①家长发短信给苏老师，再把短信截图发给我，并及时填写办事薄，以及在智慧学工上请假。⚠️⚠️⚠️请确保请假短信由家长发送，审批时将依次核对手机号\n\n②去向地点要写详细，不能只写省市和区县\n\n③办事薄里请假事由与去向地点写清楚:因xx事前往xx地点\n\n10月7号17:00后我将在办事薄依次确认办理，然后再由苏老师同意请假\n\n⚠️注意，请假不规范会影响批假，所以请各位同学务必检查是否在截止时间前按照以上要求请假",
-      "createdAt": "2026-10-07T02:13:58.284Z",
+      "createdAt": "2026-10-08T16:16:56.211Z",
+      "updatedAt": "2026-10-08T16:16:56.211Z",
       "completed": false,
       "dismissed": false,
-      "localDeadline": null,
       "note": "",
+      "localDeadline": null,
       "audienceOverride": "",
       "attachments": []
     },
     {
-      "schemaVersion": 4,
-      "kind": "task",
-      "title": "国庆离校返校安排",
-      "summary": "公布国庆节假期离校名单，请同学注意安全并按申报时间按时返校，返校时间填写有误或不能按期返校者需按条件处理。",
+      "schemaVersion": 5,
+      "kind": "reminder",
+      "title": "军训期间外出请假要求",
+      "summary": "军训期间无特殊情况不能请假外出夜不归宿，因病去医院检查复查并提交医院证明除外。",
       "deadline": null,
       "deadlineText": "",
       "timeline": [],
-      "tasks": [
-        {
-          "text": "修改返校时间",
-          "assignee": null,
-          "scope": "conditional",
-          "condition": "填写2027年返校的同学",
-          "details": [],
-          "steps": [],
-          "time": null,
-          "timeText": "",
-          "location": null
-        },
-        {
-          "text": "按10月7日返校",
-          "assignee": null,
-          "scope": "conditional",
-          "condition": "填写2026年10月8日返校且能按要求10月7日返校的同学",
-          "details": [],
-          "steps": [],
-          "time": null,
-          "timeText": "",
-          "location": null
-        },
-        {
-          "text": "办理请假手续",
-          "assignee": null,
-          "scope": "conditional",
-          "condition": "填写2026年10月8日返校但不能按要求10月7日返校的同学",
-          "details": [
-            "请假必须有**正当理由**，否则不予批准"
-          ],
-          "steps": [],
-          "time": null,
-          "timeText": "",
-          "location": null
-        }
-      ],
-      "materials": [],
-      "warnings": [
-        "请各位同学**注意安全**，按申报时间按时返校",
-        "具体名单详见附件公示"
-      ],
-      "reminders": [],
-      "id": "example-reading-v21-1",
-      "originalText": "@全体成员 【2026年国庆节去离校准假名单】\n现将国庆节假期离校名单予以公布，请各位同学 注意安全，按申报时间按时返校！\n具体名单详见附件公示。\n注意：\n请填写2027年返校的同学，修改返校时间！\n请填写2026年10月8日返校的同学，按照要求10月7日返校，否者请按照【请假流程】办理【请假手续】。\n【请假必须有正当理由，否则不予批准】",
-      "createdAt": "2026-10-07T02:14:55.889Z",
-      "completed": false,
-      "dismissed": false,
-      "localDeadline": null,
-      "note": "",
-      "audienceOverride": "",
-      "attachments": []
-    },
-    {
-      "schemaVersion": 4,
-      "kind": "information",
-      "title": "助学贷款入账处理",
-      "summary": "国家开发银行生源地助学贷款正陆续发放，学校预计十月中旬完成入账处理，二次缴费将统一退还至绑定银行卡。",
-      "deadline": null,
-      "deadlineText": "",
-      "timeline": [
-        {
-          "label": "学校预计完成入账处理（本科生选课新增学分学费一并结算）",
-          "time": null,
-          "timeText": "十月中旬",
-          "location": null,
-          "timeSpec": {
-            "type": "partial",
-            "year": null,
-            "month": 10,
-            "day": null,
-            "hour": null,
-            "minute": null,
-            "rawText": "十月中旬"
-          }
-        },
-        {
-          "label": "财务处统一退还二次缴费至学生财务系统绑定的银行卡",
-          "time": null,
-          "timeText": "",
-          "location": null
-        }
-      ],
       "tasks": [],
       "materials": [],
       "warnings": [],
       "reminders": [
-        "贷款到账短信不等于学费已缴",
-        "学校将贷款资金转为学费入账需要一定处理时间，学生收到短信后仍显示欠费属于正常情况",
-        "部分学生在学校录入回执后，又自行缴纳了学费或住宿费，贷款放款后便造成二次缴费"
-      ],
-      "id": "example-reading-v21-2",
-      "originalText": "@全体成员 【转发资助中心消息】\n当前，国家开发银行生源地助学贷款正陆续发放，学生也将陆续收到短信提醒。\n同学们：\n贷款到账短信不等于学费已缴。学校将贷款资金转为学费入账需要一定处理时间，因此学生收到短信后仍显示欠费属于正常情况。学校预计于十月中旬完成入账处理（届时本科生选课新增学分学费将一并结算）。\n此外，部分学生在学校录入回执后，又自行缴纳了学费或住宿费，贷款放款后便造成二次缴费。财务处将在入账处理完毕后，统一退还至学生财务系统绑定的银行卡中。",
-      "createdAt": "2026-10-07T02:13:58.284Z",
-      "completed": false,
-      "dismissed": false,
-      "localDeadline": null,
-      "note": "",
-      "audienceOverride": "",
-      "attachments": []
-    },
-    {
-      "schemaVersion": 4,
-      "kind": "task",
-      "title": "新生学籍电子注册核对",
-      "summary": "2026级新生须在10月15号前完成网上电子注册学籍核对，港澳台新生另行通知。",
-      "deadline": null,
-      "deadlineText": "10月15号前",
-      "timeline": [],
-      "tasks": [
         {
-          "text": "完成学籍电子注册",
-          "assignee": null,
-          "scope": "conditional",
-          "condition": "2026级新生（不含待学信网数据更新后另行通知的港澳台新生）",
-          "details": [
-            "在**中国高等教育学生信息网**注册完毕",
-            "新生通过学籍电子注册才能获得学籍，具有学籍的学生才能获得毕业证书",
-            "通知链接：https://jwc.cqu.edu.cn/info/1080/6186.htm"
-          ],
-          "steps": [],
-          "time": null,
-          "timeText": "10月15号前",
-          "location": null,
-          "timeSpec": {
-            "type": "partial",
-            "year": null,
-            "month": 10,
-            "day": 15,
-            "hour": null,
-            "minute": null,
-            "rawText": "10月15号前"
-          }
+          "id": "95529f71-c8ba-454f-a8f2-8d4a3b5ee6b3",
+          "text": "军训期间无特殊情况不能请假外出夜不归宿",
+          "note": ""
+        },
+        {
+          "id": "e0df23c0-e22d-4be9-9c8c-759f2a70eb27",
+          "text": "因病去医院检查复查，并提交医院证明的可以请假",
+          "note": ""
+        },
+        {
+          "id": "244c0f45-b02e-4d7e-a3a1-2e01ac011dc0",
+          "text": "其他情况都不允许",
+          "note": ""
         }
       ],
-      "materials": [],
-      "warnings": [
-        "2026级港澳台新生待学信网数据更新后另行通知学生进行注册"
-      ],
-      "reminders": [],
-      "deadlineSpec": {
-        "type": "partial",
-        "year": null,
-        "month": 10,
-        "day": 15,
-        "hour": null,
-        "minute": null,
-        "rawText": "10月15号前"
-      },
-      "id": "example-reading-v21-3",
-      "originalText": "@全体成员\n关于开展2026级新生网上电子注册学籍核对的通知https://jwc.cqu.edu.cn/info/1080/6186.htm\n要求必须10月15号前在“中国高等教育学生信息网”注册完毕，新生通过学籍电子注册才能获得学籍，具有学籍的学生才能获得毕业证书（2026级港澳台新生待学信网数据更新后另行通知学生进行注册）。",
-      "createdAt": "2026-10-07T02:14:55.889Z",
+      "id": "example-reading-v25-1",
+      "originalText": "各位注意，军训期间无特殊情况不能请假外出夜不归宿。除非因病去医院检查复查，并提交医院证明，其他情况都不允许。@全体成员",
+      "createdAt": "2026-10-08T16:16:56.211Z",
+      "updatedAt": "2026-10-08T16:16:56.211Z",
       "completed": false,
       "dismissed": false,
-      "localDeadline": null,
       "note": "",
+      "localDeadline": null,
       "audienceOverride": "",
       "attachments": []
     },
     {
-      "schemaVersion": 4,
+      "schemaVersion": 5,
       "kind": "task",
-      "title": "学生评教",
-      "summary": "本科生评教系统已开放，学生须在课程结束前及时评教。",
-      "deadline": null,
-      "deadlineText": "",
-      "timeline": [],
-      "tasks": [
-        {
-          "text": "完成课程评教",
-          "assignee": null,
-          "scope": "all",
-          "condition": "",
-          "details": [
-            "使用微信搜索并关注“**重庆大学服务号**”，点击菜单“功能”->“评教”，输入统一认证号和密码（或者扫描二维码）即可进入系统",
-            "若忘记密码，在统一认证界面点击“忘记密码”按照指引操作即可"
-          ],
-          "steps": [],
-          "time": null,
-          "timeText": "课程结束前",
-          "location": null,
-          "timeSpec": {
-            "type": "unknown",
-            "year": null,
-            "month": null,
-            "day": null,
-            "hour": null,
-            "minute": null,
-            "rawText": "课程结束前"
-          }
-        }
-      ],
-      "materials": [],
-      "warnings": [],
-      "reminders": [
-        "学生评教都将以【**匿名**】的方式反映，请同学们在评教时不要有所顾虑",
-        "《关于开展2026—2027学年第一学期学生评教的通知》见QQ群文件"
-      ],
-      "id": "example-reading-v21-4",
-      "originalText": "本科生评教系统已经开放了，请提醒学生（在课程结束前）及时评教。《关于开展2026—2027学年第一学期学生评教的通知》见QQ群文件[表情][表情]\n\n学生评教方式：\n使用微信搜索并关注“重庆大学服务号”，点击菜单“功能”->“评教”，输入统一认证号和密码（或者扫描二维码）即可进入系统。若忘记密码，在统一认证界面点击“忘记密码”按照指引操作即可。\n\n温馨提示：学生评教都将以【匿名】的方式反映，请同学们在评教时不要有所顾虑。",
-      "createdAt": "2026-10-07T02:13:58.284Z",
-      "completed": false,
-      "dismissed": false,
-      "localDeadline": null,
-      "note": "",
-      "audienceOverride": "",
-      "attachments": []
-    },
-    {
-      "schemaVersion": 4,
-      "kind": "task",
-      "title": "SRTP项目申报",
-      "summary": "2026级大学生科研训练计划（SRTP）项目申报已启动，有意申报者可按两种方式之一组队申报。",
+      "title": "2026级SRTP项目申报",
+      "summary": "2026级大学生科研训练计划（SRTP）项目申报已启动，可在指定平台选择两种方式之一申报，截止2026年10月20日24:00。",
       "deadline": "2026-10-21T00:00:00",
       "deadlineText": "2026年10月20日24:00",
-      "timeline": [],
-      "tasks": [
+      "timeline": [
         {
-          "text": "申报SRTP项目",
-          "assignee": null,
-          "scope": "conditional",
-          "condition": "有意申报SRTP项目的同学",
-          "details": [
-            "申报平台：**新版重庆大学大学生创新创业项目管理平台** https://sxic.cqu.edu.cn/upm/",
-            "两种方式二选一：选择老师发布的现有项目，自行找队友组队参加；或自己拟定题目，联系心仪的老师担任指导老师，招募队友组队",
-            "通知链接：https://sxic.cqu.edu.cn/content/news-detail?menuIds=64,66&params=3308e6d4b0564815b91b3f596ff0207c （需使用校园网访问）"
-          ],
-          "steps": [],
+          "label": "申报截止",
           "time": null,
           "timeText": "2026年10月20日24:00",
           "location": null,
@@ -370,12 +210,45 @@
           }
         }
       ],
+      "tasks": [
+        {
+          "text": "申报SRTP项目",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "2026级申报SRTP项目的同学",
+          "details": [
+            "申报平台：新版重庆大学大学生创新创业项目管理平台 https://sxic.cqu.edu.cn/upm/",
+            "两种方式二选一：选择老师发布的现有项目，自行找队友组队参加；或自己拟定题目，联系心仪的老师担任指导老师，招募队友组队"
+          ],
+          "steps": [],
+          "time": null,
+          "timeText": "",
+          "location": null,
+          "id": "608ea269-2210-42df-89e6-777dff0a2a69",
+          "completed": false,
+          "dismissed": false,
+          "note": "",
+          "localDeadline": null
+        }
+      ],
       "materials": [],
       "warnings": [
-        "项目结题后可获得**2个创新学分**，直接满足毕业要求的创新学分",
+        "需使用校园网访问通知链接",
+        "项目结题后可获得2个创新学分，直接满足毕业要求的创新学分",
         "原则上完成校级SRTP后，大二才有资格申报国家级、市级大创项目"
       ],
-      "reminders": [],
+      "reminders": [
+        {
+          "id": "54b2533d-add3-4468-b4c3-323990e89d00",
+          "text": "获得基础的科研训练经历，为后续竞赛、保研、进课题组打基础",
+          "note": ""
+        },
+        {
+          "id": "62a69ed3-39a9-4fad-9915-dd69aac7946f",
+          "text": "通知链接：https://sxic.cqu.edu.cn/content/news-detail?menuIds=64,66&params=3308e6d4b0564815b91b3f596ff0207c",
+          "note": ""
+        }
+      ],
       "deadlineSpec": {
         "type": "date_time",
         "year": 2026,
@@ -385,21 +258,64 @@
         "minute": 0,
         "rawText": "2026年10月20日24:00"
       },
-      "id": "example-reading-v21-5",
+      "id": "example-reading-v25-2",
       "originalText": "各位同学好，2026级大学生科研训练计划（SRTP）项目申报已经正式启动！@全体成员\n\n《关于组织申报2026级“大学生科研训练计划”（SRTP）项目的通知》\nhttps://sxic.cqu.edu.cn/content/news-detail?menuIds=64,66&params=3308e6d4b0564815b91b3f596ff0207c\n（需使用校园网访问）\n\n📌 参与SRTP的作用\n1. 项目结题后可获得 2个创新学分，直接满足毕业要求的创新学分；\n2. 获得基础的科研训练经历，为后续竞赛、保研、进课题组打基础；\n3. 原则上完成校级SRTP后，大二才有资格申报国家级、市级大创项目。\n\n📌 申报方式\n两种方式二选一即可：\n- 选择老师发布的现有项目，自行找队友组队参加；\n- 自己拟定题目，联系心仪的老师担任指导老师，招募队友组队。\n\n⚠️ 关键时间与平台\n1. 申报平台：新版重庆大学大学生创新创业项目管理平台\nhttps://sxic.cqu.edu.cn/upm/\n2. 截止时间：2026年10月20日24:00",
-      "createdAt": "2026-10-07T02:14:55.889Z",
+      "createdAt": "2026-10-08T16:16:56.211Z",
+      "updatedAt": "2026-10-08T16:16:56.211Z",
       "completed": false,
       "dismissed": false,
-      "localDeadline": null,
       "note": "",
+      "localDeadline": null,
       "audienceOverride": "",
       "attachments": []
     },
     {
-      "schemaVersion": 4,
+      "schemaVersion": 5,
+      "kind": "information",
+      "title": "助学贷款发放与入账说明",
+      "summary": "国家开发银行生源地助学贷款陆续发放，到账短信不等于学费已缴，学校预计十月中旬完成入账。",
+      "deadline": null,
+      "deadlineText": "",
+      "timeline": [
+        {
+          "label": "学校预计完成贷款资金入账处理（届时本科生选课新增学分学费一并结算）",
+          "time": null,
+          "timeText": "十月中旬",
+          "location": null,
+          "timeSpec": {
+            "type": "partial",
+            "year": null,
+            "month": 10,
+            "day": null,
+            "hour": null,
+            "minute": null,
+            "rawText": "十月中旬"
+          }
+        }
+      ],
+      "tasks": [],
+      "materials": [],
+      "warnings": [
+        "贷款到账短信不等于学费已缴；学校将贷款资金转为学费入账需要一定处理时间，收到短信后仍显示欠费属于正常情况。",
+        "部分学生在学校录入回执后，又自行缴纳了学费或住宿费，贷款放款后造成二次缴费；财务处将在入账处理完毕后统一退还至学生财务系统绑定的银行卡中。"
+      ],
+      "reminders": [],
+      "id": "example-reading-v25-3",
+      "originalText": "@全体成员 【转发资助中心消息】\n当前，国家开发银行生源地助学贷款正陆续发放，学生也将陆续收到短信提醒。\n同学们：\n贷款到账短信不等于学费已缴。学校将贷款资金转为学费入账需要一定处理时间，因此学生收到短信后仍显示欠费属于正常情况。学校预计于十月中旬完成入账处理（届时本科生选课新增学分学费将一并结算）。\n此外，部分学生在学校录入回执后，又自行缴纳了学费或住宿费，贷款放款后便造成二次缴费。财务处将在入账处理完毕后，统一退还至学生财务系统绑定的银行卡中。",
+      "createdAt": "2026-10-08T16:16:59.589Z",
+      "updatedAt": "2026-10-08T16:16:59.589Z",
+      "completed": false,
+      "dismissed": false,
+      "note": "",
+      "localDeadline": null,
+      "audienceOverride": "",
+      "attachments": []
+    },
+    {
+      "schemaVersion": 5,
       "kind": "reminder",
-      "title": "军训期间外出纪律",
-      "summary": "军训期间无特殊情况不能请假外出夜不归宿，因病就医需提交医院证明。",
+      "title": "军训期间宿舍安全提醒",
+      "summary": "军训期间宿舍长期无人，请落实断水电、锁门窗、妥善放置物品等安全事项。",
       "deadline": null,
       "deadlineText": "",
       "timeline": [],
@@ -407,81 +323,245 @@
       "materials": [],
       "warnings": [],
       "reminders": [
-        "军训期间**无特殊情况不能请假外出夜不归宿**",
-        "除非因病去医院检查复查，并**提交医院证明**，其他情况都不允许"
+        {
+          "id": "7e8683c9-e980-4ba0-9ed7-275ab28a8ec9",
+          "text": "断水电：关闭排插电源，拔掉电器插头；关紧水龙头等阀门。",
+          "note": ""
+        },
+        {
+          "id": "9d02a2e6-431c-453b-8ae3-514142713374",
+          "text": "锁门窗：反锁宿舍门，关闭并锁好所有窗户，低层宿舍尤其注意。",
+          "note": ""
+        },
+        {
+          "id": "3e2f1f90-c8b6-4af4-b68e-e2301bd87aed",
+          "text": "妥置物：贵重物品、证件随身携带；清理易变质食品，物品有序收纳。",
+          "note": ""
+        }
       ],
-      "id": "example-reading-v21-6",
-      "originalText": "各位注意，军训期间无特殊情况不能请假外出夜不归宿。除非因病去医院检查复查，并提交医院证明，其他情况都不允许。@全体成员",
-      "createdAt": "2026-10-07T02:14:55.889Z",
+      "id": "example-reading-v25-4",
+      "originalText": "【军训期间宿舍安全提醒】\n\n各位同学好：\n由于军训期间宿舍长期无人，为杜绝安全隐患、保障财产安全，请做好以下安全事项：\n\n1.断水电：关闭排插电源，拔掉电器插头；关紧水龙头等阀门。\n2.锁门窗：反锁宿舍门，关闭并锁好所有窗户，低层宿舍尤其注意。\n3.妥置物：贵重物品、证件随身携带；清理易变质食品，物品有序收纳。\n\n请大家高度重视，共同守护宿舍安全![表情][表情][表情][表情]",
+      "createdAt": "2026-10-08T16:16:59.589Z",
+      "updatedAt": "2026-10-08T16:16:59.589Z",
       "completed": false,
       "dismissed": false,
-      "localDeadline": null,
       "note": "",
+      "localDeadline": null,
       "audienceOverride": "",
       "attachments": []
     },
     {
-      "schemaVersion": 4,
+      "schemaVersion": 5,
       "kind": "task",
-      "title": "第十一届海峡两岸口译大赛校选赛报名",
-      "summary": "重庆大学将于2026年9月举办第十一届海峡两岸口译大赛校选赛，全日制在校生可报名参赛。",
-      "deadline": "2026-09-22T15:00:00",
-      "deadlineText": "2026年9月22日15:00",
-      "timeline": [
-        {
-          "label": "初赛",
-          "time": null,
-          "timeText": "2026年9月24日（具体时间另行通知）",
-          "location": "线上"
-        },
-        {
-          "label": "决赛",
-          "time": null,
-          "timeText": "赛事群内另行通知",
-          "location": "A校园（具体地点待定）"
-        }
-      ],
+      "title": "本科生评教",
+      "summary": "本科生评教系统已开放，请在课程结束前及时完成评教。",
+      "deadline": null,
+      "deadlineText": "",
+      "timeline": [],
       "tasks": [
         {
-          "text": "扫描二维码完成校选赛报名登记",
-          "assignee": "重庆大学全日制在校生",
+          "text": "完成评教",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "本科生",
           "details": [
-            "扫描通知中的下方二维码，完成报名登记",
-            "报名截止后不接受任何方式、任何渠道的补报名"
+            "在课程结束前及时评教",
+            "学生评教以匿名方式反映，评教时不要有所顾虑"
+          ],
+          "steps": [
+            {
+              "text": "进入评教系统",
+              "details": [
+                "使用微信搜索并关注“重庆大学服务号”，点击菜单“功能”->“评教”，输入统一认证号和密码（或者扫描二维码）即可进入系统",
+                "若忘记密码，在统一认证界面点击“忘记密码”按照指引操作即可"
+              ],
+              "id": "4d4eb3c9-9d25-43d7-b938-510cf793d5bc",
+              "completed": false,
+              "note": ""
+            }
           ],
           "time": null,
           "timeText": "",
           "location": null,
+          "id": "8fbfa0a7-c0e1-475c-af83-d9eeeeaf5a44",
+          "completed": false,
+          "dismissed": false,
+          "note": "",
+          "localDeadline": null
+        }
+      ],
+      "materials": [],
+      "warnings": [],
+      "reminders": [],
+      "id": "example-reading-v25-5",
+      "originalText": "本科生评教系统已经开放了，请提醒学生（在课程结束前）及时评教。《关于开展2026—2027学年第一学期学生评教的通知》见QQ群文件[表情][表情]\n\n学生评教方式：\n使用微信搜索并关注“重庆大学服务号”，点击菜单“功能”->“评教”，输入统一认证号和密码（或者扫描二维码）即可进入系统。若忘记密码，在统一认证界面点击“忘记密码”按照指引操作即可。\n\n温馨提示：学生评教都将以【匿名】的方式反映，请同学们在评教时不要有所顾虑。",
+      "createdAt": "2026-10-08T16:16:59.589Z",
+      "updatedAt": "2026-10-08T16:16:59.589Z",
+      "completed": false,
+      "dismissed": false,
+      "note": "",
+      "localDeadline": null,
+      "audienceOverride": "",
+      "attachments": []
+    },
+    {
+      "schemaVersion": 5,
+      "kind": "task",
+      "title": "国庆留校查寝安排",
+      "summary": "国庆留校同学需配合查寝并遵守宿舍管理，班干部负责安排与上报。",
+      "deadline": null,
+      "deadlineText": "",
+      "timeline": [],
+      "tasks": [
+        {
+          "text": "安排查寝工作人员",
+          "assignee": "留校同学临时负责人",
+          "scope": "role",
+          "condition": "各班留校同学中的临时负责人",
+          "details": [
+            "分别设置1名男女查寝工作人员"
+          ],
+          "steps": [],
+          "time": null,
+          "timeText": "",
+          "location": null,
+          "id": "f92614e8-a612-43d4-af06-85c9a820a374",
           "completed": false,
           "dismissed": false,
           "note": "",
           "localDeadline": null
         },
         {
-          "text": "加入赛事QQ群",
-          "assignee": "报名参赛选手",
+          "text": "每日查寝并汇报",
+          "assignee": "查寝工作人员",
+          "scope": "role",
+          "condition": "各班留校同学中安排的查寝工作人员",
           "details": [
-            "赛事QQ群：1108753260",
-            "请报名后立即加入赛事QQ群",
-            "除本通知之外的其他相关赛事动态信息均会在本赛事QQ群通知和发布，如因未在报名时间截止之前加入本赛事QQ群导致错失各类赛情信息而参赛失败自行负责"
+            "查寝名单如表所示",
+            "23点前将查寝情况汇报给各班班长"
           ],
+          "steps": [],
           "time": null,
           "timeText": "",
           "location": null,
+          "id": "02de53aa-af74-4d0d-aea4-1fe9fef12229",
           "completed": false,
           "dismissed": false,
           "note": "",
           "localDeadline": null
         },
         {
-          "text": "关注赛事资讯平台",
-          "assignee": "参赛选手",
-          "details": [
-            "关注外国语学院网站、外国语学院微信公众号、外语竞赛微信公众号（微信搜：CQU外语竞赛）等平台，获取更多赛事资讯"
-          ],
+          "text": "工作群中上报查寝情况",
+          "assignee": "班长",
+          "scope": "role",
+          "condition": "各班班长",
+          "details": [],
+          "steps": [],
           "time": null,
           "timeText": "",
           "location": null,
+          "id": "73084430-a7d8-422a-9f5f-24566db0cac7",
+          "completed": false,
+          "dismissed": false,
+          "note": "",
+          "localDeadline": null
+        },
+        {
+          "text": "做好记录和查寝准备",
+          "assignee": "班干部",
+          "scope": "role",
+          "condition": "各班班干部",
+          "details": [],
+          "steps": [],
+          "time": null,
+          "timeText": "",
+          "location": null,
+          "id": "d38cf3e5-64a7-406e-a567-87b0efa3761d",
+          "completed": false,
+          "dismissed": false,
+          "note": "",
+          "localDeadline": null
+        }
+      ],
+      "materials": [],
+      "warnings": [],
+      "reminders": [
+        {
+          "id": "9ac3981b-d927-4ee2-a9f8-f194677012f0",
+          "text": "留校同学遵守宿舍管理条例，不得晚于23点返回宿舍",
+          "note": ""
+        },
+        {
+          "id": "c340ba7f-7883-4434-868e-2f81d03fa9bb",
+          "text": "如需晚归请告知室友大致回寝时间并给通知发布者留言",
+          "note": ""
+        }
+      ],
+      "id": "example-reading-v25-6",
+      "originalText": "@全体成员 【2026年国庆节留校情况】\n各班留校同学中，请临时负责人安排分别设置1名男女查寝工作人员，每日查寝，查寝名单如表所示，并在23点前将查寝情况汇报给各班班长，班长在工作群中上报。\n请各位留校同学遵守宿舍管理条例，不得晚于23点返回宿舍，如需晚归请告知室友大致回寝时间并给我留言。\n以下是留校名单 ：\n\n请各位班干部做好记录和查寝准备。",
+      "createdAt": "2026-10-08T16:19:10.969Z",
+      "updatedAt": "2026-10-08T16:19:10.969Z",
+      "completed": false,
+      "dismissed": false,
+      "note": "",
+      "localDeadline": null,
+      "audienceOverride": "",
+      "attachments": []
+    },
+    {
+      "schemaVersion": 5,
+      "kind": "task",
+      "title": "国庆离校返校安排",
+      "summary": "国庆离校名单已公布，部分同学需修改返校时间或按请假流程办理。",
+      "deadline": null,
+      "deadlineText": "",
+      "timeline": [],
+      "tasks": [
+        {
+          "text": "修改返校时间",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "填写2027年返校的同学",
+          "details": [],
+          "steps": [],
+          "time": null,
+          "timeText": "",
+          "location": null,
+          "id": "bc76e3fb-da72-485c-94ad-8d0e4965a51b",
+          "completed": false,
+          "dismissed": false,
+          "note": "",
+          "localDeadline": null
+        },
+        {
+          "text": "按要求10月7日返校",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "填写2026年10月8日返校的同学",
+          "details": [],
+          "steps": [],
+          "time": null,
+          "timeText": "",
+          "location": null,
+          "id": "232e87a9-2fcf-4b64-b0b7-f961c5a21860",
+          "completed": false,
+          "dismissed": false,
+          "note": "",
+          "localDeadline": null
+        },
+        {
+          "text": "按请假流程办理请假手续",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "填写2026年10月8日返校但不能10月7日返校的同学",
+          "details": [
+            "请假必须有正当理由，否则不予批准"
+          ],
+          "steps": [],
+          "time": null,
+          "timeText": "",
+          "location": null,
+          "id": "67520fd8-2ba3-4ea6-93a5-f2271303176a",
           "completed": false,
           "dismissed": false,
           "note": "",
@@ -490,84 +570,110 @@
       ],
       "materials": [],
       "warnings": [
-        "如比赛时间、地点等事项因学校学院临时客观性重要事件冲突不得不调整时，校赛工作组会基于参赛选手整体/多数情况调整执行方案，并在有限范围内兼顾个例特殊情况；无法接受调整则视为自行弃赛。",
-        "线下决赛有赛前签到、抽签、抽题、备赛、比赛、观赛、评委点评、获奖结果公布、颁奖合影等环节，参赛选手应遵循赛事相关安排要求完成上述所有环节，方视为成功完成比赛。",
-        "如因未及时查看赛事资讯，致使出现未遵循参赛要求或赛程环节安排、未按规定时间到场签到抽签、因个人因素临场弃赛、无故无理扰乱赛场秩序、整场比赛未结束因个人因素提前离开赛场等情况而影响正常参赛、比赛结果、参加其他英语竞赛等，由选手自行负责，赛事方不予处理。",
-        "校赛设口译之星、一等奖、二等奖、三等奖各若干名。",
-        "校园选拔赛获奖选手有机会进入我校口译队，长期接受专业老师指导。",
-        "根据比赛表现，将选拔部分优秀选手进行集训并代表重庆大学参加西南区级赛，晋级选手代表重庆市参加大陆决赛乃至两岸总决赛。"
+        "请假必须有正当理由，否则不予批准"
       ],
-      "reminders": [],
-      "id": "example-v1-v7-8",
-      "originalText": "关于举办第十一届海峡两岸口译大赛重庆大学校选赛的通知\n“海峡两岸口译大赛”是由厦门大学发起并主办、海峡两岸高校广泛参与、在海峡两岸暨港澳地区高等教育领域具有重要影响力的国家级品牌学业竞赛，是一项具有开拓性的重要赛事，大赛始终与国家发展、国家战略紧密结合，为中华民族共同体建设添砖加瓦。大赛包括校级赛、省级赛、区级赛、大陆地区决赛/台湾地区决赛/香港地区决赛/澳门地区决赛，以及总决赛等阶段。大陆地区比赛分为西北赛区、东北赛区、华北赛区、华中赛区、华东赛区、华南赛区和西南赛区。\n经研究，我校决定于近期举办2026年第十一届海峡两岸口译大赛重庆大学校选赛。现将具体事项通知如下：\n一、组织方\n校赛主办：重庆大学\n校赛承办：重庆大学外国语学院、外语演讲与辩论协会\n二、参赛对象：重庆大学全日制在校生\n三、赛程安排\n（一）初赛\n1.时间：2026年9月24日（具体时间另行通知）\n2.地点：线上\n3.竞赛规则\n先听1分钟左右的英语音频材料，提示音响起后，参赛者在1分钟30秒内将其译成中文；随后，听1分钟左右的中文音频材料，提示音响起后，参赛者在1分钟40秒内将其译成英文。参赛者可以记笔记。初赛得分靠前的若干选手晋级决赛。\n（二）决赛\n1.时间：赛事群内另行通知\n2.地点：A校园（具体地点待定）\n3.竞赛规则\n（1）主旨口译\n选手先听一段1分钟左右的中文讲话音频，提示音响起后，在45秒内完成汉英主旨口译；然后再听一段1分钟左右的英文讲话音频，提示音响起后，在45秒内完成英汉主旨口译。本环节不能记笔记。\n（2）交替传译\n选手先听一段1.5分钟左右的中文讲话音频，提示音响起后，在2分钟15秒内完成汉英口译；然后再听一段1.5分钟左右的英文讲话音频，提示音响起后，在2分钟内完成英汉口译。本环节可以做笔记。\n四、报名方式\n1．扫描下方二维码，完成报名登记。\n2．报名截止时间：2026年9月22日15:00\n3．赛事QQ群：1108753260\n4．请关注外国语学院网站、外国语学院微信公众号、外语竞赛微信公众号(微信搜:CQU外语竞赛)等平台，获取更多赛事资讯。\n六、奖项设置：校赛设口译之星、一等奖、二等奖、三等奖各若干名。\n七、其他事项说明\n1.如比赛时间、地点等事项因学校学院临时客观性重要事件冲突不得不调整时，校赛工作组会基于参赛选手整体/多数情况，调整出合适的执行方案，并在有限范围内兼顾因客观变动导致的个例特殊情况。无法接受调整则视为自行弃赛。\n2.请报名后立即加入赛事QQ群。除本通知之外的其他相关此赛事动态信息均会在本赛事QQ群通知和发布，如因未在报名时间截止之前加入本赛事QQ群导致错失各类赛情信息而参赛失败自行负责。\n3.校赛报名截止后不接受任何方式、任何渠道的补报名。\n4.凡是校园选拔赛的获奖选手，都有机会进入我校口译队，长期接受专业老师指导。\n5.根据比赛表现，将选拔部分优秀选手进行集训并代表重庆大学参加西南区级赛，晋级选手代表重庆市参加大陆决赛乃至两岸总决赛。\n6.线下决赛有赛前签到、抽签、抽题、备赛、比赛、观赛（等待比赛结果）、评委点评、获奖结果公布、颁奖合影等环节。参赛选手应遵循赛事相关安排、要求，完成上述赛事所有环节，方视为成功完成比赛。如因未及时查看赛事资讯，致使出现包括但不限于以下情况而影响正常参赛、比赛结果、参加其他英语竞赛等，由选手自行负责，赛事方不予处理：\n（1）未遵循赛事方发布的参赛要求、赛程环节安排；\n（2）未按规定时间到场签到、抽签；\n（3）因各种个人因素临场弃赛；\n（4）无故、无理扰乱赛场秩序；\n（5）整场比赛未结束，因各种个人因素提前离开赛场。\n重庆大学 重庆大学外国语学院 外语演讲与辩论协会\n2026年09月15日",
-      "createdAt": "2026-10-04T00:00:00.000Z",
+      "reminders": [
+        {
+          "id": "e9a3f750-22ba-4559-828b-7710edcadc31",
+          "text": "请各位同学注意安全，按申报时间按时返校",
+          "note": ""
+        },
+        {
+          "id": "6fb2d0f0-20cf-4766-aa19-3e417f81aefa",
+          "text": "具体名单详见附件公示",
+          "note": ""
+        }
+      ],
+      "id": "example-reading-v25-7",
+      "originalText": "@全体成员 【2026年国庆节去离校准假名单】\n现将国庆节假期离校名单予以公布，请各位同学 注意安全，按申报时间按时返校！\n具体名单详见附件公示。\n注意：\n请填写2027年返校的同学，修改返校时间！\n请填写2026年10月8日返校的同学，按照要求10月7日返校，否者请按照【请假流程】办理【请假手续】。\n【请假必须有正当理由，否则不予批准】",
+      "createdAt": "2026-10-08T16:19:10.969Z",
+      "updatedAt": "2026-10-08T16:19:10.969Z",
       "completed": false,
-      "attachments": [],
+      "dismissed": false,
       "note": "",
       "localDeadline": null,
-      "reminderNotes": []
+      "audienceOverride": "",
+      "attachments": []
     },
     {
-      "schemaVersion": 4,
+      "schemaVersion": 5,
       "kind": "task",
-      "title": "辅修专业选课确认",
-      "summary": "2025-2026学年第二学期辅修专业选课确认及放弃修读手续安排。",
+      "title": "入党申请材料提交与信息填写",
+      "summary": "意愿入党的共青团员需在9月20日前撰写并提交入党申请书和自传，已提交入党申请书的同学需在9月19日17:00前填写在线信息表。",
       "deadline": null,
-      "deadlineText": "3月15日前",
+      "deadlineText": "9月19日",
       "timeline": [
         {
-          "label": "第4周周五",
+          "label": "线下纸质提交入党志愿书和自传",
           "time": null,
-          "timeText": "第4周周五（3月27日）",
-          "location": null
-        },
-        {
-          "label": "第5周周五",
-          "time": null,
-          "timeText": "第5周周五（4月3日）",
-          "location": null
+          "timeText": "9月20日",
+          "location": null,
+          "timeSpec": {
+            "type": "partial",
+            "year": null,
+            "month": 9,
+            "day": 20,
+            "hour": null,
+            "minute": null,
+            "rawText": "9月20日"
+          }
         }
       ],
       "tasks": [
         {
-          "text": "咨询辅修选课等具体事项",
-          "assignee": "2022、2023、2024级修读辅修专业的学生",
+          "text": "撰写并提交入党申请书和自传",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "意愿入党的共青团员",
           "details": [
-            "到所修辅修专业学院教务办公室或线上咨询本学期选课（重修课程、跨年级补修课程等）等具体事项"
+            "9月20日前完成撰写",
+            "一起交给各班临时团支部负责人",
+            "建议使用重庆大学信笺纸，入党申请书与自传信笺纸尺寸一致",
+            "避免涂改，落款格式符合要求，避免将落款内容放在第一行或最后一行",
+            "避免政治术语错误，专有名词不可混淆"
           ],
+          "steps": [],
           "time": null,
-          "timeText": "3月15日前",
+          "timeText": "9月20日前",
           "location": null,
+          "timeSpec": {
+            "type": "partial",
+            "year": null,
+            "month": 9,
+            "day": 20,
+            "hour": null,
+            "minute": null,
+            "rawText": "9月20日前"
+          },
+          "id": "c25460b0-fc63-412b-9d09-c87b0fedf3b9",
           "completed": false,
           "dismissed": false,
           "note": "",
           "localDeadline": null
         },
         {
-          "text": "在选课系统进行选课确认",
-          "assignee": "各年级修读辅修专业的学生",
+          "text": "填写入党申请人信息收集在线表格",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "已提交入党申请书的同学",
           "details": [
-            "在重大教学网选课系统（https://my.cqu.edu.cn/enroll）进行选课确认",
-            "未在网上进行选课确认的学生将视为放弃修读辅修专业"
+            "腾讯文档：2026级未来信息类【入党申请人信息收集】",
+            "9月19日下午17:00前填写"
           ],
+          "steps": [],
           "time": null,
-          "timeText": "3月15日前",
+          "timeText": "9月19日下午17:00",
           "location": null,
-          "completed": false,
-          "dismissed": false,
-          "note": "",
-          "localDeadline": null
-        },
-        {
-          "text": "提交放弃修读申请",
-          "assignee": "已取得辅修专业修读资格但决定中途放弃修读的学生",
-          "details": [
-            "到辅修专业学院教务办公室和本科教务管理系统提交申请，办理放弃修读辅修专业有关手续",
-            "过期不再办理"
-          ],
-          "time": null,
-          "timeText": "第4周周五（3月27日）前",
-          "location": null,
+          "timeSpec": {
+            "type": "unknown",
+            "year": null,
+            "month": null,
+            "day": null,
+            "hour": null,
+            "minute": null,
+            "rawText": "9月19日下午17:00"
+          },
+          "id": "b83ba9fb-0848-45f6-b92d-cbb6b272e34a",
           "completed": false,
           "dismissed": false,
           "note": "",
@@ -575,37 +681,151 @@
         }
       ],
       "materials": [
-        "汇总表（学院教务老师提交）"
+        "入党申请书和自传（意愿入党的共青团员，9月20日前）"
       ],
-      "warnings": [],
-      "reminders": [],
-      "id": "example-v1-v7-9",
-      "originalText": "2025-2026学年第二学期辅修专业工作安排的通知\n各学院：\n根据2025-2026学年第二学期辅修专业的工作安排，现将相关事宜通知如下：\n1．2022、2023、2024级修读辅修专业的学生，请于3月15日前到所修辅修专业学院教务办公室或线上咨询本学期选课（重修课程、跨年级补修课程等）等具体事项。\n2．各年级修读辅修专业的学生，须于3月15日前在重大教学网选课系统（https://my.cqu.edu.cn/enroll）进行选课确认，未在网上进行选课确认的学生将视为放弃修读辅修专业。\n3．已取得辅修专业修读资格但决定中途放弃修读的学生，请于第4周周五（3月27日）前到辅修专业学院教务办公室和本科教务管理系统提交申请，办理放弃修读辅修专业有关手续，过期不再办理。\n4．请各学院教务老师在本科教务管理系统将放弃修读辅修专业学生处理完毕后，于第5周周五（4月3日）前将汇总表交本科生院学籍管理科。\n特此通知\n本科生院\n2026年3月4日",
-      "createdAt": "2026-10-04T00:00:00.000Z",
+      "warnings": [
+        "党组织一般在每年3月份开始推荐和确定入党积极分子，建议年满18周岁后尽早提交入党申请书",
+        "非团员请等待后续发展团员通知，一般在学期中后段",
+        "党组织吸收28周岁以下的青年入党，一般应是共青团员",
+        "团组织关系转接不影响提交入党申请书"
+      ],
+      "reminders": [
+        {
+          "id": "b6e23ed7-88e4-43d2-b6f2-8df250c0eb53",
+          "text": "参考资料：发展党员工作手册 https://www.12371.cn/special/dwgzsc/fzdygzsc/",
+          "note": ""
+        },
+        {
+          "id": "efc5d8e6-ad2e-43ef-abe3-5895dbd1bd90",
+          "text": "重庆大学发展党员和党员教育、管理工作实施细则 https://dwzzb.cqu.edu.cn/info/1061/3681.htm",
+          "note": ""
+        },
+        {
+          "id": "85d2b7f2-cc52-4f1b-9cc0-74cdee95f284",
+          "text": "最新版党章 https://www.12371.cn/2022/10/27/ARTI1666845926836204.shtml",
+          "note": ""
+        },
+        {
+          "id": "bb3e0e7d-ad5a-4365-b765-008a5dafeeb2",
+          "text": "《中国共产党发展党员工作细则》2026年修订 https://mp.weixin.qq.com/s/ODjd21xKjElJdU47-wausw",
+          "note": ""
+        },
+        {
+          "id": "876b91cc-0093-4b94-855a-cdcee904c681",
+          "text": "附件1：发展党员常用文书（参考模板）",
+          "note": ""
+        },
+        {
+          "id": "ffd56454-90d0-4344-a131-9a126f2f1b22",
+          "text": "附件2：推优入党文件",
+          "note": ""
+        }
+      ],
+      "deadlineSpec": {
+        "type": "partial",
+        "year": null,
+        "month": 9,
+        "day": 19,
+        "hour": null,
+        "minute": null,
+        "rawText": "9月19日"
+      },
+      "id": "example-reading-v25-8",
+      "originalText": "【20250915通知4】【关于入党申请的预通知】\n@全体成员 \n由于入党申请人的情况各不相同，党组织对其培养教育和考察需要一定时间。参考《发展党员工作手册（新编本）》并结合实际工作情况，学院党委一般在每年3月份开始推荐和确定入党积极分子，如2026级新生有意愿加入中国共产党，建议年满18周岁后尽早提交入党申请书，以免错过时间节点。\n \n【🔥线下纸质提交】我们预计在【9月20日】统一收集一次大家的入党志愿书和自传，请各位意愿入党的共青团员在9月20日前严格按照文件要求撰写入党申请书和自传，一起交给各班临时团支部负责人。\n【🔥线上信息提交】请各位提交了入党申请书的同学，请于【9月19日】下午17:00填写以下在线表格。【腾讯文档】2026级未来信息类【入党申请人信息收集】2026级未来信息类【入党申请人信息收集】\n\n[表情]参考资料：\n发展党员工作手册https://www.12371.cn/special/dwgzsc/fzdygzsc/（来源：共产党员网）\n重庆大学发展党员和党员教育、管理工作实施细则https://dwzzb.cqu.edu.cn/info/1061/3681.htm\n\n✨入党申请其他注意事项：\n1、非团员请等待后续发展团员通知，一般在学期中后段。（友情提示：请注意体测达标+积累志愿时长）；\n2、团组织关系转接不影响提交入党申请书，推荐和确定入党积极分子前，团组织关系肯定已经转接好了；\n3、根据《发展党员工作手册》，党组织吸收28周岁以下的青年入党，一般应是共青团员；\n4、为了归档时的统一规范，建议使用重庆大学信笺纸（重大商店内自行购买）撰写入党申请书及自传，入党申请书与自传所使用的信笺纸尺寸应一致；\n5、端正入党动机。入党申请书和自传字数不设上限，没有字数要求，但不宜过少，同时入党申请书及自传应避免涂改；\n6、在撰写入党申请书以及自传时要尤其要注意格式规范参考文件《发展党员常用文书》，末尾的落款格式要符合要求，另外也要避免将落款内容放在第一行或者最后一行；\n\n7、避免出现政治术语错误，关键的政治表述应与最新版党章（建议在共产党员网查询：https://www.12371.cn/2022/10/27/ARTI1666845926836204.shtml）保持一致；\n8、习近平新时代中国特色社会主义思想、全面建成社会主义现代化强国等专有名词不可混淆；一般应写”习近平总书记“或”习近平同志“。可参考：新华社在《新闻阅评动态》第 315 期发表的《新华社新闻报道中的禁用词（第一批）》（自行查询）；\n9、请区分出生地、籍贯、住址的区别（见下图，住址参见个人身份证），建议请父母拍照自己的户口页，你自己长期保存在手机里，以后填写个人资料可能都会用上。\n\n10、《中国共产党发展党员工作细则》在2026年做了修订，规范了部分的名词，请大家自行学习查看：https://mp.weixin.qq.com/s/ODjd21xKjElJdU47-wausw\n\n附件1:发展党员常用文书（参考模板）\n附件2:推优入党文件（请提交学习相关要求）\n\n---\n\n【20260916通知1】【关于困难认定的通知1】\n同学们：\n根据学校《关于做好2026-2027学年家庭经济困难学生认定工作的通知》要求，现将2026级未来信息1-10班本年度困难认定的相关通知做如下安排：\n2026级未来信息1-10班困难认定程序\n1、本人申请\n1.1 需要提交的纸质材料：\n（1）个人申请书：详细介绍本人家庭情况， 目前存在的主要困难等，能够详细说明家庭经济状况。\n（2）《附件1：重庆大学家庭经济困难学生认定申请表》\n（3）《附件2：重庆大学家庭经济困难学生在校经济状况调查表》\n（4）《附件3：重庆大学学生家庭其他成员信息调查表》\n（5）其他辅助材料：低保证、贫困证明、残疾证等，（不是必须）\n提交方式：9 月 22 前，工作时间（8:30-12:00,14:00-17:30）将所有材料用信封装好（信封办公室可提供，不用密封），用便签纸写上“班级、姓名、学号、联系方式 ”贴在信封上，提交到理科楼117-3办公室（苏俊老师处）。\n\n1.2【智慧学工】线上申请：（9 月 22 日以前）\n学生在电脑端打开浏览器，通过统一身份认证号即可登录（网址：http://zhxg.cqu.edu.cn/）。在常用功能或者功能列表内，点击家庭困难生认定功能按钮进入功能页面，学生根据实际情况在申请页面填写申请信息并提交申请。\n\n2.班级民主评议 （时间：9 月 23 日-9 月 28 日）\n各班组织召开民主评议班会，根据申请人自述情况并结合日常表现，综合考量后打分，填写《家庭经济困难学生认定民主评议表（不记名）》\n注意：认定等级为一般困难、困难、特别困难三个等级\n\n评议小组根据同学们的打分，录入分值计算表，计算分值。填写汇总表《家庭经济困难学生认定民主评议班级统计表》\n\n3.辅导员考核、审核\n辅导员根据学生“基本得分 ”、“ 民主测评 ”结果情况及“系统建议等次 ”完成认定。通过系统可查看所带班级学生的申请信息，上传班级民主评议统计表并完成审批。\n\n\n4.学院调整、审批。（学院可根据实际情况对评定小组上报的困难等级进行调整。）\n\n\n5、 申请人确认等级（复核结果）\n\n\n\n6、学院领导审核\n\n\n\n7、公示\n\n具体通知见群文件：未来信息1-10班家庭经济困难学生认定程序。\n\n相关文件和表格见压缩包：\n\n---\n\n【20260907通知1】【关于2026级新生英语分级考试安排的通知】@全体成员 \n一、考试时间\n\n2026年9月9日（星期三）晚上18:30—20:30。\n\n（18:20发放答题卡；18:25发放试卷； 18:30考试开始，同步播放听力；20:30考试结束）\n\n二、考场办公室\n\nA校园：第五教学楼A5213、第八教学楼A8207\n\nB校园：第二综合楼B二316\n\n虎溪校园：第一教学楼D1240、综合楼DZ220\n\n注意事项：\n四、注意事项\n\n1.请考生自备2B铅笔、黑色中性笔或钢笔参加考试。\n\n2.本次考试的听力部分采用IP广播播音，考生无需自备耳机。\n\n3.考生必须携带校园一卡通（未完成报到注册的学生可携带身份证）参加考试，无证件者一律不准入场；开考30分钟后，禁止迟到考生入场。\n\n4.本次考试采用计算机阅卷，请各考生务必按照答题卡上 “注意事项”的要求正确填涂。\n\n具体教室安排：\n\n具体通知链接：\nhttps://jwc.cqu.edu.cn/info/1080/6170.htm",
+      "createdAt": "2026-10-08T16:16:48.092Z",
+      "updatedAt": "2026-10-08T16:16:48.092Z",
       "completed": false,
-      "attachments": [],
+      "dismissed": false,
       "note": "",
       "localDeadline": null,
-      "reminderNotes": []
+      "audienceOverride": "",
+      "attachments": []
     },
     {
-      "schemaVersion": 4,
+      "schemaVersion": 5,
       "kind": "task",
-      "title": "提交放弃修读汇总表",
-      "summary": "学院教务老师处理完放弃修读学生后，需提交汇总表。",
+      "title": "家庭经济困难学生认定申请",
+      "summary": "2026级未来信息1-10班学生需在9月22日前提交纸质材料并在智慧学工线上申请困难认定。",
       "deadline": null,
-      "deadlineText": "第5周周五（4月3日）前",
-      "timeline": [],
+      "deadlineText": "9 月 22 前",
+      "timeline": [
+        {
+          "label": "班级民主评议",
+          "time": null,
+          "timeText": "9 月 23 日-9 月 28 日",
+          "location": null,
+          "timeSpec": {
+            "type": "unknown",
+            "year": null,
+            "month": null,
+            "day": null,
+            "hour": null,
+            "minute": null,
+            "rawText": "9 月 23 日-9 月 28 日"
+          }
+        }
+      ],
       "tasks": [
         {
-          "text": "提交放弃修读辅修专业学生汇总表",
-          "assignee": "各学院教务老师",
+          "text": "提交困难认定纸质材料",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "2026级未来信息1-10班需要困难认定的学生",
           "details": [
-            "在本科教务管理系统将放弃修读辅修专业学生处理完毕后，将汇总表交本科生院学籍管理科"
+            "个人申请书：详细介绍本人家庭情况、目前存在的主要困难等",
+            "《附件1：重庆大学家庭经济困难学生认定申请表》",
+            "《附件2：重庆大学家庭经济困难学生在校经济状况调查表》",
+            "《附件3：重庆大学学生家庭其他成员信息调查表》",
+            "其他辅助材料：低保证、贫困证明、残疾证等（不是必须）",
+            "工作时间（8:30-12:00,14:00-17:30）提交",
+            "用信封装好（信封办公室可提供，不用密封）",
+            "用便签纸写上\"班级、姓名、学号、联系方式\"贴在信封上",
+            "提交到理科楼117-3办公室（苏俊老师处）"
           ],
+          "steps": [],
           "time": null,
-          "timeText": "第5周周五（4月3日）前",
+          "timeText": "9 月 22 前",
+          "location": "理科楼117-3办公室（苏俊老师处）",
+          "timeSpec": {
+            "type": "unknown",
+            "year": null,
+            "month": null,
+            "day": null,
+            "hour": null,
+            "minute": null,
+            "rawText": "9 月 22 前"
+          },
+          "id": "82ef3912-caa6-47cd-91bf-5d682ba266ca",
+          "completed": false,
+          "dismissed": false,
+          "note": "",
+          "localDeadline": null
+        },
+        {
+          "text": "在智慧学工线上申请困难认定",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "2026级未来信息1-10班需要困难认定的学生",
+          "details": [
+            "电脑端打开浏览器，通过统一身份认证号登录 http://zhxg.cqu.edu.cn/",
+            "在常用功能或功能列表内点击家庭困难生认定功能按钮进入功能页面",
+            "根据实际情况填写申请信息并提交申请",
+            "9月22日以前完成"
+          ],
+          "steps": [],
+          "time": null,
+          "timeText": "9 月 22 日以前",
           "location": null,
+          "timeSpec": {
+            "type": "unknown",
+            "year": null,
+            "month": null,
+            "day": null,
+            "hour": null,
+            "minute": null,
+            "rawText": "9 月 22 日以前"
+          },
+          "id": "5344418f-e4af-443e-9743-3d63f73a02b4",
           "completed": false,
           "dismissed": false,
           "note": "",
@@ -613,91 +833,347 @@
         }
       ],
       "materials": [
-        "汇总表"
+        "个人申请书",
+        "《附件1：重庆大学家庭经济困难学生认定申请表》",
+        "《附件2：重庆大学家庭经济困难学生在校经济状况调查表》",
+        "《附件3：重庆大学学生家庭其他成员信息调查表》",
+        "其他辅助材料：低保证、贫困证明、残疾证等（不是必须）"
       ],
-      "warnings": [],
-      "reminders": [],
-      "id": "example-v1-v7-10",
-      "originalText": "2025-2026学年第二学期辅修专业工作安排的通知\n各学院：\n根据2025-2026学年第二学期辅修专业的工作安排，现将相关事宜通知如下：\n1．2022、2023、2024级修读辅修专业的学生，请于3月15日前到所修辅修专业学院教务办公室或线上咨询本学期选课（重修课程、跨年级补修课程等）等具体事项。\n2．各年级修读辅修专业的学生，须于3月15日前在重大教学网选课系统（https://my.cqu.edu.cn/enroll）进行选课确认，未在网上进行选课确认的学生将视为放弃修读辅修专业。\n3．已取得辅修专业修读资格但决定中途放弃修读的学生，请于第4周周五（3月27日）前到辅修专业学院教务办公室和本科教务管理系统提交申请，办理放弃修读辅修专业有关手续，过期不再办理。\n4．请各学院教务老师在本科教务管理系统将放弃修读辅修专业学生处理完毕后，于第5周周五（4月3日）前将汇总表交本科生院学籍管理科。\n特此通知\n本科生院\n2026年3月4日",
-      "createdAt": "2026-10-04T00:00:00.000Z",
+      "warnings": [
+        "认定等级为一般困难、困难、特别困难三个等级",
+        "学院可根据实际情况对评定小组上报的困难等级进行调整",
+        "申请人需确认等级（复核结果）"
+      ],
+      "reminders": [
+        {
+          "id": "2add5145-85b2-47cd-88aa-251b3c92c233",
+          "text": "具体通知见群文件：未来信息1-10班家庭经济困难学生认定程序",
+          "note": ""
+        },
+        {
+          "id": "90a71fd5-8710-408a-9976-980141440a62",
+          "text": "相关文件和表格见压缩包",
+          "note": ""
+        }
+      ],
+      "deadlineSpec": {
+        "type": "unknown",
+        "year": null,
+        "month": null,
+        "day": null,
+        "hour": null,
+        "minute": null,
+        "rawText": "9 月 22 前"
+      },
+      "id": "example-reading-v25-9",
+      "originalText": "【20250915通知4】【关于入党申请的预通知】\n@全体成员 \n由于入党申请人的情况各不相同，党组织对其培养教育和考察需要一定时间。参考《发展党员工作手册（新编本）》并结合实际工作情况，学院党委一般在每年3月份开始推荐和确定入党积极分子，如2026级新生有意愿加入中国共产党，建议年满18周岁后尽早提交入党申请书，以免错过时间节点。\n \n【🔥线下纸质提交】我们预计在【9月20日】统一收集一次大家的入党志愿书和自传，请各位意愿入党的共青团员在9月20日前严格按照文件要求撰写入党申请书和自传，一起交给各班临时团支部负责人。\n【🔥线上信息提交】请各位提交了入党申请书的同学，请于【9月19日】下午17:00填写以下在线表格。【腾讯文档】2026级未来信息类【入党申请人信息收集】2026级未来信息类【入党申请人信息收集】\n\n[表情]参考资料：\n发展党员工作手册https://www.12371.cn/special/dwgzsc/fzdygzsc/（来源：共产党员网）\n重庆大学发展党员和党员教育、管理工作实施细则https://dwzzb.cqu.edu.cn/info/1061/3681.htm\n\n✨入党申请其他注意事项：\n1、非团员请等待后续发展团员通知，一般在学期中后段。（友情提示：请注意体测达标+积累志愿时长）；\n2、团组织关系转接不影响提交入党申请书，推荐和确定入党积极分子前，团组织关系肯定已经转接好了；\n3、根据《发展党员工作手册》，党组织吸收28周岁以下的青年入党，一般应是共青团员；\n4、为了归档时的统一规范，建议使用重庆大学信笺纸（重大商店内自行购买）撰写入党申请书及自传，入党申请书与自传所使用的信笺纸尺寸应一致；\n5、端正入党动机。入党申请书和自传字数不设上限，没有字数要求，但不宜过少，同时入党申请书及自传应避免涂改；\n6、在撰写入党申请书以及自传时要尤其要注意格式规范参考文件《发展党员常用文书》，末尾的落款格式要符合要求，另外也要避免将落款内容放在第一行或者最后一行；\n\n7、避免出现政治术语错误，关键的政治表述应与最新版党章（建议在共产党员网查询：https://www.12371.cn/2022/10/27/ARTI1666845926836204.shtml）保持一致；\n8、习近平新时代中国特色社会主义思想、全面建成社会主义现代化强国等专有名词不可混淆；一般应写”习近平总书记“或”习近平同志“。可参考：新华社在《新闻阅评动态》第 315 期发表的《新华社新闻报道中的禁用词（第一批）》（自行查询）；\n9、请区分出生地、籍贯、住址的区别（见下图，住址参见个人身份证），建议请父母拍照自己的户口页，你自己长期保存在手机里，以后填写个人资料可能都会用上。\n\n10、《中国共产党发展党员工作细则》在2026年做了修订，规范了部分的名词，请大家自行学习查看：https://mp.weixin.qq.com/s/ODjd21xKjElJdU47-wausw\n\n附件1:发展党员常用文书（参考模板）\n附件2:推优入党文件（请提交学习相关要求）\n\n---\n\n【20260916通知1】【关于困难认定的通知1】\n同学们：\n根据学校《关于做好2026-2027学年家庭经济困难学生认定工作的通知》要求，现将2026级未来信息1-10班本年度困难认定的相关通知做如下安排：\n2026级未来信息1-10班困难认定程序\n1、本人申请\n1.1 需要提交的纸质材料：\n（1）个人申请书：详细介绍本人家庭情况， 目前存在的主要困难等，能够详细说明家庭经济状况。\n（2）《附件1：重庆大学家庭经济困难学生认定申请表》\n（3）《附件2：重庆大学家庭经济困难学生在校经济状况调查表》\n（4）《附件3：重庆大学学生家庭其他成员信息调查表》\n（5）其他辅助材料：低保证、贫困证明、残疾证等，（不是必须）\n提交方式：9 月 22 前，工作时间（8:30-12:00,14:00-17:30）将所有材料用信封装好（信封办公室可提供，不用密封），用便签纸写上“班级、姓名、学号、联系方式 ”贴在信封上，提交到理科楼117-3办公室（苏俊老师处）。\n\n1.2【智慧学工】线上申请：（9 月 22 日以前）\n学生在电脑端打开浏览器，通过统一身份认证号即可登录（网址：http://zhxg.cqu.edu.cn/）。在常用功能或者功能列表内，点击家庭困难生认定功能按钮进入功能页面，学生根据实际情况在申请页面填写申请信息并提交申请。\n\n2.班级民主评议 （时间：9 月 23 日-9 月 28 日）\n各班组织召开民主评议班会，根据申请人自述情况并结合日常表现，综合考量后打分，填写《家庭经济困难学生认定民主评议表（不记名）》\n注意：认定等级为一般困难、困难、特别困难三个等级\n\n评议小组根据同学们的打分，录入分值计算表，计算分值。填写汇总表《家庭经济困难学生认定民主评议班级统计表》\n\n3.辅导员考核、审核\n辅导员根据学生“基本得分 ”、“ 民主测评 ”结果情况及“系统建议等次 ”完成认定。通过系统可查看所带班级学生的申请信息，上传班级民主评议统计表并完成审批。\n\n\n4.学院调整、审批。（学院可根据实际情况对评定小组上报的困难等级进行调整。）\n\n\n5、 申请人确认等级（复核结果）\n\n\n\n6、学院领导审核\n\n\n\n7、公示\n\n具体通知见群文件：未来信息1-10班家庭经济困难学生认定程序。\n\n相关文件和表格见压缩包：\n\n---\n\n【20260907通知1】【关于2026级新生英语分级考试安排的通知】@全体成员 \n一、考试时间\n\n2026年9月9日（星期三）晚上18:30—20:30。\n\n（18:20发放答题卡；18:25发放试卷； 18:30考试开始，同步播放听力；20:30考试结束）\n\n二、考场办公室\n\nA校园：第五教学楼A5213、第八教学楼A8207\n\nB校园：第二综合楼B二316\n\n虎溪校园：第一教学楼D1240、综合楼DZ220\n\n注意事项：\n四、注意事项\n\n1.请考生自备2B铅笔、黑色中性笔或钢笔参加考试。\n\n2.本次考试的听力部分采用IP广播播音，考生无需自备耳机。\n\n3.考生必须携带校园一卡通（未完成报到注册的学生可携带身份证）参加考试，无证件者一律不准入场；开考30分钟后，禁止迟到考生入场。\n\n4.本次考试采用计算机阅卷，请各考生务必按照答题卡上 “注意事项”的要求正确填涂。\n\n具体教室安排：\n\n具体通知链接：\nhttps://jwc.cqu.edu.cn/info/1080/6170.htm",
+      "createdAt": "2026-10-08T16:16:48.092Z",
+      "updatedAt": "2026-10-08T16:16:48.092Z",
       "completed": false,
-      "attachments": [],
+      "dismissed": false,
       "note": "",
       "localDeadline": null,
-      "reminderNotes": []
+      "audienceOverride": "",
+      "attachments": []
     },
     {
-      "schemaVersion": 4,
+      "schemaVersion": 5,
+      "kind": "reminder",
+      "title": "2026级新生英语分级考试安排",
+      "summary": "2026年9月9日晚上18:30—20:30进行英语分级考试，考生需按时到场并遵守考场规则。",
+      "deadline": null,
+      "deadlineText": "",
+      "timeline": [
+        {
+          "label": "英语分级考试",
+          "time": null,
+          "timeText": "2026年9月9日（星期三）晚上18:30—20:30",
+          "location": null,
+          "timeSpec": {
+            "type": "unknown",
+            "year": null,
+            "month": null,
+            "day": null,
+            "hour": null,
+            "minute": null,
+            "rawText": "2026年9月9日（星期三）晚上18:30—20:30"
+          }
+        }
+      ],
+      "tasks": [],
+      "materials": [
+        "2B铅笔、黑色中性笔或钢笔",
+        "校园一卡通（未完成报到注册的学生可携带身份证）"
+      ],
+      "warnings": [
+        "18:20发放答题卡；18:25发放试卷；18:30考试开始，同步播放听力；20:30考试结束",
+        "无证件者一律不准入场",
+        "开考30分钟后，禁止迟到考生入场",
+        "采用计算机阅卷，请按照答题卡上\"注意事项\"的要求正确填涂"
+      ],
+      "reminders": [
+        {
+          "id": "0cc160c7-a939-49ae-ad45-d04c6d4d2c0e",
+          "text": "考场办公室：A校园第五教学楼A5213、第八教学楼A8207；B校园第二综合楼B二316；虎溪校园第一教学楼D1240、综合楼DZ220",
+          "note": ""
+        },
+        {
+          "id": "46e53ebc-e832-429c-b763-375aa77c7198",
+          "text": "听力部分采用IP广播播音，考生无需自备耳机",
+          "note": ""
+        },
+        {
+          "id": "b1af4b23-d19f-48e8-87c0-dd77c674e4c3",
+          "text": "具体通知链接：https://jwc.cqu.edu.cn/info/1080/6170.htm",
+          "note": ""
+        }
+      ],
+      "id": "example-reading-v25-10",
+      "originalText": "【20250915通知4】【关于入党申请的预通知】\n@全体成员 \n由于入党申请人的情况各不相同，党组织对其培养教育和考察需要一定时间。参考《发展党员工作手册（新编本）》并结合实际工作情况，学院党委一般在每年3月份开始推荐和确定入党积极分子，如2026级新生有意愿加入中国共产党，建议年满18周岁后尽早提交入党申请书，以免错过时间节点。\n \n【🔥线下纸质提交】我们预计在【9月20日】统一收集一次大家的入党志愿书和自传，请各位意愿入党的共青团员在9月20日前严格按照文件要求撰写入党申请书和自传，一起交给各班临时团支部负责人。\n【🔥线上信息提交】请各位提交了入党申请书的同学，请于【9月19日】下午17:00填写以下在线表格。【腾讯文档】2026级未来信息类【入党申请人信息收集】2026级未来信息类【入党申请人信息收集】\n\n[表情]参考资料：\n发展党员工作手册https://www.12371.cn/special/dwgzsc/fzdygzsc/（来源：共产党员网）\n重庆大学发展党员和党员教育、管理工作实施细则https://dwzzb.cqu.edu.cn/info/1061/3681.htm\n\n✨入党申请其他注意事项：\n1、非团员请等待后续发展团员通知，一般在学期中后段。（友情提示：请注意体测达标+积累志愿时长）；\n2、团组织关系转接不影响提交入党申请书，推荐和确定入党积极分子前，团组织关系肯定已经转接好了；\n3、根据《发展党员工作手册》，党组织吸收28周岁以下的青年入党，一般应是共青团员；\n4、为了归档时的统一规范，建议使用重庆大学信笺纸（重大商店内自行购买）撰写入党申请书及自传，入党申请书与自传所使用的信笺纸尺寸应一致；\n5、端正入党动机。入党申请书和自传字数不设上限，没有字数要求，但不宜过少，同时入党申请书及自传应避免涂改；\n6、在撰写入党申请书以及自传时要尤其要注意格式规范参考文件《发展党员常用文书》，末尾的落款格式要符合要求，另外也要避免将落款内容放在第一行或者最后一行；\n\n7、避免出现政治术语错误，关键的政治表述应与最新版党章（建议在共产党员网查询：https://www.12371.cn/2022/10/27/ARTI1666845926836204.shtml）保持一致；\n8、习近平新时代中国特色社会主义思想、全面建成社会主义现代化强国等专有名词不可混淆；一般应写”习近平总书记“或”习近平同志“。可参考：新华社在《新闻阅评动态》第 315 期发表的《新华社新闻报道中的禁用词（第一批）》（自行查询）；\n9、请区分出生地、籍贯、住址的区别（见下图，住址参见个人身份证），建议请父母拍照自己的户口页，你自己长期保存在手机里，以后填写个人资料可能都会用上。\n\n10、《中国共产党发展党员工作细则》在2026年做了修订，规范了部分的名词，请大家自行学习查看：https://mp.weixin.qq.com/s/ODjd21xKjElJdU47-wausw\n\n附件1:发展党员常用文书（参考模板）\n附件2:推优入党文件（请提交学习相关要求）\n\n---\n\n【20260916通知1】【关于困难认定的通知1】\n同学们：\n根据学校《关于做好2026-2027学年家庭经济困难学生认定工作的通知》要求，现将2026级未来信息1-10班本年度困难认定的相关通知做如下安排：\n2026级未来信息1-10班困难认定程序\n1、本人申请\n1.1 需要提交的纸质材料：\n（1）个人申请书：详细介绍本人家庭情况， 目前存在的主要困难等，能够详细说明家庭经济状况。\n（2）《附件1：重庆大学家庭经济困难学生认定申请表》\n（3）《附件2：重庆大学家庭经济困难学生在校经济状况调查表》\n（4）《附件3：重庆大学学生家庭其他成员信息调查表》\n（5）其他辅助材料：低保证、贫困证明、残疾证等，（不是必须）\n提交方式：9 月 22 前，工作时间（8:30-12:00,14:00-17:30）将所有材料用信封装好（信封办公室可提供，不用密封），用便签纸写上“班级、姓名、学号、联系方式 ”贴在信封上，提交到理科楼117-3办公室（苏俊老师处）。\n\n1.2【智慧学工】线上申请：（9 月 22 日以前）\n学生在电脑端打开浏览器，通过统一身份认证号即可登录（网址：http://zhxg.cqu.edu.cn/）。在常用功能或者功能列表内，点击家庭困难生认定功能按钮进入功能页面，学生根据实际情况在申请页面填写申请信息并提交申请。\n\n2.班级民主评议 （时间：9 月 23 日-9 月 28 日）\n各班组织召开民主评议班会，根据申请人自述情况并结合日常表现，综合考量后打分，填写《家庭经济困难学生认定民主评议表（不记名）》\n注意：认定等级为一般困难、困难、特别困难三个等级\n\n评议小组根据同学们的打分，录入分值计算表，计算分值。填写汇总表《家庭经济困难学生认定民主评议班级统计表》\n\n3.辅导员考核、审核\n辅导员根据学生“基本得分 ”、“ 民主测评 ”结果情况及“系统建议等次 ”完成认定。通过系统可查看所带班级学生的申请信息，上传班级民主评议统计表并完成审批。\n\n\n4.学院调整、审批。（学院可根据实际情况对评定小组上报的困难等级进行调整。）\n\n\n5、 申请人确认等级（复核结果）\n\n\n\n6、学院领导审核\n\n\n\n7、公示\n\n具体通知见群文件：未来信息1-10班家庭经济困难学生认定程序。\n\n相关文件和表格见压缩包：\n\n---\n\n【20260907通知1】【关于2026级新生英语分级考试安排的通知】@全体成员 \n一、考试时间\n\n2026年9月9日（星期三）晚上18:30—20:30。\n\n（18:20发放答题卡；18:25发放试卷； 18:30考试开始，同步播放听力；20:30考试结束）\n\n二、考场办公室\n\nA校园：第五教学楼A5213、第八教学楼A8207\n\nB校园：第二综合楼B二316\n\n虎溪校园：第一教学楼D1240、综合楼DZ220\n\n注意事项：\n四、注意事项\n\n1.请考生自备2B铅笔、黑色中性笔或钢笔参加考试。\n\n2.本次考试的听力部分采用IP广播播音，考生无需自备耳机。\n\n3.考生必须携带校园一卡通（未完成报到注册的学生可携带身份证）参加考试，无证件者一律不准入场；开考30分钟后，禁止迟到考生入场。\n\n4.本次考试采用计算机阅卷，请各考生务必按照答题卡上 “注意事项”的要求正确填涂。\n\n具体教室安排：\n\n具体通知链接：\nhttps://jwc.cqu.edu.cn/info/1080/6170.htm",
+      "createdAt": "2026-10-08T16:16:48.092Z",
+      "updatedAt": "2026-10-08T16:16:48.092Z",
+      "completed": false,
+      "dismissed": false,
+      "note": "",
+      "localDeadline": null,
+      "audienceOverride": "",
+      "attachments": []
+    },
+    {
+      "schemaVersion": 5,
       "kind": "task",
-      "title": "外研社国才杯校赛报名",
-      "summary": "重庆大学将于2026年5月-8月举办2026“外研社·国才杯”“理解当代中国”大学生外语能力大赛校赛，报名截止2026年6月1日15:00。",
+      "title": "班干部竞选面试",
+      "summary": "2026级未来信息1-10班参与班干部竞选的同学需按时参加无领导小组讨论面试。",
+      "deadline": null,
+      "deadlineText": "",
+      "timeline": [
+        {
+          "label": "面试",
+          "time": null,
+          "timeText": "2026年9月23日 18:00-21:00",
+          "location": null,
+          "timeSpec": {
+            "type": "unknown",
+            "year": null,
+            "month": null,
+            "day": null,
+            "hour": null,
+            "minute": null,
+            "rawText": "2026年9月23日 18:00-21:00"
+          }
+        }
+      ],
+      "tasks": [
+        {
+          "text": "参加班干部竞选面试",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "2026级未来信息1-10班参与班干部竞选的同学",
+          "details": [
+            "采用无领导小组讨论（群面）形式",
+            "需提前准备1分钟以内的自我介绍"
+          ],
+          "steps": [
+            {
+              "text": "提前5分钟到场完成候场签到",
+              "details": [
+                "候场教室：A8211"
+              ],
+              "id": "5e6dedab-f12f-4ad9-b43a-ea525e14650f",
+              "completed": false,
+              "note": ""
+            },
+            {
+              "text": "到指定面试教室参加面试",
+              "details": [
+                "面试教室：A8213、A8214",
+                "具体分组和教室安排见图片"
+              ],
+              "id": "f2893fe4-68b3-4370-b573-d88791cc427a",
+              "completed": false,
+              "note": ""
+            }
+          ],
+          "time": null,
+          "timeText": "2026年9月23日 18:00-21:00",
+          "location": "重庆大学沙坪坝校区八教",
+          "timeSpec": {
+            "type": "unknown",
+            "year": null,
+            "month": null,
+            "day": null,
+            "hour": null,
+            "minute": null,
+            "rawText": "2026年9月23日 18:00-21:00"
+          },
+          "id": "3945e0aa-dd16-4cf8-87c1-1ebbac087ab0",
+          "completed": false,
+          "dismissed": false,
+          "note": "",
+          "localDeadline": null
+        }
+      ],
+      "materials": [],
+      "warnings": [
+        "逾期未到视为自动放弃竞选资格",
+        "无故缺席视为自动放弃竞选"
+      ],
+      "reminders": [],
+      "id": "example-reading-v25-11",
+      "originalText": "@全体成员 【20260922通知1】【关于年级学生干部选拔面试的通知2】\n各位参与2026级未来信息1-10班班干部竞选的同学：\n为顺利完成新一届班干部选拔工作，综合考察竞选同学的综合能力，现正式开展班干部竞选面试工作，结合前期签到报名情况，现将具体面试安排通知如下，请各位同学认真阅读、准时参与：\n一、面试时间\n2026年9月23日 18:00-21:00\n⚠️ 请所有竞选同学提前5分钟到场完成候场签到，逾期未到视为自动放弃竞选资格。\n二、面试地点\n重庆大学沙坪坝校区八教\n候场教室： A8211\n面试教室：A8213、A8214\n【具体分组和教室安排如下】[图片]三、面试形式\n本次班干部竞选面试采用无领导小组讨论（群面）的形式开展，重点考察同学们的沟通表达、团队协作、组织统筹、临场应变等综合素养。\n四、准备要求\n所有竞选同学需提前准备1分钟以内的自我介绍，内容简洁精炼，能快速让大家了解记住你。\n五、温馨提示\n1. 请各位同学提前规划出行时间，熟悉校区场地，准时到场，严格遵守现场秩序。\n2. 面试过程中保持从容自信、文明礼貌，展现自身最佳状态。\n3. 本次面试为班干部选拔核心环节，请所有参选同学务必重视，无故缺席视为自动放弃竞选。\n\n预祝各位同学面试顺利，成功入选！",
+      "createdAt": "2026-10-08T16:19:09.046Z",
+      "updatedAt": "2026-10-08T16:19:09.046Z",
+      "completed": false,
+      "dismissed": false,
+      "note": "",
+      "localDeadline": null,
+      "audienceOverride": "",
+      "attachments": []
+    },
+    {
+      "schemaVersion": 5,
+      "kind": "task",
+      "title": "外语能力大赛校赛报名",
+      "summary": "重庆大学全日制在籍在校学生可报名2026年外语能力大赛校赛，6月1日15:00前扫码报名并加入对应赛项QQ群。",
       "deadline": "2026-06-01T15:00:00",
-      "deadlineText": "报名截止时间：2026年6月1日15:00",
+      "deadlineText": "2026年6月1日15:00",
       "timeline": [
         {
-          "label": "校赛举办时间",
-          "time": null,
-          "timeText": "2026年5月-8月",
-          "location": null
-        },
-        {
-          "label": "综合能力赛项比赛",
+          "label": "国际传播综合能力赛项综合能力比赛",
           "time": null,
           "timeText": "2026年6月6日下午",
-          "location": null
+          "location": null,
+          "timeSpec": {
+            "type": "date",
+            "year": 2026,
+            "month": 6,
+            "day": 6,
+            "hour": null,
+            "minute": null,
+            "rawText": "2026年6月6日下午"
+          }
         },
         {
-          "label": "演讲赛项决赛",
+          "label": "国际传播综合能力赛项演讲赛项现场决赛",
           "time": null,
           "timeText": "2026年6月7日下午",
-          "location": null
+          "location": null,
+          "timeSpec": {
+            "type": "date",
+            "year": 2026,
+            "month": 6,
+            "day": 7,
+            "hour": null,
+            "minute": null,
+            "rawText": "2026年6月7日下午"
+          }
         },
         {
           "label": "笔译赛项比赛",
           "time": null,
           "timeText": "2026年6月6日上午",
-          "location": null
+          "location": null,
+          "timeSpec": {
+            "type": "date",
+            "year": 2026,
+            "month": 6,
+            "day": 6,
+            "hour": null,
+            "minute": null,
+            "rawText": "2026年6月6日上午"
+          }
         },
         {
-          "label": "“四新”专项决赛",
+          "label": "“四新”专项现场决赛",
           "time": null,
           "timeText": "2026年6月14日下午",
-          "location": null
+          "location": null,
+          "timeSpec": {
+            "type": "date",
+            "year": 2026,
+            "month": 6,
+            "day": 14,
+            "hour": null,
+            "minute": null,
+            "rawText": "2026年6月14日下午"
+          }
         }
       ],
       "tasks": [
         {
-          "text": "完成校赛报名登记",
-          "assignee": "重庆大学全日制在籍在校学生",
+          "text": "报名校赛并加入对应赛项QQ群",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "重庆大学全日制在籍在校学生，自愿报名",
           "details": [
-            "扫描通知下方二维码完成相应赛项的报名登记",
-            "英语组校赛设置国际传播综合能力、笔译、短视频、“四新”专项四个赛项",
-            "多语种组校赛包括日语、德语、法语、俄语等赛项",
-            "国际中文组为来华留学生中文短视频"
+            "扫描下方二维码完成相应赛项的报名登记",
+            "报名截止后不接受任何方式、任何渠道的补报名",
+            "除本通知外的赛事动态信息均在对应赛事赛项QQ群通知、发布，需在报名截止前加入对应赛项QQ群，未加入导致错失信息而参赛失败自行负责"
           ],
+          "steps": [],
           "time": null,
-          "timeText": "报名截止时间：2026年6月1日15:00",
+          "timeText": "",
           "location": null,
+          "id": "9ae9b212-48ba-4bc6-a283-627e357e6271",
           "completed": false,
           "dismissed": false,
           "note": "",
           "localDeadline": null
         },
         {
-          "text": "加入对应赛项QQ群",
-          "assignee": "报名参赛学生",
+          "text": "提交3分钟定题演讲视频",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "报名国际传播综合能力赛项演讲分赛项的学生",
           "details": [
-            "综合能力赛项QQ群：434242588",
-            "演讲赛项QQ群：1048971447",
-            "笔译赛项QQ群：1042783005",
-            "短视频赛项QQ群：1085786298",
-            "“四新”专项QQ群：1102635240",
-            "多语种组赛项QQ群：1009651974",
-            "请报名时间截止之前准确加入对应赛项QQ群获取信息"
+            "初选：报名截止时间之前提交",
+            "定题演讲题目：China in the Garden of Civilizations文明百花园，中国共芳华"
           ],
+          "steps": [],
           "time": null,
-          "timeText": "报名截止之前",
+          "timeText": "",
           "location": null,
+          "id": "9dc26be8-3feb-4d92-9422-8ac1e2246029",
+          "completed": false,
+          "dismissed": false,
+          "note": "",
+          "localDeadline": null
+        },
+        {
+          "text": "提交创意方案",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "报名短视频赛项的学生",
+          "details": [
+            "初选：报名截止时间之前撰写提交创意方案",
+            "参赛主题“数说中国”，制作原创短视频，决赛视频不超过3分钟",
+            "个人参赛或团队参赛，团队不超过5人，可跨院组队不可跨校组队，每位选手仅可参与1个作品"
+          ],
+          "steps": [],
+          "time": null,
+          "timeText": "",
+          "location": null,
+          "id": "ba8e47c9-2c73-4b55-9221-fc24432d5687",
+          "completed": false,
+          "dismissed": false,
+          "note": "",
+          "localDeadline": null
+        },
+        {
+          "text": "提交英文研究计划",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "报名“四新”专项的学生",
+          "details": [
+            "初选：报名截止时间之前提交一份500—1000词的英文研究计划",
+            "选取一个真实、具体的全球性议题，基于充分调研，结合专业知识，提出具有可行性的中国方案",
+            "个人参赛或团队参赛，团队建议3-4人、不超过5人，可跨院组队不可跨校组队，每位选手仅可参与1个作品"
+          ],
+          "steps": [],
+          "time": null,
+          "timeText": "",
+          "location": null,
+          "id": "2f9664c3-0a10-47f6-b04b-dde6c995a42a",
           "completed": false,
           "dismissed": false,
           "note": "",
@@ -705,96 +1181,94 @@
         }
       ],
       "materials": [
-        "3分钟定题演讲视频（演讲赛项初选）",
-        "创意方案（短视频赛项初选）",
-        "不超过3分钟的原创短视频（短视频赛项决赛）",
-        "500—1000词的英文研究计划（“四新”专项初选）",
-        "3-5分钟原创短视频，须配中文字幕（国际中文组比赛）"
+        "演讲分赛项初选：3分钟定题演讲视频",
+        "短视频赛项初选：创意方案；决赛：不超过3分钟的原创短视频",
+        "“四新”专项初选：500—1000词英文研究计划",
+        "国际中文组：3-5分钟原创短视频，须配中文字幕，可自定小标题"
       ],
       "warnings": [
-        "国际传播综合能力赛项如有意向参加省赛候选人选拔，建议同时参加综合能力和演讲两赛项。",
-        "演讲赛项定题演讲题目：China in the Garden of Civilizations文明百花园，中国共芳华。",
-        "短视频赛项主题“数说中国”，个人参赛或团队参赛，团队不超过5人，可跨院组队但不可跨校组队，每位选手仅可参与1个作品。",
-        "“四新”专项个人参赛或团队参赛，单支队伍建议3-4人、不超过5人，可跨院组队但不可跨校组队，每位选手仅可参与1个作品。",
-        "直通国赛政策：2025年10月至2026年11月之间获得国才考试高级良好及以上、高端合格及以上、高翻（笔译）合格及以上、高翻（交传、同传）合格及以上证书的考生，可申请进入国赛外卡通道，组委会根据分数从高到低取前80名晋级国赛（分数相同时按申请先后排序），入围国赛给予报销国才考试报名费（多个考级不重复报销）。",
-        "笔译赛项直通国赛：2025年10月至2026年11月之间获得国才考试高翻（笔译）合格及以上证书的考生，经组委会审核后可晋级国赛。",
-        "短视频赛项直通省赛：2025年10月至2026年11月之间获得任一级别国才考试证书的考生，可按通过外卡通道参加英语短视频省赛；获得省级金奖，给予报销国才考试初级报名费（多个考级不重复报销）。",
-        "校赛报名截止后不接受任何方式、任何渠道的补报名。",
-        "除本通知外其他赛事动态信息均在对应赛项QQ群通知、发布，未在报名截止前加入对应赛项QQ群导致错失赛情信息而参赛失败自行负责。",
-        "线下赛项均有赛前签到、抽签/抽题、备赛、比赛、观赛、评委点评、获奖结果公布、颁奖合影等环节，参赛选手应遵循赛事相关安排完成所有环节方视为成功完成比赛。",
-        "因未及时查看赛事资讯影响正常参赛、比赛结果等，由选手自行负责，赛事方不予处理。"
+        "校赛报名截止后不接受任何方式、任何渠道的补报名",
+        "如因未在报名时间截止之前加入对应赛项QQ群导致错失各类赛情信息而参赛失败自行负责",
+        "线下赛项均有赛前签到、抽签/抽题、备赛、比赛、观赛、评委点评、获奖结果公布、颁奖合影等环节，参赛选手应遵循赛事相关安排、要求，完成上述赛事所有环节，方视为成功完成比赛",
+        "如因未及时查看赛事资讯，致使未遵循赛事方发布的参赛要求、赛程环节安排，未按规定时间到场签到、抽签，因各种个人因素临场弃赛，无故、无理扰乱赛场秩序，或整场比赛未结束因各种个人因素提前离开赛场等影响正常参赛、比赛结果、参加其他外语类竞赛等，由选手自行负责，赛事方不予处理",
+        "直通国赛政策：2025年10月至2026年11月之间获得国才考试高级良好及以上、高端合格及以上、高翻（笔译）合格及以上、高翻（交传、同传）合格及以上证书的考生，可申请进入国赛外卡通道，组委会根据申请考生的分数由高到低取前80名晋级国赛（分数相同时按申请先后排序），入围国赛给予报销国才考试报名费（若有多个考级不重复报销）",
+        "笔译赛项直通国赛政策：2025年10月至2026年11月之间获得国才考试高翻（笔译）合格及以上证书的考生，经组委会审核后可晋级国赛，入围国赛给予报销国才考试报名费（若有多个考级不重复报销）",
+        "短视频赛项直通省赛政策：2025年10月至2026年11月之间获得任一级别国才考试证书的考生，可按通过外卡通道参加英语短视频省赛，获得省级金奖给予报销国才考试初级报名费（若有多个考级不重复报销）"
       ],
-      "reminders": [],
-      "id": "example-v1-v7-11",
-      "originalText": "关于举办2026“外研社·国才杯”“理解当代中国”大学生外语能力大赛校赛的通知\n为深入贯彻党的二十大和二十届历次全会精神，落实立德树人根本任务，深化高校外语教育改革，进一步推动重庆大学学生外语综合应用能力的提升，更好地体现学校外语教学的办学特色，促进学校外语教学改革与发展。在上级主管部门指导和支持下，重庆大学将于2026年5月-8月举办2026“外研社·国才杯”“理解当代中国”全国大学生外语能力大赛系列赛项校赛。具体安排如下：\n一、参赛对象\n重庆大学全日制在籍在校学生\n二、大赛内容\n各赛事赛题涵盖习近平新时代中国特色社会主义思想核心内容，涉及经济建设、政治建设、文化建设、社会建设和生态文明建设等领域的重要话题，部分赛题素材选自《习近平谈治国理政》第一卷、第二卷、第三卷、第四卷、第五卷，《习近平总书记教育重要论述讲义》、党的二十大报告、《教育强国建设规划纲要（2024—2035年）》、高等学校《理解当代中国》系列教材和《理解当代中国 核心术语学习手册》（汉英对照）等。\n三、赛事类型\n“外研社·国才杯”“理解当代中国”全国大学生外语能力大赛重庆大学校赛赛事所涉语种分为英语组、多语种组、国际中文组三大类。其中，英语组校赛设置国际传播综合能力、笔译、短视频、“四新”专项四个赛项，多语种组校赛包括日语、德语、法语、俄语等赛项，国际中文组为来华留学生中文短视频。\n（一）国际传播综合能力赛项\n国际传播综合能力比赛包括综合能力、演讲两个分赛项。如有意向参加省赛候选人选拔，建议同时参加综合能力和演讲两赛项。\n1．综合能力赛项\n（1）考查形式：客观题、汉译英、议论文写作\n（2）比赛时间：2026年6月6日下午\n（3）综合能力赛项QQ群：434242588（具体通知通过本赛项群内获取）\n2．演讲赛项\n定题演讲题目：China in the Garden of Civilizations文明百花园，中国共芳华\n（1）竞赛流程：\n①初选：报名截止时间之前提交3分钟定题演讲视频\n②现场决赛：定题演讲3分钟、即兴演讲2分钟、回答问题\n（2）决赛时间：2026年6月7日下午\n（3）演讲赛项QQ群：1048971447（具体通知通过本赛项群内获取）\n3．直通国赛政策：2025年10月至2026年11月之间获得国才考试高级良好及以上、高端合格及以上、高翻（笔译）合格及以上、高翻（交传、同传）合格及以上证书的考生，可申请进入国赛外卡通道。组委会根据申请考生的分数，由高到低取前80名晋级国赛（分数相同时，按申请先后排序）。入围国赛，给予报销国才考试报名费（若有多个考级不重复报销）\n（二）笔译赛项\n1．考查形式：客观题、英汉互译（段落翻译）\n2．比赛时间：2026年6月6日上午\n3．笔译赛项QQ群：1042783005（具体通知通过本赛项群内获取）\n4．直通国赛政策：2025年10月至2026年11月之间获得国才考试高翻（笔译）合格及以上证书的考生，经组委会审核后可晋级国赛。入围国赛，给予报销国才考试报名费（若有多个考级不重复报销）\n（三）短视频赛项\n1．考查形式：参赛选手围绕本年度比赛主题“数说中国”制作原创短视频。选手可选择个人参赛或团队参赛。团队参赛不超过5人，可跨院组队，但不可跨校组队。每位选手仅可参与1个作品。\n2．竞赛流程：\n①初选：报名截止时间之前，撰写提交创意方案\n②决赛：按要求制作不超过3分钟的原创短视频\n3．比赛具体通知将在该赛项QQ群内另行发布\n4．短视频赛项QQ群：1085786298\n5．直通省赛政策：2025年10月至2026年11月之间获得任一级别国才考试证书的考生，可按通过外卡通道参加英语短视频省赛。获得省级金奖，给予报销国才考试初级报名费（若有多个考级不重复报销）\n（四）“四新”专项\n1．考查形式：参赛选手应选取一个真实、具体的全球性议题，基于充分调研，结合专业知识，提出具有可行性的中国方案。选手可选择个人参赛或团队参赛。团队参赛单支队伍建议3-4人，不超过5人，可跨院组队，但不可跨校组队。每位选手仅可参与1个作品。\n2．竞赛流程：\n①初选：报名截止时间之前，提交一份500—1000词的英文研究计划\n②现场决赛：现场英文研究计划答辩、回答问题\n3．决赛时间：2026年6月14日下午\n4．“四新”专项QQ群：1102635240（具体通知通过本赛项群内获取）\n（五）多语种组比赛\n1.多语种（日语、德语、法语、俄语）四个分赛项考查内容：阅读客观题若干道、汉外笔译（对应语种）、写作、演讲。\n2．各语种比赛具体通知将在该赛项QQ群内另行发布\n3．多语种组赛项QQ群：1009651974\n（五）国际中文组比赛\n国际中文组为中文短视频比赛，面向全校来华留学生进行选拔。\n1．考查形式：参赛选手结合自己的亲身体验和跨文化交流经历，围绕本年度比赛主题“数说中国”制作原创短视频，视频时长3-5分钟，须配中文字幕，可自定小标题。\n2．比赛具体安排另行通知。\n四、报名渠道\n扫描下方二维码，完成相应赛项的报名登记。\n报名截止时间：2026年6月1日15:00\n五、奖励办法\n校级奖项+创新实践学分。\n各赛项具体获奖比例及奖项设置将根据实际参赛情况、比赛成绩以及校赛组委会的章程决定。\n根据校赛比赛表现，将选拔部分优秀选手进行集训，最终确定代表重庆大学参加重庆赛区决赛的正式选手。\n六、注意事项\n1．除本通知之外的其他相关赛事动态信息均会在对应赛事赛项QQ群通知、发布，请在报名时间截止之前准确地加入对应赛项QQ群获取信息，如因未在报名时间截止之前加入对应赛项QQ群导致错失各类赛情信息而参赛失败自行负责。\n2．校赛报名截止后不接受任何方式、任何渠道的补报名。\n3．凡是线下赛项，均有赛前签到、抽签/抽题、备赛、比赛、观赛（等待比赛结果）、评委点评、获奖结果公布、颁奖合影等环节。参赛选手应遵循赛事相关安排、要求，完成上述赛事所有环节，方视为成功完成比赛。如因未及时查看赛事资讯，致使出现包含但不限于以下情况而影响正常参赛、比赛结果、参加其他外语类竞赛等，由选手自行负责，赛事方不予处理：\n（1）未遵循赛事方发布的参赛要求、赛程环节安排；\n（2）未按规定时间到场签到、抽签；\n（3）因各种个人因素临场弃赛；\n（4）无故、无理扰乱赛场秩序；\n（5）整场比赛未结束，因各种个人因素提前离开赛场。\n重庆大学 重庆大学外国语学院 外语演讲与辩论协会\n2026年05月11日",
-      "createdAt": "2026-10-04T00:00:00.000Z",
-      "completed": false,
-      "attachments": [],
-      "note": "",
-      "localDeadline": null,
-      "reminderNotes": []
-    },
-    {
-      "schemaVersion": 4,
-      "kind": "information",
-      "title": "计算机等级考试成绩查询",
-      "summary": "2026年3月全国计算机等级考试成绩和证书查询已开通。",
-      "deadline": null,
-      "deadlineText": "",
-      "timeline": [],
-      "tasks": [],
-      "materials": [],
-      "warnings": [],
       "reminders": [
-        "考生即日起可登录中国教育考试网（www.neea.edu.cn）查询成绩和证书。",
-        "获证考生可在该网站下载电子证书。"
-      ],
-      "id": "example-v1-v7-12",
-      "originalText": "2026年3月全国计算机等级考试成绩、证书查询开通\n发布时间：2026-05-15\n2026年3月（第77次）全国计算机等级考试（NCRE）成绩、证书查询已开通，考生即日起可登录中国教育考试网（www.neea.edu.cn）进行查询，获证考生可下载电子证书。",
-      "createdAt": "2026-10-04T00:00:00.000Z",
-      "completed": false,
-      "attachments": [],
-      "note": "",
-      "localDeadline": null,
-      "reminderNotes": [
-        "",
-        ""
-      ]
-    },
-    {
-      "schemaVersion": 4,
-      "kind": "task",
-      "title": "补选人工智能通识课",
-      "summary": "学校已协调名额，尚未选上人工智能通识课程的同学尽快选课，选课时避开001教学班。",
-      "deadline": null,
-      "deadlineText": "",
-      "timeline": [],
-      "tasks": [
         {
-          "text": "选人工智能通识课",
-          "assignee": null,
-          "scope": "conditional",
-          "condition": "还没有选上人工智能通识课程的同学",
-          "details": [
-            "选择时**避开001教学班**",
-            "除001教学班外其余为线上课程，**不用在意开课校区**"
-          ],
-          "steps": [],
-          "time": null,
-          "timeText": "",
-          "location": null
+          "id": "f873a32b-fa74-4884-854b-5f18bf88a865",
+          "text": "赛事类型：英语组（国际传播综合能力、笔译、短视频、“四新”专项）、多语种组（日语、德语、法语、俄语）、国际中文组（来华留学生中文短视频）",
+          "note": ""
+        },
+        {
+          "id": "8d30fb83-5dca-4a91-abfd-e5c7089230db",
+          "text": "国际传播综合能力比赛包括综合能力、演讲两个分赛项，如有意向参加省赛候选人选拔，建议同时参加综合能力和演讲两赛项",
+          "note": ""
+        },
+        {
+          "id": "5e46269e-ae5c-4840-967b-82a2060c9bee",
+          "text": "国际传播综合能力赛项综合能力考查形式：客观题、汉译英、议论文写作；QQ群434242588",
+          "note": ""
+        },
+        {
+          "id": "3c2a665e-4597-4604-9809-8343a1cdce6a",
+          "text": "国际传播综合能力赛项演讲赛项QQ群1048971447，现场决赛含定题演讲3分钟、即兴演讲2分钟、回答问题",
+          "note": ""
+        },
+        {
+          "id": "7118defe-20df-4263-9f6d-7f9c0ea273d7",
+          "text": "笔译赛项考查形式：客观题、英汉互译（段落翻译）；QQ群1042783005",
+          "note": ""
+        },
+        {
+          "id": "c65716e8-207b-4351-9ca1-8d3c253ee6a9",
+          "text": "短视频赛项QQ群1085786298，比赛具体通知将在该赛项QQ群内另行发布",
+          "note": ""
+        },
+        {
+          "id": "91a3f079-e82d-45ed-8217-2565a932be76",
+          "text": "“四新”专项QQ群1102635240，现场决赛含英文研究计划答辩、回答问题",
+          "note": ""
+        },
+        {
+          "id": "25d25b91-c550-4ae2-874b-11766c78ae61",
+          "text": "多语种组比赛考查内容：阅读客观题若干道、汉外笔译（对应语种）、写作、演讲；各语种比赛具体通知将在该赛项QQ群内另行发布；QQ群1009651974",
+          "note": ""
+        },
+        {
+          "id": "ddef6aeb-8629-43b5-a266-7f2126204f83",
+          "text": "国际中文组为中文短视频比赛，面向全校来华留学生选拔，比赛具体安排另行通知",
+          "note": ""
+        },
+        {
+          "id": "b470e4db-05a1-44ff-bc24-3dddd50340b2",
+          "text": "奖励办法：校级奖项+创新实践学分；各赛项具体获奖比例及奖项设置将根据实际参赛情况、比赛成绩以及校赛组委会的章程决定",
+          "note": ""
+        },
+        {
+          "id": "9d47558b-0de5-43ed-ba82-5c19e01d32d3",
+          "text": "根据校赛比赛表现，将选拔部分优秀选手进行集训，最终确定代表重庆大学参加重庆赛区决赛的正式选手",
+          "note": ""
         }
       ],
-      "materials": [],
-      "warnings": [],
-      "reminders": [],
-      "id": "example-reading-v21-12",
-      "originalText": "@全体成员 各位还没有选上人工智能通识课程的同学，我们已经请求学校协调了名额，大家尽快选上。\n由于人工智能通识课除了001教学班外，其余都是线上课程，所以大家再选择的时候，避开001教学班，并且不用在意开课校区。",
-      "createdAt": "2026-10-07T02:14:55.889Z",
+      "deadlineSpec": {
+        "type": "date_time",
+        "year": 2026,
+        "month": 6,
+        "day": 1,
+        "hour": 15,
+        "minute": 0,
+        "rawText": "2026年6月1日15:00"
+      },
+      "id": "example-reading-v25-12",
+      "originalText": "关于举办2026“外研社·国才杯”“理解当代中国”大学生外语能力大赛校赛的通知\n为深入贯彻党的二十大和二十届历次全会精神，落实立德树人根本任务，深化高校外语教育改革，进一步推动重庆大学学生外语综合应用能力的提升，更好地体现学校外语教学的办学特色，促进学校外语教学改革与发展。在上级主管部门指导和支持下，重庆大学将于2026年5月-8月举办2026“外研社·国才杯”“理解当代中国”全国大学生外语能力大赛系列赛项校赛。具体安排如下：\n一、参赛对象\n重庆大学全日制在籍在校学生\n二、大赛内容\n各赛事赛题涵盖习近平新时代中国特色社会主义思想核心内容，涉及经济建设、政治建设、文化建设、社会建设和生态文明建设等领域的重要话题，部分赛题素材选自《习近平谈治国理政》第一卷、第二卷、第三卷、第四卷、第五卷，《习近平总书记教育重要论述讲义》、党的二十大报告、《教育强国建设规划纲要（2024—2035年）》、高等学校《理解当代中国》系列教材和《理解当代中国 核心术语学习手册》（汉英对照）等。\n三、赛事类型\n“外研社·国才杯”“理解当代中国”全国大学生外语能力大赛重庆大学校赛赛事所涉语种分为英语组、多语种组、国际中文组三大类。其中，英语组校赛设置国际传播综合能力、笔译、短视频、“四新”专项四个赛项，多语种组校赛包括日语、德语、法语、俄语等赛项，国际中文组为来华留学生中文短视频。\n（一）国际传播综合能力赛项\n国际传播综合能力比赛包括综合能力、演讲两个分赛项。如有意向参加省赛候选人选拔，建议同时参加综合能力和演讲两赛项。\n1．综合能力赛项\n（1）考查形式：客观题、汉译英、议论文写作\n（2）比赛时间：2026年6月6日下午\n（3）综合能力赛项QQ群：434242588（具体通知通过本赛项群内获取）\n2．演讲赛项\n定题演讲题目：China in the Garden of Civilizations文明百花园，中国共芳华\n（1）竞赛流程：\n①初选：报名截止时间之前提交3分钟定题演讲视频\n②现场决赛：定题演讲3分钟、即兴演讲2分钟、回答问题\n（2）决赛时间：2026年6月7日下午\n（3）演讲赛项QQ群：1048971447（具体通知通过本赛项群内获取）\n3．直通国赛政策：2025年10月至2026年11月之间获得国才考试高级良好及以上、高端合格及以上、高翻（笔译）合格及以上、高翻（交传、同传）合格及以上证书的考生，可申请进入国赛外卡通道。组委会根据申请考生的分数，由高到低取前80名晋级国赛（分数相同时，按申请先后排序）。入围国赛，给予报销国才考试报名费（若有多个考级不重复报销）\n（二）笔译赛项\n1．考查形式：客观题、英汉互译（段落翻译）\n2．比赛时间：2026年6月6日上午\n3．笔译赛项QQ群：1042783005（具体通知通过本赛项群内获取）\n4．直通国赛政策：2025年10月至2026年11月之间获得国才考试高翻（笔译）合格及以上证书的考生，经组委会审核后可晋级国赛。入围国赛，给予报销国才考试报名费（若有多个考级不重复报销）\n（三）短视频赛项\n1．考查形式：参赛选手围绕本年度比赛主题“数说中国”制作原创短视频。选手可选择个人参赛或团队参赛。团队参赛不超过5人，可跨院组队，但不可跨校组队。每位选手仅可参与1个作品。\n2．竞赛流程：\n①初选：报名截止时间之前，撰写提交创意方案\n②决赛：按要求制作不超过3分钟的原创短视频\n3．比赛具体通知将在该赛项QQ群内另行发布\n4．短视频赛项QQ群：1085786298\n5．直通省赛政策：2025年10月至2026年11月之间获得任一级别国才考试证书的考生，可按通过外卡通道参加英语短视频省赛。获得省级金奖，给予报销国才考试初级报名费（若有多个考级不重复报销）\n（四）“四新”专项\n1．考查形式：参赛选手应选取一个真实、具体的全球性议题，基于充分调研，结合专业知识，提出具有可行性的中国方案。选手可选择个人参赛或团队参赛。团队参赛单支队伍建议3-4人，不超过5人，可跨院组队，但不可跨校组队。每位选手仅可参与1个作品。\n2．竞赛流程：\n①初选：报名截止时间之前，提交一份500—1000词的英文研究计划\n②现场决赛：现场英文研究计划答辩、回答问题\n3．决赛时间：2026年6月14日下午\n4．“四新”专项QQ群：1102635240（具体通知通过本赛项群内获取）\n（五）多语种组比赛\n1.多语种（日语、德语、法语、俄语）四个分赛项考查内容：阅读客观题若干道、汉外笔译（对应语种）、写作、演讲。\n2．各语种比赛具体通知将在该赛项QQ群内另行发布\n3．多语种组赛项QQ群：1009651974\n（五）国际中文组比赛\n国际中文组为中文短视频比赛，面向全校来华留学生进行选拔。\n1．考查形式：参赛选手结合自己的亲身体验和跨文化交流经历，围绕本年度比赛主题“数说中国”制作原创短视频，视频时长3-5分钟，须配中文字幕，可自定小标题。\n2．比赛具体安排另行通知。\n四、报名渠道\n扫描下方二维码，完成相应赛项的报名登记。\n报名截止时间：2026年6月1日15:00\n五、奖励办法\n校级奖项+创新实践学分。\n各赛项具体获奖比例及奖项设置将根据实际参赛情况、比赛成绩以及校赛组委会的章程决定。\n根据校赛比赛表现，将选拔部分优秀选手进行集训，最终确定代表重庆大学参加重庆赛区决赛的正式选手。\n六、注意事项\n1．除本通知之外的其他相关赛事动态信息均会在对应赛事赛项QQ群通知、发布，请在报名时间截止之前准确地加入对应赛项QQ群获取信息，如因未在报名时间截止之前加入对应赛项QQ群导致错失各类赛情信息而参赛失败自行负责。\n2．校赛报名截止后不接受任何方式、任何渠道的补报名。\n3．凡是线下赛项，均有赛前签到、抽签/抽题、备赛、比赛、观赛（等待比赛结果）、评委点评、获奖结果公布、颁奖合影等环节。参赛选手应遵循赛事相关安排、要求，完成上述赛事所有环节，方视为成功完成比赛。如因未及时查看赛事资讯，致使出现包含但不限于以下情况而影响正常参赛、比赛结果、参加其他外语类竞赛等，由选手自行负责，赛事方不予处理：\n（1）未遵循赛事方发布的参赛要求、赛程环节安排；\n（2）未按规定时间到场签到、抽签；\n（3）因各种个人因素临场弃赛；\n（4）无故、无理扰乱赛场秩序；\n（5）整场比赛未结束，因各种个人因素提前离开赛场。\n重庆大学 重庆大学外国语学院 外语演讲与辩论协会\n2026年05月11日",
+      "createdAt": "2026-10-08T16:16:42.089Z",
+      "updatedAt": "2026-10-08T16:16:42.089Z",
       "completed": false,
       "dismissed": false,
-      "localDeadline": null,
       "note": "",
+      "localDeadline": null,
       "audienceOverride": "",
       "attachments": []
     }

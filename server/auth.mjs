@@ -101,9 +101,14 @@ export async function createAuthService(config,options={}){
     }
   }
   async function login(body,ip){
-    const username=canonicalUsername(body.username),password=passwordValue(body.password);
-    transaction(()=>{clean();rate('login-ip',hashSubject('ip:'+ip),limits.loginIPMinute,60000);rate('login-user',hashSubject('user:'+username),limits.loginUserMinute,60000);});
-    const user=stmt.user.get(username),hasPassword=!!user&&/^[a-f0-9]{128}$/.test(user.password_hash),salt=hasPassword?user.salt:'00000000000000000000000000000000';
+    let username,user;
+    if(typeof body.username==='string'&&body.username.includes('@')){
+      username=emailAuth.emailValue(body.username);user=emailAuth.userForEmail(username);
+    }else{username=canonicalUsername(body.username);user=stmt.user.get(username);}
+    const password=passwordValue(body.password);
+    // Email and username aliases share the account's guessing budget.
+    transaction(()=>{clean();rate('login-ip',hashSubject('ip:'+ip),limits.loginIPMinute,60000);rate('login-user',hashSubject('user:'+(user?.id||username)),limits.loginUserMinute,60000);});
+    const hasPassword=!!user&&/^[a-f0-9]{128}$/.test(user.password_hash),salt=hasPassword?user.salt:'00000000000000000000000000000000';
     const actual=await hashPassword(password,salt),expected=hasPassword?Buffer.from(user.password_hash,'hex'):Buffer.alloc(64);
     const matches=timingSafeEqual(actual,expected);
     if(!hasPassword||!matches)throw new ServiceError('用户名或密码不正确。',401);
@@ -126,13 +131,25 @@ export async function createAuthService(config,options={}){
     return {provider:'invite',subject:session.id,username:session.username,expiresAt:new Date(expires).toISOString(),...(email?{email}:{})};
   }
   const emailAuth=createEmailAuth({db,signingSecret:config.signingSecret,now,limits:options.limits,sendCode:options.sendCode,getIdentity,sessionFor,
-    createUser(){
+    async prepareCredentials(body,purpose){
+      const password=passwordValue(body.password),username=purpose==='register'?canonicalUsername(body.username):undefined;
+      if(username&&stmt.user.get(username))throw new ServiceError('此用户名已被使用，请换一个。',409);
+      const salt=randomBytes(16).toString('hex'),passwordHash=(await hashPassword(password,salt)).toString('hex');
+      return {username,salt,passwordHash};
+    },
+    setPassword(user,credentials){
+      const changed=db.prepare("UPDATE invite_users SET salt=?,password_hash=? WHERE id=? AND salt='' AND password_hash=''").run(credentials.salt,credentials.passwordHash,user.id);
+      if(changed.changes!==1)throw new ServiceError('账号已有密码，请直接登录。',409);
+    },
+    createUser(credentials){
       if(stmt.count.get().count>=limits.accountLimit)throw new ServiceError('当前注册容量已满，请联系维护者。',507);
-      let username;do{username='同学_'+randomBytes(8).toString('hex');}while(stmt.user.get(username));
+      let username=credentials?.username;
+      if(username&&stmt.user.get(username))throw new ServiceError('此用户名已被使用，请换一个。',409);
+      if(!username)do{username='同学_'+randomBytes(8).toString('hex');}while(stmt.user.get(username));
       const user={id:randomUUID(),username};
-      // Empty credentials explicitly designate an email-only account. Password
-      // login runs its dummy hash and rejects it without comparing empty buffers.
-      stmt.insertUser.run(user.id,username,'','',now());return user;
+      // Legacy OTP clients can still create an email-only account. Empty
+      // credentials reject password login until verified first-password setup.
+      stmt.insertUser.run(user.id,username,credentials?.salt||'',credentials?.passwordHash||'',now());return user;
     }
   });
   async function handle(request,ip='unknown'){

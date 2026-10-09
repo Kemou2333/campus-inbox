@@ -154,6 +154,7 @@ describe('time and useful local ordering', () => {
     expect(timeFromText('2026—2027学年第一学期').year).toBeNull();
     expect(timeFromText('2026年10月7日到2026年10月9日').type).toBe('unknown');
     expect(timeFromText('每周五17:00').type).toBe('unknown');
+    expect(timeFromText('2026年5月-8月').type).toBe('unknown');
     const actual = timeFromText('10月7日17:00前');
     expect(() => parseTimeSpec({ ...actual, type: 'date_time', year: 2026 }, actual.rawText)).toThrow();
   });

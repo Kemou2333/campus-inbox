@@ -6,7 +6,7 @@ const MINUTE=60000,HOUR=60*MINUTE,DAY=24*HOUR,CODE_TTL=5*MINUTE;
 const DEFAULT_LIMITS={emailSendHour:3,emailSendDay:6,emailSendIPHour:20,emailSendIPDay:40,emailSendGlobalDay:50,emailVerifyIPMinute:10,emailSendConcurrency:2,emailRegisterIPMinute:5,emailRegisterIPDay:10,emailRegisterGlobalDay:20};
 
 /** Email is another credential for the existing account UUID, never a new cloud owner. */
-export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCode,getIdentity,sessionFor,createUser}){
+export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCode,getIdentity,sessionFor,createUser,prepareCredentials,setPassword}){
   db.exec(`
     CREATE TABLE IF NOT EXISTS email_identities(email TEXT PRIMARY KEY,user TEXT NOT NULL UNIQUE REFERENCES invite_users(id));
     CREATE TABLE IF NOT EXISTS email_challenges(
@@ -60,14 +60,17 @@ export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCod
   function options(){return {emailEnabled:enabled,inviteEnabled:true,domains:[...ALLOWED_EMAIL_DOMAINS]};}
   function requireEnabled(){if(!enabled)throw error('邮箱登录暂未开放，请使用用户名和密码登录。',503,'EMAIL_UNAVAILABLE');}
   function emailValue(value){try{return canonicalEmail(value);}catch(issue){throw error(issue.message);}}
+  function userForEmail(email){return stmt.identity.get(email);}
   function currentIdentity(key){const identity=getIdentity(key);if(!identity)throw error('请先登录原账号，再绑定邮箱。',401,'AUTH_REQUIRED');return identity;}
   let sending=0;
 
   async function request(body,ip,key){
     requireEnabled();
     const email=emailValue(body.email),purpose=body.purpose;
-    if(purpose!=='login'&&purpose!=='bind')throw error('请选择登录或绑定邮箱。');
+    if(!['login','bind','register','password'].includes(purpose))throw error('请选择注册或绑定邮箱。');
     const target=purpose==='bind'?currentIdentity(key).subject:null;
+    // The public send reply never discloses whether this mailbox has an account.
+    // Ownership-sensitive registration/setup checks happen after code validation.
     if(sending>=caps.emailSendConcurrency){
       const issue=error('发信服务暂时繁忙，请稍后再试。',429,'EMAIL_SERVICE_BUSY');issue.retryAfterSeconds=3;throw issue;
     }
@@ -92,7 +95,7 @@ export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCod
     });
     sending++;
     try{
-      await sendCode({email,code,expiresMinutes:5});
+      await sendCode({email,code,expiresMinutes:5,purpose});
       if(now()>=expires){stmt.state.run('expired',challenge.id,'pending');throw error('验证码已过期，请重新获取。',400,'EMAIL_CODE_INVALID');}
       const sent=stmt.state.run('sent',challenge.id,'pending');
       if(sent.changes!==1)throw error('验证码已失效，请重新获取。',400,'EMAIL_CODE_INVALID');
@@ -108,6 +111,18 @@ export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCod
   async function verify(body,ip,key){
     requireEnabled();
     const challengeId=body.challengeId;
+    // Derive the password only after a valid code has been presented. Re-read the
+    // challenge in the transaction after hashing so concurrent redemption and
+    // expiry during hashing cannot create or overwrite an account.
+    const preview=typeof challengeId==='string'&&/^[A-Za-z0-9_-]{43}$/.test(challengeId)?stmt.challenge.get(challengeId):null;
+    let credentials;
+    if(preview&&['register','password'].includes(preview.purpose)&&preview.state==='sent'&&preview.attempts<5&&preview.expires>now()
+      &&typeof body.code==='string'&&/^\d{6}$/.test(body.code)&&timingSafeEqual(Buffer.from(preview.code_hash,'hex'),Buffer.from(hashCode(preview,body.code),'hex'))){
+      const existing=userForEmail(preview.email);
+      if(preview.purpose==='register'&&existing)throw error('此邮箱已注册，请直接登录。',409,'EMAIL_ALREADY_REGISTERED');
+      if(preview.purpose==='password'&&(!existing||existing.password_hash))throw error('账号已有密码，请直接登录。',409,'EMAIL_PASSWORD_EXISTS');
+      credentials=await prepareCredentials(body,preview.purpose);
+    }
     // Expected verification errors are returned from the transaction, not thrown,
     // so wrong-code counters and expired states cannot be rolled back.
     const result=transaction(()=>{
@@ -145,12 +160,23 @@ export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCod
         stmt.attempt.run(attempts,'used',challengeId);
         return {bound:{username:identity.username,email:challenge.email,expiresAt:identity.expiresAt}};
       }
+      if(challenge.purpose==='register'&&user){
+        stmt.attempt.run(attempts,'used',challengeId);
+        return {error:error('此邮箱已注册，请直接登录。',409,'EMAIL_ALREADY_REGISTERED')};
+      }
+      if(challenge.purpose==='password'){
+        if(!user||user.password_hash){
+          stmt.attempt.run(attempts,'used',challengeId);
+          return {error:error('账号已有密码，请直接登录。',409,'EMAIL_PASSWORD_EXISTS')};
+        }
+        setPassword(user,credentials);
+      }
       if(!user){
         const network=digest('email-register:'+ip);
         rate('email-register-ip-minute',network,caps.emailRegisterIPMinute,MINUTE);
         rate('email-register-ip-day',network,caps.emailRegisterIPDay,DAY);
         rate('email-register-global-day','global',caps.emailRegisterGlobalDay,DAY);
-        user=createUser(ip);stmt.bind.run(challenge.email,user.id);created=true;
+        user=createUser(credentials);stmt.bind.run(challenge.email,user.id);created=true;
       }
       stmt.attempt.run(attempts,'used',challengeId);
       return {user,created,email:challenge.email};
@@ -160,7 +186,7 @@ export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCod
     // A redeemed code is never reusable, including concurrent submissions. If
     // provisioning fails, keep the UUID and verified email for the next login.
     try{return {...await sessionFor(result.user,ip),email:result.email};}
-    catch(issue){throw error('邮箱已验证，账号已保留。请稍后重新获取验证码登录。',issue.status||503,result.created?'ACCOUNT_CREATED_LOGIN_PENDING':'EMAIL_LOGIN_PENDING');}
+    catch(issue){throw error(credentials?'邮箱已验证，密码已保存。请稍后使用密码登录。':'邮箱已验证，账号已保留。请稍后重新获取验证码登录。',issue.status||503,result.created?'ACCOUNT_CREATED_LOGIN_PENDING':'EMAIL_LOGIN_PENDING');}
   }
-  return {options,emailForUser,request,verify};
+  return {options,emailValue,userForEmail,emailForUser,request,verify};
 }

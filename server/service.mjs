@@ -1,9 +1,15 @@
 import {createHash,createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
 import {readFile,writeFile,rename} from 'node:fs/promises';
-import {analyze,boundedText,ServiceError,modelInput} from './analyze.mjs';
+import {analyze,boundedText,ServiceError,modelInput,modelPayload} from './analyze.mjs';
 import {createImageCaptcha,captchaAnswerHash} from './image-captcha.mjs';
 const D=globalThis.CampusData;
 const RATE_WINDOW_MS=180000,RATE_LIMIT=5,AUTHENTICATED_IP_RATE_LIMIT=20;
+// Peak list prices translated at a conservative 8 RMB/USD; cached input is
+// deliberately priced as a miss. These estimates are not provider invoices.
+// Update both values when the provider's prices change.
+const INPUT_MICRO_RMB_PER_TOKEN=2.4,OUTPUT_MICRO_RMB_PER_TOKEN=9.6;
+const tokenCostMicro=(input,output)=>Math.min(Number.MAX_SAFE_INTEGER,Math.ceil(input*INPUT_MICRO_RMB_PER_TOKEN+output*OUTPUT_MICRO_RMB_PER_TOKEN));
+const validTokenCounts=stats=>stats&&['input','output'].every(key=>Number.isSafeInteger(stats[key])&&stats[key]>=0);
 export async function createService(config,options={}){
   if(!config.apiKey||!config.accessToken||config.accessToken.length<20)throw new Error('Server secrets are missing or too short');
   // Legacy private mode is retained for isolated tests; production is explicitly public.
@@ -14,14 +20,19 @@ export async function createService(config,options={}){
   const cache=new Map(),rates=new Map(),challenges=new Map();
   const dailyLimit=config.dailyLimit===undefined?30:config.dailyLimit;
   if(!Number.isSafeInteger(dailyLimit)||dailyLimit<1)throw new Error('Daily AI budget must be a positive integer');
+  const dailyBudgetRmb=config.dailyBudgetRmb===undefined?3:config.dailyBudgetRmb;
+  const dailyBudgetMicro=Math.floor(dailyBudgetRmb*1_000_000);
+  if(typeof dailyBudgetRmb!=='number'||!Number.isFinite(dailyBudgetRmb)||!Number.isSafeInteger(dailyBudgetMicro)||dailyBudgetMicro<1)throw new Error('Daily AI currency budget must be a positive number');
   const ipLimit=Number.isInteger(config.ipDailyLimit)&&config.ipDailyLimit>0?config.ipDailyLimit:10;
   const bits=16,sign=value=>createHmac('sha256',config.accessToken).update(value).digest('base64url');
   const day=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(now());
-  let usage=null,busy=false,persistQueue=Promise.resolve();
+  let usage=null,busy=false,persistQueue=Promise.resolve(),currencyMigration=false;
   if(config.stateFile){try{
     usage=JSON.parse(await readFile(config.stateFile,'utf8'));
     if(!usage||typeof usage.day!=='string'||!Number.isSafeInteger(usage.requests)||usage.requests<0||['input','output','reasoning'].some(key=>usage[key]!==undefined&&(!Number.isSafeInteger(usage[key])||usage[key]<0)))throw new Error('Invalid quota state');
     for(const key of ['input','output','reasoning'])usage[key]??=0;
+    if(usage.costMicro===undefined){usage.costMicro=tokenCostMicro(usage.input,usage.output);currencyMigration=true;}
+    if(!Number.isSafeInteger(usage.costMicro)||usage.costMicro<0)throw new Error('Invalid currency budget state');
     const validTimes=(value,limit)=>Array.isArray(value)&&value.length<=limit&&value.every(t=>Number.isSafeInteger(t)&&t>=0);
     const validMap=value=>value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length<=2000;
     if(usage.clients!==undefined&&(!validMap(usage.clients)||Object.entries(usage.clients).some(([k,v])=>!/^[-\w]{43}$/.test(k)||!v||!Number.isSafeInteger(v.requests)||v.requests<0||!validTimes(v.times,config.requireIdentity?AUTHENTICATED_IP_RATE_LIMIT:RATE_LIMIT))))throw new Error('Invalid address quota state');
@@ -29,6 +40,7 @@ export async function createService(config,options={}){
     if(usage.accountRates!==undefined&&(!validMap(usage.accountRates)||Object.entries(usage.accountRates).some(([k,v])=>!/^[-\w]{43}$/.test(k)||!validTimes(v,RATE_LIMIT))))throw new Error('Invalid account rate state');
   }catch(e){if(e.code!=='ENOENT')throw e;}}
   const persist=()=>{if(!config.stateFile)return Promise.resolve();const snapshot=JSON.stringify(usage);const pending=persistQueue.catch(()=>{}).then(async()=>{await writeFile(config.stateFile+'.tmp',snapshot,{mode:0o600});await rename(config.stateFile+'.tmp',config.stateFile);});persistQueue=pending;return pending;};
+  if(currencyMigration)await persist();
   const authorized=header=>timingSafeEqual(createHash('sha256').update(header||'').digest(),createHash('sha256').update('Bearer '+config.accessToken).digest());
   const verify=(proof,ipKey,hash,origin,t,accountKey)=>{
     try{
@@ -79,7 +91,7 @@ export async function createService(config,options={}){
     const saved=cache.get(hash);
     if(busy&&!saved)return reply({error:'正在整理另一条通知，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
     if(busy&&usage?.day!==day())return reply({error:'正在整理另一条通知，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
-    if(!usage||usage.day!==day())usage={day:day(),requests:0,input:0,output:0,reasoning:0,...(publicMode?{clients:{}}:{})};
+    if(!usage||usage.day!==day())usage={day:day(),requests:0,input:0,output:0,reasoning:0,costMicro:0,...(publicMode?{clients:{}}:{})};
     const requestUsage=usage;
     const accountKey=account?sign(usage.day+':account:'+account.id):null;
     const accountLimit=Number.isInteger(config.accountDailyLimit)&&config.accountDailyLimit>0?config.accountDailyLimit:10;
@@ -107,7 +119,13 @@ export async function createService(config,options={}){
     }
     const seconds=Math.ceil((86400000-((t+8*3600000)%86400000))/1000);
     const limited=(error,code)=>reply({error,code,retryAfterSeconds:seconds},429,{'Retry-After':String(seconds)});
+    // UTF-8 bytes upper-bound the text input tokens, with extra room for chat
+    // framing. Output includes the reasoning budget rather than adding it twice.
+    const payload=saved?null:modelPayload(notice,config);
+    const reservedCostMicro=payload?tokenCostMicro(Buffer.byteLength(JSON.stringify(payload),'utf8')+1024,payload.max_tokens):0;
+    const currencyLimited=()=>limited('今日 AI 服务预算已用完，明天再试。','DAILY_COST_LIMIT');
     // Paid failures also consume both caps. Cache reuse does not spend the budget.
+    if(!saved&&usage.costMicro>dailyBudgetMicro-reservedCostMicro)return currencyLimited();
     if(!saved&&usage.requests>=dailyLimit)return limited('今日整理次数已达上限，明天再试。','DAILY_LIMIT');
     if(publicMode&&!saved&&client.requests>=ipLimit)return limited('此网络今日整理次数已达上限，明天再试。','IP_DAILY_LIMIT');
     if(accountKey&&!saved&&(usage.accounts?.[accountKey]||0)>=accountLimit)return limited('此账号今日整理次数已达上限，明天再试。','ACCOUNT_DAILY_LIMIT');
@@ -138,23 +156,25 @@ export async function createService(config,options={}){
     // Recheck after asynchronous persistence; two arrivals must never start two model calls.
     if(busy)return reply({error:'正在整理另一条通知，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
     if(usage.requests>=dailyLimit)return limited('今日整理次数已达上限，明天再试。','DAILY_LIMIT');
+    if(usage.costMicro>dailyBudgetMicro-reservedCostMicro)return currencyLimited();
     if(publicMode&&client.requests>=ipLimit)return limited('此网络今日整理次数已达上限，明天再试。','IP_DAILY_LIMIT');
     if(accountKey&&(usage.accounts?.[accountKey]||0)>=accountLimit)return limited('此账号今日整理次数已达上限，明天再试。','ACCOUNT_DAILY_LIMIT');
     if(request.signal.aborted)return reply({error:'整理已取消，请重新提交。',code:'CANCELLED'},499);
     busy=true;let tokensRecorded=false;
-    const recordTokens=async(stats,finishReason,failureCode)=>{
-      for(const key of ['input','output','reasoning'])usage[key]=Math.min(Number.MAX_SAFE_INTEGER,(usage[key]||0)+(stats[key]||0));
+    const recordTokens=async(stats,finishReason,failureCode,usageAvailable)=>{
+      for(const key of ['input','output','reasoning'])usage[key]=Math.min(Number.MAX_SAFE_INTEGER,(usage[key]||0)+(stats?.[key]||0));
+      if(usageAvailable===true&&validTokenCounts(stats))usage.costMicro=Math.min(Number.MAX_SAFE_INTEGER,usage.costMicro-reservedCostMicro+tokenCostMicro(stats.input,stats.output));
       if(finishReason)usage.lastFinishReason=finishReason;if(failureCode)usage.lastFailureCode=failureCode;else delete usage.lastFailureCode;
       tokensRecorded=true;await persist();
     };
     try{
-      usage.requests++;if(publicMode)client.requests++;if(accountKey){usage.accounts??={};usage.accounts[accountKey]=(usage.accounts[accountKey]||0)+1;}await persist();
+      usage.costMicro+=reservedCostMicro;usage.requests++;if(publicMode)client.requests++;if(accountKey){usage.accounts??={};usage.accounts[accountKey]=(usage.accounts[accountKey]||0)+1;}await persist();
       if(request.signal.aborted)throw new ServiceError('整理已取消，请重新提交。',499);
-      const output=await analyze(notice,config,modelFetch,request.signal);await recordTokens(output.usage,output.finishReason);
+      const output=await analyze(notice,config,modelFetch,request.signal);await recordTokens(output.usage,output.finishReason,undefined,output.usageAvailable);
       if(request.signal.aborted)throw new ServiceError('整理已取消，请重新提交。',499);
       if(cache.size>=50)cache.delete(cache.keys().next().value);cache.set(hash,{created:now(),result:output.result});return reply(output.result);
     }catch(e){
-      if(e instanceof ServiceError&&e.usage&&!tokensRecorded){try{await recordTokens(e.usage,e.finishReason,e.failureCode);}catch{return reply({error:'整理服务暂时不可用，请稍后重试。'},503);}}
+      if(e instanceof ServiceError&&e.usage&&!tokensRecorded){try{await recordTokens(e.usage,e.finishReason,e.failureCode,e.usageAvailable);}catch{return reply({error:'整理服务暂时不可用，请稍后重试。'},503);}}
       return reply({error:e instanceof ServiceError?e.message:'整理服务暂时不可用，请稍后重试。'},e.status||503);
     }finally{busy=false;}
   };

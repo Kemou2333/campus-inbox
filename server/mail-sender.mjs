@@ -133,14 +133,16 @@ export function createMailSender(env={},options={}){
     tls:{rejectUnauthorized:true,minVersion:'TLSv1.2',servername:host},
     connectionTimeout:5000,greetingTimeout:5000,socketTimeout:5000,dnsTimeout:4000,
     logger:false,debug:false,transactionLog:false,pool:false,disableFileAccess:true,disableUrlAccess:true};
-  return async function sendCode({email,code,expiresMinutes=5}={}){
+  return async function sendCode({email,code,expiresMinutes=5,purpose='login'}={}){
     const recipient=canonicalEmail(email);
     if(typeof code!=='string'||!/^\d{6}$/.test(code)||expiresMinutes!==5)throw new Error('验证码邮件内容不正确。');
     let transport,timer;
     try{
       transport=createTransport(transportOptions);
+      const action={login:'登录',register:'注册',bind:'绑定邮箱',password:'设置密码'}[purpose];
+      if(!action)throw new Error('验证码邮件用途不正确。');
       const message={from:{name:APP_NAME,address:from},to:{address:recipient},envelope:{from,to:[recipient]},
-        subject:`${APP_NAME} 登录验证码`,text:`你的 ${APP_NAME} 登录验证码是：${code}\n\n${expiresMinutes} 分钟内有效，请勿告诉他人。\n如果不是你本人操作，请忽略此邮件。`,
+        subject:`${APP_NAME} ${action}验证码`,text:`你的 ${APP_NAME} ${action}验证码是：${code}\n\n${expiresMinutes} 分钟内有效，请勿告诉他人。\n如果不是你本人操作，请忽略此邮件。`,
         disableFileAccess:true,disableUrlAccess:true};
       const sent=await Promise.race([
         Promise.resolve().then(()=>transport.sendMail(message)),

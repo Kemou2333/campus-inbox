@@ -61,7 +61,7 @@ test('mail request returns only an opaque challenge and creates accounts after v
 test('mail validation and origin rules do not send unsupported or untrusted requests',async t=>{
   const f=await fixture();t.after(()=>f.auth.close());
   assert.equal((await f.request('email/request',{email:'user@unlisted.test',purpose:'login'})).status,400);
-  assert.equal((await f.request('email/request',{email,purpose:'register'})).status,400);
+  assert.equal((await f.request('email/request',{email,purpose:'unknown'})).status,400);
   assert.equal((await f.request('email/request',{email,purpose:'login'},undefined,'test-network','https://attacker.test')).status,403);
   assert.equal((await f.request('email/request',{email,purpose:'bind'})).status,401);
   assert.equal(f.messages.length,0);
@@ -263,4 +263,80 @@ test('persisted codes are HMAC hashes and email sessions survive reopening',asyn
   const reopened=await fixture({file});t.after(()=>reopened.auth.close());
   assert.equal(reopened.auth.getIdentity(logged.body.key).subject,owner);assert.equal(reopened.auth.getIdentity(logged.body.key).email,email);
   assert.equal((await reopened.verify(challenge,code)).status,400);
+});
+
+test('email registration verifies once, stores a password hash and then logs in by password without sending mail',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'campus-email-password-'));t.after(()=>rm(directory,{recursive:true,force:true}));
+ const file=join(directory,'auth.sqlite'),f=await fixture({file});t.after(()=>f.auth.close());
+ const challenge=await f.send(email,'register'),code=f.messages.at(-1).code;
+ assert.equal(f.identities.length,0);assert.equal(f.messages[0].purpose,'register');
+ const short=await f.request('email/verify',{challengeId:challenge.challengeId,code,username:'student-one',password:'short'});assert.equal(short.status,400);
+ const registered=await f.request('email/verify',{challengeId:challenge.challengeId,code,username:'ＳＴＵＤＥＮＴ-one',password});
+ assert.equal(registered.status,200);assert.equal(registered.body.username,'student-one');
+ const owner=f.auth.getIdentity(registered.body.key).subject;
+ const byEmail=await f.request('login',{username:' REVIEW@163.COM ',password});
+ const byUsername=await f.request('login',{username:'STUDENT-one',password});
+ assert.equal(byEmail.status,200);assert.equal(byUsername.status,200);
+ assert.equal(f.auth.getIdentity(byEmail.body.key).subject,owner);assert.equal(f.auth.getIdentity(byUsername.body.key).subject,owner);
+ assert.equal(f.messages.length,1);assert.equal((await f.verify(challenge,code)).status,400);
+ const db=new DatabaseSync(file),user=db.prepare('SELECT * FROM invite_users').get(),identityCount=db.prepare('SELECT COUNT(*) AS count FROM email_identities').get();db.close();
+ assert.match(user.password_hash,/^[a-f0-9]{128}$/);assert.match(user.salt,/^[a-f0-9]{32}$/);assert.ok(!Object.values(user).includes(password));assert.equal(identityCount.count,1);
+});
+
+test('email registration cannot overwrite an existing bound account or its password',async t=>{
+ const f=await fixture();t.after(()=>f.auth.close());const old=await f.register(),owner=f.auth.getIdentity(old.key).subject;
+ await f.verify(await f.send(email,'bind',old.key),undefined,old.key);f.advance(60000);
+ const register=await f.send(email,'register'),rejected=await f.request('email/verify',{challengeId:register.challengeId,code:f.messages.at(-1).code,username:'replacement',password:'another password'});assert.equal(rejected.status,409);assert.equal(rejected.body.code,'EMAIL_ALREADY_REGISTERED');
+ f.advance(60000);const setup=await f.send(email,'password'),conflict=await f.request('email/verify',{challengeId:setup.challengeId,code:f.messages.at(-1).code,password:'another password'});assert.equal(conflict.status,409);assert.equal(conflict.body.code,'EMAIL_PASSWORD_EXISTS');
+ const logged=await f.request('login',{username:email,password});assert.equal(logged.status,200);assert.equal(f.auth.getIdentity(logged.body.key).subject,owner);assert.equal(f.messages.length,3);
+});
+
+test('legacy email-only accounts set a password after verification and retain their cloud owner',async t=>{
+ const f=await fixture();t.after(()=>f.auth.close());const original=(await f.verify(await f.send())).body,owner=f.auth.getIdentity(original.key).subject;
+ f.advance(60000);const challenge=await f.send(email,'password'),code=f.messages.at(-1).code,wrong=code==='000000'?'000001':'000000';
+ const invalid=await f.request('email/verify',{challengeId:challenge.challengeId,code:wrong,password});assert.equal(invalid.status,400);
+ assert.equal((await f.request('login',{username:email,password})).status,401);
+ const saved=await f.request('email/verify',{challengeId:challenge.challengeId,code,password});assert.equal(saved.status,200);
+ assert.equal(f.auth.getIdentity(saved.body.key).subject,owner);assert.equal(saved.body.username,original.username);
+ const login=await f.request('login',{username:email,password});assert.equal(login.status,200);assert.equal(f.auth.getIdentity(login.body.key).subject,owner);
+ f.advance(60000);const again=await f.send(email,'password'),rejected=await f.request('email/verify',{challengeId:again.challengeId,code:f.messages.at(-1).code,password:'another password'});assert.equal(rejected.status,409);assert.equal(f.messages.length,3);
+});
+
+test('email and username password guesses share one per-account budget across networks',async t=>{
+ const f=await fixture();t.after(()=>f.auth.close());const old=await f.register();await f.verify(await f.send(email,'bind',old.key),undefined,old.key);
+ for(let i=0;i<5;i++)assert.equal((await f.request('login',{username:i%2?old.username:email,password:'wrong password'},undefined,'network-'+i)).status,401);
+ assert.equal((await f.request('login',{username:old.username,password},undefined,'fresh-network')).status,429);
+ f.advance(60000);assert.equal((await f.request('login',{username:email,password},undefined,'fresh-network')).status,200);
+});
+
+test('concurrent password registrations with one code cannot create duplicate email identities',async t=>{
+ const f=await fixture();t.after(()=>f.auth.close());const challenge=await f.send(email,'register'),code=f.messages.at(-1).code;
+ const results=await Promise.all(['first-user','second-user'].map(username=>f.request('email/verify',{challengeId:challenge.challengeId,code,username,password})));
+ assert.deepEqual(results.map(result=>result.status).sort(),[200,400]);assert.equal(f.identities.length,1);
+});
+
+test('verified password registration preserves rolling account ceilings and leaves a throttled code usable',async t=>{
+ const f=await fixture({limits:{emailRegisterIPDay:1}});t.after(()=>f.auth.close());
+ const first=await f.send(email,'register');assert.equal((await f.request('email/verify',{challengeId:first.challengeId,code:f.messages.at(-1).code,username:'first-user',password})).status,200);
+ const second=await f.send('another@163.com','register'),code=f.messages.at(-1).code;
+ const body={challengeId:second.challengeId,code,username:'second-user',password};
+ assert.equal((await f.request('email/verify',body)).status,429);
+ assert.equal((await f.request('email/verify',body,undefined,'other-network')).status,200);
+});
+
+test('a verified password account survives provisioning failure and can recover by ordinary login',async t=>{
+ let unavailable=true;const f=await fixture({provision:()=>{if(unavailable){const issue=new Error('sync fixture unavailable');issue.status=429;throw issue;}return {key:randomBytes(32).toString('base64url')};}});t.after(()=>f.auth.close());
+ const challenge=await f.send(email,'register'),code=f.messages.at(-1).code;
+ const result=await f.request('email/verify',{challengeId:challenge.challengeId,code,username:'new-user',password});
+ assert.equal(result.status,429);assert.equal(result.body.code,'ACCOUNT_CREATED_LOGIN_PENDING');assert.match(result.body.error,/使用密码登录/);
+ unavailable=false;const logged=await f.request('login',{username:email,password});assert.equal(logged.status,200);assert.equal(f.identities[0].subject,f.auth.getIdentity(logged.body.key).subject);assert.equal(f.messages.length,1);
+});
+
+test('public registration and first-password send replies do not reveal mailbox membership',async t=>{
+ const f=await fixture();t.after(()=>f.auth.close());const old=await f.register();await f.verify(await f.send(email,'bind',old.key),undefined,old.key);f.advance(60000);
+ for(const [address,purpose] of [[email,'register'],['new@163.com','register'],['unknown@163.com','password']]){
+  const reply=await f.request('email/request',{email:address,purpose});assert.equal(reply.status,200);assert.deepEqual(Object.keys(reply.body).sort(),['challengeId','expiresAt','retryAfterSeconds']);
+  if(purpose==='password')assert.equal((await f.request('email/verify',{challengeId:reply.body.challengeId,code:f.messages.at(-1).code,password})).status,409);
+ }
+ assert.equal(f.identities.length,1);
 });

@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
-import {Alert,Box,Button,IconButton,LinearProgress,Paper,Stack,TextField,Tooltip,Typography,useMediaQuery} from '@mui/material';
+import {Alert,Box,Button,Dialog,DialogActions,DialogContent,DialogTitle,IconButton,LinearProgress,Paper,Stack,TextField,Tooltip,Typography,useMediaQuery} from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
 import AttachFile from '@mui/icons-material/AttachFile';
@@ -9,6 +9,7 @@ import {AttachmentList} from '../attachments/AttachmentList';
 
 export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusController;onDone:()=>void;onLogin:()=>void;embedded?:boolean}){
  const input=useRef<HTMLInputElement>(null);const [target,setTarget]=useState<string|null>(null);const [adding,setAdding]=useState(false);const [pasting,setPasting]=useState(false);
+ const [aiNotice,setAiNotice]=useState(false);
  const topNavigation=useMediaQuery('(min-width:960px), (min-width:600px) and (max-height:500px)');
  const shortViewport=useMediaQuery('(max-height:500px)');
  const [clock,setClock]=useState(Date.now());
@@ -16,7 +17,9 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
  const retrySeconds=Math.max(0,Math.ceil((app.retryAt-clock)/1000));
  const retryText=retrySeconds>3600?'稍后再试':retrySeconds>=60?`${Math.ceil(retrySeconds/60)} 分钟后`:`${retrySeconds} 秒后`;
  const total=app.drafts.reduce((n,d)=>n+d.text.length,0);const hasContent=app.drafts.some(d=>d.text.trim());
- async function submit(){if(!app.cloud?.getKey()){onLogin();return;}try{if(await app.analyze())onDone();}catch(e){app.report(e);}}
+ async function analyze(){try{if(await app.analyze())onDone();}catch(e){app.report(e);}}
+ async function submit(){if(!app.cloud?.getKey()){onLogin();return;}if(localStorage.getItem('campus-inbox:ai-notice:v1')!=='seen'){setAiNotice(true);return;}await analyze();}
+ function acknowledge(){localStorage.setItem('campus-inbox:ai-notice:v1','seen');setAiNotice(false);void analyze();}
  async function picked(files:FileList|null){const id=target;if(!files||!id)return;setAdding(true);try{await app.attach(id,Array.from(files));}catch(e){app.report(e);}finally{setAdding(false);if(input.current)input.current.value='';}}
  async function paste(id:string){if(pasting)return;setPasting(true);try{const text=await navigator.clipboard.readText();if(text)app.pasteDraft(id,text);else app.tell('剪贴板是空的。');}catch{app.tell('请在输入框长按粘贴，或使用键盘粘贴。');}finally{setPasting(false);}}
  return <Stack spacing={2} className="page-enter">
@@ -48,5 +51,6 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
      {app.busy&&<Button onClick={app.cancel}>取消</Button>}
    </Stack>
   </Box>
+  <Dialog open={aiNotice} onClose={()=>setAiNotice(false)} aria-labelledby="ai-notice-heading"><DialogTitle id="ai-notice-heading">整理前请留意</DialogTitle><DialogContent><Typography>AI 可能遗漏或误判。时间、对象和要求等重要信息，请再核对原文。</Typography></DialogContent><DialogActions><Button onClick={()=>setAiNotice(false)}>取消</Button><Button variant="contained" onClick={acknowledge}>开始整理</Button></DialogActions></Dialog>
  </Stack>;
 }

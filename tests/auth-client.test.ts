@@ -104,3 +104,24 @@ test('legacy status may omit email and nullable email is retained without leakin
   const nullable = clientWith(() => Response.json({ ...session, email: null, unrelatedSecret: 'ignored' })).client;
   expect(await nullable.login('old-user', 'a simple password')).toEqual({ ...session, email: null });
 });
+
+test('verified email registration sends credentials only on redemption, then ordinary login needs no new email', async () => {
+ const {client,calls}=clientWith(url=>Response.json(url.endsWith('/request')?{challengeId,retryAfterSeconds:60,expiresAt}:session));
+ await client.requestEmail('review@gmail.com','register');
+ expect(await client.registerEmail(challengeId,'123456','student-one','a simple password')).toEqual(session);
+ await client.login('review@gmail.com','a simple password');
+ expect(calls.map(call=>call.body)).toEqual([
+  {email:'review@gmail.com',purpose:'register'},
+  {challengeId,code:'123456',username:'student-one',password:'a simple password'},
+  {username:'review@gmail.com',password:'a simple password'},
+ ]);
+ expect(calls[2].url).toBe('https://example.test/auth/login');expect(calls.every(call=>call.authorization===null)).toBe(true);
+});
+
+test('legacy email password setup redeems a code once and rejects short passwords locally',async()=>{
+ const {client,calls}=clientWith(url=>Response.json(url.endsWith('/request')?{challengeId,retryAfterSeconds:60,expiresAt}:session));
+ await expect(client.setEmailPassword(challengeId,'123456','short')).rejects.toThrow('8–128');expect(calls).toHaveLength(0);
+ await client.requestEmail('review@gmail.com','password');
+ expect(await client.setEmailPassword(challengeId,'123456','new secure password')).toEqual(session);
+ expect(calls[1].body).toEqual({challengeId,code:'123456',password:'new secure password'});
+});

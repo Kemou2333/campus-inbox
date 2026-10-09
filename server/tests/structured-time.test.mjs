@@ -69,7 +69,7 @@ test('backend checks the exact matching time field, without borrowing a cohort y
 });
 test('one model response can carry date-only specs without an invented timestamp or a retry',async()=>{
  const text='2026年10月15日前',n=basic(text);n.deadlineSpec=T.fromText(text);n.tasks[0].timeSpec=T.fromText(text);let calls=0;
- const output=await analyze({sources:[{text:'请在2026年10月15日前提交登记表。'}]},{apiKey:'test-only-key'},async(_url,options)=>{calls++;const payload=JSON.parse(options.body);assert.equal(payload.thinking.type,'disabled');assert(payload.messages[0].content.includes('deadlineSpec'));return new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({schemaVersion:4,notices:[n]})}}],usage:{prompt_tokens:1,completion_tokens:1}}),{status:200});});
+ const output=await analyze({sources:[{text:'请在2026年10月15日前提交登记表。'}]},{apiKey:'test-only-key'},async(_url,options)=>{calls++;const payload=JSON.parse(options.body);assert.equal(payload.thinking.type,'disabled');assert.equal(payload.reasoning_effort,undefined);assert(payload.messages[0].content.includes('deadlineSpec'));return new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({schemaVersion:4,notices:[n]})}}],usage:{prompt_tokens:1,completion_tokens:1}}),{status:200});});
  assert.equal(calls,1);assert.equal(output.result.notices[0].deadline,null);assert.equal(output.result.notices[0].deadlineSpec.type,'date');assert.equal(output.result.notices[0].deadlineSpec.hour,null);
 });
 
@@ -82,4 +82,10 @@ test('an empty partial label cannot discard a paid result or invent a date',()=>
  assert.equal(grounded.type,'partial');assert.equal(grounded.month,10);assert.equal(grounded.day,null);assert.equal(T.toISO(grounded),null);
  assert.throws(()=>T.ground({...unknown,extra:'not allowed'},'课程结束前','课程结束前'));
  assert.throws(()=>T.ground({...unknown,day:35},'课程结束前','课程结束前'));
+});
+
+test('month ranges and whole Chinese link delimiters do not become exact dates',()=>{
+ for(const text of ['2026年5月-8月','2026年5月—8月','5月至8月'])assert.equal(T.fromText(text).type,'unknown',text);
+ const n=basic('2026年6月1日15:00');const result=groundDates({schemaVersion:4,notices:[n]},'报名截止时间：2026年6月1日15:00');
+ assert.equal(result.notices[0].deadlineSpec.type,'date_time');assert.equal(result.notices[0].tasks[0].timeSpec.hour,15);
 });

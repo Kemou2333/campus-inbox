@@ -8,7 +8,7 @@
 2. 运行 `python3 mobile/prepare-web.py`。
 3. 使用 JDK 17、Gradle 8.13、Android SDK 36，在 `mobile/android/` 运行 `gradle :app:assembleRelease`。
 
-APK 发布版本为 `2.4.0`、`versionCode=6`，应用 ID 延续 `io.github.kemou2333.campusinbox`。沿用第一版的私密签名密钥才能覆盖安装并保留已有通知。签名配置仅从 `ANDROID_KEYSTORE_PATH`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD` 环境变量读取，不进入仓库。
+APK 发布版本为 `2.5.0`、`versionCode=6`，应用 ID 延续 `io.github.kemou2333.campusinbox`。沿用第一版的私密签名密钥才能覆盖安装并保留已有通知。签名配置仅从 `ANDROID_KEYSTORE_PATH`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD` 环境变量读取，不进入仓库。
 
 ## 平台能力
 

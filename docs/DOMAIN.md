@@ -6,7 +6,7 @@
 
 | 功能 | 数据与规则 |
 | --- | --- |
-| 多条通知整理 | 服务仍接受最多 20 个 `sources`，合计 4000 字；这里只将返回的 v4 AI 内容转为 v5 本地记录 |
+| 多条通知整理 | 服务接受最多 20 个输入框 `sources`，合计 4000 字；同一框可拆出多张独立主题卡片，整批最多 20 张；返回的 v4 AI 内容转为 v5 本地记录 |
 | 任务、提醒、知悉消息 | `kind` 保留三个内容类别；界面可以把 reminder 和 information 放在一个提醒页并区分标签 |
 | 适用对象 | 每个 Task 保留 `scope`、`condition`、`assignee`，不能把“未选课的同学”显示成全体必做 |
 | AI 拆出的办理步骤 | 每个 Step 的文字、细节原样保留；用户只修改完成状态和笔记 |
@@ -20,16 +20,36 @@
 
 ## 两种版本号
 
-服务的 **AI 输出契约仍是 schemaVersion 4**。它包含摘要、执行人、条件、步骤和时间，不包含用户笔记、完成情况、附件或本地编号。
+服务的 **AI 输出契约仍是 schemaVersion 4**。它包含摘要、执行人、条件、步骤和时间，不包含用户笔记、完成情况、附件或本地编号。模型返回中每张卡片的 `sourceId` 指向输入框；服务校验后将其剥离，必要时在客户端批次结果中添加可选的 `sourceIndexes`。
 
 新版 **本地记录为 schemaVersion 5**。每条通知、事项、步骤和提醒都有稳定 ID。UI 编辑笔记和切换状态通过 ID 找到目标，不依赖列表下标；排序后笔记仍对应原来的项目。
 
 ```ts
 const result = parseAnalysisBatch(response.result);
-const notices = result.notices.map((a, i) => createNotice(a, sources[i].text));
+const indexes = result.sourceIndexes ?? result.notices.map((_, index) => index);
+const notices = result.notices.map((analysis, index) => {
+  const source = sources[indexes[index]];
+  return createNotice(analysis, source.text);
+});
 ```
 
 `parseAnalysis` / `parseAnalysisBatch` 负责外部 AI 结果的边界校验，移除不了的错误直接告诉用户。`createNotice` 增加本地字段，不改写摘要和办理内容，也不进行第二次 AI 调用。
+
+## 输入来源与同框拆卡
+
+`sourceId` 是服务器为本次输入框按顺序添加的 **1 起始编号**，不是用户提供的本地 ID。一框粘贴两条独立通知时，模型可以返回两张具有同一 `sourceId` 的卡片；同一主题的不同角色或办理步骤仍留在同一张卡内。多输入框一起整理只发起一次模型请求，模型看到本次原文，不接收已经保存的通知或附件。
+
+服务要求来源编号有效、按输入框和原文顺序排列，且每个输入框至少对应一张卡片。随后剥离每张卡片的 `sourceId`，按所属来源核验可解析的时间和网址，再做 v4 字段校验。来源编号只能证明对应关系，不能保证模型理解的每一项事实都正确；重要信息仍需要核对原文。
+
+常规一框一张、顺序对应的结果不带 `sourceIndexes`，保持旧客户端兼容。同框多卡等情况附带 **0 起始**的对应关系，例如两框返回三张卡时 `sourceIndexes:[0,0,1]`。前端按此映射保存每张卡的原文和附件引用，不按输出下标直接读取输入框。两张来自同一框的卡片会保留这个输入框的完整原文和附件引用；它们的事项、完成状态和笔记相互独立。
+
+不同来源不合并，不互借流程、接收人、日期或链接；这既是提示词约束，也由来源映射和可校验的字段检查配合落实。映射缺失、越界、乱序或漏掉来源时，不保存半批结果；输入草稿保留。
+
+## 整理结果恢复
+
+草稿在本地有稳定 ID，整理结果暂存时连同来源草稿一起保留。保存时第一张卡使用 `ai-${source.id}`；同框后续卡依次使用 `ai-${source.id}-1`、`ai-${source.id}-2`。同一份结果在刷新后恢复时会得到同一批卡片编号，已存在的编号不再次插入，避免重复恢复增加通知。
+
+卡片内事项、步骤和提醒各有自己的本地 ID，保存后笔记和勾选状态通过这些 ID 定位。稳定恢复编号只用于同一份已返回结果，不表示两次独立调用的 AI 结果一定相同，也不用于自动合并已有通知。
 
 ## 操作 API
 
@@ -69,7 +89,7 @@ const notices = result.notices.map((a, i) => createNotice(a, sources[i].text));
 
 `NoticeRepository` 只定义本地 `load / save / subscribe`。持续云同步由独立 `src/infrastructure/sync-client.ts` 协调器处理；它不会替换本地离线仓库，也不会把网络请求写进各个界面组件。
 
-`createCloudSync(repository, endpoint, options)` 提供 `connect / disconnect / syncNow / resolveConflict / getState / subscribe`。应用用一次性邀请码注册，再用用户名和密码登录。登录成功取得设备会话并 `connect`，没有匿名生成空间的前端入口。
+`createCloudSync(repository, endpoint, options)` 提供 `connect / disconnect / syncNow / resolveConflict / getState / subscribe`。2.5.0 日常使用邮箱或用户名加密码登录；公开注册时验证一次邮箱并设置密码，邀请码注册保留兼容。旧邀请码账号绑定邮箱后保留原密码与账号 UUID；旧邮箱免密账号只能验证后设置首次密码，不能覆盖已有密码。登录成功取得设备会话并 `connect`，没有匿名生成空间的前端入口。
 
 应用在新增、修改、完成、删除后短暂合并请求并自动同步；页面可见时定时拉取，重新获得焦点时立即拉取。这里的 key 是持续登录的设备会话，不是邀请码或一次性迁移码；使用同一账号登录连接同一云空间。每台设备仍先保存本地，断网时继续操作，恢复连接再上传。
 
