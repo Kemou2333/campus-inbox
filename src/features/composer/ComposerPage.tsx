@@ -1,14 +1,17 @@
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useRef,useState,type ClipboardEvent} from 'react';
 import {Alert,Box,Button,Dialog,DialogActions,DialogContent,DialogTitle,IconButton,LinearProgress,Paper,Stack,TextField,Tooltip,Typography,useMediaQuery} from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
 import AttachFile from '@mui/icons-material/AttachFile';
 import ContentPaste from '@mui/icons-material/ContentPaste';
-import type {CampusController} from '../../app/useCampus';
+import type {CampusController,DraftSelection} from '../../app/useCampus';
 import {AttachmentList} from '../attachments/AttachmentList';
+import {readClipboard,readTransfer,type ClipboardImport} from '../../infrastructure/clipboard-import';
 
 export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusController;onDone:()=>void;onLogin:()=>void;embedded?:boolean}){
- const input=useRef<HTMLInputElement>(null);const [target,setTarget]=useState<string|null>(null);const [adding,setAdding]=useState(false);const [pasting,setPasting]=useState(false);
+ const input=useRef<HTMLInputElement>(null);const [target,setTarget]=useState<string|null>(null);const [adding,setAdding]=useState(false);
+ const importLock=useRef(false);const [dragTarget,setDragTarget]=useState<string|null>(null);
+ const [importWarnings,setImportWarnings]=useState<Record<string,string>>({});
  const [aiNotice,setAiNotice]=useState(false);
  const topNavigation=useMediaQuery('(min-width:960px), (min-width:600px) and (max-height:500px)');
  const shortViewport=useMediaQuery('(max-height:500px)');
@@ -20,27 +23,66 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
  async function analyze(){try{if(await app.analyze())onDone();}catch(e){app.report(e);}}
  async function submit(){if(!app.cloud?.getKey()){onLogin();return;}if(localStorage.getItem('campus-inbox:ai-notice:v1')!=='seen'){setAiNotice(true);return;}await analyze();}
  function acknowledge(){localStorage.setItem('campus-inbox:ai-notice:v1','seen');setAiNotice(false);void analyze();}
- async function picked(files:FileList|null){const id=target;if(!files||!id)return;setAdding(true);try{await app.attach(id,Array.from(files));}catch(e){app.report(e);}finally{setAdding(false);if(input.current)input.current.value='';}}
- async function paste(id:string){if(pasting)return;setPasting(true);try{const text=await navigator.clipboard.readText();if(text)app.pasteDraft(id,text);else app.tell('剪贴板是空的。');}catch{app.tell('请在输入框长按粘贴，或使用键盘粘贴。');}finally{setPasting(false);}}
+ async function picked(files:FileList|null){const id=target;if(!files||!id||importLock.current)return;importLock.current=true;setAdding(true);try{await app.attach(id,Array.from(files));setImportWarnings(old=>({...old,[id]:''}));}catch(e){app.report(e);}finally{importLock.current=false;setAdding(false);if(input.current)input.current.value='';}}
+ async function importContent(id:string,read:()=>Promise<ClipboardImport>,selection?:DraftSelection){
+  if(importLock.current||app.busy)return;importLock.current=true;setAdding(true);
+  try{
+   let value:ClipboardImport;
+   try{value=await read();}catch{app.tell('请在输入框长按粘贴，或使用键盘粘贴。');return;}
+   // Save readable text even if some attachment representations are unavailable.
+   if(value.text)app.insertDraft(id,value.text,selection);
+   const warnings=[...value.warnings];
+   if(value.unavailableImages)warnings.push(`${value.unavailableImages} 张图片未复制过来，请拖入或添加。`);
+   if(value.files.length){try{await app.attach(id,value.files);app.tell(`已添加 ${value.files.length} 个附件`);}catch(e){warnings.push(e instanceof Error?e.message:'附件未保存，请重新添加。');}}
+   if(!value.text&&!value.files.length&&!warnings.length)app.tell('剪贴板没有可粘贴的内容。');
+   setImportWarnings(old=>({...old,[id]:[...new Set(warnings)].join(' ')}));
+   return value;
+  }catch(e){app.report(e);}
+  finally{importLock.current=false;setAdding(false);}
+ }
+ function pasteEvent(id:string,event:ClipboardEvent){
+  if(app.busy||importLock.current){event.preventDefault();return;}
+  const element=event.target;
+  if(!(element instanceof HTMLTextAreaElement))return;
+  event.preventDefault();
+  const selection={start:element.selectionStart,end:element.selectionEnd,expectedText:element.value};
+  // Clipboard event data must be read before the event handler returns.
+  const content=readTransfer(event.clipboardData);
+  void importContent(id,()=>content,selection).then(value=>{
+   if(!value)return;
+   const expected=selection.expectedText.slice(0,selection.start)+value.text+selection.expectedText.slice(selection.end);
+   requestAnimationFrame(()=>{
+    if(!element.isConnected||element.disabled||element.value!==expected)return;
+    // Disabling during import may blur the field; do not steal focus from another control.
+    if(document.activeElement!==document.body&&document.activeElement!==element)return;
+    element.focus();const caret=selection.start+value.text.length;element.setSelectionRange(caret,caret);
+   });
+  });
+ }
  return <Stack spacing={2} className="page-enter">
   <Typography variant={embedded?"h5":"h4"} component={embedded?"h2":"h1"}>新增通知</Typography>
   {app.pending&&<Alert severity="info" action={<Button onClick={app.recoverResult}>保存结果</Button>}>上次整理的结果还没保存，无需再次调用 AI。</Alert>}
   {!!app.legacyRecords.length&&<Alert severity="info" action={<Button onClick={app.recoverLegacyResult}>保存结果</Button>}>旧版有 {app.legacyRecords.length} 条整理结果未保存，无需重新调用 AI。</Alert>}
   {app.legacyMissingFiles&&<Alert severity="info" onClose={()=>app.setLegacyMissingFiles(false)}>旧版草稿文字已保留，草稿附件需要重新添加。</Alert>}
-  {app.drafts.map((draft,index)=><Paper key={draft.id} variant="outlined" sx={{p:{xs:1.5,sm:2}}}>
+  {app.drafts.map((draft,index)=><Paper key={draft.id} variant="outlined"
+   onDragOver={event=>{event.preventDefault();if(app.busy||adding){event.dataTransfer.dropEffect='none';return;}event.dataTransfer.dropEffect='copy';setDragTarget(draft.id);}}
+   onDragLeave={event=>{if(!(event.relatedTarget instanceof Node)||!event.currentTarget.contains(event.relatedTarget))setDragTarget(null);}}
+   onDrop={event=>{event.preventDefault();setDragTarget(null);if(app.busy||importLock.current)return;const content=readTransfer(event.dataTransfer);void importContent(draft.id,()=>content);}}
+   sx={{p:{xs:1.5,sm:2},borderColor:dragTarget===draft.id?'primary.main':undefined,bgcolor:dragTarget===draft.id?'action.hover':undefined}}>
    <Stack direction="row" sx={{alignItems:"center",justifyContent:"space-between",mb:1.5}}>
     <Typography variant="h6">通知 {index+1}</Typography>
     <Stack direction="row" sx={{gap:.5,alignItems:'center'}}>
-     {!draft.text&&<Tooltip title="粘贴原文"><span><IconButton sx={{border:'1px solid',borderColor:'divider'}} aria-label={`给通知${index+1}粘贴原文`} disabled={app.busy||adding||pasting} onClick={()=>void paste(draft.id)}><ContentPaste fontSize="small"/></IconButton></span></Tooltip>}
+     {!draft.text&&<Tooltip title="粘贴文字与图片"><span><IconButton sx={{border:'1px solid',borderColor:'divider'}} aria-label={`给通知${index+1}粘贴原文`} disabled={app.busy||adding} onClick={()=>void importContent(draft.id,readClipboard,{start:0,end:0,expectedText:draft.text})}><ContentPaste fontSize="small"/></IconButton></span></Tooltip>}
      {(app.drafts.length>1||draft.text||draft.attachments.length>0)&&<IconButton aria-label={`移除通知${index+1}`} disabled={app.busy||adding} onClick={()=>void app.removeDraft(draft.id).catch(app.report)}><Close/></IconButton>}
     </Stack>
    </Stack>
-   <TextField className="composer-text" placeholder="将群里的通知粘贴到这里…" multiline minRows={5} maxRows={embedded?9:13} value={draft.text} disabled={app.busy} onChange={e=>app.changeDraft(draft.id,e.target.value)} slotProps={{htmlInput:{'aria-label':`通知${index+1}原文`}}} error={total>4000}/>
+   <TextField className="composer-text" placeholder="粘贴通知，图片和文件会作为附件…" multiline minRows={5} maxRows={embedded?9:13} value={draft.text} disabled={app.busy||adding} onChange={e=>app.changeDraft(draft.id,e.target.value)} onPaste={event=>pasteEvent(draft.id,event)} slotProps={{htmlInput:{'aria-label':`通知${index+1}原文`}}} error={total>4000} helperText={!draft.text.trim()&&draft.attachments.length?'补充通知文字后可整理。':undefined}/>
+   {importWarnings[draft.id]&&<Alert severity="warning" sx={{mt:1}} onClose={()=>setImportWarnings(old=>({...old,[draft.id]:''}))}>{importWarnings[draft.id]}</Alert>}
    <Stack direction="row" spacing={1} sx={{alignItems:"center",justifyContent:'space-between',mt:1}}>
     <Tooltip title="添加附件 · 仅存本机"><span><IconButton sx={{border:'1px solid',borderColor:'divider'}} aria-label={`给通知${index+1}添加附件`} disabled={app.busy||adding} onClick={()=>{setTarget(draft.id);input.current?.click();}}><AttachFile/></IconButton></span></Tooltip>
     {index===app.drafts.length-1&&<Typography className="composer-count" aria-label={`本次通知总字数 ${total}，上限4000`} color={total>4000?'error.main':'text.secondary'} variant="body2" sx={{whiteSpace:'nowrap',fontVariantNumeric:'tabular-nums'}}>{total}/4000</Typography>}
    </Stack>
-   <AttachmentList ids={draft.attachments} platform={app.platform} onRemove={app.busy?undefined:id=>void app.detach(draft.id,id).catch(app.report)}/>
+   <AttachmentList ids={draft.attachments} platform={app.platform} onRemove={app.busy||adding?undefined:id=>void app.detach(draft.id,id).catch(app.report)}/>
   </Paper>)}
   <input hidden ref={input} type="file" multiple onChange={e=>void picked(e.target.files)}/>
   <Tooltip title="再加一条通知"><span style={{alignSelf:'center'}}><IconButton aria-label="再加一条通知" sx={{border:'1px solid',borderColor:'divider',color:'primary.main'}} disabled={app.busy||adding||app.drafts.length>=20} onClick={()=>app.addDraft()}><Add/></IconButton></span></Tooltip>
