@@ -1,5 +1,5 @@
 import type { AnalysisBatch, AnalysisStep, AnalysisTask, Backup, BackupAttachment, Notice, NoticeAnalysis, NoticeStatus, NoteTarget, Priority, SortOrder, Step, Task, TimelineEntry } from './types';
-import { parseTimeSpec } from './time';
+import { parseTimeSpec, timeFromText, timeSpecToISO } from './time';
 
 export const MAX_TEXT = 4000;
 export const MAX_NOTE = 4000;
@@ -101,10 +101,15 @@ export function parseAnalysis(value: unknown, strict = true): NoticeAnalysis {
 }
 export function parseAnalysisBatch(value: unknown): AnalysisBatch {
   const o = object(value, '整理结果');
-  fields(o, ['schemaVersion', 'notices'], [], true);
+  fields(o, ['schemaVersion', 'notices'], ['sourceIndexes'], true);
   if (o.schemaVersion !== 4) throw new Error('AI 整理格式版本不正确');
   const notices = array(o.notices, '整理结果', 20).map(n => parseAnalysis(n));
   if (!notices.length) throw new Error('AI 没有返回通知');
+  if(o.sourceIndexes!==undefined){
+    const indexes=array(o.sourceIndexes,'原文对应关系',20);
+    if(indexes.length!==notices.length||indexes.some(v=>!Number.isSafeInteger(v)||Number(v)<0||Number(v)>=20))throw new Error('原文对应关系格式不正确');
+    return { schemaVersion: 4, notices, sourceIndexes:indexes as number[] };
+  }
   return { schemaVersion: 4, notices };
 }
 
@@ -241,8 +246,15 @@ export function updateNote(n: Notice, target: NoteTarget, note: string): Notice 
 }
 export function taskDeadline(n: Notice, t: Task): string | null {
   if (t.localDeadline || n.localDeadline) return t.localDeadline || n.localDeadline;
-  if (t.time && /(?:截止|之前|(?:\d|日|号|时|分)前|内$)/.test(t.timeText)) return t.time;
-  if (t.time || t.timeText && t.timeText.replace(/[\s：:]/g, '') !== n.deadlineText.replace(/[\s：:]/g, '')) return null;
+  const dueWording=/(?:截止|之前|(?:\d|日|号|时|分)前|内$)/.test(t.timeText);
+  if (t.time && dueWording) return t.time;
+  if (t.time) return null;
+  if (t.timeText && t.timeText.replace(/[\s：:]/g, '') !== n.deadlineText.replace(/[\s：:]/g, '')) {
+    // Different phrasing may still name the same complete deadline. Re-read
+    // only the task wording, without borrowing a year or treating event starts
+    // as deadlines, even when the model left its timeSpec unknown.
+    return n.deadline && dueWording && timeSpecToISO(timeFromText(t.timeText)) === n.deadline ? n.deadline : null;
+  }
   return n.deadline;
 }
 export function effectiveDeadline(n: Notice): string | null {

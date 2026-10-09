@@ -29,13 +29,13 @@ test('source dates prevent inferred years and normalize midnight boundaries',()=
   const wrong={...midnight,notices:[{...midnight.notices[0],deadlineText:'2027年10月20日24:00'}]};
   assert.equal(groundDates(wrong,'截止2026年10月20日24:00').notices[0].deadline,null);
 });
-test('valid structured result is cached, direct mode is explicit and bounded, quota survives restart',async()=>{
+test('valid structured result is cached, low thinking is explicit and bounded, quota survives restart',async()=>{
   const directory=await mkdtemp(join(tmpdir(),'campus-test-')),file=join(directory,'usage.json');
   try{
-    let calls=0;const modelFetch=async(_url,options)=>{calls++;const payload=JSON.parse(options.body);assert.equal(payload.model,'deepseek-flash');assert.equal(payload.thinking.type,'disabled');assert.equal(payload.reasoning_effort,'none');assert.deepEqual(Object.keys(payload.thinking),['type']);assert.equal(payload.temperature,0.2);assert.deepEqual(payload.response_format,{type:'json_object'});assert.equal(payload.max_tokens,8192);return mock();};
-    const config={apiKey:'test',accessToken:token,allowedOrigins:[origin],dailyLimit:1,stateFile:file};
+    let calls=0;const modelFetch=async(_url,options)=>{calls++;const payload=JSON.parse(options.body);assert.equal(payload.model,'deepseek-flash');assert.equal(payload.thinking.type,'enabled');assert.equal(payload.reasoning_effort,'low');assert.deepEqual(Object.keys(payload.thinking),['type']);assert.ok(!Object.hasOwn(payload,'temperature'));assert.deepEqual(payload.response_format,{type:'json_object'});assert.equal(payload.max_tokens,32768);return mock();};
+    const config={apiKey:'test',accessToken:token,allowedOrigins:[origin],dailyLimit:1,stateFile:file,thinkingMode:'low'};
     const handler=await createService(config,{modelFetch});
-    const response=await handler(request());assert.equal(response.status,200);assert.deepEqual(await response.json(),globalThis.CampusData.batch(result,true));
+    const response=await handler(request());assert.equal(response.status,200);assert.deepEqual(await response.json(),globalThis.CampusData.batch(groundDates(result,'测试通知'),true));
     assert.equal((await handler(request())).status,200);assert.equal(calls,1);
     assert.equal((await handler(request('另一条通知'))).status,429);
     const state=JSON.parse(await readFile(file,'utf8'));assert.equal(state.requests,1);assert.equal(state.input,100);assert.ok(!JSON.stringify(state).includes('测试通知'));
@@ -65,7 +65,7 @@ test('paid incomplete or invalid responses retain metering without exposing mode
       const state=JSON.parse(await readFile(file,'utf8'));
       assert.equal(state.requests,1);assert.equal(state.input,91);assert.equal(state.output,640);assert.equal(state.reasoning,600);
       assert.equal(state.lastFinishReason,item.reason==='private-unexpected-finish-reason'?'unknown':item.reason);
-      const expectedKeys=['day','input','lastFinishReason','output','reasoning','requests'];if(item.reason==='stop')expectedKeys.push('lastFailureCode');assert.deepEqual(Object.keys(state).sort(),expectedKeys.sort());if(item.reason==='stop')assert.equal(state.lastFailureCode,item.content.startsWith('{invalid')?'INVALID_JSON':'TASK_FIELDS');
+      const expectedKeys=['costMicro','day','input','lastFinishReason','output','reasoning','requests'];if(item.reason==='stop')expectedKeys.push('lastFailureCode');assert.deepEqual(Object.keys(state).sort(),expectedKeys.sort());if(item.reason==='stop')assert.equal(state.lastFailureCode,item.content.startsWith('{invalid')?'INVALID_JSON':'TASK_FIELDS');
       assert.ok(!JSON.stringify({state,body}).includes('private-'));assert.equal(calls,1);
       const restarted=await createService(config,{modelFetch});
       assert.equal((await restarted(request('private-original-notice'))).status,429);assert.equal(calls,1);

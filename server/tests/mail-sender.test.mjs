@@ -92,3 +92,11 @@ test('the vendored full Nodemailer bundle composes mail offline without node_mod
     assert.ok(Buffer.isBuffer(message.message));assert.match(message.message.toString(),/offline MIME check/);
   }finally{transport.close();}
 });
+
+test('registration, binding and password setup mails accurately name their operation',async()=>{
+ const mock=mockSMTP(),sender=createMailSender(PASSWORD_ENV,mock);
+ for(const [purpose,label] of [['register','注册'],['bind','绑定邮箱'],['password','设置密码']]){
+  await sender({...MESSAGE,purpose});assert.equal(mock.received.at(-1).subject,`校园 Inbox ${label}验证码`);assert.ok(mock.received.at(-1).text.includes(`${label}验证码`));
+ }
+ await assert.rejects(sender({...MESSAGE,purpose:'unsafe purpose'}));assert.equal(mock.received.length,3);
+});

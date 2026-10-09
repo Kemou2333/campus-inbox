@@ -109,8 +109,15 @@ function create(result,originalText){const a=analysis(result);return {...a,id:ne
 function taskDeadline(n,t){
  if(t.localDeadline||n.localDeadline)return t.localDeadline||n.localDeadline;
  // Action times can mean an event start. Only explicit deadline wording is urgent.
- if(t.time&&/(?:截止|之前|(?:\d|日|号|时|分)前|内$)/.test(t.timeText))return t.time;
- if(t.time||t.timeText&&t.timeText.replace(/[\s：:]/g,'')!==n.deadlineText.replace(/[\s：:]/g,''))return null;
+ const dueWording=/(?:截止|之前|(?:\d|日|号|时|分)前|内$)/.test(t.timeText);
+ if(t.time&&dueWording)return t.time;
+ if(t.time)return null;
+ if(t.timeText&&t.timeText.replace(/[\s：:]/g,'')!==n.deadlineText.replace(/[\s：:]/g,'')){
+  // Associate only an explicitly complete matching deadline; never fill a year
+  // from the card or turn an event time into an action deadline.
+  const T=root.CampusTime||(typeof require==='function'?require('./time.js'):null);
+  return n.deadline&&dueWording&&T&&T.toISO(T.fromText(t.timeText))===n.deadline?n.deadline:null;
+ }
  return n.deadline;
 }
 function effectiveDeadline(n){if(n.completed||n.kind!=='task')return null;const remaining=n.tasks.filter(t=>!t.completed&&!t.dismissed);if(!remaining.length)return null;const dates=remaining.map(t=>taskDeadline(n,t)).filter(Boolean);return dates.length?dates.reduce((a,b)=>Date.parse(a)<Date.parse(b)?a:b):null;}

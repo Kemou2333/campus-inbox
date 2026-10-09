@@ -92,7 +92,7 @@ export async function analyzeSources(sources: AnalysisSource[], options: Analyze
   const cancel = () => controller.abort();
   if (options.signal?.aborted) controller.abort();
   else options.signal?.addEventListener('abort', cancel, { once: true });
-  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, options.timeoutMs ?? 130_000);
+  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, options.timeoutMs ?? 250_000);
   const fetcher = options.fetcher ?? fetch;
   // An explicit projection keeps UI or attachment fields out of the request.
   const body = JSON.stringify({ sources: sources.map(source => ({ text: source.text })) });

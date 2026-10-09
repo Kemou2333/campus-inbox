@@ -49,7 +49,7 @@ export interface NoticeAnalysis {
   warnings: string[];
   reminders: string[];
 }
-export interface AnalysisBatch { schemaVersion: 4; notices: NoticeAnalysis[] }
+export interface AnalysisBatch { schemaVersion: 4; notices: NoticeAnalysis[]; sourceIndexes?: number[] }
 
 export interface Step extends AnalysisStep {
   id: string;

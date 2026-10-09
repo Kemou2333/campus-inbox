@@ -43,6 +43,7 @@ function classify(s: TimeSpec): TimeSpec['type'] {
 /** Port of the established time parser: no current-year or publication-time guesses. */
 export function timeFromText(rawText: string): TimeSpec {
   const s = rawText.trim(), out = empty(s);
+  if (new RegExp(`(?:月|日|号|时|点)\\s*[-~～—–至到]\\s*(?:\\d|[一二三四五六七八九十])`).test(s)) return out;
   if (!s || /(?:每(?:天|日|周|星期|月|年)|隔周|逢周)/.test(s)) return out;
   if (new RegExp(`(?:\\d{1,4}|[一二三四五六七八九十]{1,3})\\s*(?:至|到|[-~～—–])\\s*(?:\\d{1,4}|[一二三四五六七八九十]{1,3})(?:年|月|日|号|时|点)`).test(s)) return out;
   const dates = [...s.matchAll(new RegExp(`(?:(\\d{4})年)?(${numberPattern})月(${numberPattern})(?:日|号)|(\\d{4})[-/]([0-9]{1,2})[-/]([0-9]{1,2})|(${numberPattern})(?:日|号)`, 'g'))];
