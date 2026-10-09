@@ -42,7 +42,7 @@
 
 ## 验证与依据
 
-早期加固的 67 项相关测试通过，包括信号转发、取消后不缓存、失败用量保留、严格拒答、来源链接、共用网络公平性及验证码、配额与并发。2.5 最终后台回归 209 项通过，另有真实模型轮测；各项证据边界见 [2.5 验收记录](VALIDATION-2.5.md)。
+早期加固的 67 项相关测试通过，包括信号转发、取消后不缓存、失败用量保留、严格拒答、来源链接、共用网络公平性及验证码、配额与并发。2.5 最终后台回归 213 项通过，另有真实模型轮测；各项证据边界见 [2.5 验收记录](VALIDATION-2.5.md)。
 
 设计参考 [DeepSeek 官方 API 文档](https://api-docs.deepseek.com/api/create-chat-completion/)、[OWASP 提示词注入防护说明](https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html)与 [OWASP LLM01](https://genai.owasp.org/llmrisk/llm01-prompt-injection/)。提示词只是其中一层，可信输入结构、无工具权限、输出验证及硬预算共同限定实际影响。
 
