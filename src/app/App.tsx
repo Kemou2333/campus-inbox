@@ -9,6 +9,7 @@ import {useCampus} from './useCampus';
 import {makeTheme} from './theme';
 import {FeedPage,createFeedViewState} from '../features/notices/FeedPage';
 import {ComposerPage} from '../features/composer/ComposerPage';
+import {AnalysisJobStatus} from '../features/composer/AnalysisJobStatus';
 import SettingsPage from '../features/settings/SettingsPage';
 import LoginDialog from '../features/settings/LoginDialog';
 import {NoteDialog,type NoteEditor} from '../features/notes/NoteDialog';
@@ -65,9 +66,10 @@ export default function App(){
     <Tooltip title="使用帮助"><IconButton aria-label="使用帮助" onClick={()=>setHelp(true)}><HelpOutline/></IconButton></Tooltip>
    </Toolbar>
   </AppBar>
-  <Container maxWidth={false} component="main" sx={{maxWidth:split&&page!==2?1440:900,px:{xs:1,sm:3},pt:{xs:1.5,sm:3},pb:split&&page!==2?0:wide?3:'calc(80px + var(--safe-bottom))'}}>
+  <Container maxWidth={false} component="main" sx={{maxWidth:split&&page!==2?1440:900,px:{xs:1,sm:3},pt:{xs:1.5,sm:3},pb:split&&page!==2?0:wide?3:'calc(80px + var(--safe-bottom))',...(split&&page!==2?{display:'flex',flexDirection:'column',height:'calc(100dvh - 77px - var(--safe-top))',minHeight:0,'@media (max-height:500px)':{height:'calc(100dvh - 61px - var(--safe-top))'}}:{})}}>
+   <AnalysisJobStatus app={app} onRestore={()=>navigate(1)}/>
    {app.bootError?<Alert severity="error" action={<Button onClick={()=>void rescue().catch(app.report)}>保存原始数据</Button>}>原来的通知无法读取：{app.bootError}。数据仍在本机，暂未覆盖。</Alert>:
-    split&&page!==2?<Box className="workspace" sx={{display:'grid',gridTemplateColumns:'minmax(300px, 360px) minmax(0, 1fr)',gap:3,height:'calc(100dvh - 101px - var(--safe-top))',minHeight:160,'@media (max-height:500px)':{height:'calc(100dvh - 85px - var(--safe-top))'}}}>
+    split&&page!==2?<Box className="workspace" sx={{display:'grid',gridTemplateColumns:'minmax(300px, 360px) minmax(0, 1fr)',gap:3,flex:1,minHeight:160}}>
      <ScrollPane id="compose-pane" label="新增通知" onFocus={()=>setPage(1)}><ComposerPage app={app} embedded onDone={()=>setPage(0)} onLogin={()=>setLogin(true)}/></ScrollPane>
      <ScrollPane id="feed-pane" label="已保存通知" onFocus={()=>setPage(0)}><FeedPage app={app} embedded actions={actions} onCompose={()=>navigate(1)} focusID={focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView}/></ScrollPane>
     </Box>:
