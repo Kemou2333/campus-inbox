@@ -3,6 +3,7 @@ import './contracts/data.js';
 import {SYSTEM_PROMPT} from '../worker/prompt.mjs';
 const D=globalThis.CampusData;
 const T=globalThis.CampusTime;
+const record=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 // A cohort year or school year is not evidence for a calendar deadline.
 // Keep the model's wording, but require a complete source timestamp for ISO dates.
 function groundedTime(value,raw,notice){
@@ -22,12 +23,18 @@ function groundedTime(value,raw,notice){
 }
 export function groundDates(result,notice){
   if(!result||!Array.isArray(result.notices))return result;
-  return {...result,notices:result.notices.map(n=>({...n,
-    deadline:groundedTime(n.deadline,n.deadlineText,notice),
+  // Grounding may replace unsupported dates, but must not supply missing
+  // required fields or turn malformed values into structured model output.
+  const timed=item=>record(item)?{...item,
+    ...(Object.hasOwn(item,'time')?{time:groundedTime(item.time,item.timeText,notice)}:{}),
+    ...timeSpec(item,'timeSpec',item.timeText,notice)
+  }:item;
+  return {...result,notices:result.notices.map(n=>record(n)?({...n,
+    ...(Object.hasOwn(n,'deadline')?{deadline:groundedTime(n.deadline,n.deadlineText,notice)}:{}),
     ...timeSpec(n,'deadlineSpec',n.deadlineText,notice),
-    tasks:Array.isArray(n.tasks)?n.tasks.map(t=>({...t,time:groundedTime(t.time,t.timeText,notice),...timeSpec(t,'timeSpec',t.timeText,notice)})):n.tasks,
-    timeline:Array.isArray(n.timeline)?n.timeline.map(t=>({...t,time:groundedTime(t.time,t.timeText,notice),...timeSpec(t,'timeSpec',t.timeText,notice)})):n.timeline
-  }))};
+    ...(Object.hasOwn(n,'tasks')?{tasks:Array.isArray(n.tasks)?n.tasks.map(timed):n.tasks}:{}),
+    ...(Object.hasOwn(n,'timeline')?{timeline:Array.isArray(n.timeline)?n.timeline.map(timed):n.timeline}:{})
+  }):n)};
 }
 function timeSpec(item,key,raw,source){
   if(Object.hasOwn(item,key))return {[key]:T.ground(item[key],raw,source)};
@@ -35,6 +42,7 @@ function timeSpec(item,key,raw,source){
 }
 const FINISH_REASONS=new Set(['stop','length','content_filter','insufficient_system_resource','aborted','tool_calls','function_call','unknown']);
 const FAILURE_CODES=new Set(['INVALID_JSON','TIMELINE_FIELDS','TIMELINE_TIME_TEXT','SUMMARY','ASSIGNEE','LOCATION','TASK_TIME_TEXT','CLASSIFICATION','TASK_FIELDS','STEP_FIELDS','ROOT_FIELDS','SCHEMA_INVALID','SOURCE_COUNT','CONTENT_BOUNDARY','SOURCE_LINK','TITLE','TASK_TEXT','TASK_SCOPE','TASK_CONDITION','TASK_DETAILS','TASK_LIST','STEP_TEXT','STEP_DETAILS','STEP_COUNT','STRUCTURED_TIME','ISO_TIME','DEADLINE_TEXT','TIMELINE_LABEL','TIMELINE_FORMAT','MATERIALS','WARNINGS','REMINDERS','SCHEMA_VERSION']);
+const PUBLIC_AI_CODES=new Set(['AI_FORMAT_INVALID','AI_INCOMPLETE','AI_TIMEOUT']);
 const CONTENT_MESSAGE='这里只能整理校园通知，请提供原通知中的事项、安全提醒或学习信息。';
 function contentBoundary(metadata={}){return new ServiceError(CONTENT_MESSAGE,422,{...metadata,failureCode:'CONTENT_BOUNDARY'});}
 // Only direct, obvious generation requests are screened here. Campus safety,
@@ -83,6 +91,7 @@ export class ServiceError extends Error {
     this.usageAvailable=metadata.usageAvailable===true;
     if(metadata.finishReason)this.finishReason=FINISH_REASONS.has(metadata.finishReason)?metadata.finishReason:'unknown';
     if(FAILURE_CODES.has(metadata.failureCode))this.failureCode=metadata.failureCode;
+    if(PUBLIC_AI_CODES.has(metadata.code))this.code=metadata.code;
   }
 }
 export async function boundedText(stream,limit){
@@ -171,6 +180,6 @@ export async function analyze(notice,config,modelFetch=fetch,signal){
     // Old clients still accept ordinary one-source/one-card batches unchanged.
     if(sources&&(mapping.indexes.length!==sources.length||mapping.indexes.some((value,index)=>value!==index)))result={...result,sourceIndexes:mapping.indexes};
     return {result,usage,usageAvailable,finishReason};
-  }catch(e){if(e instanceof ServiceError){e.usageAvailable=usageAvailable;throw e;}if(signal?.aborted)throw new ServiceError('整理已取消，请重新提交。',499,{usage,usageAvailable,finishReason});throw new ServiceError(e.name==='AbortError'?'AI 整理超时，请稍后重试。':'AI 未返回有效的整理结果，请稍后重试。',502,{usage,usageAvailable,finishReason});}
+  }catch(e){if(e instanceof ServiceError){e.usageAvailable=usageAvailable;throw e;}if(signal?.aborted)throw new ServiceError('整理已取消，请重新提交。',499,{usage,usageAvailable,finishReason});const timeout=e.name==='AbortError';throw new ServiceError(timeout?'AI 整理超时，请稍后重试。':'AI 未返回有效的整理结果，请稍后重试。',502,{usage,usageAvailable,finishReason,code:timeout?'AI_TIMEOUT':undefined});}
   finally{clearTimeout(timer);signal?.removeEventListener('abort',cancel);}
 }

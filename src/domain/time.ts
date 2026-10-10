@@ -92,6 +92,31 @@ export function parseTimeSpec(value: unknown, rawText: string): TimeSpec {
   return s;
 }
 
+/** Resolve named cutoff references only from one explicit cutoff in this source.
+ * The returned value is the existing card ISO; model wording stays intact.
+ */
+export function deadlineReferenceISO(rawText: string, source: string, deadlineText: string, deadlineISO: string | null): string | null {
+  if (!deadlineISO || timeSpecToISO(timeFromText(deadlineText)) !== deadlineISO) return null;
+  const compact = (s: string) => s.replace(/\s/g, '').replace(/号/g, '日');
+  const reference = compact(rawText).match(/^(?:请|须|需|应)?(?:在|于)?(报名|注册|提交|申报|申请|缴费|登记|填报|上传|报送|选课|确认)(?:时间)?截止(?:时间|日期)?(?:之前|前)$/);
+  if (!reference) return null;
+  const sourceText = source.replace(/[ \t]/g, '').replace(/号/g, '日');
+  const definitions = [...sourceText.matchAll(new RegExp(`${reference[1]}(?:时间)?截止(?:时间|日期)?(?=([^\\n\\r。；;]{0,120}))`, 'g'))];
+  let found = false;
+  for (const match of definitions) {
+    const clause = match[1].replace(/^[：:，,]*(?:为|是|至|于)?[：:]*/, '').split(/[，,]/)[0];
+    // Other appearances of the label can be references, such as 截止前/截止后.
+    if (/^(?:之前|之后|前|后|以前|以后)/.test(clause)) continue;
+    // The cutoff definition must start with the explicit date itself. Offsets
+    // and an event date in brackets are not evidence for the cutoff clock.
+    if (!/^\d{4}(?:年|[-/])/.test(clause)
+      || /提前|延后|推迟|顺延|延期|延迟|(?:前|后)(?:\d+|[一二三四五六七八九十两半]+)(?:天|日|小时|分钟)|(?:\d+|[一二三四五六七八九十两半]+)(?:天|日|小时|分钟)(?:前|后)/.test(clause)) return null;
+    if (timeSpecToISO(timeFromText(clause)) !== deadlineISO) return null;
+    found = true;
+  }
+  return found ? deadlineISO : null;
+}
+
 const pad = (n: number | null) => String(n).padStart(2, '0');
 export function timeSpecToISO(s: TimeSpec): string | null {
   if (s.type !== 'date_time') return null;

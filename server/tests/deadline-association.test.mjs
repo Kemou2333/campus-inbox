@@ -21,6 +21,10 @@ test('same-clock event starts remain events, with or without their own ISO',()=>
   const n=record('2026年6月1日15:00活动开始');assert.equal(D.taskDeadline(n,n.tasks[0]),null);
   n.tasks[0].time=due;assert.equal(D.taskDeadline(n,n.tasks[0]),null);
 });
+test('travelling to an event is not a cutoff despite the character 前 after the clock',()=>{
+  const n=record('2026年6月1日15:00前往教室');assert.equal(D.taskDeadline(n,n.tasks[0]),null);
+  n.tasks[0].time=due;assert.equal(D.taskDeadline(n,n.tasks[0]),null);assert.equal(D.effectiveDeadline(n),null);
+});
 test('exact association does not create missing global deadlines or reinterpret a timezone',()=>{
   const absent=record(taskText,null);assert.equal(D.taskDeadline(absent,absent.tasks[0]),null);
   const utc=record(taskText,due+'Z');assert.equal(D.taskDeadline(utc,utc.tasks[0]),null);
@@ -32,4 +36,12 @@ test('completed and excluded associated actions do not leave unrelated undated a
   const n=record();n.tasks.push({...n.tasks[0],timeText:'后续安排等待群内通知',timeSpec:undefined});
   n.tasks[0].completed=true;assert.equal(D.effectiveDeadline(n),null);
   n.tasks[0].completed=false;n.tasks[0].dismissed=true;assert.equal(D.effectiveDeadline(n),null);
+});
+test('named source cutoff references participate in urgency without changing stored AI fields',()=>{
+  const n=record('报名截止时间之前'),before=structuredClone(n);
+  assert.equal(D.taskDeadline(n,n.tasks[0]),due);assert.equal(D.effectiveDeadline(n),due);assert.deepEqual(n,before);
+  n.originalText='作品提交截止时间：2026年6月1日15:00；报名截止时间之前加入赛事QQ群。';
+  assert.equal(D.taskDeadline(n,n.tasks[0]),null);assert.equal(D.effectiveDeadline(n),null);
+  n.originalText='本科报名截止时间：2026年6月1日15:00，研究生报名截止时间：2026年6月2日15:00。';
+  assert.equal(D.taskDeadline(n,n.tasks[0]),null);assert.equal(D.effectiveDeadline(n),null);
 });

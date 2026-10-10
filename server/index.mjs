@@ -13,7 +13,7 @@ let auth;
 const sync=await createSyncService({signingSecret:env.CAMPUS_ACCESS_TOKEN,allowedOrigins,stateFile:env.SYNC_STATE_FILE||'/var/lib/campus-inbox/sync.sqlite'},{authenticate:key=>auth.getIdentity(key)});
 auth=await createAuthService({signingSecret:env.CAMPUS_ACCESS_TOKEN,allowedOrigins,stateFile:env.AUTH_STATE_FILE||'/var/lib/campus-inbox/auth.sqlite'},{provision:sync.provision,sendCode});
 const handleAI=await createService({apiKey:env.DEEPSEEK_API_KEY,accessToken:env.CAMPUS_ACCESS_TOKEN,requireAccess:false,requireIdentity:true,accountDailyLimit:Number(env.ACCOUNT_DAILY_REQUEST_LIMIT)||10,ipDailyLimit:Number(env.IP_DAILY_REQUEST_LIMIT)||10,model:env.AI_MODEL||'deepseek-flash',allowedOrigins,dailyLimit:Number(env.DAILY_REQUEST_LIMIT)||30,stateFile:env.USAGE_STATE_FILE||'/var/lib/campus-inbox/usage.json',
-  thinkingMode:env.AI_THINKING_MODE==='low'?'low':'none',captchaMode:env.CAPTCHA_MODE||'image',dailyBudgetRmb:Number(env.AI_DAILY_BUDGET_RMB)||3
+  thinkingMode:env.AI_THINKING_MODE==='none'?'none':'low',captchaMode:env.CAPTCHA_MODE||'image',dailyBudgetRmb:Number(env.AI_DAILY_BUDGET_RMB)||3
 },{accountForToken:key=>auth.getIdentity(key)?sync.accountForKey(key):null});
 const handle=(request,ip)=>{const path=new URL(request.url).pathname;return path.startsWith('/auth/')?auth.handle(request,ip):path.startsWith('/sync')?sync.handle(request,ip):handleAI(request,ip);};
 const server=http.createServer(async(req,res)=>{
