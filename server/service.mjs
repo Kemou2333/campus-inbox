@@ -26,7 +26,7 @@ export async function createService(config,options={}){
   const verificationMode=config.captchaMode||'image';
   if(!['image','pow'].includes(verificationMode))throw new Error('CAPTCHA_MODE must be image or pow');
   const imageCaptcha=options.imageCaptcha||createImageCaptcha;
-  const cache=new Map(),rates=new Map(),challenges=new Map();
+  const cache=new Map(),rates=new Map(),challenges=new Map(),pendingJobs=new Set(),admissions=new Map();
   const dailyLimit=config.dailyLimit===undefined?30:config.dailyLimit;
   if(!Number.isSafeInteger(dailyLimit)||dailyLimit<1)throw new Error('Daily AI budget must be a positive integer');
   const dailyBudgetRmb=config.dailyBudgetRmb===undefined?3:config.dailyBudgetRmb;
@@ -75,14 +75,19 @@ export async function createService(config,options={}){
       challenges.delete(value.id);return true;
     }catch{return false;}
   };
-  return async function handle(request,ip='unknown'){
+  const handle=async function handle(request,ip='unknown'){
     const origin=request.headers.get('Origin'),accepted=!!origin&&(config.allowedOrigins||[]).includes(origin),url=new URL(request.url);
-    const reply=(body,status=200,extraHeaders={})=>new Response(status===204?null:JSON.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Vary':'Origin',...(accepted?{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization, X-Campus-Proof','Access-Control-Expose-Headers':'Retry-After','Access-Control-Max-Age':'600'}:{}),...extraHeaders}});
+    const jobRoute=url.pathname==='/analysis-jobs'||/^\/analysis-jobs\/[0-9a-f-]{36}(?:\/save)?$/.test(url.pathname);
+    let admissionDone;
+    const reply=(body,status=200,extraHeaders={})=>{
+      admissionDone?.({body,status,extraHeaders});
+      return new Response(status===204?null:JSON.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Vary':'Origin',...(accepted?{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':jobRoute?'GET, POST, OPTIONS':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization, X-Campus-Proof','Access-Control-Expose-Headers':'Retry-After','Access-Control-Max-Age':'600'}:{}),...extraHeaders}});
+    };
     if(url.pathname==='/health'&&request.method==='GET')return reply({status:'ok'});
-    if(url.pathname!=='/analyze')return reply({error:'接口不存在。'},404);
+    if(url.pathname!=='/analyze'&&!jobRoute)return reply({error:'接口不存在。'},404);
     if(!accepted)return reply({error:'此网页未获准调用整理服务。'},403);
     if(request.method==='OPTIONS')return reply({},204);
-    if(request.method!=='POST')return reply({error:'请使用 POST 请求。'},405);
+    if(request.method!=='POST'&&!(jobRoute&&request.method==='GET'))return reply({error:'请使用支持的请求方法。'},405);
     if(!publicMode&&!authorized(request.headers.get('Authorization')))return reply({error:'访问码不正确，请重新输入。'},401);
     let account=null;
     if(config.requireIdentity){
@@ -90,12 +95,43 @@ export async function createService(config,options={}){
       account=token&&options.accountForToken?await options.accountForToken(token):null;
       if(!account)return reply({error:'请先登录，再整理通知。',code:'AUTH_REQUIRED'},401);
     }
+    if(jobRoute&&!account)return reply({error:'请先登录，再整理通知。',code:'AUTH_REQUIRED'},401);
+    if(jobRoute&&!options.jobs)return reply({error:'后台整理服务暂时不可用，请稍后再试。'},503);
+    if(jobRoute&&url.pathname.endsWith('/save')){
+      if(request.method!=='POST')return reply({error:'请使用POST恢复保存。'},405);
+      if(!(request.headers.get('Content-Type')||'').toLowerCase().startsWith('application/json'))return reply({error:'请求必须使用 JSON。'},415);
+      try{
+        const body=JSON.parse(await boundedText(request.body,1024));if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).length)throw new ServiceError('恢复保存无需填写额外内容。',400);
+        return reply({job:options.jobs.retrySave(account,url.pathname.split('/')[2])},202);
+      }catch(error){return reply({error:error instanceof ServiceError?error.message:'整理结果暂时无法恢复保存。'},error.status||503);}
+    }
+    if(jobRoute&&request.method==='GET'){
+      try{
+        if(url.pathname==='/analysis-jobs')return reply(options.jobs.list(account,url.searchParams.get('before')));
+        const job=options.jobs.get(account,url.pathname.slice('/analysis-jobs/'.length));
+        return job?reply({job}):reply({error:'整理任务不存在。'},404);
+      }catch(error){return reply({error:error instanceof ServiceError?error.message:'整理任务暂时无法读取。'},error.status||503);}
+    }
+    if(jobRoute&&url.pathname!=='/analysis-jobs')return reply({error:'此任务接口仅支持读取。'},405);
     if(request.signal.aborted)return reply({error:'整理已取消，请重新提交。',code:'CANCELLED'},499);
     if(!(request.headers.get('Content-Type')||'').toLowerCase().startsWith('application/json'))return reply({error:'请求必须使用 JSON。'},415);
-    let notice;
-    try{const body=JSON.parse(await boundedText(request.body,64000));if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).length!==1)throw new Error();if(Object.hasOwn(body,'notice')){if(typeof body.notice!=='string'||!body.notice.trim()||body.notice.length>D.MAX_TEXT)throw new Error();notice=body.notice.trim();}else if(Object.hasOwn(body,'sources'))notice=body;else throw new Error();modelInput(notice);}
+    let notice,requestID;
+    try{const body=JSON.parse(await boundedText(request.body,64000));if(!body||typeof body!=='object'||Array.isArray(body))throw new Error();
+      if(jobRoute){if(Object.keys(body).length!==2||!Object.hasOwn(body,'sources')||typeof body.requestId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{15,99}$/.test(body.requestId))throw new Error();requestID=body.requestId;notice={sources:body.sources};}
+      else{if(Object.keys(body).length!==1)throw new Error();if(Object.hasOwn(body,'notice')){if(typeof body.notice!=='string'||!body.notice.trim()||body.notice.length>D.MAX_TEXT)throw new Error();notice=body.notice.trim();}else if(Object.hasOwn(body,'sources'))notice=body;else throw new Error();}modelInput(notice);if(jobRoute)notice={sources:notice.sources.map(source=>({text:source.text.trim()}))};}
     catch(e){return reply({error:e instanceof ServiceError?e.message:'请提供 1–4,000 字的通知文字。'},e.status||400);}
     const t=now(),hash=createHash('sha256').update(JSON.stringify(modelInput(notice))).digest('hex');
+    if(jobRoute){try{const existing=options.jobs.findRequest(account,requestID,hash);if(existing)return reply({job:existing},202);options.jobs.checkCapacity(account);}catch(error){return reply({error:error instanceof ServiceError?error.message:'整理任务暂时不可用。'},error.status||503);}}
+    if(jobRoute){
+      const key=account.id+':'+requestID,previous=admissions.get(key);
+      if(previous){
+        if(previous.hash!==hash)return reply({error:'同一任务编号不能提交不同原文，请重新创建任务。'},409);
+        const response=await previous.promise;return reply(response.body,response.status,response.extraHeaders);
+      }
+      let resolve;const promise=new Promise(done=>{resolve=done;});admissions.set(key,{hash,promise});
+      admissionDone=response=>{admissions.delete(key);resolve(response);admissionDone=undefined;};
+    }
+    try{
     for(const [k,v] of cache)if(t-v.created>15*60000)cache.delete(k);
     const saved=cache.get(hash);
     if(busy&&!saved)return reply({error:'正在整理另一条通知，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
@@ -150,7 +186,12 @@ export async function createService(config,options={}){
       try{await persist();}catch{return reply({error:'整理服务暂时不可用，请稍后重试。'},503);}
     }
     if(requestUsage!==usage||usage.day!==day())return reply({error:'整理服务时间已更新，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
-    if(saved)return reply(saved.result);
+    if(saved){
+      if(!jobRoute)return reply(saved.result);
+      let job;
+      try{job=options.jobs.accept(account,requestID,hash,notice.sources);options.jobs.stage(account,job.id,saved.result);return reply({job:options.jobs.complete(account,job.id)},202);}
+      catch(error){if(job){try{options.jobs.fail(account,job.id,'JOB_SAVE_FAILED');}catch{}}return reply({error:error instanceof ServiceError?error.message:'整理结果暂时无法保存。'},error.status||503);}
+    }
     if(publicMode&&!proof&&(accountEntries||entries).length>=3){
       for(const [id,challenge] of challenges)if(challenge.expires<=t)challenges.delete(id);
       if(challenges.size>=2000)return reply({error:'服务繁忙，请稍后再试。'},503);
@@ -169,7 +210,7 @@ export async function createService(config,options={}){
     if(publicMode&&client.requests>=ipLimit)return limited('此网络今日整理次数已达上限，明天再试。','IP_DAILY_LIMIT');
     if(accountKey&&(usage.accounts?.[accountKey]||0)>=accountLimit)return limited('此账号今日整理次数已达上限，明天再试。','ACCOUNT_DAILY_LIMIT');
     if(request.signal.aborted)return reply({error:'整理已取消，请重新提交。',code:'CANCELLED'},499);
-    busy=true;let tokensRecorded=false;
+    busy=true;let tokensRecorded=false,acceptedJob;
     const recordTokens=async(stats,finishReason,failureCode,usageAvailable)=>{
       for(const key of ['input','output','reasoning'])usage[key]=Math.min(Number.MAX_SAFE_INTEGER,(usage[key]||0)+(stats?.[key]||0));
       if(usageAvailable===true&&validTokenCounts(stats))usage.costMicro=Math.min(Number.MAX_SAFE_INTEGER,usage.costMicro-reservedCostMicro+tokenCostMicro(stats.input,stats.output));
@@ -177,15 +218,50 @@ export async function createService(config,options={}){
       tokensRecorded=true;await persist();
     };
     try{
+      // Claim the idempotency key synchronously before the quota write yields.
+      // Concurrent repeats can already find this durable task, even if its ACK
+      // or budget persistence later fails. No provider runs before both stores.
+      if(jobRoute)acceptedJob=options.jobs.accept(account,requestID,hash,notice.sources);
       usage.costMicro+=reservedCostMicro;usage.requests++;if(publicMode)client.requests++;if(accountKey){usage.accounts??={};usage.accounts[accountKey]=(usage.accounts[accountKey]||0)+1;}await persist();
+      if(jobRoute){
+        // Both the quota reservation and accepted task are durable before ACK.
+        // The background call is not bound to the browser's request signal.
+        const job=acceptedJob;
+        const worker=(async()=>{
+          let outputReceived=false,modelOutput;
+          try{
+            options.jobs.start(account,job.id);
+            const output=await analyze(notice,config,modelFetch);outputReceived=true;modelOutput=output;
+            options.jobs.stage(account,job.id,output.result);
+            options.jobs.complete(account,job.id);
+            await recordTokens(output.usage,output.finishReason,undefined,output.usageAvailable);
+            if(cache.size>=50)cache.delete(cache.keys().next().value);cache.set(hash,{created:now(),result:output.result});
+          }catch(error){
+            if(modelOutput&&!tokensRecorded){try{await recordTokens(modelOutput.usage,modelOutput.finishReason,undefined,modelOutput.usageAvailable);}catch{}}
+            if(error instanceof ServiceError&&error.usage&&!tokensRecorded){try{await recordTokens(error.usage,error.finishReason,error.failureCode,error.usageAvailable);}catch{}}
+            const code=outputReceived?'JOB_SAVE_FAILED':error.failureCode==='CONTENT_BOUNDARY'?'CONTENT_BOUNDARY':publicAIErrorCode(error)||'SERVICE_UNAVAILABLE';
+            try{options.jobs.fail(account,job.id,code);}catch{}
+          }finally{busy=false;}
+        })();
+        pendingJobs.add(worker);worker.finally(()=>pendingJobs.delete(worker)).catch(()=>{});
+        return reply({job:options.jobs.findRequest(account,requestID,hash)},202);
+      }
       if(request.signal.aborted)throw new ServiceError('整理已取消，请重新提交。',499);
       const output=await analyze(notice,config,modelFetch,request.signal);await recordTokens(output.usage,output.finishReason,undefined,output.usageAvailable);
       if(request.signal.aborted)throw new ServiceError('整理已取消，请重新提交。',499);
       if(cache.size>=50)cache.delete(cache.keys().next().value);cache.set(hash,{created:now(),result:output.result});return reply(output.result);
     }catch(e){
+      if(acceptedJob){try{options.jobs.fail(account,acceptedJob.id,'SERVICE_UNAVAILABLE');}catch{}}
       if(e instanceof ServiceError&&e.usage&&!tokensRecorded){try{await recordTokens(e.usage,e.finishReason,e.failureCode,e.usageAvailable);}catch{return reply({error:'整理服务暂时不可用，请稍后重试。'},503);}}
       const code=publicAIErrorCode(e);
       return reply({error:e instanceof ServiceError?e.message:'整理服务暂时不可用，请稍后重试。',...(code?{code}:{})},e.status||503);
-    }finally{busy=false;}
+    }finally{if(!jobRoute||!pendingJobs.size)busy=false;}
+    }catch(error){
+      // Every in-memory admission waiter must receive a finite response even if
+      // preflight fails unexpectedly before the durable task can be accepted.
+      return reply({error:error instanceof ServiceError?error.message:'整理服务暂时不可用，请稍后重试。'},error.status||503);
+    }
   };
+  handle.drain=()=>Promise.allSettled([...pendingJobs]);
+  return handle;
 }

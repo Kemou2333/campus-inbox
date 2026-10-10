@@ -12,6 +12,7 @@ EnvironmentFile=/etc/campus-inbox/backend.env
 ExecStart=/opt/campus-inbox/runtime/node /opt/campus-inbox/current/server/index.mjs
 Restart=on-failure
 RestartSec=5
+TimeoutStopSec=195s
 StateDirectory=campus-inbox
 StateDirectoryMode=0700
 NoNewPrivileges=true

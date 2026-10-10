@@ -14,7 +14,7 @@ const sync=await createSyncService({signingSecret:env.CAMPUS_ACCESS_TOKEN,allowe
 auth=await createAuthService({signingSecret:env.CAMPUS_ACCESS_TOKEN,allowedOrigins,stateFile:env.AUTH_STATE_FILE||'/var/lib/campus-inbox/auth.sqlite'},{provision:sync.provision,sendCode});
 const handleAI=await createService({apiKey:env.DEEPSEEK_API_KEY,accessToken:env.CAMPUS_ACCESS_TOKEN,requireAccess:false,requireIdentity:true,accountDailyLimit:Number(env.ACCOUNT_DAILY_REQUEST_LIMIT)||10,ipDailyLimit:Number(env.IP_DAILY_REQUEST_LIMIT)||10,model:env.AI_MODEL||'deepseek-flash',allowedOrigins,dailyLimit:Number(env.DAILY_REQUEST_LIMIT)||30,stateFile:env.USAGE_STATE_FILE||'/var/lib/campus-inbox/usage.json',
   thinkingMode:env.AI_THINKING_MODE==='none'?'none':'low',captchaMode:env.CAPTCHA_MODE||'image',dailyBudgetRmb:Number(env.AI_DAILY_BUDGET_RMB)||3
-},{accountForToken:key=>auth.getIdentity(key)?sync.accountForKey(key):null});
+},{accountForToken:key=>auth.getIdentity(key)?sync.accountForKey(key):null,jobs:sync.jobs});
 const handle=(request,ip)=>{const path=new URL(request.url).pathname;return path.startsWith('/auth/')?auth.handle(request,ip):path.startsWith('/sync')?sync.handle(request,ip):handleAI(request,ip);};
 const server=http.createServer(async(req,res)=>{
   try{
@@ -32,4 +32,4 @@ const server=http.createServer(async(req,res)=>{
 server.requestTimeout=210000;server.headersTimeout=10000;
 const bindHost=env.BIND_HOST||'127.0.0.1';
 server.listen(Number(env.PORT)||8787,bindHost,()=>console.log('Campus Inbox backend ready'));
-for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>server.close(()=>{auth.close();sync.close();process.exit(0);}));
+for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>server.close(async()=>{await handleAI.drain();auth.close();sync.close();process.exit(0);}));

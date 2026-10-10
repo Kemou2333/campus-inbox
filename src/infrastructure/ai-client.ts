@@ -14,6 +14,8 @@ export interface AnalyzeOptions {
   fetcher?: typeof fetch;
   sessionKey?: string;
   onHumanVerification?: HumanVerificationHandler;
+  /** Stable only for the short cloud-job submission; never used for a paid retry. */
+  requestId?: string;
 }
 
 export class AnalysisError extends Error {
@@ -99,7 +101,7 @@ export async function analyzeSources(sources: AnalysisSource[], options: Analyze
   else options.signal?.addEventListener('abort', cancel, { once: true });
   const fetcher = options.fetcher ?? fetch;
   // An explicit projection keeps UI or attachment fields out of the request.
-  const body = JSON.stringify({ sources: sources.map(source => ({ text: source.text })) });
+  const body = JSON.stringify({ sources: sources.map(source => ({ text: source.text })), ...(options.requestId ? { requestId: options.requestId } : {}) });
   const send = async (proof?: string) => {
     // Filling a verification dialog must not consume the model's response window.
     limitWait(options.timeoutMs ?? 250_000, 'TIMEOUT');
