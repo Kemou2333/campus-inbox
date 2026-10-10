@@ -86,6 +86,25 @@ function ground(value,timeText,source){
  if(!text||!compact(source).includes(compact(text)))return empty(text);
  return fromText(text);
 }
+// Resolve named cutoff references without changing model text or time precision.
+function deadlineReferenceISO(rawText,source,deadlineText,deadlineISO){
+ if(!deadlineISO||typeof rawText!=='string'||typeof source!=='string'||typeof deadlineText!=='string'||toISO(fromText(deadlineText))!==deadlineISO)return null;
+ const compact=s=>s.replace(/\s/g,'').replace(/号/g,'日');
+ const reference=compact(rawText).match(/^(?:请|须|需|应)?(?:在|于)?(报名|注册|提交|申报|申请|缴费|登记|填报|上传|报送|选课|确认)(?:时间)?截止(?:时间|日期)?(?:之前|前)$/);
+ if(!reference)return null;
+ const sourceText=source.replace(/[ \t]/g,'').replace(/号/g,'日');
+ const definitions=[...sourceText.matchAll(new RegExp(`${reference[1]}(?:时间)?截止(?:时间|日期)?(?=([^\\n\\r。；;]{0,120}))`,'g'))];
+ let found=false;
+ for(const match of definitions){
+  const clause=match[1].replace(/^[：:，,]*(?:为|是|至|于)?[：:]*/,'').split(/[，,]/)[0];
+  if(/^(?:之前|之后|前|后|以前|以后)/.test(clause))continue;
+  // Do not interpret an offset or a bracketed event date as the cutoff clock.
+  if(!/^\d{4}(?:年|[-/])/.test(clause)||/提前|延后|推迟|顺延|延期|延迟|(?:前|后)(?:\d+|[一二三四五六七八九十两半]+)(?:天|日|小时|分钟)|(?:\d+|[一二三四五六七八九十两半]+)(?:天|日|小时|分钟)(?:前|后)/.test(clause))return null;
+  if(toISO(fromText(clause))!==deadlineISO)return null;
+  found=true;
+ }
+ return found?deadlineISO:null;
+}
 const pad=n=>String(n).padStart(2,'0');
 function toISO(value){
  const s=validate(value);if(s.type!=='date_time')return null;
@@ -96,5 +115,5 @@ function toDate(value){
  const s=validate(value);if(!['date','date_time'].includes(s.type))return null;
  return s.type==='date_time'&&s.hour===24?toISO(s).slice(0,10):`${s.year}-${pad(s.month)}-${pad(s.day)}`;
 }
-const api=Object.freeze({fromText,validate,normalize,ground,toISO,toDate});root.CampusTime=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
+const api=Object.freeze({fromText,validate,normalize,ground,deadlineReferenceISO,toISO,toDate});root.CampusTime=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(globalThis);

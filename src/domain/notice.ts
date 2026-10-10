@@ -1,5 +1,5 @@
 import type { AnalysisBatch, AnalysisStep, AnalysisTask, Backup, BackupAttachment, Notice, NoticeAnalysis, NoticeStatus, NoteTarget, Priority, SortOrder, Step, Task, TimelineEntry } from './types';
-import { parseTimeSpec, timeFromText, timeSpecToISO } from './time';
+import { deadlineReferenceISO, parseTimeSpec, timeFromText, timeSpecToISO } from './time';
 
 export const MAX_TEXT = 4000;
 export const MAX_NOTE = 4000;
@@ -246,10 +246,12 @@ export function updateNote(n: Notice, target: NoteTarget, note: string): Notice 
 }
 export function taskDeadline(n: Notice, t: Task): string | null {
   if (t.localDeadline || n.localDeadline) return t.localDeadline || n.localDeadline;
-  const dueWording=/(?:截止|之前|(?:\d|日|号|时|分)前|内$)/.test(t.timeText);
+  const dueWording=/(?:截止|之前|(?:\d|日|号|时|分)前(?!往)|内$)/.test(t.timeText);
   if (t.time && dueWording) return t.time;
   if (t.time) return null;
   if (t.timeText && t.timeText.replace(/[\s：:]/g, '') !== n.deadlineText.replace(/[\s：:]/g, '')) {
+    const referenced = deadlineReferenceISO(t.timeText, n.originalText, n.deadlineText, n.deadline);
+    if (referenced) return referenced;
     // Different phrasing may still name the same complete deadline. Re-read
     // only the task wording, without borrowing a year or treating event starts
     // as deadlines, even when the model left its timeSpec unknown.

@@ -23,7 +23,8 @@ function registry(value:unknown):LegacyExampleFingerprint[] {
   return value as LegacyExampleFingerprint[];
 }
 
-/** Replace only verified, untouched built-ins. Every other record remains a
+/** The catalog may contain fingerprints from several built-in releases.
+ * Replace only verified, untouched built-ins. Every other record remains a
  * user's record, and protects its original from being loaded twice. */
 export async function mergeExamples(current:Notice[],incoming:Notice[],legacyRegistry:unknown){
   const expected=new Map(registry(legacyRegistry).map(entry=>[entry.id,entry.fingerprint]));

@@ -61,7 +61,8 @@ test('paid incomplete or invalid responses retain metering without exposing mode
       const config={apiKey:'test',accessToken:token,allowedOrigins:[origin],dailyLimit:1,stateFile:file};
       const handler=await createService(config,{modelFetch});
       const reply=await handler(request('private-original-notice'));
-      assert.equal(reply.status,item.status);const body=await reply.json();assert.deepEqual(Object.keys(body),['error']);assert.match(body.error,item.message);
+      assert.equal(reply.status,item.status);const body=await reply.json();assert.deepEqual(Object.keys(body),['error','code']);assert.match(body.error,item.message);
+      assert.equal(body.code,item.reason==='stop'?'AI_FORMAT_INVALID':'AI_INCOMPLETE');
       const state=JSON.parse(await readFile(file,'utf8'));
       assert.equal(state.requests,1);assert.equal(state.input,91);assert.equal(state.output,640);assert.equal(state.reasoning,600);
       assert.equal(state.lastFinishReason,item.reason==='private-unexpected-finish-reason'?'unknown':item.reason);

@@ -223,4 +223,45 @@ describe('AI transport', () => {
     await check;
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
+
+  it('gives generation its full response window after time spent filling the image verification', async () => {
+    vi.useFakeTimers();
+    const challenge = humanChallenge();
+    const fetcher = vi.fn(async (_url: RequestInfo | URL, request?: RequestInit) => {
+      if (!(request?.headers as Record<string, string>)['X-Campus-Proof']) {
+        await new Promise(resolve => setTimeout(resolve, 25));
+        return json({ code: 'VERIFICATION_REQUIRED', challenge }, 428);
+      }
+      return new Promise<Response>((resolve, reject) => {
+        const timer = setTimeout(() => resolve(json(batch)), 40);
+        request?.signal?.addEventListener('abort', () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }, { once: true });
+      });
+    });
+    const onHumanVerification = vi.fn(async () => {
+      await new Promise(resolve => setTimeout(resolve, 80));
+      return '0123';
+    });
+    const pending = analyzeSources([{ text: '长通知' }], { fetcher, timeoutMs: 50, onHumanVerification });
+    const check = expect(pending).resolves.toEqual(batch);
+    await vi.advanceTimersByTimeAsync(145);
+    await check;
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(onHumanVerification).toHaveBeenCalledTimes(1);
+  });
+
+  it('expires an ignored verification dialog at its signed deadline rather than the generation timeout', async () => {
+    vi.useFakeTimers();
+    const challenge = { ...humanChallenge(), expires: Date.now() + 1000 };
+    const fetcher = vi.fn(async () => json({ code: 'VERIFICATION_REQUIRED', challenge }, 428));
+    const onHumanVerification = vi.fn((_request, _signal: AbortSignal) => new Promise<string>(() => {}));
+    const pending = analyzeSources([{ text: '通知' }], { fetcher, timeoutMs: 50, onHumanVerification });
+    const check = expect(pending).rejects.toMatchObject({ code: 'VERIFICATION_EXPIRED' });
+    await vi.advanceTimersByTimeAsync(60);
+    expect(onHumanVerification).toHaveBeenCalledTimes(1);
+    expect(onHumanVerification.mock.calls[0][1].aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(940);
+    await check;
+    expect(onHumanVerification.mock.calls[0][1].aborted).toBe(true);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
 });

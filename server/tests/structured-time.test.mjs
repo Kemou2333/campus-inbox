@@ -89,3 +89,30 @@ test('month ranges and whole Chinese link delimiters do not become exact dates',
  const n=basic('2026年6月1日15:00');const result=groundDates({schemaVersion:4,notices:[n]},'报名截止时间：2026年6月1日15:00');
  assert.equal(result.notices[0].deadlineSpec.type,'date_time');assert.equal(result.notices[0].tasks[0].timeSpec.hour,15);
 });
+
+test('named cutoff references use one matching explicit source cutoff, not another date',()=>{
+ const due='2026-06-01T15:00:00',label='报名截止时间：2026年6月1日15:00';
+ const source=label+'；报名截止时间之前提交视频；校赛报名截止后不接受补报名。';
+ for(const raw of ['报名截止时间之前','报名时间截止之前','请在报名截止前'])assert.equal(T.deadlineReferenceISO(raw,source,label,due),due);
+ for(const raw of ['截止时间之前','报名截止后','报名截止前一天','报名截止时间之前或活动开始时','明天报名截止之前'])assert.equal(T.deadlineReferenceISO(raw,source,label,due),null,raw);
+ for(const other of [
+  '作品提交截止时间：2026年6月1日15:00；报名截止时间之前加入群。',
+  '比赛开始时间：2026年6月1日15:00；报名截止时间另行通知。',
+  '报名截止时间：2026年6月2日15:00。',
+  '本科'+label+'，研究生报名截止时间：2026年6月2日15:00。',
+  label+'；第二场报名截止时间：6月2日15:00。',
+  label+'；第二场报名截止时间另行通知。',
+  '报名截止时间：2026年6月1日14:00至15:00。',
+  '报名截止时间：2026年6月1日15:00至2026年6月2日15:00。',
+  '报名截止时间：6月1日15:00。',
+  '报名截止时间：2026年6月1日。',
+  '报名截止时间：2026年6月1日15:00前2小时。',
+  '报名截止时间：2026年6月1日15:00后一天。',
+  '报名截止时间：2026年6月1日15:00提前一天。',
+  '报名截止时间：2026年6月1日15:00延后2小时。',
+  '报名截止时间：比赛开始前2小时（2026年6月1日15:00）。',
+ ])assert.equal(T.deadlineReferenceISO('报名截止时间之前',other,label,due),null,other);
+ assert.equal(T.deadlineReferenceISO('报名截止时间之前',source,label,null),null);
+ assert.equal(T.deadlineReferenceISO('报名截止时间之前',source,label,due+'Z'),null);
+ assert.equal(T.deadlineReferenceISO('报名截止时间之前',source,'6月1日15:00',due),null);
+});

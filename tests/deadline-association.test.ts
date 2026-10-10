@@ -26,6 +26,11 @@ describe('task phrasing and known global deadline association',()=>{
     const n=record('2026年6月1日15:00活动开始');n.tasks[0].time=due;
     expect(taskDeadline(n,n.tasks[0])).toBeNull();expect(effectiveDeadline(n)).toBeNull();
   });
+  test('travelling to an event is not a cutoff despite the character 前 after the clock',()=>{
+    const n=record('2026年6月1日15:00前往教室');
+    expect(taskDeadline(n,n.tasks[0])).toBeNull();
+    n.tasks[0].time=due;expect(taskDeadline(n,n.tasks[0])).toBeNull();expect(effectiveDeadline(n)).toBeNull();
+  });
   test('a complete task timestamp cannot create an absent global deadline or guess its timezone',()=>{
     const absent=record(taskText,null);expect(taskDeadline(absent,absent.tasks[0])).toBeNull();
     const utc=record(taskText,due+'Z');expect(taskDeadline(utc,utc.tasks[0])).toBeNull();
@@ -45,5 +50,43 @@ describe('task phrasing and known global deadline association',()=>{
     n.tasks[0].localDeadline='2026-06-02T12:00:00';expect(taskDeadline(n,n.tasks[0])).toBe(n.tasks[0].localDeadline);
     n.localDeadline=null;n.tasks[0].localDeadline=null;n.tasks[0].time='2026-06-01T14:00:00';n.tasks[0].timeText='2026年6月1日14:00截止';
     expect(taskDeadline(n,n.tasks[0])).toBe(n.tasks[0].time);
+  });
+  test.each(['报名截止时间之前','报名时间截止之前','请在报名截止前'])('resolves %s only from the same source cutoff without changing AI output',raw=>{
+    const n=record(raw),before=structuredClone(n);
+    expect(taskDeadline(n,n.tasks[0])).toBe(due);expect(effectiveDeadline(n)).toBe(due);
+    expect(priority(n,Date.parse('2026-06-01T16:00:00')).level).toBe('overdue');expect(n).toEqual(before);
+  });
+  test('a named reference cannot borrow another cutoff or another source',()=>{
+    const n=record('报名截止时间之前');
+    n.originalText='作品提交截止时间：2026年6月1日15:00；报名截止时间之前加入群。';
+    expect(taskDeadline(n,n.tasks[0])).toBeNull();
+    n.originalText='比赛开始时间：2026年6月1日15:00；报名截止时间另行通知。';
+    expect(taskDeadline(n,n.tasks[0])).toBeNull();
+    n.originalText='报名截止时间：2026年6月2日15:00；报名截止时间之前加入群。';
+    expect(taskDeadline(n,n.tasks[0])).toBeNull();
+  });
+  test.each([
+    '本科报名截止时间：2026年6月1日15:00，研究生报名截止时间：2026年6月2日15:00。',
+    '报名截止时间：2026年6月1日15:00；第二场报名截止时间：6月2日15:00。',
+    '报名截止时间：2026年6月1日15:00；第二场报名截止时间另行通知。',
+    '报名截止时间：2026年6月1日14:00至15:00。',
+    '报名截止时间：2026年6月1日15:00至2026年6月2日15:00。',
+    '报名截止时间：6月1日15:00。',
+    '报名截止时间：2026年6月1日。',
+    '报名截止时间：2026年6月1日15:00前2小时。',
+    '报名截止时间：2026年6月1日15:00后一天。',
+    '报名截止时间：2026年6月1日15:00提前一天。',
+    '报名截止时间：2026年6月1日15:00延后2小时。',
+    '报名截止时间：比赛开始前2小时（2026年6月1日15:00）。',
+  ])('leaves conflicting or incomplete source cutoffs unresolved: %s',source=>{
+    const n=record('报名截止时间之前');n.originalText=source;expect(taskDeadline(n,n.tasks[0])).toBeNull();
+  });
+  test.each(['截止时间之前','报名截止后','报名截止前一天','报名截止时间之前或活动开始时','明天报名截止之前'])('leaves ambiguous or shifted references unresolved: %s',raw=>{
+    const n=record(raw);expect(taskDeadline(n,n.tasks[0])).toBeNull();
+  });
+  test('a named reference keeps undated or timezone-specific card cutoffs unresolved',()=>{
+    const n=record('报名截止时间之前',null);expect(taskDeadline(n,n.tasks[0])).toBeNull();
+    n.deadline=due+'Z';expect(taskDeadline(n,n.tasks[0])).toBeNull();
+    n.deadline=due;n.deadlineText='6月1日15:00截止';expect(taskDeadline(n,n.tasks[0])).toBeNull();
   });
 });

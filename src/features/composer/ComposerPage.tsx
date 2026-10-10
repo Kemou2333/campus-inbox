@@ -13,6 +13,8 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
  const importLock=useRef(false);const [dragTarget,setDragTarget]=useState<string|null>(null);
  const [importWarnings,setImportWarnings]=useState<Record<string,string>>({});
  const [aiNotice,setAiNotice]=useState(false);
+ const [showWaitHint,setShowWaitHint]=useState(false);
+ useEffect(()=>{setShowWaitHint(false);if(!app.busy||app.stage!=='整理中')return;const timer=setTimeout(()=>setShowWaitHint(true),15_000);return()=>clearTimeout(timer);},[app.busy,app.stage]);
  const topNavigation=useMediaQuery('(min-width:960px), (min-width:600px) and (max-height:500px)');
  const shortViewport=useMediaQuery('(max-height:500px)');
  const [clock,setClock]=useState(Date.now());
@@ -88,9 +90,10 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
   <Tooltip title="再加一条通知"><span style={{alignSelf:'center'}}><IconButton aria-label="再加一条通知" sx={{border:'1px solid',borderColor:'divider',color:'primary.main'}} disabled={app.busy||adding||app.drafts.length>=20} onClick={()=>app.addDraft()}><Add/></IconButton></span></Tooltip>
   <Box className="composer-actions" sx={{py:1,position:shortViewport&&!embedded?'static':'sticky',bottom:embedded?0:topNavigation?16:'calc(80px + var(--safe-bottom))',zIndex:2,bgcolor:'background.default'}}>
    {app.busy&&<LinearProgress sx={{mb:1,borderRadius:1}}/>}
+   {app.busy&&showWaitHint&&<Typography variant="body2" color="text.secondary" role="status" sx={{mb:1}}>长通知可能需要更多时间，请保留页面等待结果。</Typography>}
    <Stack direction="row" sx={{alignItems:'center',gap:1}}>
      <Button fullWidth variant="contained" sx={{whiteSpace:'nowrap',minHeight:56,fontSize:16}} disabled={app.busy||adding||!!retrySeconds||!hasContent||total>4000||app.pending||!!app.legacyRecords.length||!app.config} onClick={()=>void submit()}>{app.busy?app.stage:retrySeconds?retryText:'整理通知'}</Button>
-     {app.busy&&<Button onClick={app.cancel}>取消</Button>}
+     {app.busy&&<Button sx={{flexShrink:0,whiteSpace:'nowrap'}} onClick={app.cancel}>停止等待</Button>}
    </Stack>
   </Box>
   <Dialog open={aiNotice} onClose={()=>setAiNotice(false)} aria-labelledby="ai-notice-heading"><DialogTitle id="ai-notice-heading">整理前请留意</DialogTitle><DialogContent><Typography>AI 可能遗漏或误判。时间、对象和要求等重要信息，请再核对原文。</Typography></DialogContent><DialogActions><Button onClick={()=>setAiNotice(false)}>取消</Button><Button variant="contained" onClick={acknowledge}>开始整理</Button></DialogActions></Dialog>

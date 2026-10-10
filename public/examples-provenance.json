@@ -1,10 +1,9 @@
 {
   "model": "deepseek-flash",
-  "thinking": "disabled",
-  "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
+  "thinking": "mixed",
   "paidCallsForLatestResults": 6,
   "sourceCount": 11,
-  "generationMethod": "Latest prompt, one natural provider response per batch. No manual wording changes, paid auto retry or response repair. Local IDs, progress fields and source-grounded time parts added by the app.",
+  "generationMethod": "Mixed provenance: 12 notices from five r5/disabled batches, and one long notice from one r6/low batch. One natural provider response per batch; no manual wording changes, paid automatic retries or response repair. Local IDs and progress fields added by the app.",
   "limitations": [
     "AI can still omit or misclassify facts. Return-vs-leave applicability may overlap; check the original.",
     "Exam schedules may be classified as reminders."
@@ -18,7 +17,11 @@
       "testedAt": "2026-10-08T16:16:56.211Z",
       "sourceSha256": "b2f0db83596e019ce62e475feacc9a3783c4fa13b3681af278e642367837aafd",
       "firstProviderContentSha256": "2cbcdc48d0f98de369e024c75e4f600e832a0ff217ed3f8f1d9c46a037893081",
-      "manualWordEdits": false
+      "manualWordEdits": false,
+      "revision": "r5",
+      "thinking": "disabled",
+      "reasoningEffort": null,
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
     },
     {
       "exampleId": "example-reading-v25-1",
@@ -28,7 +31,11 @@
       "testedAt": "2026-10-08T16:16:56.211Z",
       "sourceSha256": "c69e50b1c29544c2b525fd313f5c664295c934e3c8ceebb3aa4645855ade869c",
       "firstProviderContentSha256": "2cbcdc48d0f98de369e024c75e4f600e832a0ff217ed3f8f1d9c46a037893081",
-      "manualWordEdits": false
+      "manualWordEdits": false,
+      "revision": "r5",
+      "thinking": "disabled",
+      "reasoningEffort": null,
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
     },
     {
       "exampleId": "example-reading-v25-2",
@@ -38,7 +45,11 @@
       "testedAt": "2026-10-08T16:16:56.211Z",
       "sourceSha256": "e67bac4a13a3a75efec245791c56d022a6ddb0cc67827e07d9410514336ca601",
       "firstProviderContentSha256": "2cbcdc48d0f98de369e024c75e4f600e832a0ff217ed3f8f1d9c46a037893081",
-      "manualWordEdits": false
+      "manualWordEdits": false,
+      "revision": "r5",
+      "thinking": "disabled",
+      "reasoningEffort": null,
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
     },
     {
       "exampleId": "example-reading-v25-3",
@@ -48,7 +59,11 @@
       "testedAt": "2026-10-08T16:16:59.589Z",
       "sourceSha256": "6ba802cc228eb97fb93e1d73d66823d4e47629903caa8d367c732d869b0b8d69",
       "firstProviderContentSha256": "d2c5252b8e01d2af99f8ea83cf04abb030d41d859073be6debbffbf8de9b10de",
-      "manualWordEdits": false
+      "manualWordEdits": false,
+      "revision": "r5",
+      "thinking": "disabled",
+      "reasoningEffort": null,
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
     },
     {
       "exampleId": "example-reading-v25-4",
@@ -58,7 +73,11 @@
       "testedAt": "2026-10-08T16:16:59.589Z",
       "sourceSha256": "9e7b5853ccadc824ae4f3353d9677c9bb92db82986ba8001a60e09f8f8ae8e40",
       "firstProviderContentSha256": "d2c5252b8e01d2af99f8ea83cf04abb030d41d859073be6debbffbf8de9b10de",
-      "manualWordEdits": false
+      "manualWordEdits": false,
+      "revision": "r5",
+      "thinking": "disabled",
+      "reasoningEffort": null,
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
     },
     {
       "exampleId": "example-reading-v25-5",
@@ -68,7 +87,11 @@
       "testedAt": "2026-10-08T16:16:59.589Z",
       "sourceSha256": "2427577d4c6eec8bd1595742ff0518b4ccfcf85cff6d66d4b334a9db1364817b",
       "firstProviderContentSha256": "d2c5252b8e01d2af99f8ea83cf04abb030d41d859073be6debbffbf8de9b10de",
-      "manualWordEdits": false
+      "manualWordEdits": false,
+      "revision": "r5",
+      "thinking": "disabled",
+      "reasoningEffort": null,
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
     },
     {
       "exampleId": "example-reading-v25-6",
@@ -78,7 +101,11 @@
       "testedAt": "2026-10-08T16:19:10.969Z",
       "sourceSha256": "b53f6f7efdca5f9e6ce327fcefa3d61ddaff718ca3e28adb2d671826c1a605a4",
       "firstProviderContentSha256": "19b541456409e99051bc755055554f208c60df2a01797455e226b58796ab922d",
-      "manualWordEdits": false
+      "manualWordEdits": false,
+      "revision": "r5",
+      "thinking": "disabled",
+      "reasoningEffort": null,
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
     },
     {
       "exampleId": "example-reading-v25-7",
@@ -88,7 +115,11 @@
       "testedAt": "2026-10-08T16:19:10.969Z",
       "sourceSha256": "7b45eca477f1aa27791c7239ae6aa735bcc48a2e97171b0d6b8a5bdedd0f12cd",
       "firstProviderContentSha256": "19b541456409e99051bc755055554f208c60df2a01797455e226b58796ab922d",
-      "manualWordEdits": false
+      "manualWordEdits": false,
+      "revision": "r5",
+      "thinking": "disabled",
+      "reasoningEffort": null,
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
     },
     {
       "exampleId": "example-reading-v25-8",
@@ -98,7 +129,11 @@
       "testedAt": "2026-10-08T16:16:48.092Z",
       "sourceSha256": "e8d42234718f0a4baa76bd53aaddd3859210bc110ab93b1faf6fc9b2f053681e",
       "firstProviderContentSha256": "ca13828838a6becda878a9266c1c2e0c1c6fe9d55bf9d430ebcda0516130cd1c",
-      "manualWordEdits": false
+      "manualWordEdits": false,
+      "revision": "r5",
+      "thinking": "disabled",
+      "reasoningEffort": null,
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
     },
     {
       "exampleId": "example-reading-v25-9",
@@ -108,7 +143,11 @@
       "testedAt": "2026-10-08T16:16:48.092Z",
       "sourceSha256": "e8d42234718f0a4baa76bd53aaddd3859210bc110ab93b1faf6fc9b2f053681e",
       "firstProviderContentSha256": "ca13828838a6becda878a9266c1c2e0c1c6fe9d55bf9d430ebcda0516130cd1c",
-      "manualWordEdits": false
+      "manualWordEdits": false,
+      "revision": "r5",
+      "thinking": "disabled",
+      "reasoningEffort": null,
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
     },
     {
       "exampleId": "example-reading-v25-10",
@@ -118,7 +157,11 @@
       "testedAt": "2026-10-08T16:16:48.092Z",
       "sourceSha256": "e8d42234718f0a4baa76bd53aaddd3859210bc110ab93b1faf6fc9b2f053681e",
       "firstProviderContentSha256": "ca13828838a6becda878a9266c1c2e0c1c6fe9d55bf9d430ebcda0516130cd1c",
-      "manualWordEdits": false
+      "manualWordEdits": false,
+      "revision": "r5",
+      "thinking": "disabled",
+      "reasoningEffort": null,
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
     },
     {
       "exampleId": "example-reading-v25-11",
@@ -128,17 +171,29 @@
       "testedAt": "2026-10-08T16:19:09.046Z",
       "sourceSha256": "4bf44c24e840ed01f223a68c830b293426dd215c0e04b4192a9f907285ffb536",
       "firstProviderContentSha256": "f95429a5fa8a805942b0d4d0b4a7fe8378e41643706cbe8dd0edfc7d0196f1d5",
-      "manualWordEdits": false
+      "manualWordEdits": false,
+      "revision": "r5",
+      "thinking": "disabled",
+      "reasoningEffort": null,
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
     },
     {
-      "exampleId": "example-reading-v25-12",
-      "title": "外语能力大赛校赛报名",
+      "exampleId": "example-reading-v26-12",
+      "title": "2026“外研社·国才杯”外语能力大赛校赛通知",
       "case": "user-long",
       "sourceIndex": 0,
-      "testedAt": "2026-10-08T16:16:42.089Z",
+      "testedAt": "2026-10-10T04:23:42.985Z",
+      "revision": "r6",
+      "thinking": "enabled",
+      "reasoningEffort": "low",
+      "promptSha256": "74e69d797307c0415e42489863dab68980c5d48ac283d732e66b49117f4f50cf",
       "sourceSha256": "0b6934e70edbdaac44193d1e227dadde0894b05e9b5a2f75bb4d16db8317efb0",
-      "firstProviderContentSha256": "77546665265f8e8d95f80a1269780360e3a593605f7b1bef314537824d423df4",
+      "firstProviderContentSha256": "da20b7524eef89ca658a18e28b45dbbcf94ea3f36135cbb052eb13ad784c924b",
       "manualWordEdits": false
     }
+  ],
+  "promptRevisions": [
+    "r5",
+    "r6"
   ]
 }
