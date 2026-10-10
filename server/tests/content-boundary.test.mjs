@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {analyze,modelInput,ServiceError} from '../analyze.mjs';
 import {createService} from '../service.mjs';
-import {SYSTEM_PROMPT} from '../../worker/prompt.mjs';
+import {SYSTEM_PROMPT,promptForInput} from '../../worker/prompt.mjs';
 
 // Fixed local model envelopes only. No network, moderation or paid calls.
 const origin='https://app.example.test',token='mock-access-token-long-enough-for-tests';
@@ -50,10 +50,12 @@ test('injection remains user data; model messages contain no service secrets, lo
   await analyze({sources:[{text}]},{...config,otherSecret:'private-local-secret',smtpPassword:'private-smtp-password'},async(url,options)=>{
     assert.equal(url,'https://api.deepseek.com/chat/completions');assert.equal(options.redirect,'error');
     const payload=JSON.parse(options.body);assert.equal(payload.tools,undefined);assert.equal(payload.messages.length,2);
-    assert.deepEqual(payload.messages.map(message=>message.role),['system','user']);assert.equal(payload.messages[0].content,SYSTEM_PROMPT);
+    assert.deepEqual(payload.messages.map(message=>message.role),['system','user']);assert.equal(payload.messages[0].content,promptForInput(modelInput({sources:[{text}]})));
     assert.deepEqual(JSON.parse(payload.messages[1].content),{sources:[{sourceId:1,text}]});
     for(const secret of [config.apiKey,token,'private-local-secret','private-smtp-password'])assert.equal(JSON.stringify(payload.messages).includes(secret),false);
-    assert.match(SYSTEM_PROMPT,/refusal.*UNSUPPORTED_REQUEST/);assert.match(SYSTEM_PROMPT,/正常校园反诈、纪律、性教育/);
+    for(const prompt of [SYSTEM_PROMPT,payload.messages[0].content]){
+      assert.match(prompt,/refusal.*UNSUPPORTED_REQUEST/);assert.match(prompt,/校园反诈、纪律、性教育/);
+    }
     return envelope();
   });
   await assert.rejects(analyze('正常通知',config,async()=>Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(normal),tool_calls:[{function:{name:'fetch_url'}}]}}]})),error=>error.failureCode==='SCHEMA_INVALID');

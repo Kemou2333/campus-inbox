@@ -1,6 +1,6 @@
 import './contracts/time.js';
 import './contracts/data.js';
-import {SYSTEM_PROMPT} from '../worker/prompt.mjs';
+import {promptForInput} from '../worker/prompt.mjs';
 const D=globalThis.CampusData;
 const T=globalThis.CampusTime;
 const record=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -122,7 +122,8 @@ export function modelInput(notice){
 }
 /** Shared with the cost guard so it reserves the same bounded provider payload. */
 export function modelPayload(notice,config={}){
-  return {model:config.model||'deepseek-flash',thinking:{type:config.thinkingMode==='low'?'enabled':'disabled'},...(config.thinkingMode==='low'?{reasoning_effort:'low'}:{}),max_tokens:config.thinkingMode==='low'?32768:12288,response_format:{type:'json_object'},messages:[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:JSON.stringify(modelInput(notice))}]};
+  const input=modelInput(notice);
+  return {model:config.model||'deepseek-flash',thinking:{type:config.thinkingMode==='low'?'enabled':'disabled'},...(config.thinkingMode==='low'?{reasoning_effort:'low'}:{}),max_tokens:config.thinkingMode==='low'?32768:12288,response_format:{type:'json_object'},messages:[{role:'system',content:promptForInput(input)},{role:'user',content:JSON.stringify(input)}]};
 }
 function sourceMapping(parsed,sources){
   if(!Array.isArray(parsed?.notices)||!parsed.notices.length||parsed.notices.length>20)throw new Error('source');
