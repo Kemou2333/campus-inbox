@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdtemp,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {analyze,ServiceError} from '../analyze.mjs';
+import {analyze,groundDates,ServiceError} from '../analyze.mjs';
 import {createService} from '../service.mjs';
 
 const message='AI 未返回有效的整理结果，请稍后重试。';
@@ -63,7 +63,7 @@ test('service persists only the new category and token totals after a failed pai
     const invalid=batch();step(invalid.notices[0]).details=['private-model-value'.repeat(30)];let calls=0;
     const handler=await createService({apiKey:'test',accessToken:token,allowedOrigins:[origin],stateFile},{modelFetch:async()=>{calls++;return upstream(invalid);}});
     const response=await handler(new Request('http://localhost/analyze',{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({notice:source})}));
-    assert.equal(response.status,502);assert.deepEqual(await response.json(),{error:message});assert.equal(calls,1);
+    assert.equal(response.status,502);assert.deepEqual(await response.json(),{error:message,code:'AI_FORMAT_INVALID'});assert.equal(calls,1);
     const state=JSON.parse(await readFile(stateFile,'utf8'));
     assert.equal(state.requests,1);assert.equal(state.input,37);assert.equal(state.output,112);assert.equal(state.reasoning,29);assert.equal(state.lastFinishReason,'stop');assert.equal(state.lastFailureCode,'STEP_DETAILS');
     assert.equal(state.costMicro,1164,'usage cost uses output once, including reasoning');
@@ -73,6 +73,54 @@ test('service persists only the new category and token totals after a failed pai
 });
 
 test('diagnostic metadata rejects arbitrary provider strings outside the fixed enum',()=>{
-  const error=new ServiceError(message,502,{failureCode:'private-provider-validator-message',finishReason:'private-provider-metadata',usage});
-  assert.equal(error.failureCode,undefined);assert.equal(error.finishReason,'unknown');assert(!JSON.stringify(error).includes('private-'));
+  const error=new ServiceError(message,502,{failureCode:'private-provider-validator-message',finishReason:'private-provider-metadata',code:'private-provider-code',usage});
+  assert.equal(error.failureCode,undefined);assert.equal(error.finishReason,'unknown');assert.equal(error.code,undefined);assert(!JSON.stringify(error).includes('private-'));
+});
+
+test('grounding cannot fabricate required fields in a malformed model response',async()=>{
+  for(const [code,mutate,hasField] of [
+    ['ROOT_FIELDS',n=>delete n.deadline,n=>Object.hasOwn(n,'deadline')],
+    ['ROOT_FIELDS',n=>delete n.timeline,n=>Object.hasOwn(n,'timeline')],
+    ['TASK_FIELDS',n=>delete task(n).time,n=>Object.hasOwn(task(n),'time')],
+    ['TIMELINE_FIELDS',n=>{n.timeline=[{label:'提交截止',timeText:'',location:null}];},n=>Object.hasOwn(n.timeline[0],'time')]
+  ]){
+    const value=batch();mutate(value.notices[0]);
+    const grounded=groundDates(value,source);assert.equal(hasField(grounded.notices[0]),false);
+    let calls=0;
+    await assert.rejects(analyze(source,{apiKey:'test'},async()=>{calls++;return upstream(value);}),error=>{
+      assert.equal(error.failureCode,code);assert.equal(error.usageAvailable,true);assert.deepEqual(error.usage,{input:37,output:112,reasoning:29});return true;
+    });
+    assert.equal(calls,1);
+  }
+});
+
+test('malformed card, task and timeline values keep finite field diagnostics without normalizing their types',async()=>{
+  for(const malformed of [null,[],42,'private-malformed-value']){
+    for(const [code,mutate,read] of [
+      ['ROOT_FIELDS',v=>v.notices[0]=malformed,v=>v.notices[0]],
+      ['TASK_FIELDS',v=>v.notices[0].tasks=[malformed],v=>v.notices[0].tasks[0]],
+      ['TIMELINE_FORMAT',v=>v.notices[0].timeline=[malformed],v=>v.notices[0].timeline[0]]
+    ]){
+      const value=batch();mutate(value);assert.deepEqual(read(groundDates(value,source)),malformed);let calls=0;
+      await assert.rejects(analyze(source,{apiKey:'test'},async()=>{calls++;return upstream(value);}),error=>{
+        assert.equal(error.failureCode,code);assert.equal(error.message,message);assert.equal(error.usageAvailable,true);assert(!JSON.stringify(error).includes('private-'));return true;
+      });
+      assert.equal(calls,1);
+    }
+  }
+});
+
+test('provider timeout returns a stable code, retains the reservation and never retries',async()=>{
+  const directory=await mkdtemp(join(tmpdir(),'campus-validation-timeout-')),stateFile=join(directory,'usage.json');
+  const origin='https://kemou2333.github.io',token='test-timeout-token-at-least-twenty';let calls=0;
+  try{
+    const handler=await createService({apiKey:'test',accessToken:token,allowedOrigins:[origin],stateFile,timeoutMs:5},{modelFetch:async(_url,{signal})=>{
+      calls++;return new Promise((resolve,reject)=>signal.addEventListener('abort',()=>reject(new DOMException('private-provider-abort','AbortError')),{once:true}));
+    }});
+    const response=await handler(new Request('http://localhost/analyze',{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({notice:source})}));
+    assert.equal(response.status,502);assert.deepEqual(await response.json(),{error:'AI 整理超时，请稍后重试。',code:'AI_TIMEOUT'});
+    assert.equal(calls,1);const state=JSON.parse(await readFile(stateFile,'utf8'));
+    assert.equal(state.requests,1);assert(state.costMicro>0);assert.equal(state.input,0);assert.equal(state.output,0);
+    assert(!JSON.stringify(state).includes('private-'));assert(!JSON.stringify(state).includes(token));
+  }finally{await rm(directory,{recursive:true,force:true});}
 });

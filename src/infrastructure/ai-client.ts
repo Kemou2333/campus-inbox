@@ -88,25 +88,35 @@ export async function analyzeSources(sources: AnalysisSource[], options: Analyze
     throw new AnalysisError('请填写 1–20 条通知，总字数不超过 4,000。', 'INVALID_INPUT');
   }
   const controller = new AbortController();
-  let timedOut = false;
+  let timeoutCode: 'TIMEOUT' | 'VERIFICATION_EXPIRED' | undefined;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const limitWait = (milliseconds: number, code: typeof timeoutCode) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => { timeoutCode = code; controller.abort(); }, Math.max(0, milliseconds));
+  };
   const cancel = () => controller.abort();
   if (options.signal?.aborted) controller.abort();
   else options.signal?.addEventListener('abort', cancel, { once: true });
-  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, options.timeoutMs ?? 250_000);
   const fetcher = options.fetcher ?? fetch;
   // An explicit projection keeps UI or attachment fields out of the request.
   const body = JSON.stringify({ sources: sources.map(source => ({ text: source.text })) });
-  const send = (proof?: string) => fetcher(options.endpoint ?? DEFAULT_AI_ENDPOINT, {
-    method: 'POST', credentials: 'omit',
-    headers: { 'Content-Type': 'application/json', ...(options.sessionKey ? { Authorization: `Bearer ${options.sessionKey}` } : {}),
-      ...(proof ? { 'X-Campus-Proof': proof } : {}) },
-    body, signal: controller.signal,
-  });
+  const send = async (proof?: string) => {
+    // Filling a verification dialog must not consume the model's response window.
+    limitWait(options.timeoutMs ?? 250_000, 'TIMEOUT');
+    try {
+      const response = await fetcher(options.endpoint ?? DEFAULT_AI_ENDPOINT, {
+        method: 'POST', credentials: 'omit',
+        headers: { 'Content-Type': 'application/json', ...(options.sessionKey ? { Authorization: `Bearer ${options.sessionKey}` } : {}),
+          ...(proof ? { 'X-Campus-Proof': proof } : {}) },
+        body, signal: controller.signal,
+      });
+      return { response, value: await responseBody(response) };
+    } finally { clearTimeout(timeout); }
+  };
   try {
     if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
     options.onStage?.('requesting');
-    let response = await send();
-    let value = await responseBody(response);
+    let { response, value } = await send();
     if (response.status === 428 && value.code === 'VERIFICATION_REQUIRED') {
       options.onStage?.('verifying');
       if (value.challenge && typeof value.challenge === 'object' && (value.challenge as Record<string, unknown>).type === 'image') {
@@ -117,14 +127,17 @@ export async function analyzeSources(sources: AnalysisSource[], options: Analyze
         for (let attempt = 0; attempt < 5; attempt++) {
           if (Date.now() >= challenge.expires) throw new AnalysisError('验证码已过期，请重新提交。', 'VERIFICATION_EXPIRED');
           if (attempt > 0) options.onStage?.('verifying');
-          const input = await humanResponse({ ...challenge, ...(error ? { error } : {}) }, options.onHumanVerification, controller.signal);
+          limitWait(challenge.expires - Date.now(), 'VERIFICATION_EXPIRED');
+          let input: string;
+          try {
+            input = await humanResponse({ ...challenge, ...(error ? { error } : {}) }, options.onHumanVerification, controller.signal);
+          } finally { clearTimeout(timeout); }
           const answer = typeof input === 'string' ? input.trim() : '';
           if (!/^\d{4}$/.test(answer)) throw new AnalysisError('请填写图片中的 4 位数字。', 'INVALID_HUMAN_ANSWER');
           if (Date.now() >= challenge.expires) throw new AnalysisError('验证码已过期，请重新提交。', 'VERIFICATION_EXPIRED');
           if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
           options.onStage?.('requesting');
-          response = await send(JSON.stringify({ token: challenge.token, answer }));
-          value = await responseBody(response);
+          ({ response, value } = await send(JSON.stringify({ token: challenge.token, answer })));
           const next = value.remainingAttempts;
           // This code is emitted only before the model dispatch. Never retry any provider failure or new challenge.
           if (response.status === 400 && value.code === 'CAPTCHA_INCORRECT'
@@ -145,8 +158,7 @@ export async function analyzeSources(sources: AnalysisSource[], options: Analyze
         if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
         options.onStage?.('requesting');
         // 428 occurs before a provider call. One PoW handshake, no automatic paid retry.
-        response = await send(proof);
-        value = await responseBody(response);
+        ({ response, value } = await send(proof));
       }
     }
     if (!response.ok) {
@@ -158,8 +170,9 @@ export async function analyzeSources(sources: AnalysisSource[], options: Analyze
     if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
     return value;
   } catch (error) {
-    if (controller.signal.aborted) throw new AnalysisError(timedOut ? '整理超时，请稍后重试。' : '已取消整理。', timedOut ? 'TIMEOUT' : 'CANCELLED');
-    if (error instanceof DOMException && error.name === 'AbortError') throw new AnalysisError('已取消整理。', 'CANCELLED');
+    if (controller.signal.aborted) throw new AnalysisError(timeoutCode === 'VERIFICATION_EXPIRED' ? '验证码已过期，请重新提交。'
+      : timeoutCode === 'TIMEOUT' ? '等待整理结果超时，请稍后再试。' : '已停止等待整理结果。', timeoutCode ?? 'CANCELLED');
+    if (error instanceof DOMException && error.name === 'AbortError') throw new AnalysisError('已停止等待整理结果。', 'CANCELLED');
     if (error instanceof TypeError) throw new AnalysisError('无法连接整理服务，请检查网络。', 'NETWORK_ERROR');
     throw error;
   } finally {

@@ -93,11 +93,12 @@ describe('real pending-result controller recovery',()=>{
     const catalog=[{id:old.id,fingerprint:await exampleFingerprint(old)}];
     const fetchMock=vi.fn(async(url:string)=>Response.json(url==='./examples.json'?{app:'campus-inbox',version:5,notices:newer}:catalog));vi.stubGlobal('fetch',fetchMock);
     await controller().loadExamples();expect(records()).toEqual(newer);expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toBe('./examples-legacy.json');
   });
   test('registry failure during actual loadExamples leaves old and personal records intact',async()=>{
     const old={...createNotice(analysis('旧示例'),'示例来源'),id:'example-reading-v21-0'},newer={...createNotice(analysis('新版示例'),'示例来源'),id:'example-reading-v25-0'};
     const repository=new LocalRepository(storage);repository.save([old]);
-    vi.stubGlobal('fetch',vi.fn(async(url:string)=>{if(url==='./examples-legacy-2.4.json')throw new Error('offline');return Response.json({app:'campus-inbox',version:5,notices:[newer]});}));
+    vi.stubGlobal('fetch',vi.fn(async(url:string)=>{if(url==='./examples-legacy.json')throw new Error('offline');return Response.json({app:'campus-inbox',version:5,notices:[newer]});}));
     await controller().loadExamples();expect(records()).toEqual([old]);
   });
   test('a personal edit while fingerprints are calculated prevents an outdated example replacement',async()=>{

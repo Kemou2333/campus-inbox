@@ -208,7 +208,9 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   }catch(e){
    if(e instanceof AnalysisError&&e.status===429&&e.retryAfterSeconds)setRetryAt(Date.now()+e.retryAfterSeconds*1000);
    if(e instanceof AnalysisError&&e.code==='AUTH_REQUIRED')cloud?.disconnect();
-   report(e);return false;
+   if(e instanceof AnalysisError&&['AI_FORMAT_INVALID','AI_INCOMPLETE','AI_TIMEOUT'].includes(e.code))setError(`${e.message} 原文已保留，可自行重试。`);
+   else report(e);
+   return false;
   }finally{analyzing.current=false;setBusy(false);setStage('');abort.current=null;}
  }
  function recoverResult(){try{const raw=localStorage.getItem(RESULT_KEY);const value=resultRef.current||(raw?JSON.parse(raw):null);if(value)commitResult(value);}catch(e){report(e);}}
@@ -217,7 +219,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  async function loadExamples(){
   const response=await fetch('./examples.json');if(!response.ok)throw new Error('示例暂时无法载入。');
   const records=parseBackup(await response.json());let registry:unknown=null;
-  try{const response=await fetch('./examples-legacy-2.4.json',{signal:AbortSignal.timeout(5000)});if(response.ok)registry=await response.json();}catch{/* Existing records stay intact when legacy fingerprints are unavailable. */}
+  try{const response=await fetch('./examples-legacy.json',{signal:AbortSignal.timeout(5000)});if(response.ok)registry=await response.json();}catch{/* Existing records stay intact when legacy fingerprints are unavailable. */}
   const current=repository.load(),merged=await mergeExamples(current,records,registry);
   // Hashing yields to other edits. Do not overwrite changes made while it ran.
   if(JSON.stringify(repository.load())!==JSON.stringify(current))throw new Error('通知正在更新，请稍后再载入示例。');

@@ -10,6 +10,15 @@ const RATE_WINDOW_MS=180000,RATE_LIMIT=5,AUTHENTICATED_IP_RATE_LIMIT=20;
 const INPUT_MICRO_RMB_PER_TOKEN=2.4,OUTPUT_MICRO_RMB_PER_TOKEN=9.6;
 const tokenCostMicro=(input,output)=>Math.min(Number.MAX_SAFE_INTEGER,Math.ceil(input*INPUT_MICRO_RMB_PER_TOKEN+output*OUTPUT_MICRO_RMB_PER_TOKEN));
 const validTokenCounts=stats=>stats&&['input','output'].every(key=>Number.isSafeInteger(stats[key])&&stats[key]>=0);
+function publicAIErrorCode(error){
+  if(!(error instanceof ServiceError))return undefined;
+  if(error.code==='AI_TIMEOUT')return error.code;
+  // The provider details remain server-side finite categories. Clients receive
+  // only the broad failure type, never raw validator paths or model content.
+  if(error.failureCode&&error.failureCode!=='CONTENT_BOUNDARY')return 'AI_FORMAT_INVALID';
+  if(error.finishReason&&error.finishReason!=='stop')return 'AI_INCOMPLETE';
+  return undefined;
+}
 export async function createService(config,options={}){
   if(!config.apiKey||!config.accessToken||config.accessToken.length<20)throw new Error('Server secrets are missing or too short');
   // Legacy private mode is retained for isolated tests; production is explicitly public.
@@ -175,7 +184,8 @@ export async function createService(config,options={}){
       if(cache.size>=50)cache.delete(cache.keys().next().value);cache.set(hash,{created:now(),result:output.result});return reply(output.result);
     }catch(e){
       if(e instanceof ServiceError&&e.usage&&!tokensRecorded){try{await recordTokens(e.usage,e.finishReason,e.failureCode,e.usageAvailable);}catch{return reply({error:'整理服务暂时不可用，请稍后重试。'},503);}}
-      return reply({error:e instanceof ServiceError?e.message:'整理服务暂时不可用，请稍后重试。'},e.status||503);
+      const code=publicAIErrorCode(e);
+      return reply({error:e instanceof ServiceError?e.message:'整理服务暂时不可用，请稍后重试。',...(code?{code}:{})},e.status||503);
     }finally{busy=false;}
   };
 }

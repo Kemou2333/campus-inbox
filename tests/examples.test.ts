@@ -1,7 +1,7 @@
 import {describe,expect,test} from 'vitest';
 import {readFile} from 'node:fs/promises';
 import {exampleFingerprint,mergeExamples} from '../src/domain/examples';
-import {createNotice} from '../src/domain/notice';
+import {createNotice,parseBackup} from '../src/domain/notice';
 import type {Notice,NoticeAnalysis} from '../src/domain/types';
 
 const analysis:NoticeAnalysis={schemaVersion:4,kind:'task',title:'旧示例',summary:'请办理通知事项。',deadline:null,deadlineText:'',timeline:[],materials:[],warnings:[],reminders:[],tasks:[{text:'提交材料',assignee:null,scope:'all',condition:'',details:[],steps:[{text:'上传材料',details:[]}],time:null,timeText:'',location:null}]};
@@ -58,5 +58,44 @@ describe('safe built-in example upgrades',()=>{
     const catalog=JSON.parse(await readFile(new URL('../public/examples-legacy-2.4.json',import.meta.url),'utf8'));
     expect(catalog).toHaveLength(13);
     for(const item of catalog){expect(Object.keys(item).sort()).toEqual(['fingerprint','id']);expect(item.fingerprint).toMatch(/^[a-f0-9]{64}$/);}
+  });
+  test('the current catalog retains the 2.4 fingerprints and adds only the old 2.5 long-notice fingerprint',async()=>{
+    const previous=JSON.parse(await readFile(new URL('../public/examples-legacy-2.4.json',import.meta.url),'utf8'));
+    const current=JSON.parse(await readFile(new URL('../public/examples-legacy.json',import.meta.url),'utf8'));
+    expect(current.slice(0,13)).toEqual(previous);expect(current).toHaveLength(14);
+    expect(current[13].id).toBe('example-reading-v25-12');
+    expect(current[13].fingerprint).toMatch(/^[a-f0-9]{64}$/);
+  });
+  test('upgrading a 2.5 long-notice example preserves the other examples and remains idempotent',async()=>{
+    const incoming=parseBackup(JSON.parse(await readFile(new URL('../public/examples.json',import.meta.url),'utf8')));
+    const long=incoming.find(n=>n.id==='example-reading-v26-12')!;
+    const original=fresh(long.originalText,'example-reading-v25-12'),others=incoming.filter(n=>n!==long);
+    const current=[...others,original];
+    const result=await mergeExamples(current,incoming,await registry(original));
+    expect(result).toEqual({notices:[...others,long],added:1,replaced:1});
+    expect(await mergeExamples(result.notices,incoming,await registry(original))).toEqual({notices:result.notices,added:0,replaced:0});
+  });
+  test('a modified 2.5 long-notice example protects its progress, attachments, notes and schedule from the upgrade',async()=>{
+    const incoming=parseBackup(JSON.parse(await readFile(new URL('../public/examples.json',import.meta.url),'utf8')));
+    const long=incoming.find(n=>n.id==='example-reading-v26-12')!;
+    const original=fresh(long.originalText,'example-reading-v25-12'),catalog=await registry(original);
+    const changes:Array<(n:Notice)=>void>=[n=>{n.note='自用备注';},n=>{n.completed=true;},n=>{n.localDeadline='2026-10-20T12:00:00';},n=>{n.attachments=['my-file'];},n=>{n.tasks[0].note='个人计划';},n=>{n.tasks[0].completed=true;},n=>{n.tasks[0].localDeadline='2026-10-20T12:00:00';},n=>{n.tasks[0].steps[0].note='我的步骤';},n=>{n.tasks[0].steps[0].completed=true;}];
+    for(const change of changes){
+      const modified=structuredClone(original);change(modified);
+      expect(await mergeExamples([modified],[long],catalog)).toEqual({notices:[modified],added:0,replaced:0});
+    }
+    const personal={...original,id:'my-long-notice',note:'个人版本'};
+    expect(await mergeExamples([personal],[long],catalog)).toEqual({notices:[personal],added:0,replaced:0});
+  });
+  test('public provenance distinguishes the one r6 low response from twelve retained r5 disabled examples',async()=>{
+    const provenance=JSON.parse(await readFile(new URL('../public/examples-provenance.json',import.meta.url),'utf8'));
+    const examples=parseBackup(JSON.parse(await readFile(new URL('../public/examples.json',import.meta.url),'utf8')));
+    expect(provenance.thinking).toBe('mixed');expect(provenance.promptSha256).toBeUndefined();
+    expect(provenance.results).toHaveLength(13);
+    expect(provenance.results.filter((r:{revision:string;thinking:string})=>r.revision==='r5'&&r.thinking==='disabled')).toHaveLength(12);
+    const low=provenance.results.filter((r:{reasoningEffort:string})=>r.reasoningEffort==='low');
+    expect(low).toHaveLength(1);expect(low[0]).toMatchObject({exampleId:'example-reading-v26-12',revision:'r6',thinking:'enabled',manualWordEdits:false});
+    expect(provenance.results.map((r:{exampleId:string})=>r.exampleId)).toEqual(examples.map(n=>n.id));
+    for(const result of provenance.results){expect(result.promptSha256).toMatch(/^[a-f0-9]{64}$/);expect(result.sourceSha256).toMatch(/^[a-f0-9]{64}$/);expect(result.firstProviderContentSha256).toMatch(/^[a-f0-9]{64}$/);}
   });
 });
