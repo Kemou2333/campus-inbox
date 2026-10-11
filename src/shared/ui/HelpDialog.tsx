@@ -1,7 +1,7 @@
 import {Box,Button,Dialog,DialogActions,DialogContent,DialogTitle,Stack,Typography} from '@mui/material';
 import {version as appVersion} from '../../../package.json';
 export function HelpDialog({open,onClose,onExamples}:{open:boolean;onClose:()=>void;onExamples?:()=>void}){
- const steps=[['粘贴原文','一条或多条通知都能整理，也可以分框添加。'],['查看事项','重点直接显示在通知中，展开步骤后按项打勾，不适用的跳过。'],['留下进度','事项和步骤都能记笔记，登录后可在手机和网页同步。']];
+ const steps=[['粘贴原文','一条或多条通知都能整理，也可以分框添加。'],['查看事项','列表先看标题和简介，点击“查看”阅读详情；材料、注意和步骤按需展开。'],['留下进度','在详情中按项打勾、写笔记，不适用的跳过；登录后可在手机和网页同步。']];
  return <Dialog open={open} onClose={onClose}><DialogTitle>如何使用</DialogTitle><DialogContent><Stack spacing={2.5}>{steps.map(([title,text],i)=><Stack direction="row" spacing={2} key={title}><Box sx={{width:32,height:32,flexShrink:0,borderRadius:'50%',bgcolor:'primary.main',color:'primary.contrastText',display:'grid',placeItems:'center',fontWeight:700}}>{i+1}</Box><Box><Typography variant="h6">{title}</Typography><Typography color="text.secondary" sx={{mt:.5}}>{text}</Typography></Box></Stack>)}<Typography variant="body2" color="text.secondary">重要事项请核对原文，建议定期备份。</Typography></Stack></DialogContent><DialogActions sx={{flexWrap:'wrap',gap:1}}>{onExamples&&<Button variant="outlined" onClick={onExamples}>载入示例</Button>}<Button variant="contained" onClick={onClose}>我知道了</Button></DialogActions></Dialog>;
 }
 export function AboutDialog({open,onClose}:{open:boolean;onClose:()=>void}){

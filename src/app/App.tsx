@@ -15,6 +15,7 @@ import LoginDialog from '../features/settings/LoginDialog';
 import {NoteDialog,type NoteEditor} from '../features/notes/NoteDialog';
 import {CalendarDialog,type CalendarSelection} from '../features/notices/CalendarDialog';
 import {DetailDialog} from '../features/notices/DetailDialog';
+import {NoticeDetailDrawer} from '../features/notices/NoticeDetailDrawer';
 import {AboutDialog,HelpDialog} from '../shared/ui/HelpDialog';
 import type {NoticeActions} from '../features/notices/NoticeCard';
 import {ScrollPane} from '../shared/ui/ScrollPane';
@@ -29,28 +30,33 @@ export default function App(){
  const [page,setPage]=useState(0);const [login,setLogin]=useState(false);const [help,setHelp]=useState(()=>!exampleRequest.current&&localStorage.getItem('campus-inbox:tutorial:v2')!=='seen');
  const [about,setAbout]=useState(false);const [note,setNote]=useState<NoteEditor|null>(null);const [details,setDetails]=useState<string|null>(null);const [calendar,setCalendar]=useState<CalendarSelection|null>(null);const [focusID,setFocusID]=useState<string|null>(null);
  const [settingsDialog,setSettingsDialog]=useState(false);
+ const [selectedNoticeID,setSelectedNoticeID]=useState<string|null>(null);
+ const detailReturn=useRef<{windowTop:number;paneTop:number;trigger:HTMLElement|null}|null>(null);
  const [feedView,setFeedView]=useState(createFeedViewState);
  const consumeFocus=useCallback((id:string)=>setFocusID(value=>value===id?null:value),[]);
  useEffect(()=>{if(!exampleRequest.current||exampleStarted.current||app.bootError)return;exampleStarted.current=true;void app.loadExamples().catch(app.report);},[app.bootError]);
  useEffect(()=>{if(app.latestAddedID){setPage(0);setFocusID(app.latestAddedID);}},[app.latestAddedID]);
  const dark=app.theme==='system'?(app.capabilities?.theme?.dark??systemDark):app.theme==='dark';const theme=makeTheme(dark,app.capabilities?.theme??null);
  useEffect(()=>{document.documentElement.dataset.platform=app.platform.kind;document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.style.colorScheme=dark?'dark':'light';document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme.palette.background.default);if(app.platform.setAppearance)void app.platform.setAppearance(dark).catch(app.report);},[app.platform,dark]);
- const modalRef=useRef(false);modalRef.current=login||help||about||!!note||!!details||!!calendar||settingsDialog||!!verification.request;
+ const modalRef=useRef(false);modalRef.current=login||help||about||!!note||!!details||!!calendar||!!selectedNoticeID||settingsDialog||!!verification.request;
  const lastNotices=useRef(app.notices);
  function closeHelp(){setHelp(false);localStorage.setItem('campus-inbox:tutorial:v2','seen');}
  function navigate(next:number){setPage(next);if(split&&next===1){setTimeout(()=>{document.getElementById('compose-pane')?.scrollIntoView({block:'start',behavior:'smooth'});document.querySelector<HTMLTextAreaElement>('#compose-pane textarea')?.focus({preventScroll:true});},0);}else window.scrollTo({top:0,behavior:'instant'});}
- const actions:NoticeActions={note:(notice,target,title,text)=>setNote({noticeID:notice.id,target,title,text}),details:n=>setDetails(n.id),calendar:(notice,task)=>setCalendar({notice,task})};
+ function openNoticeDetail(id:string){detailReturn.current={windowTop:window.scrollY,paneTop:document.getElementById('feed-pane')?.scrollTop??0,trigger:document.activeElement instanceof HTMLElement?document.activeElement:null};setSelectedNoticeID(id);}
+ function restoreDetailPosition(){const previous=detailReturn.current;if(!previous)return;detailReturn.current=null;window.scrollTo({top:previous.windowTop,behavior:'instant'});const pane=document.getElementById('feed-pane');if(pane)pane.scrollTop=previous.paneTop;const target=previous.trigger?.isConnected?previous.trigger:document.querySelector<HTMLElement>('main [role="tab"][aria-selected="true"]');target?.focus({preventScroll:true});}
+ const actions:NoticeActions={note:(notice,target,title,text)=>setNote({noticeID:notice.id,target,title,text}),view:n=>openNoticeDetail(n.id),details:n=>setDetails(n.id),calendar:(notice,task)=>setCalendar({notice,task})};
  useEffect(()=>{
   const receive=()=>{if(modalRef.current||app.busy||document.querySelector('[role=\"dialog\"]'))return;void app.receiveShare().then(received=>{if(received)navigate(1);}).catch(app.report);};
   const openNotice=()=>{void app.platform.getOpenedNotice().then(id=>{if(id){setPage(0);setFocusID(id);}}).catch(app.report);};
   const offShare=app.platform.onShare(receive);const offNotice=app.platform.onOpenNotice(openNotice);receive();openNotice();return()=>{offShare();offNotice();};
- },[app.platform,app.busy,login,help,about,note,details,calendar,settingsDialog]);
+ },[app.platform,app.busy,login,help,about,note,details,calendar,selectedNoticeID,settingsDialog]);
  useEffect(()=>app.platform.onBack(()=>{
   const dialog=Array.from(document.querySelectorAll('[role="dialog"]')).at(-1);
   if(dialog){dialog.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',code:'Escape',bubbles:true}));return true;}
   if(page!==0){navigate(0);return true;}return false;
  }),[app.platform,page]);
  useEffect(()=>{if(details&&!app.notices.some(n=>n.id===details))setDetails(null);},[app.notices,details]);
+ useEffect(()=>{if(selectedNoticeID&&!app.notices.some(n=>n.id===selectedNoticeID))setSelectedNoticeID(null);},[app.notices,selectedNoticeID]);
  useEffect(()=>{const current=new Map(app.notices.map(n=>[n.id,n]));
   for(const previous of lastNotices.current){const n=current.get(previous.id);if(!n||getNoticeStatus(previous)==='pending'&&getNoticeStatus(n)!=='pending')void app.platform.cancelReminder(previous.id).catch(app.report);}
   lastNotices.current=app.notices;
@@ -80,6 +86,7 @@ export default function App(){
   {!wide&&<Paper sx={{position:'fixed',bottom:0,left:0,right:0,borderTop:'1px solid',borderColor:'divider',pb:'var(--safe-bottom)',zIndex:10}}>
    <BottomNavigation value={page} onChange={(_,value)=>navigate(value)} showLabels sx={{bgcolor:'background.paper',height:64,alignItems:'center',px:1,gap:1,'& .MuiBottomNavigationAction-root':{minWidth:0,maxWidth:180,height:48,borderRadius:6,color:'text.secondary'},'& .MuiBottomNavigationAction-root.Mui-selected':{color:'primary.main',bgcolor:'action.selected'},'& .MuiBottomNavigationAction-label':{fontSize:'1rem',fontWeight:600},'& .MuiBottomNavigationAction-label.Mui-selected':{fontSize:'1rem'}}}>{nav.map(item=><BottomNavigationAction key={item.label} label={item.label}/>)}</BottomNavigation>
   </Paper>}
+  <NoticeDetailDrawer notice={app.notices.find(n=>n.id===selectedNoticeID)??null} app={app} actions={actions} onClose={()=>setSelectedNoticeID(null)} onExited={restoreDetailPosition}/>
   <NoteDialog editor={note} app={app} onClose={()=>setNote(null)}/>
   <DetailDialog notice={app.notices.find(n=>n.id===details)??null} app={app} onClose={()=>setDetails(null)}/>
   <CalendarDialog selection={calendar} app={app} onClose={()=>setCalendar(null)}/>

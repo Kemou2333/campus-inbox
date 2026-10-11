@@ -37,6 +37,28 @@ export function noticeOverview(n:Notice){
  };
 }
 
+function shortLabel(value:string,limit:number):string{
+ const characters=Array.from(value);
+ return characters.length>limit?`${characters.slice(0,limit-1).join('')}…`:value;
+}
+
+/** List labels shorten saved text without changing the notice or inventing a summary. */
+export function compactNoticePreview(n:Notice){
+ const overview=noticeOverview(n);
+ const summary=plainReadingText(n.summary).trim();
+ const reminderTexts=new Set(n.reminders.map(reminder=>plainReadingText(reminder.text).trim()));
+ const audienceCount=overview.audiences.length;
+ const firstAudience=shortLabel(overview.audiences[0]??'',14);
+ return {
+  summary:n.summary,
+  showSummary:!!summary&&summary!==plainReadingText(n.title).trim()&&!reminderTexts.has(summary),
+  audienceLabel:firstAudience+(audienceCount>1?`（共${audienceCount}类）`:''),
+  audienceCount,
+  timeLabel:shortLabel(overview.times[0]??'',26),
+  timesCount:overview.times.length,
+ };
+}
+
 /** Search can lead directly to content hidden by the compact list. */
 export function matchesHiddenDetail(n:Notice,query:string):boolean{
  const needle=query.trim().toLocaleLowerCase();if(!needle)return false;
