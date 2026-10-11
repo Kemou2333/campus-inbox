@@ -1,7 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {createNotice,setTaskApplicable,toggleStep} from '../../domain/notice';
 import type {NoticeAnalysis} from '../../domain/types';
-import {displayTime,extraTimeline,matchesHiddenDetail,noticeOverview,readingSummary,sameHeadlineTime,summaryPreview,taskTime} from './notice-overview';
+import {displayTime,headlineTime,extraTimeline,matchesHiddenDetail,noticeOverview,readingSummary,sameHeadlineTime,summaryPreview,taskTime} from './notice-overview';
 
 const base:NoticeAnalysis={schemaVersion:4,kind:'task',title:'请假办理',summary:'按通知要求办理。',deadline:null,deadlineText:'10月7号17:00前',timeline:[],materials:[],warnings:[],reminders:[],tasks:[
  {text:'提交请假',assignee:null,scope:'conditional',condition:'需要8号请假的同学',details:[],steps:[{text:'提交截图',details:[]},{text:'填写办事簿',details:[]}],time:null,timeText:'10月7号17:00前',location:'智慧学工'},
@@ -43,6 +43,11 @@ describe('compact notice overview',()=>{
 });
 
 describe('readable notice facts',()=>{
+ it('shows a deadline caption once and keeps relative deadline phrases intact',()=>{
+  expect(headlineTime('报名截止时间:2026年6月1日15:00')).toBe('6月1日15:00');
+  expect(headlineTime('截止：2026/10/9 09:00')).toBe('10月9日 09:00');
+  expect(headlineTime('报名截止时间之前')).toBe('报名截止时间之前');
+ });
  it('shows month/day while leaving unknown, relative and 24:00 times intact',()=>{
   expect(displayTime('2026年9月23日 18:00-21:00')).toBe('9月23日 18:00-21:00');
   expect(displayTime('2026/9/23 18:00')).toBe('9月23日 18:00');
@@ -56,6 +61,7 @@ describe('readable notice facts',()=>{
   const n=record();n.summary='同学须在10月7号17:00前提交申请并填写表格。';const original=JSON.stringify(n);
   expect(readingSummary(n)).toBe('同学须提交申请并填写表格。');
   expect(JSON.stringify(n)).toBe(original);
+  n.summary='校赛开始报名，报名截止时间：10月7号17:00前。';expect(readingSummary(n)).toBe('校赛开始报名。');
   n.summary='同学须在10月8日17:00前提交申请。';expect(readingSummary(n)).toBe(n.summary);
   n.summary='同学须在10月7号17:00后提交申请。';expect(readingSummary(n)).toBe(n.summary);
  });

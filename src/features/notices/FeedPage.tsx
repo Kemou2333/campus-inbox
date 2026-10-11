@@ -8,26 +8,27 @@ import type {CampusController} from '../../app/useCampus';
 import {NoticeCard,type NoticeActions} from './NoticeCard';
 import {transitionRows} from './transition-rows';
 
-export interface FeedViewState {tab:0|1|2;query:string;sort:SortOrder;expandedIDs:Set<string>}
-export const createFeedViewState=():FeedViewState=>({tab:0,query:'',sort:'priority',expandedIDs:new Set()});
+export interface FeedViewState {tab:0|1|2;query:string;sort:SortOrder;expandedIDs:Set<string>;expandedTaskIDs:Set<string>}
+export const createFeedViewState=():FeedViewState=>({tab:0,query:'',sort:'priority',expandedIDs:new Set(),expandedTaskIDs:new Set()});
 
-function AnimatedNotices({records,app,actions,now,expandedIDs,onExpandedChange,onEmpty}:{records:Notice[];app:CampusController;actions:NoticeActions;now:number;expandedIDs:Set<string>;onExpandedChange:(id:string)=>void;onEmpty:(empty:boolean)=>void}){
+function AnimatedNotices({records,app,actions,now,expandedIDs,onExpandedChange,expandedTaskIDs,onTaskExpandedChange,onEmpty}:{records:Notice[];app:CampusController;actions:NoticeActions;now:number;expandedIDs:Set<string>;onExpandedChange:(id:string)=>void;expandedTaskIDs:Set<string>;onTaskExpandedChange:(id:string)=>void;onEmpty:(empty:boolean)=>void}){
  const [rows,setRows]=useState(()=>records.map(record=>({record,visible:true})));
  const reducedMotion=useMediaQuery('(prefers-reduced-motion: reduce)');
  const current=useRef(records);current.current=records;
  useEffect(()=>setRows(previous=>transitionRows(previous,records)),[records]);
  useEffect(()=>onEmpty(rows.length===0),[rows.length,onEmpty]);
  return <Stack>{rows.map(row=><Collapse key={row.record.id} in={row.visible} timeout={reducedMotion?0:260} onExited={()=>setRows(old=>old.filter(v=>v.record.id!==row.record.id||current.current.some(n=>n.id===v.record.id)))}>
-  <Box sx={{pb:1.5,opacity:row.visible?1:0,transform:row.visible?'none':'translateX(8px)',transition:reducedMotion?'none':'opacity 160ms ease-out, transform 200ms cubic-bezier(.2,0,0,1)'}}><NoticeCard notice={row.record} app={app} actions={actions} now={now} expanded={expandedIDs.has(row.record.id)} onExpandedChange={()=>onExpandedChange(row.record.id)} disabled={!row.visible}/></Box>
+  <Box sx={{pb:1.5,opacity:row.visible?1:0,transform:row.visible?'none':'translateX(8px)',transition:reducedMotion?'none':'opacity 160ms ease-out, transform 200ms cubic-bezier(.2,0,0,1)'}}><NoticeCard notice={row.record} app={app} actions={actions} now={now} expanded={expandedIDs.has(row.record.id)} onExpandedChange={()=>onExpandedChange(row.record.id)} expandedTaskIDs={expandedTaskIDs} onTaskExpandedChange={onTaskExpandedChange} disabled={!row.visible}/></Box>
  </Collapse>)}</Stack>;
 }
 export function FeedPage({app,actions,onCompose,focusID,onFocusHandled,embedded=false,viewState,onViewStateChange}:{app:CampusController;actions:NoticeActions;onCompose:()=>void;focusID:string|null;onFocusHandled?:(id:string)=>void;embedded?:boolean;viewState?:FeedViewState;onViewStateChange?:Dispatch<SetStateAction<FeedViewState>>}){
  const [localView,setLocalView]=useState(createFeedViewState);const [now,setNow]=useState(Date.now());
- const {tab,query,sort,expandedIDs}=viewState??localView;const setView=onViewStateChange??setLocalView;
+ const {tab,query,sort,expandedIDs,expandedTaskIDs}=viewState??localView;const setView=onViewStateChange??setLocalView;
  const setTab=(value:FeedViewState['tab'])=>setView(previous=>({...previous,tab:value}));
  const setQuery=(value:string)=>setView(previous=>({...previous,query:value}));
  const setSort=(value:SortOrder)=>setView(previous=>({...previous,sort:value}));
  const toggleExpanded=(id:string)=>setView(previous=>{const ids=new Set(previous.expandedIDs);if(ids.has(id))ids.delete(id);else ids.add(id);return {...previous,expandedIDs:ids};});
+ const toggleTaskExpanded=(id:string)=>setView(previous=>{const ids=new Set(previous.expandedTaskIDs);if(ids.has(id))ids.delete(id);else ids.add(id);return {...previous,expandedTaskIDs:ids};});
  const handledFocus=useRef<string|null>(null);
  const focusScroll=useRef<ReturnType<typeof setTimeout>|null>(null);
  useEffect(()=>()=>{if(focusScroll.current!==null)clearTimeout(focusScroll.current);},[]);
@@ -54,7 +55,7 @@ export function FeedPage({app,actions,onCompose,focusID,onFocusHandled,embedded=
   if(focusScroll.current!==null)clearTimeout(focusScroll.current);
   focusScroll.current=setTimeout(()=>{focusScroll.current=null;document.getElementById(`notice-${focusID}`)?.scrollIntoView({behavior:'smooth',block:'start'});},150);
  },[focusID,app.notices,onFocusHandled]);
- return <Stack spacing={2} className="page-enter">
+ return <Stack spacing={2} className="page-enter notice-feed" sx={{maxWidth:760,width:'100%',mx:'auto'}}>
   <Box ref={controls} className="feed-controls" sx={{position:embedded?'sticky':'static',top:0,zIndex:3,bgcolor:'background.default',pb:embedded?1.5:0}}>
   {!embedded&&<Stack direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:2}}>
    <Typography variant="h4" component="h1">通知</Typography>
@@ -68,7 +69,7 @@ export function FeedPage({app,actions,onCompose,focusID,onFocusHandled,embedded=
    <TextField select value={sort} onChange={e=>setSort(e.target.value as SortOrder)} size="small" sx={{width:{xs:110,sm:140},flexShrink:0}} aria-label="通知排序"><MenuItem value="priority">优先级</MenuItem><MenuItem value="deadline">截止时间</MenuItem><MenuItem value="newest">最近添加</MenuItem></TextField>
   </Stack>
   </Box>
-  <AnimatedNotices key={tab} records={records} app={app} actions={actions} now={now} expandedIDs={expandedIDs} onExpandedChange={toggleExpanded} onEmpty={setAnimationEmpty}/>
+  <AnimatedNotices key={tab} records={records} app={app} actions={actions} now={now} expandedIDs={expandedIDs} onExpandedChange={toggleExpanded} expandedTaskIDs={expandedTaskIDs} onTaskExpandedChange={toggleTaskExpanded} onEmpty={setAnimationEmpty}/>
   {!records.length&&animationEmpty&&<Paper variant="outlined" sx={{p:4,textAlign:'center'}}><Typography variant="h6">{query?'没有找到匹配的通知':tab===0?'暂时没有待办':tab===1?'暂时没有提醒':'还没有完成的通知'}</Typography><Typography color="text.secondary" sx={{mt:1,mb:2}}>{query?'换一个关键词试试。':'添加通知，或者载入几条示例看看。'}</Typography>{!query&&<Stack direction="row" sx={{justifyContent:"center",gap:1}}><Button variant="contained" onClick={onCompose}>新增通知</Button><Button variant="outlined" onClick={()=>void app.loadExamples().catch(app.report)}>载入示例</Button></Stack>}</Paper>}
   <Box component="footer" className="product-footer" sx={{py:2,borderTop:'1px solid',borderColor:'divider'}}>
    <Typography variant="body2" color="text.secondary">内容由 AI 生成，请注意甄别。</Typography>
