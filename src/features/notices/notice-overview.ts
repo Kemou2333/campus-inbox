@@ -66,12 +66,19 @@ const datePhrase=/(?:\d{4}\s*年)?\d{1,2}\s*月\s*\d{1,2}\s*(?:日|号)?(?:\s*(?
 export function readingSummary(n:Notice):string{
  const supplied=[...noticeOverview(n).times,...n.tasks.map(taskTime),...n.timeline.map(entry=>entry.timeText||(entry.time?formatDate(entry.time):''))];
  const keys=new Set(supplied.flatMap(value=>(value.match(datePhrase)??[]).map(timeKey)));
- return n.summary.replace(new RegExp(`(?:在|于)?${datePhrase.source}`,'g'),(value,offset:number,whole:string)=>{
+ let omitted=false;
+ const summary=n.summary.replace(new RegExp(`(?:在|于)?${datePhrase.source}`,'g'),(value,offset:number,whole:string)=>{
   // A Markdown emphasis pair must remain balanced; such phrases are left intact.
   if(whole.slice(Math.max(0,offset-2),offset).includes('*')||whole.slice(offset+value.length,offset+value.length+2).includes('*'))return value;
-  return keys.has(timeKey(value.replace(/^[在于]/,'')))?'':value;
- })
-  .replace(/[,，；;]\s*(?:报名)?截止(?:时间)?[为是：:]?\s*[。.]?\s*$/,'。').replace(/\s+/g,' ').trim();
+  if(!keys.has(timeKey(value.replace(/^[在于]/,''))))return value;
+  omitted=true;return '';
+ });
+ // Remove a caption left empty by the omitted date, including one between two clauses.
+ // An original "报名截止" statement or a relative deadline remains untouched.
+ if(!omitted)return summary;
+ return summary.replace(/(^|[，,；;])\s*(?:报名)?截止(?:时间|日期)?[为是：:]?\s*(?=[，,；;。.]|$)/g,'$1')
+  .replace(/([，,；;])\s*[，,；;]+/g,'$1')
+  .replace(/[,，；;]\s*[。.]?\s*$/,'。').replace(/^\s*[,，；;]\s*/,'').replace(/\s+/g,' ').trim();
 }
 /** Keep useful whole clauses, never a one-line ellipsis or a cut-off audience condition. */
 export function summaryPreview(n:Notice):{text:string;full:string;more:boolean}{

@@ -62,6 +62,9 @@ describe('readable notice facts',()=>{
   expect(readingSummary(n)).toBe('同学须提交申请并填写表格。');
   expect(JSON.stringify(n)).toBe(original);
   n.summary='校赛开始报名，报名截止时间：10月7号17:00前。';expect(readingSummary(n)).toBe('校赛开始报名。');
+  n.summary='校赛可报名，截止10月7号17:00前，须扫码并加群。';expect(readingSummary(n)).toBe('校赛可报名，须扫码并加群。');
+  n.summary='报名截止，后续安排见群通知。';expect(readingSummary(n)).toBe(n.summary);
+  n.summary='请在报名截止时间之前提交。';expect(readingSummary(n)).toBe(n.summary);
   n.summary='同学须在10月8日17:00前提交申请。';expect(readingSummary(n)).toBe(n.summary);
   n.summary='同学须在10月7号17:00后提交申请。';expect(readingSummary(n)).toBe(n.summary);
  });
