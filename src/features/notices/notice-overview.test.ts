@@ -1,7 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {createNotice,setTaskApplicable,toggleStep} from '../../domain/notice';
 import type {NoticeAnalysis} from '../../domain/types';
-import {compactNoticePreview,matchesHiddenDetail,noticeOverview} from './notice-overview';
+import {displayTime,extraTimeline,matchesHiddenDetail,noticeOverview,readingSummary,sameHeadlineTime,summaryPreview,taskTime} from './notice-overview';
 
 const base:NoticeAnalysis={schemaVersion:4,kind:'task',title:'请假办理',summary:'按通知要求办理。',deadline:null,deadlineText:'10月7号17:00前',timeline:[],materials:[],warnings:[],reminders:[],tasks:[
  {text:'提交请假',assignee:null,scope:'conditional',condition:'需要8号请假的同学',details:[],steps:[{text:'提交截图',details:[]},{text:'填写办事簿',details:[]}],time:null,timeText:'10月7号17:00前',location:'智慧学工'},
@@ -42,44 +42,54 @@ describe('compact notice overview',()=>{
  });
 });
 
-describe('compact notice preview',()=>{
- it('returns the saved summary and keeps the existing visibility rule',()=>{
-  const n=record();n.summary=' **按通知要求办理。** ';
-  expect(compactNoticePreview(n)).toMatchObject({summary:' **按通知要求办理。** ',showSummary:true});
-  n.summary=' **请假办理** ';expect(compactNoticePreview(n).showSummary).toBe(false);
-  n.summary=' **按通知要求办理。** ';n.reminders=[{id:'reminder',text:'按通知要求办理。',note:''}];
-  expect(compactNoticePreview(n).showSummary).toBe(false);
-  n.summary=' ';expect(compactNoticePreview(n).showSummary).toBe(false);
+describe('readable notice facts',()=>{
+ it('shows month/day while leaving unknown, relative and 24:00 times intact',()=>{
+  expect(displayTime('2026年9月23日 18:00-21:00')).toBe('9月23日 18:00-21:00');
+  expect(displayTime('9 月 22 前')).toBe('9月22日前');
+  expect(displayTime('2026年10月20日24:00')).toBe('10月20日24:00');
+  expect(displayTime('课程结束前')).toBe('课程结束前');
+  expect(displayTime('2026级学生')).toBe('2026级学生');
  });
- it('shortens a long audience while keeping its saved condition available',()=>{
-  const n=record();n.tasks=[n.tasks[0]];n.tasks[0].condition='需要在课程结束之后前往学院办公室办理请假的同学';
-  expect(compactNoticePreview(n)).toMatchObject({audienceLabel:'需要在课程结束之后前往学院…',audienceCount:1});
-  expect(noticeOverview(n).audiences).toEqual(['需要在课程结束之后前往学院办公室办理请假的同学']);
+ it('removes only complete duplicated time phrases and leaves saved model text intact',()=>{
+  const n=record();n.summary='同学须在10月7号17:00前提交申请并填写表格。';const original=JSON.stringify(n);
+  expect(readingSummary(n)).toBe('同学须提交申请并填写表格。');
+  expect(JSON.stringify(n)).toBe(original);
+  n.summary='同学须在10月8日17:00前提交申请。';expect(readingSummary(n)).toBe(n.summary);
+  n.summary='同学须在10月7号17:00后提交申请。';expect(readingSummary(n)).toBe(n.summary);
  });
- it('shows only the first short audience and a count for multiple roles',()=>{
-  const n=record();n.tasks[0].scope='role';n.tasks[0].assignee='班长';n.tasks[0].condition='仅负责汇总本班报名并提交学院审核的班长';
-  n.tasks[1].assignee='辅导员';n.tasks[1].condition='审核各班提交的详细申请材料并联系学院';
-  n.tasks.push({...n.tasks[1],id:'third-role',assignee:'学院老师',condition:'统一处理最终结果并登记全部申请材料'});
-  const preview=compactNoticePreview(n);
-  expect(preview.audienceLabel).toBe('班长 · 仅负责汇总本班报…（共3类）');expect(preview.audienceCount).toBe(3);
-  expect(preview.audienceLabel).not.toContain('辅导员');expect(preview.audienceLabel).not.toContain('详细申请材料');expect(preview.audienceLabel).not.toContain('统一处理');
+ it('keeps more precise or different-year summary dates instead of hiding unmatched facts',()=>{
+  const n=record();n.deadlineText='10月7日';n.tasks=[];n.summary='10月7日17:00前报名，2027年10月7日复审。';
+  expect(readingSummary(n)).toBe(n.summary);
+  n.summary='在提交前检查**10月7日**这个日期。';expect(readingSummary(n)).toBe(n.summary);
  });
- it('counts Unicode characters without splitting emoji in shortened labels',()=>{
-  const n=record();n.deadlineText='';n.tasks=[n.tasks[0]];n.tasks[0].condition='😀'.repeat(20);n.tasks[0].timeText='📅'.repeat(30);
-  const preview=compactNoticePreview(n);
-  expect(preview.audienceLabel).toBe('😀'.repeat(13)+'…');expect(Array.from(preview.audienceLabel)).toHaveLength(14);
-  expect(preview.timeLabel).toBe('📅'.repeat(25)+'…');expect(Array.from(preview.timeLabel)).toHaveLength(26);
+ it('keeps distinct task times visible when the headline shows only the first time',()=>{
+  const n=record();n.deadlineText='';n.tasks[1].timeText='10月8号17:00前';
+  expect(sameHeadlineTime(taskTime(n.tasks[0]),n)).toBe(true);
+  expect(sameHeadlineTime(taskTime(n.tasks[1]),n)).toBe(false);
+  n.tasks[0].timeText='2026年10月7日';n.tasks[1].timeText='2027年10月7日';
+  expect(sameHeadlineTime(taskTime(n.tasks[1]),n)).toBe(false);
  });
- it('keeps the first supplied time short and counts other distinct times',()=>{
-  const n=record();n.deadlineText='';n.tasks[0].timeText='课程结束之后前往学院办公室提交申请材料并等待审核结果及后续通知';n.tasks[1].timeText='次日课程开始前';
-  expect(compactNoticePreview(n)).toMatchObject({timeLabel:'课程结束之后前往学院办公室提交申请材料并等待审核结…',timesCount:2});
+ it('prioritizes a personal task deadline over its saved time without overwriting either',()=>{
+  const n=record();n.deadlineText='';n.tasks[0].localDeadline='2026-10-09T09:00:00+08:00';const original=JSON.stringify(n);
+  expect(taskTime(n.tasks[0])).toContain('2026');expect(taskTime(n.tasks[0])).toContain('9');
+  expect(noticeOverview(n).times[0]).toBe(taskTime(n.tasks[0]));expect(JSON.stringify(n)).toBe(original);
  });
- it('does not infer an audience or a date when saved fields are empty',()=>{
-  const n=record();n.deadline=null;n.deadlineText='';n.tasks=[];n.timeline=[];
-  expect(compactNoticePreview(n)).toMatchObject({audienceLabel:'',audienceCount:0,timeLabel:'',timesCount:0});
+ it('omits an identical timeline action but retains a different action, date or place',()=>{
+  const n=record();const t=n.tasks[0];n.timeline=[
+   {label:'提交请假',time:null,timeText:t.timeText,location:t.location},
+   {label:'老师审核',time:null,timeText:t.timeText,location:t.location},
+   {label:'提交请假',time:null,timeText:'10月8日17:00前',location:t.location},
+   {label:'提交请假',time:null,timeText:t.timeText,location:'学院办公室'},
+  ];const original=JSON.stringify(n);
+  expect(extraTimeline(n)).toEqual(n.timeline.slice(1));expect(JSON.stringify(n)).toBe(original);
  });
- it('does not change saved fields, progress, notes or hidden details',()=>{
-  const n=record();n.note='自己填写的笔记';n.tasks[0].completed=true;n.tasks[0].steps[0].note='步骤笔记';n.tasks[0].details=['完整办理条件'];
-  const before=JSON.stringify(n);compactNoticePreview(n);expect(JSON.stringify(n)).toBe(before);
+ it('previews whole clauses, preserving the remaining summary for expansion',()=>{
+  const n=record();n.summary='请提交**完整材料**并核对自己的信息，'+ '这是需要保留在补充简介里的详细原文'.repeat(5)+'。';
+  const preview=summaryPreview(n);expect(preview.text).toBe('请提交**完整材料**并核对自己的信息，');
+  expect(preview.more).toBe(true);expect(preview.full).toBe(n.summary);expect(preview.text).not.toContain('…');
+ });
+ it('does not invent a preview when saved summary or times are empty',()=>{
+  const n=record();n.summary='';n.deadlineText='';n.tasks=[];n.timeline=[];
+  expect(summaryPreview(n)).toEqual({text:'',full:'',more:false});expect(noticeOverview(n).times).toEqual([]);
  });
 });
