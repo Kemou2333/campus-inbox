@@ -47,6 +47,10 @@ export function displayTime(value:string):string{
   .replace(/(\d{1,2})\s*月\s*(\d{1,2})\s*(?:日|号)?/g,'$1月$2日')
   .replace(/：/g,':').replace(/\s+/g,' ').trim();
 }
+/** The deadline caption is shown once, outside the date value. Relative phrases stay intact. */
+export function headlineTime(value:string):string{
+ return displayTime(value.replace(/^(?:报名)?截止(?:时间)?[：:]?\s*(?=\d)/,''));
+}
 export function timeKey(value:string):string{
  return plainReadingText(value).replace(/\b(\d{4})[/-](\d{1,2})[/-](\d{1,2})(?=$|\s)/g,(_,year,month,day)=>`${year}年${Number(month)}月${Number(day)}日`).replace(/[\s：:]/g,'').replace(/(\d{1,2})月(\d{1,2})(?:日|号)?/g,'$1月$2日').replace(/以前|之前/g,'前').replace(/[—–]/g,'-').replace(/^截止/,'');
 }
@@ -67,7 +71,7 @@ export function readingSummary(n:Notice):string{
   if(whole.slice(Math.max(0,offset-2),offset).includes('*')||whole.slice(offset+value.length,offset+value.length+2).includes('*'))return value;
   return keys.has(timeKey(value.replace(/^[在于]/,'')))?'':value;
  })
-  .replace(/[,，；;]\s*截止[。.]?\s*$/,'。').replace(/\s+/g,' ').trim();
+  .replace(/[,，；;]\s*(?:报名)?截止(?:时间)?[为是：:]?\s*[。.]?\s*$/,'。').replace(/\s+/g,' ').trim();
 }
 /** Keep useful whole clauses, never a one-line ellipsis or a cut-off audience condition. */
 export function summaryPreview(n:Notice):{text:string;full:string;more:boolean}{
