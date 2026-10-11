@@ -45,6 +45,8 @@ describe('compact notice overview',()=>{
 describe('readable notice facts',()=>{
  it('shows month/day while leaving unknown, relative and 24:00 times intact',()=>{
   expect(displayTime('2026年9月23日 18:00-21:00')).toBe('9月23日 18:00-21:00');
+  expect(displayTime('2026/9/23 18:00')).toBe('9月23日 18:00');
+  expect(displayTime('截止：2026-09-23 18:00')).toBe('截止:9月23日 18:00');
   expect(displayTime('9 月 22 前')).toBe('9月22日前');
   expect(displayTime('2026年10月20日24:00')).toBe('10月20日24:00');
   expect(displayTime('课程结束前')).toBe('课程结束前');

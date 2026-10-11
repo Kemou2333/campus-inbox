@@ -41,13 +41,14 @@ export function noticeOverview(n:Notice){
 export function displayTime(value:string):string{
  if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)&&Number.isFinite(Date.parse(value)))return displayTime(formatDate(value));
  return plainReadingText(value)
+  .replace(/\b\d{4}[/-](\d{1,2})[/-](\d{1,2})(?=$|[\sT])/g,(_,month,day)=>`${Number(month)}月${Number(day)}日`)
 
   .replace(/\d{4}\s*年(?=\s*\d{1,2}\s*月)/g,'')
   .replace(/(\d{1,2})\s*月\s*(\d{1,2})\s*(?:日|号)?/g,'$1月$2日')
   .replace(/：/g,':').replace(/\s+/g,' ').trim();
 }
 export function timeKey(value:string):string{
- return plainReadingText(value).replace(/[\s：:]/g,'').replace(/(\d{1,2})月(\d{1,2})(?:日|号)?/g,'$1月$2日').replace(/以前|之前/g,'前').replace(/[—–]/g,'-').replace(/^截止/,'');
+ return plainReadingText(value).replace(/\b(\d{4})[/-](\d{1,2})[/-](\d{1,2})(?=$|\s)/g,(_,year,month,day)=>`${year}年${Number(month)}月${Number(day)}日`).replace(/[\s：:]/g,'').replace(/(\d{1,2})月(\d{1,2})(?:日|号)?/g,'$1月$2日').replace(/以前|之前/g,'前').replace(/[—–]/g,'-').replace(/^截止/,'');
 }
 export function taskTime(task:Task):string{
  return task.localDeadline?`截止：${formatDate(task.localDeadline)}`:task.timeText||(task.time?formatDate(task.time):'');
