@@ -128,6 +128,7 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
         <Button variant="outlined" disabled={busy}
           onClick={() => void run('examples', app.loadExamples)}>{running === 'examples' ? '正在载入…' : '载入示例'}</Button>
       </Stack>
+      <Typography variant="body2" color="text.secondary" sx={{mt:1.5}}>公开示例已脱敏，姓名为化名，联系方式与具体链接已隐藏；个人通知保留原内容。</Typography>
       <input ref={picker} type="file" accept="application/json,.json" hidden aria-label="选择通知备份"
         onChange={event => {
           const file = event.target.files?.[0]; event.target.value = '';

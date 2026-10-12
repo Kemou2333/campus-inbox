@@ -1,15 +1,16 @@
 {
   "name": "campus-inbox",
   "private": true,
-  "version": "2.10.0",
+  "version": "2.11.0",
   "type": "module",
   "packageManager": "pnpm@11.19.0",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/verify-example-privacy.mjs && tsc -b && vite build",
     "test": "vitest run",
     "test:server": "node --test server/tests/*.test.mjs",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "check:examples": "node scripts/verify-example-privacy.mjs"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

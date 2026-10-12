@@ -36,8 +36,8 @@ describe('compact notice overview',()=>{
   expect(JSON.stringify(noticeOverview(n))).not.toContain('稍后问老师');
  });
  it('distinguishes a hidden note or step match from a title or visible audience match',()=>{
-  const n=record();n.tasks[0].steps[0].note='已联系青禾老师（化名）';
-  expect(matchesHiddenDetail(n,'青禾老师（化名）')).toBe(true);expect(matchesHiddenDetail(n,'提交截图')).toBe(true);
+  const n=record();n.tasks[0].steps[0].note='已联系示例老师';
+  expect(matchesHiddenDetail(n,'示例老师')).toBe(true);expect(matchesHiddenDetail(n,'提交截图')).toBe(true);
   expect(matchesHiddenDetail(n,'请假办理')).toBe(false);expect(matchesHiddenDetail(n,'需要8号')).toBe(false);expect(matchesHiddenDetail(n,'')).toBe(false);
  });
 });

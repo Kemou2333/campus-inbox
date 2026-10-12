@@ -1,12 +1,16 @@
 {
   "model": "deepseek-flash",
   "thinking": "mixed",
-  "paidCallsForLatestResults": 6,
-  "sourceCount": 11,
-  "generationMethod": "Mixed provenance: 12 notices from five r5/disabled batches, and one long notice from one r6/low batch. One natural provider response per batch; no manual wording changes, paid automatic retries or response repair. Local IDs and progress fields added by the app.",
+  "paidCallsForLatestResults": 12,
+  "sourceCount": 17,
+  "generationMethod": "Mixed provenance: 12 retained r5/disabled notices, one retained r6/low long notice, and selected r12/r14 low first responses from authorized 2026-10-12 experiments. One natural provider response per intentional trial; no automatic paid retries or response repair. Public examples underwent manual privacy redaction only. Original sources and first provider responses remain private; original hashes identify those unedited records. Deterministic date grounding and local IDs/progress fields are app transformations, not manual semantic corrections. The selected math response was initially rejected by the former five-detail validator; its exact first provider content was then revalidated offline against the bounded twenty-detail contract without another provider request or semantic edits.",
   "limitations": [
     "AI can still omit or misclassify facts. Return-vs-leave applicability may overlap; check the original.",
-    "Exam schedules may be classified as reminders."
+    "Exam schedules may be classified as reminders.",
+    "Public examples are privacy-redacted demonstrations; hidden links and contacts cannot be used to sign up. Consult your own original notice.",
+    "Some retained summaries are generic or repeat a separately displayed deadline; display-layer shortening does not alter the provider result.",
+    "The selected math response omits audio as a permitted material format; this omission is preserved rather than silently corrected.",
+    "Math platform URLs use consistent A/B privacy placeholders to keep the source conflict visible without publishing the URLs."
   ],
   "results": [
     {
@@ -17,11 +21,15 @@
       "testedAt": "2026-10-08T16:16:56.211Z",
       "sourceSha256": "b2f0db83596e019ce62e475feacc9a3783c4fa13b3681af278e642367837aafd",
       "firstProviderContentSha256": "2cbcdc48d0f98de369e024c75e4f600e832a0ff217ed3f8f1d9c46a037893081",
-      "manualWordEdits": false,
+      "manualWordEdits": true,
       "revision": "r5",
       "thinking": "disabled",
       "reasoningEffort": null,
-      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "55d9fcafb51880fd4d2c6c9974c03ddf416e5c39ac868298e3b4cd6866526ced",
+      "publishedRecordSha256": "a6070d191e62592f0c854695e29245b59c426dcfb0981c1c5567c25d4ffb4e43"
     },
     {
       "exampleId": "example-reading-v25-1",
@@ -31,11 +39,15 @@
       "testedAt": "2026-10-08T16:16:56.211Z",
       "sourceSha256": "c69e50b1c29544c2b525fd313f5c664295c934e3c8ceebb3aa4645855ade869c",
       "firstProviderContentSha256": "2cbcdc48d0f98de369e024c75e4f600e832a0ff217ed3f8f1d9c46a037893081",
-      "manualWordEdits": false,
+      "manualWordEdits": true,
       "revision": "r5",
       "thinking": "disabled",
       "reasoningEffort": null,
-      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "82ca4798becdb49e81ba5879f5492eaf7b4b30af717e4ad13290b418dfbca827",
+      "publishedRecordSha256": "9fc63c0a9c37c3255a773a13c43495781ec2b7e64c18e41f51f3c4bb9e182e76"
     },
     {
       "exampleId": "example-reading-v25-2",
@@ -45,11 +57,15 @@
       "testedAt": "2026-10-08T16:16:56.211Z",
       "sourceSha256": "e67bac4a13a3a75efec245791c56d022a6ddb0cc67827e07d9410514336ca601",
       "firstProviderContentSha256": "2cbcdc48d0f98de369e024c75e4f600e832a0ff217ed3f8f1d9c46a037893081",
-      "manualWordEdits": false,
+      "manualWordEdits": true,
       "revision": "r5",
       "thinking": "disabled",
       "reasoningEffort": null,
-      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "07fcef83eca8862e993fb68260f4bd63b552f4613eafceaf70151ef715c93de6",
+      "publishedRecordSha256": "a2f5d89e03919159d47514cff086e71e35993f1d48360c8abe57a22e5c4acd05"
     },
     {
       "exampleId": "example-reading-v25-3",
@@ -59,11 +75,15 @@
       "testedAt": "2026-10-08T16:16:59.589Z",
       "sourceSha256": "6ba802cc228eb97fb93e1d73d66823d4e47629903caa8d367c732d869b0b8d69",
       "firstProviderContentSha256": "d2c5252b8e01d2af99f8ea83cf04abb030d41d859073be6debbffbf8de9b10de",
-      "manualWordEdits": false,
+      "manualWordEdits": true,
       "revision": "r5",
       "thinking": "disabled",
       "reasoningEffort": null,
-      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "ecb689c460cad26f44fddfa129e8ba83c88d76e160bd9d27b0579b93e7790ef0",
+      "publishedRecordSha256": "478f1f480bf2be1fa660a940523a94022c0ef854bebcbca6cfd5edf7c998d4ac"
     },
     {
       "exampleId": "example-reading-v25-4",
@@ -73,11 +93,15 @@
       "testedAt": "2026-10-08T16:16:59.589Z",
       "sourceSha256": "9e7b5853ccadc824ae4f3353d9677c9bb92db82986ba8001a60e09f8f8ae8e40",
       "firstProviderContentSha256": "d2c5252b8e01d2af99f8ea83cf04abb030d41d859073be6debbffbf8de9b10de",
-      "manualWordEdits": false,
+      "manualWordEdits": true,
       "revision": "r5",
       "thinking": "disabled",
       "reasoningEffort": null,
-      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "f45efb5fb406a134ee8c257a53a2dd1d3787a0c4c803796d461a69ca405715f5",
+      "publishedRecordSha256": "c5d70567ae672450cf4240730a86a4bceb8f88838122bead568363c028444b79"
     },
     {
       "exampleId": "example-reading-v25-5",
@@ -87,11 +111,15 @@
       "testedAt": "2026-10-08T16:16:59.589Z",
       "sourceSha256": "2427577d4c6eec8bd1595742ff0518b4ccfcf85cff6d66d4b334a9db1364817b",
       "firstProviderContentSha256": "d2c5252b8e01d2af99f8ea83cf04abb030d41d859073be6debbffbf8de9b10de",
-      "manualWordEdits": false,
+      "manualWordEdits": true,
       "revision": "r5",
       "thinking": "disabled",
       "reasoningEffort": null,
-      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "7af84a178a8b10ce48a18f9f4aa949b0fedde1fe4a9e0e063c8f19e774561735",
+      "publishedRecordSha256": "690188f6d1cd5b063f5014848a9cc1727056f707a6b1182ccca7af809d612833"
     },
     {
       "exampleId": "example-reading-v25-6",
@@ -101,11 +129,15 @@
       "testedAt": "2026-10-08T16:19:10.969Z",
       "sourceSha256": "b53f6f7efdca5f9e6ce327fcefa3d61ddaff718ca3e28adb2d671826c1a605a4",
       "firstProviderContentSha256": "19b541456409e99051bc755055554f208c60df2a01797455e226b58796ab922d",
-      "manualWordEdits": false,
+      "manualWordEdits": true,
       "revision": "r5",
       "thinking": "disabled",
       "reasoningEffort": null,
-      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "ea3150b4028db627501ac74ad01071b90fac63f9c5e43697b882b4041fe9fa94",
+      "publishedRecordSha256": "db64270164af5ca62b71783687626fec1ff92f1b94cde1b1830f42a576b785c3"
     },
     {
       "exampleId": "example-reading-v25-7",
@@ -115,11 +147,15 @@
       "testedAt": "2026-10-08T16:19:10.969Z",
       "sourceSha256": "7b45eca477f1aa27791c7239ae6aa735bcc48a2e97171b0d6b8a5bdedd0f12cd",
       "firstProviderContentSha256": "19b541456409e99051bc755055554f208c60df2a01797455e226b58796ab922d",
-      "manualWordEdits": false,
+      "manualWordEdits": true,
       "revision": "r5",
       "thinking": "disabled",
       "reasoningEffort": null,
-      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "2575c0f7d235ce54e65de31cd25c0449d26e4c13f8ba7b2e75d0626cddc7cbd8",
+      "publishedRecordSha256": "66f018944667cc46234d1ff8fa95bd587e44adecb0778ca0426cd0507df9f388"
     },
     {
       "exampleId": "example-reading-v25-8",
@@ -129,11 +165,15 @@
       "testedAt": "2026-10-08T16:16:48.092Z",
       "sourceSha256": "e8d42234718f0a4baa76bd53aaddd3859210bc110ab93b1faf6fc9b2f053681e",
       "firstProviderContentSha256": "ca13828838a6becda878a9266c1c2e0c1c6fe9d55bf9d430ebcda0516130cd1c",
-      "manualWordEdits": false,
+      "manualWordEdits": true,
       "revision": "r5",
       "thinking": "disabled",
       "reasoningEffort": null,
-      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "5e655a2c6947cc26d71d88c881af65b7a9209f3c5f994251de817337e93663e1",
+      "publishedRecordSha256": "2c72a1326aa40da6c7def230cd92a71350d778615a91988454d79a6491fb28a5"
     },
     {
       "exampleId": "example-reading-v25-9",
@@ -143,11 +183,15 @@
       "testedAt": "2026-10-08T16:16:48.092Z",
       "sourceSha256": "e8d42234718f0a4baa76bd53aaddd3859210bc110ab93b1faf6fc9b2f053681e",
       "firstProviderContentSha256": "ca13828838a6becda878a9266c1c2e0c1c6fe9d55bf9d430ebcda0516130cd1c",
-      "manualWordEdits": false,
+      "manualWordEdits": true,
       "revision": "r5",
       "thinking": "disabled",
       "reasoningEffort": null,
-      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "5e655a2c6947cc26d71d88c881af65b7a9209f3c5f994251de817337e93663e1",
+      "publishedRecordSha256": "3f0bd8acea66e34cfa728864637b4b846a0d7c9f551a48e007b228c83716e265"
     },
     {
       "exampleId": "example-reading-v25-10",
@@ -157,11 +201,15 @@
       "testedAt": "2026-10-08T16:16:48.092Z",
       "sourceSha256": "e8d42234718f0a4baa76bd53aaddd3859210bc110ab93b1faf6fc9b2f053681e",
       "firstProviderContentSha256": "ca13828838a6becda878a9266c1c2e0c1c6fe9d55bf9d430ebcda0516130cd1c",
-      "manualWordEdits": false,
+      "manualWordEdits": true,
       "revision": "r5",
       "thinking": "disabled",
       "reasoningEffort": null,
-      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "5e655a2c6947cc26d71d88c881af65b7a9209f3c5f994251de817337e93663e1",
+      "publishedRecordSha256": "5c5472d995352565ce5cd04b1f0a49bc3b192569ca9e597c6dbcfcd76b224a48"
     },
     {
       "exampleId": "example-reading-v25-11",
@@ -171,11 +219,15 @@
       "testedAt": "2026-10-08T16:19:09.046Z",
       "sourceSha256": "4bf44c24e840ed01f223a68c830b293426dd215c0e04b4192a9f907285ffb536",
       "firstProviderContentSha256": "f95429a5fa8a805942b0d4d0b4a7fe8378e41643706cbe8dd0edfc7d0196f1d5",
-      "manualWordEdits": false,
+      "manualWordEdits": true,
       "revision": "r5",
       "thinking": "disabled",
       "reasoningEffort": null,
-      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112"
+      "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "26955520abeab334434510e060f5b66e8df41eadf03ac22d030f81a206ba28f2",
+      "publishedRecordSha256": "0892b474bc54539d455ae758a6581e2a8a29d7eeb20cffb6c1d605c804c3a282"
     },
     {
       "exampleId": "example-reading-v26-12",
@@ -189,18 +241,224 @@
       "promptSha256": "74e69d797307c0415e42489863dab68980c5d48ac283d732e66b49117f4f50cf",
       "sourceSha256": "0b6934e70edbdaac44193d1e227dadde0894b05e9b5a2f75bb4d16db8317efb0",
       "firstProviderContentSha256": "da20b7524eef89ca658a18e28b45dbbcf94ea3f36135cbb052eb13ad784c924b",
-      "manualWordEdits": false
+      "manualWordEdits": true,
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "5e1c2ed18a3b72b922e1b4021e5c09265500d081ab997e04524c8088c4df6f81",
+      "publishedRecordSha256": "27c9a475c92ff6ad8128effd199cb276b65eaf0b2e202433294b31b4a21626ef"
+    },
+    {
+      "exampleId": "example-reading-v211-0",
+      "title": "高等数学II-1线上网课学习任务",
+      "case": "r14-math-01",
+      "sourceIndex": 0,
+      "testedAt": "2026-10-12T06:18:17.701Z",
+      "revision": "r14",
+      "thinking": "enabled",
+      "reasoningEffort": "low",
+      "promptSha256": "fb5c75248c20ac601c90613b5c23dd682bf11260eaec4c371ac48e00e7e525bf",
+      "sourceSha256": "2c512c9620bbcc20cef07037ff143f5a88798a3540d1fa401ad05e05e28580b1",
+      "firstProviderContentSha256": "9134a617c9fda8cbcd88814b441c956a569171d7d8950884073768dbf42976d1",
+      "manualWordEdits": true,
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "5a5324badf056aca63720d30f7f3b1b37139fd1981aeec8212ac596dcf6adc54",
+      "publishedRecordSha256": "35b3aac495bfb1309e604f4aa5540fb4c41fc14427f7269309d4fa3273ccdf99",
+      "firstResponseValidation": "initially rejected by prior five-detail limit; same first response passes bounded twenty-detail contract offline",
+      "originalFirstStatus": "failed",
+      "originalFailureCode": "AI_FORMAT_INVALID",
+      "freeRevalidation": "same_first_provider_content; bounded_step_details_max_20; no_semantic_edits; no_provider_request",
+      "additionalProviderCallsForRevalidation": 0,
+      "providerElapsedMs": 36722,
+      "tokens": {
+        "input": 3111,
+        "output": 7205,
+        "total": 10316,
+        "reasoning": 6232
+      },
+      "estimatedCostRmb": 0.076635,
+      "costBasis": "conservative estimate, not supplier invoice",
+      "knownLimitations": [
+        "Structured output omits audio as a permitted original math-material format.",
+        "The task summary is broad, and the two platform workflows use long step details."
+      ]
+    },
+    {
+      "exampleId": "example-reading-v211-1",
+      "title": "2026重大杯本科生院篮球队招募令",
+      "case": "r12-basketball-01",
+      "sourceIndex": 0,
+      "testedAt": "2026-10-12T06:08:05.588Z",
+      "revision": "r12",
+      "thinking": "enabled",
+      "reasoningEffort": "low",
+      "promptSha256": "cbf70f43e8089259ca40143c414295ac1b849b3ab171c877a242ad01245f0241",
+      "sourceSha256": "7cba4352d3fe52be81aeaf41fe6fb03c858cdd39846a349dfdacb9b7c82ec66e",
+      "firstProviderContentSha256": "27adc690bca12e2ea6d3ea463c0d9c7ca1b22f31b7b3f4e0cf03ffa37e680b45",
+      "manualWordEdits": true,
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "eb4897168a7df51de237d1d0c9078b4b1308ca8b959d27d4340885ed46055725",
+      "publishedRecordSha256": "0c97d81b7bb4754ed451a2bb569b000081057ff913c4a950147276f28a29e62f",
+      "firstResponseValidation": "accepted_by_backend; offline revalidated without provider request",
+      "providerElapsedMs": 14738,
+      "tokens": {
+        "input": 1926,
+        "output": 2274,
+        "total": 4200,
+        "reasoning": 2029
+      },
+      "estimatedCostRmb": 0.026453,
+      "costBasis": "conservative estimate, not supplier invoice",
+      "appTransformations": "Free replay through space-tolerant date parser: partial month=10, day=14, year=null; raw timeText and first provider content unchanged."
+    },
+    {
+      "exampleId": "example-reading-v211-2",
+      "title": "国家助学金申请",
+      "case": "r14-aid-01",
+      "sourceIndex": 0,
+      "testedAt": "2026-10-12T06:18:55.679Z",
+      "revision": "r14",
+      "thinking": "enabled",
+      "reasoningEffort": "low",
+      "promptSha256": "4eefcd3efc9baa894979b2ddf217ba620368efacdc58f0bc39adfedb2e2926f5",
+      "sourceSha256": "976f88e1a2d02adaa043937da92e35c41f107e7aa121fc08415611a6aee6bd77",
+      "firstProviderContentSha256": "56f58c432527ad9d51fa3d3caacb640089d24711d5add169a29e2a5ef8d95162",
+      "manualWordEdits": true,
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "f864bd5225a14c41c8285ec24d01ae6798c53caac69773b88e17aab0971df149",
+      "publishedRecordSha256": "e9d6e63103436912e80d629dce261dbecdeb6b4eac802dae5cc7e958835d7b9d",
+      "firstResponseValidation": "accepted_by_backend; offline revalidated without provider request",
+      "providerElapsedMs": 29960,
+      "tokens": {
+        "input": 2054,
+        "output": 4928,
+        "total": 6982,
+        "reasoning": 4646
+      },
+      "estimatedCostRmb": 0.052239,
+      "costBasis": "conservative estimate, not supplier invoice"
+    },
+    {
+      "exampleId": "example-reading-v211-3",
+      "title": "操作系统基础训练营报名",
+      "case": "r12-os-01",
+      "sourceIndex": 0,
+      "testedAt": "2026-10-12T06:08:52.961Z",
+      "revision": "r12",
+      "thinking": "enabled",
+      "reasoningEffort": "low",
+      "promptSha256": "cbf70f43e8089259ca40143c414295ac1b849b3ab171c877a242ad01245f0241",
+      "sourceSha256": "a3ccf48794db1252c9d6576fd9390cdbaae51e2fdf57ad6b181d5eb6115d8cda",
+      "firstProviderContentSha256": "c996fee23e8cd1c4db9ec495ba8734f04934162ea55f05038a8053daa262e63c",
+      "manualWordEdits": true,
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "ccb7f729267767bef934cc5fc87f74ebb0855e43a4065446c320f9dd631a1215",
+      "publishedRecordSha256": "adc87abaafdedda1a41ac299b9f6b7af0ac3078650bbbbb387930dc12b51effc",
+      "firstResponseValidation": "accepted_by_backend; offline revalidated without provider request",
+      "providerElapsedMs": 11104,
+      "tokens": {
+        "input": 1743,
+        "output": 1756,
+        "total": 3499,
+        "reasoning": 1569
+      },
+      "estimatedCostRmb": 0.021041,
+      "costBasis": "conservative estimate, not supplier invoice"
+    },
+    {
+      "exampleId": "example-reading-v211-4",
+      "title": "入党谈话安排",
+      "case": "r14-talk-01",
+      "sourceIndex": 0,
+      "testedAt": "2026-10-12T06:19:27.288Z",
+      "revision": "r14",
+      "thinking": "enabled",
+      "reasoningEffort": "low",
+      "promptSha256": "4eefcd3efc9baa894979b2ddf217ba620368efacdc58f0bc39adfedb2e2926f5",
+      "sourceSha256": "62133a717d602a280b49a82fc8c2afd2839276dc3c9ed6a73fff808f9d26976c",
+      "firstProviderContentSha256": "7b2d05b7e5d546c52549c105fe1c2b295374cdb0e58ef727ff9ba64d51afa353",
+      "manualWordEdits": true,
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "0930dea8796305ca8d31519afb0c39e66050f3e7d59ce8cd6428959cdbd5ff6c",
+      "publishedRecordSha256": "fdcd0394b62e1fc1352e240e50193629dc785a8eaf0865139e4b6bc6d7c901c6",
+      "firstResponseValidation": "accepted_by_backend; offline revalidated without provider request",
+      "providerElapsedMs": 26609,
+      "tokens": {
+        "input": 2070,
+        "output": 4453,
+        "total": 6523,
+        "reasoning": 3967
+      },
+      "estimatedCostRmb": 0.047717,
+      "costBasis": "conservative estimate, not supplier invoice"
+    },
+    {
+      "exampleId": "example-reading-v211-5",
+      "title": "2026级计算机拔尖学习选拔方式",
+      "case": "r12-elite-01",
+      "sourceIndex": 0,
+      "testedAt": "2026-10-12T06:09:28.424Z",
+      "revision": "r12",
+      "thinking": "enabled",
+      "reasoningEffort": "low",
+      "promptSha256": "cbf70f43e8089259ca40143c414295ac1b849b3ab171c877a242ad01245f0241",
+      "sourceSha256": "e5eadf5337daf7febca343bea5c91ac0a08425d695451784529a1a59efe6fa6d",
+      "firstProviderContentSha256": "236d9e0ed7d7f72536963a4bc03e18cca1300f4f6bd43d5f2576c541d6bb3f38",
+      "manualWordEdits": true,
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "publishedOriginalSha256": "28eba2f5a97181ac364adc4f62c2624bab88daa2e7aa57508f4f6d4a06b16bd2",
+      "publishedRecordSha256": "d30ec1b4239f62837bc19e38df1d3f7de657f1a3ce84fa7b45abf87e8b7be0d6",
+      "firstResponseValidation": "accepted_by_backend; offline revalidated without provider request",
+      "providerElapsedMs": 13310,
+      "tokens": {
+        "input": 1770,
+        "output": 2179,
+        "total": 3949,
+        "reasoning": 1953
+      },
+      "estimatedCostRmb": 0.025167,
+      "costBasis": "conservative estimate, not supplier invoice"
     }
   ],
   "promptRevisions": [
     "r5",
-    "r6"
+    "r6",
+    "r12",
+    "r14"
   ],
-  "historicalPrivacyCleanup": {
-    "cleanedAt": "2026-10-15",
-    "publicTextPrivacyEdits": true,
-    "rawHashesDescribeOriginalPrivateTrials": true,
-    "semanticCorrections": false,
-    "disclosure": "历史公开示例已做人工隐私编辑，原模型与原文的哈希保留用于说明测试来源，不代表脱敏后文本完全相同。"
+  "privacyReview": {
+    "policyVersion": 1,
+    "reviewedAt": "2026-10-12",
+    "manualReview": true,
+    "disclosure": "公开示例已脱敏：人物姓名为化名，联系方式、群号、具体链接及可识别班级信息已替换；公开原文并非未经修改的测试原文。",
+    "redactedCategories": [
+      "personal_names",
+      "contact_details",
+      "group_numbers",
+      "specific_links",
+      "identifiable_cohort"
+    ],
+    "contentCorrections": false,
+    "untouchedLegacyPolicy": "Only complete fingerprint matches are replaced. User notes, progress, attachments and edits remain intact.",
+    "reviewedNotices": 19
+  },
+  "paidCallsIn20261012Experiment": 12,
+  "selectedNewFirstResponses": 6,
+  "paidCallsForLatestResultsMeaning": "Distinct original provider calls represented by the entire 19-notice catalog, including historical calls; not new calls made today.",
+  "catalogDistinctOriginalProviderCalls": 12,
+  "experiment20261012": {
+    "realProviderCalls": 12,
+    "selectedFirstResponses": 6,
+    "selectedSourceCount": 6,
+    "automaticPaidRetries": 0,
+    "providerCallsForPublicExamplePreparation": 0,
+    "offlineSelectedResponseRevalidations": 6,
+    "additionalOfflineDateParserReplays": 1,
+    "manualSemanticCorrections": 0
   }
 }
