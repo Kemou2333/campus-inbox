@@ -82,6 +82,38 @@ describe('readable notice facts',()=>{
   expect(readingSummary(n)).toBe(n.summary);
   n.summary='在提交前检查**10月7日**这个日期。';expect(readingSummary(n)).toBe(n.summary);
  });
+ it('omits a fully matching emphasized deadline caption without leaving broken Markdown or modifying saved fields',()=>{
+  const n=record();n.tasks=[];n.deadlineText='10月14日23:59';
+  n.summary='招募2026级院篮球队，**报名截止10 月14日23:59**。';const original=JSON.stringify(n);
+  expect(readingSummary(n)).toBe('招募2026级院篮球队。');expect(JSON.stringify(n)).toBe(original);
+  for(const mark of ['*','__','_']){
+   n.summary=`院队招募，${mark}截止日期：10\t月\u300014日23:59${mark}，男女均可参与。`;
+   expect(readingSummary(n)).toBe('院队招募，男女均可参与。');
+  }
+ });
+ it('keeps unmatched or more precise emphasized deadlines and independent emphasized dates',()=>{
+  const n=record();n.tasks=[];n.deadlineText='10月14日23:59';
+  for(const summary of ['院队招募，**报名截止10 月15日23:59**。','院队招募，**报名截止2027年10 月14日23:59**。','请核对**10 月14日23:59**后报名。','院队招募，**报名截止之前**请加群。','院队招募，***报名截止10 月14日23:59***。']){
+   n.summary=summary;expect(readingSummary(n)).toBe(summary);
+  }
+  n.deadlineText='10月14日';n.summary='院队招募，**报名截止10 月14日23:59**。';expect(readingSummary(n)).toBe(n.summary);
+  n.deadlineText='2026 年 10 月14日23:59';n.summary='院队招募，**报名截止2027 年 10 月14日23:59**。';expect(readingSummary(n)).toBe(n.summary);
+ });
+ it('accepts horizontal date spacing but never joins separate lines into a duplicated date',()=>{
+  const n=record();n.tasks=[];n.deadlineText='10月14日23:59';
+  n.summary='请在10\t月\u00a014日23:59报名。';expect(readingSummary(n)).toBe('请报名。');
+  for(const gap of ['\n','\r\n','\u2028','\u2029','\v','\f']){
+   for(const summary of [`请在10${gap}月14日23:59报名。`,`请在10月${gap}14日23:59报名。`,`院队招募，**报名截止10月14日${gap}23:59**。`,`2027年${gap}10月14日23:59复审。`,`2027${gap}年10月14日23:59复审。`]){
+    n.summary=summary;expect(readingSummary(n)).toBe(summary);
+   }
+  }
+ });
+ it('does not use incomplete dates split across lines as the independently visible matching fact',()=>{
+  const n=record();n.tasks=[];n.deadlineText='2027年\n10月14日23:59';n.summary='请在10月14日23:59报名。';
+  expect(readingSummary(n)).toBe(n.summary);
+  n.deadlineText='10月14日';n.summary='请在10月14日\n23:59报名。';expect(readingSummary(n)).toBe(n.summary);
+  n.summary='请在10月14\n日报名。';expect(readingSummary(n)).toBe(n.summary);
+ });
  it('keeps distinct task times visible when the headline shows only the first time',()=>{
   const n=record();n.deadlineText='';n.tasks[1].timeText='10月8号17:00前';
   expect(sameHeadlineTime(taskTime(n.tasks[0]),n)).toBe(true);
