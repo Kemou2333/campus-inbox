@@ -350,9 +350,9 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  function recoverLegacyResult(){try{const current=repository.load();save([...current,...legacyRecords.filter(n=>!current.some(old=>old.id===n.id))]);finishLegacyResult(localStorage,sessionStorage);setLegacyRecords([]);tell('旧版整理结果已保存');}catch(e){report(e);}}
  async function exportLegacyWork(){const result=await platform.saveFile(new Blob([legacyWork.text],{type:'text/plain;charset=utf-8'}),'campus-inbox-old-drafts.txt');if(result.status!=='cancelled')tell('旧版草稿已导出');}
  async function loadExamples(){
-  const response=await fetch('./examples.json');if(!response.ok)throw new Error('示例暂时无法载入。');
+  const response=await fetch('./examples.json',{cache:'no-store'});if(!response.ok)throw new Error('示例暂时无法载入。');
   const records=parseBackup(await response.json());let registry:unknown=null;
-  try{const response=await fetch('./examples-legacy.json',{signal:AbortSignal.timeout(5000)});if(response.ok)registry=await response.json();}catch{/* Existing records stay intact when legacy fingerprints are unavailable. */}
+  try{const response=await fetch('./examples-legacy.json',{cache:'no-store',signal:AbortSignal.timeout(5000)});if(response.ok)registry=await response.json();}catch{/* Existing records stay intact when legacy fingerprints are unavailable. */}
   const current=repository.load(),merged=await mergeExamples(current,records,registry);
   // Hashing yields to other edits. Do not overwrite changes made while it ran.
   if(JSON.stringify(repository.load())!==JSON.stringify(current))throw new Error('通知正在更新，请稍后再载入示例。');

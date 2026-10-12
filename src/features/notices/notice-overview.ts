@@ -61,13 +61,29 @@ export function sameHeadlineTime(value:string,n:Notice):boolean{
  return !!value&&timeKey(noticeOverview(n).times[0]??'')===timeKey(value);
 }
 
-const datePhrase=/(?:\d{4}\s*年)?\d{1,2}\s*月\s*\d{1,2}\s*(?:日|号)?(?:\s*(?:上午|下午|晚上)?\s*\d{1,2}[:：]\d{2}(?:\s*[-—–至]\s*\d{1,2}[:：]\d{2})?)?(?:以前|之前|前|后)?/g;
+const dateGap='[^\\S\\r\\n\\u2028\\u2029\\v\\f]*';
+const dateBreak='[\\r\\n\\u2028\\u2029\\v\\f]+';
+const datePhrase=new RegExp(`(?:\\d{4}${dateGap}年${dateGap})?\\d{1,2}${dateGap}月${dateGap}\\d{1,2}${dateGap}(?:日|号)?(?:${dateGap}(?:上午|下午|晚上)?${dateGap}\\d{1,2}[:：]\\d{2}(?:${dateGap}[-—–至]${dateGap}\\d{1,2}[:：]\\d{2})?)?(?:以前|之前|前|后)?`,'g');
+const splitYearPrefix=new RegExp(`\\d{4}(?:${dateGap}年${dateGap}${dateBreak}${dateGap}|${dateGap}${dateBreak}${dateGap}年${dateGap})(?:在|于)?$`);
+const splitDateSuffix=new RegExp(`^${dateBreak}${dateGap}(?:日|号|(?:上午|下午|晚上)?${dateGap}\\d{1,2}[:：]\\d{2})`);
+function splitDateBoundary(whole:string,offset:number,length:number):boolean{
+ return splitYearPrefix.test(whole.slice(0,offset))||splitDateSuffix.test(whole.slice(offset+length));
+}
 /** Omit only identical time phrases that already have their own visible fact or task field. */
 export function readingSummary(n:Notice):string{
  const supplied=[...noticeOverview(n).times,...n.tasks.map(taskTime),...n.timeline.map(entry=>entry.timeText||(entry.time?formatDate(entry.time):''))];
- const keys=new Set(supplied.flatMap(value=>(value.match(datePhrase)??[]).map(timeKey)));
+ const keys=new Set(supplied.flatMap(value=>[...value.matchAll(datePhrase)].filter(match=>!splitDateBoundary(value,match.index,match[0].length)).map(match=>timeKey(match[0]))));
  let omitted=false;
- const summary=n.summary.replace(new RegExp(`(?:在|于)?${datePhrase.source}`,'g'),(value,offset:number,whole:string)=>{
+ // Remove the entire emphasis pair only when it contains just a repeated deadline caption.
+ // Other emphasized dates retain their wording and balanced Markdown.
+ const caption=new RegExp(`(?<![\\\\*_])(\\*\\*|__|\\*|_)(?:报名)?截止(?:时间|日期)?[为是：:]?${dateGap}(${datePhrase.source})\\1(?![*_])`,'g');
+ const withoutCaption=n.summary.replace(caption,(value,_mark:string,date:string)=>{
+  if(!keys.has(timeKey(date)))return value;
+  omitted=true;return '';
+ });
+ const summary=withoutCaption.replace(new RegExp(`(?:在|于)?${datePhrase.source}`,'g'),(value,offset:number,whole:string)=>{
+  // A date fragment adjacent to a line-broken year/day/clock is not a complete duplicate.
+  if(splitDateBoundary(whole,offset,value.length))return value;
   // A Markdown emphasis pair must remain balanced; such phrases are left intact.
   if(whole.slice(Math.max(0,offset-2),offset).includes('*')||whole.slice(offset+value.length,offset+value.length+2).includes('*'))return value;
   if(!keys.has(timeKey(value.replace(/^[在于]/,''))))return value;
