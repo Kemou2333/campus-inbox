@@ -88,6 +88,18 @@ export function summaryPreview(n:Notice):{text:string;full:string;more:boolean}{
  for(const clause of clauses){if(text&&Array.from(text+clause).length>72)break;text+=clause;}
  return {text:text||full,full,more:text!==full};
 }
+/** Short reading labels only. The expanded reminder still renders its original text. */
+export function reminderHeading(text:string):string{
+ const plain=plainReadingText(text).replace(/\[([^\]]+)\]\([^\s)]+\)/g,'$1').replace(/https?:\/\/\S+/g,'').trim();
+ const conditional=plain.match(/^如需([^请，,；;]{1,8})请/);
+ if(conditional)return `${conditional[1]}说明`;
+ const book=plain.match(/^《[^》]+》/);
+ if(book&&Array.from(book[0]).length<=24)return book[0];
+ const clauses=plain.split(/[，,；;。！？\n：:、]/).map(value=>value.trim()).filter(Boolean);
+ const first=clauses[0]??'';
+ const label=/^(?:附件\s*\d+|参考资料)$/.test(first)?clauses[1]??first:first;
+ return Array.from(label.replace(/^(?:请)?(?:各位同学|同学们|大家)[，,：:\s]*/,'')).slice(0,24).join('')||'提醒';
+}
 /** Remove an event's repeated timeline copy only when the same action and facts are retained. */
 export function extraTimeline(n:Notice):TimelineEntry[]{
  return n.timeline.filter(entry=>{

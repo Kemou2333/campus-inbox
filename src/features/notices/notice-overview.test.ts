@@ -1,7 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {createNotice,setTaskApplicable,toggleStep} from '../../domain/notice';
 import type {NoticeAnalysis} from '../../domain/types';
-import {displayTime,headlineTime,extraTimeline,matchesHiddenDetail,noticeOverview,readingSummary,sameHeadlineTime,summaryPreview,taskTime} from './notice-overview';
+import {displayTime,headlineTime,extraTimeline,matchesHiddenDetail,noticeOverview,readingSummary,reminderHeading,sameHeadlineTime,summaryPreview,taskTime} from './notice-overview';
 
 const base:NoticeAnalysis={schemaVersion:4,kind:'task',title:'请假办理',summary:'按通知要求办理。',deadline:null,deadlineText:'10月7号17:00前',timeline:[],materials:[],warnings:[],reminders:[],tasks:[
  {text:'提交请假',assignee:null,scope:'conditional',condition:'需要8号请假的同学',details:[],steps:[{text:'提交截图',details:[]},{text:'填写办事簿',details:[]}],time:null,timeText:'10月7号17:00前',location:'智慧学工'},
@@ -43,6 +43,15 @@ describe('compact notice overview',()=>{
 });
 
 describe('readable notice facts',()=>{
+ it('gives reminders short meaningful labels while preserving office context and source wording',()=>{
+  const source='考场办公室：第五教学楼A5213；具体通知见群文件。';
+  expect(reminderHeading(source)).toBe('考场办公室');expect(source).toContain('A5213');
+  expect(reminderHeading('附件1：发展党员常用文书（参考模板）')).toBe('发展党员常用文书（参考模板）');
+  expect(reminderHeading('参考资料：发展党员工作手册 https://example.test/long/path')).toBe('发展党员工作手册');
+  expect(reminderHeading('如需晚归请告知室友大致回寝时间并给通知发布者留言')).toBe('晚归说明');
+  expect(reminderHeading('《中国共产党发展党员工作细则》2026年修订 https://example.test')).toBe('《中国共产党发展党员工作细则》');
+  expect(Array.from(reminderHeading('这是一段需要保留全部原文但仅用短标题预览的很长提醒'.repeat(3))).length).toBeLessThanOrEqual(24);
+ });
  it('shows a deadline caption once and keeps relative deadline phrases intact',()=>{
   expect(headlineTime('报名截止时间:2026年6月1日15:00')).toBe('6月1日15:00');
   expect(headlineTime('截止：2026/10/9 09:00')).toBe('10月9日 09:00');
