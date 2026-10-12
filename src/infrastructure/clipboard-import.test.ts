@@ -100,17 +100,17 @@ describe('paste event clipboard import', () => {
   });
 
   it('keeps useful HTML paragraphs and absolute link destinations when plain text is missing', async () => {
-    const html = fixture('<p>报名</p><p>填写<a href="https://docs.qq.com/a">表格</a><br>10月18日前</p>',
+    const html = fixture('<p>报名</p><p>填写<a href="https://docs.example.invalid/a">表格</a><br>10月18日前</p>',
       element('P', {}, text('报名')), element('P', {}, text('填写'),
-        element('A', { href: 'https://docs.qq.com/a' }, text('表格')), element('BR'), text('10月18日前')));
+        element('A', { href: 'https://docs.example.invalid/a' }, text('表格')), element('BR'), text('10月18日前')));
     const result = await readTransfer(transfer('', html));
-    expect(result.text).toBe('报名\n\n填写表格 https://docs.qq.com/a\n10月18日前');
+    expect(result.text).toBe('报名\n\n填写表格 https://docs.example.invalid/a\n10月18日前');
     expect(parseCalls).toEqual(['<!doctype html><html><body></body></html>']);
     expect(fetch).not.toHaveBeenCalled();
   });
 
   it('preserves link targets advertised only in HTML alongside preferred plain text', async () => {
-    const url = 'https://docs.qq.com/sheet/actual-file?tab=1';
+    const url = 'https://docs.example.invalid/sheet/actual-file?tab=1';
     const html = fixture('plain label and real HTML destination',
       element('A', { href: url }, text('医保信息反馈表')), element('A', { href: url }, text('同一个表格')),
       element('A', { href: 'javascript:steal()' }, text('不安全链接')));

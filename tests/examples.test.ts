@@ -1,5 +1,6 @@
 import {describe,expect,test} from 'vitest';
 import {readFile} from 'node:fs/promises';
+import {auditPublicExamples} from '../scripts/verify-example-privacy.mjs';
 import {exampleFingerprint,mergeExamples} from '../src/domain/examples';
 import {createNotice,parseBackup} from '../src/domain/notice';
 import type {Notice,NoticeAnalysis} from '../src/domain/types';
@@ -59,12 +60,14 @@ describe('safe built-in example upgrades',()=>{
     expect(catalog).toHaveLength(13);
     for(const item of catalog){expect(Object.keys(item).sort()).toEqual(['fingerprint','id']);expect(item.fingerprint).toMatch(/^[a-f0-9]{64}$/);}
   });
-  test('the current catalog retains the 2.4 fingerprints and adds only the old 2.5 long-notice fingerprint',async()=>{
+  test('the catalog retains earlier fingerprints and adds the 13 unredacted 2.10 built-ins without publishing their content',async()=>{
     const previous=JSON.parse(await readFile(new URL('../public/examples-legacy-2.4.json',import.meta.url),'utf8'));
     const current=JSON.parse(await readFile(new URL('../public/examples-legacy.json',import.meta.url),'utf8'));
-    expect(current.slice(0,13)).toEqual(previous);expect(current).toHaveLength(14);
+    expect(current.slice(0,13)).toEqual(previous);expect(current).toHaveLength(27);
     expect(current[13].id).toBe('example-reading-v25-12');
     expect(current[13].fingerprint).toMatch(/^[a-f0-9]{64}$/);
+    for(const item of current){expect(Object.keys(item).sort()).toEqual(['fingerprint','id']);expect(item.fingerprint).toMatch(/^[a-f0-9]{64}$/);}
+    expect(new Set(current.map((item:{id:string;fingerprint:string})=>item.id+':'+item.fingerprint)).size).toBe(current.length);
   });
   test('upgrading a 2.5 long-notice example preserves the other examples and remains idempotent',async()=>{
     const incoming=parseBackup(JSON.parse(await readFile(new URL('../public/examples.json',import.meta.url),'utf8')));
@@ -87,15 +90,80 @@ describe('safe built-in example upgrades',()=>{
     const personal={...original,id:'my-long-notice',note:'个人版本'};
     expect(await mergeExamples([personal],[long],catalog)).toEqual({notices:[personal],added:0,replaced:0});
   });
-  test('public provenance distinguishes the one r6 low response from twelve retained r5 disabled examples',async()=>{
+  test('public provenance distinguishes retained r5/r6 results from six selected low first responses',async()=>{
     const provenance=JSON.parse(await readFile(new URL('../public/examples-provenance.json',import.meta.url),'utf8'));
     const examples=parseBackup(JSON.parse(await readFile(new URL('../public/examples.json',import.meta.url),'utf8')));
     expect(provenance.thinking).toBe('mixed');expect(provenance.promptSha256).toBeUndefined();
-    expect(provenance.results).toHaveLength(13);
+    expect(provenance.results).toHaveLength(examples.length);
     expect(provenance.results.filter((r:{revision:string;thinking:string})=>r.revision==='r5'&&r.thinking==='disabled')).toHaveLength(12);
-    const low=provenance.results.filter((r:{reasoningEffort:string})=>r.reasoningEffort==='low');
-    expect(low).toHaveLength(1);expect(low[0]).toMatchObject({exampleId:'example-reading-v26-12',revision:'r6',thinking:'enabled',manualWordEdits:false});
+    const low=provenance.results.filter((r:{revision:string;reasoningEffort:string})=>r.revision==='r6'&&r.reasoningEffort==='low');
+    expect(low).toHaveLength(1);expect(low[0]).toMatchObject({exampleId:'example-reading-v26-12',revision:'r6',thinking:'enabled',manualWordEdits:true,manualPrivacyEdits:true,manualContentCorrections:false});
     expect(provenance.results.map((r:{exampleId:string})=>r.exampleId)).toEqual(examples.map(n=>n.id));
     for(const result of provenance.results){expect(result.promptSha256).toMatch(/^[a-f0-9]{64}$/);expect(result.sourceSha256).toMatch(/^[a-f0-9]{64}$/);expect(result.firstProviderContentSha256).toMatch(/^[a-f0-9]{64}$/);}
   });
+
+  test('the six new redacted examples retain honest first-response and free-revalidation provenance',async()=>{
+    const provenance=JSON.parse(await readFile(new URL('../public/examples-provenance.json',import.meta.url),'utf8'));
+    const examples=parseBackup(JSON.parse(await readFile(new URL('../public/examples.json',import.meta.url),'utf8')));
+    const fresh=examples.filter(n=>n.id.startsWith('example-reading-v211-'));
+    expect(examples).toHaveLength(19);expect(fresh).toHaveLength(6);
+    expect(provenance.selectedNewFirstResponses).toBe(6);expect(provenance.paidCallsIn20261012Experiment).toBe(12);
+    expect(provenance.experiment20261012).toMatchObject({realProviderCalls:12,selectedFirstResponses:6,providerCallsForPublicExamplePreparation:0,offlineSelectedResponseRevalidations:6,additionalOfflineDateParserReplays:1});
+    expect(provenance.catalogDistinctOriginalProviderCalls).toBe(new Set(provenance.results.map((row:{firstProviderContentSha256:string})=>row.firstProviderContentSha256)).size);
+    expect(provenance.sourceCount).toBe(new Set(provenance.results.map((row:{sourceSha256:string})=>row.sourceSha256)).size);
+    const basketball=fresh.find(n=>n.id==='example-reading-v211-1')!;
+    expect(basketball.deadlineSpec).toMatchObject({month:10,day:14,year:null,rawText:'10 月14日23:59'});expect(basketball.deadline).toBeNull();
+    const math=fresh.find(n=>n.id==='example-reading-v211-0')!;
+    expect(math.tasks[0].steps.map(step=>step.details.length)).toEqual([6,4]);
+    const origin=provenance.results.find((row:{exampleId:string})=>row.exampleId===math.id);
+    expect(origin).toMatchObject({case:'r14-math-01',originalFirstStatus:'failed',originalFailureCode:'AI_FORMAT_INVALID',additionalProviderCallsForRevalidation:0,manualContentCorrections:false});
+    expect(origin.firstResponseValidation).toContain('same first response');
+    expect(origin.knownLimitations.join(' ')).toContain('omits audio');
+    const conflict=math.warnings.find(warning=>warning.includes('不一致'))!;
+    expect(conflict).toContain('平台链接A已脱敏');expect(conflict).toContain('平台链接B已脱敏');
+    for(const notice of fresh)expect(notice.originalText.startsWith('【脱敏示例】')).toBe(true);
+  });
+  test('privacy replacement retains edited old records without duplicating a differently redacted original',async()=>{
+    const raw=old(),catalog=await registry(raw),redacted={...fresh('【脱敏示例】公开演示原文',raw.id),title:'脱敏示例'};
+    expect(await mergeExamples([raw],[redacted],catalog)).toEqual({notices:[redacted],added:1,replaced:1});
+    for(const change of [(n:Notice)=>{n.note='我的补充';},(n:Notice)=>{n.tasks[0].completed=true;},(n:Notice)=>{n.attachments=['my-file'];}]){
+      const edited=structuredClone(raw);change(edited);
+      expect(await mergeExamples([edited],[redacted],catalog)).toEqual({notices:[edited],added:0,replaced:0});
+    }
+  });
+
+  test('multiple complete reviewed versions of one ID upgrade safely and the newest version is idempotent',async()=>{
+    const raw=old(),redacted={...fresh('【脱敏示例】第一版脱敏原文',raw.id)},newer={...redacted,summary:'新版清楚的简介'};
+    const catalog=[...await registry(raw),...await registry(redacted),...await registry(raw)];
+    expect(await mergeExamples([raw],[newer],catalog)).toEqual({notices:[newer],added:1,replaced:1});
+    expect(await mergeExamples([redacted],[newer],catalog)).toEqual({notices:[newer],added:1,replaced:1});
+    const finalCatalog=[...catalog,...await registry(newer)];
+    expect(await mergeExamples([newer],[newer],finalCatalog)).toEqual({notices:[newer],added:0,replaced:0});
+    for(const baseline of [raw,redacted])for(const change of [(n:Notice)=>{n.note='我的笔记';},(n:Notice)=>{n.tasks[0].completed=true;},(n:Notice)=>{n.attachments=['my-file'];}]){
+      const edited=structuredClone(baseline);change(edited);
+      expect(await mergeExamples([edited],[newer],catalog)).toEqual({notices:[edited],added:0,replaced:0});
+    }
+  });
+  test('every public example matches an explicitly disclosed manual privacy review',async()=>{
+    const backup=JSON.parse(await readFile(new URL('../public/examples.json',import.meta.url),'utf8'));
+    const provenance=JSON.parse(await readFile(new URL('../public/examples-provenance.json',import.meta.url),'utf8'));
+    expect(auditPublicExamples(backup,provenance)).toEqual([]);
+    expect(provenance.privacyReview.manualReview).toBe(true);
+    expect(provenance.privacyReview.disclosure).toContain('脱敏');
+    expect(provenance.generationMethod).toContain('manual privacy redaction only');
+  });
+  test('a changed reviewed example, private phone, group or form link blocks publishing without revealing the value',async()=>{
+    const backup=JSON.parse(await readFile(new URL('../public/examples.json',import.meta.url),'utf8'));
+    const provenance=JSON.parse(await readFile(new URL('../public/examples-provenance.json',import.meta.url),'utf8'));
+    for(const [text,category] of [['联系'+['1','38','0'.repeat(8)].join(''),'phone'],['QQ群：'+'123'.repeat(3),'group_number'],['https://docs.example.invalid/private-form','specific_link']]){
+      const changed=structuredClone(backup);changed.notices[0].tasks[0].details.push(text);
+      const findings=auditPublicExamples(changed,provenance);
+      expect(findings.some((entry:{category:string})=>entry.category===category)).toBe(true);
+      expect(findings.some((entry:{category:string})=>entry.category==='reviewed_content_changed')).toBe(true);
+      expect(JSON.stringify(findings)).not.toContain(text);
+    }
+    const unreviewed=structuredClone(provenance);delete unreviewed.privacyReview;
+    expect(auditPublicExamples(backup,unreviewed).some((entry:{category:string})=>entry.category==='missing_manual_review')).toBe(true);
+  });
+
 });

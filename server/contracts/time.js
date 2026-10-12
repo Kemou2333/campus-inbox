@@ -5,6 +5,8 @@ const FIELDS=['type','year','month','day','hour','minute','rawText'];
 const PARTS=['year','month','day','hour','minute'];
 const TYPES=['date_time','date','partial','relative','unknown'];
 const NUMBER='(?:\\d{1,2}|[零〇一二三四五六七八九十两]{1,3})';
+// Horizontal spacing belongs to a date; a line break can separate different facts.
+const DATE_GAP='[^\\S\\r\\n\\u2028\\u2029\\v\\f]*';
 function raw(value){if(typeof value!=='string'||value.length>500)throw new Error('原文时间格式不正确');return value.trim();}
 function empty(value,type='unknown'){return {type,year:null,month:null,day:null,hour:null,minute:null,rawText:raw(value)};}
 function number(value){
@@ -30,9 +32,9 @@ function fromText(value){
  const out=empty(value),s=out.rawText;
  if(new RegExp(`(?:月|日|号|时|点)\\s*[-~～—–至到]\\s*(?:\\d|[一二三四五六七八九十])`).test(s))return out;
  if(!s||/(?:每(?:天|日|周|星期|月|年)|隔周|逢周)/.test(s))return out;
- if(new RegExp(`(?:\\d{1,4}|[一二三四五六七八九十]{1,3})\\s*(?:至|到|[-~～—–])\\s*(?:\\d{1,4}|[一二三四五六七八九十]{1,3})(?:年|月|日|号|时|点)`).test(s))return out;
+ if(new RegExp(`(?:\\d{1,4}|[一二三四五六七八九十]{1,3})\\s*(?:至|到|[-~～—–])\\s*(?:\\d{1,4}|[一二三四五六七八九十]{1,3})${DATE_GAP}(?:年|月|日|号|时|点)`).test(s))return out;
  // A range is not a single confirmed deadline. Keep its complete wording.
- const dates=[...s.matchAll(new RegExp(`(?:(\\d{4})年)?(${NUMBER})月(${NUMBER})(?:日|号)|(\\d{4})[-/]([0-9]{1,2})[-/]([0-9]{1,2})|(${NUMBER})(?:日|号)`,'g'))];
+ const dates=[...s.matchAll(new RegExp(`(?:(\\d{4})${DATE_GAP}年${DATE_GAP})?(${NUMBER})${DATE_GAP}月${DATE_GAP}(${NUMBER})${DATE_GAP}(?:日|号)|(\\d{4})[-/]([0-9]{1,2})[-/]([0-9]{1,2})|(${NUMBER})${DATE_GAP}(?:日|号)`,'g'))];
  const clocks=[...s.matchAll(new RegExp(`(\\d{1,2})[:：](\\d{2})|(${NUMBER})(?:时|点)(?:(${NUMBER})分)?`,'g'))];
  const pointIndex=dates[0]?.index??clocks[0]?.index??Infinity;
  const ranges=[...s.matchAll(/(?:至|到|[~～—–])\s*(?:\d|[一二三四五六七八九十])/g)];
@@ -40,8 +42,8 @@ function fromText(value){
  if(dates.length){const m=dates[0];if(m[2]!==undefined){out.year=m[1]===undefined?null:Number(m[1]);out.month=number(m[2]);out.day=number(m[3]);}else if(m[4]!==undefined){out.year=Number(m[4]);out.month=Number(m[5]);out.day=Number(m[6]);}else out.day=number(m[7]);}
  else{
   // "2026级" and "2026—2027学年" are not calendar years.
-  const year=s.match(/(?:^|[^\d])(\d{4})年(?!级|度|第|第一|第二|春|秋|学期)/);
-  const month=s.match(new RegExp(`(${NUMBER})月`));
+  const year=s.match(new RegExp(`(?:^|[^\\d])(\\d{4})${DATE_GAP}年(?!${DATE_GAP}(?:级|度|第|第一|第二|春|秋|学期))`));
+  const month=s.match(new RegExp(`(${NUMBER})${DATE_GAP}月`));
   if(year&&!/学年/.test(s))out.year=Number(year[1]);
   if(month)out.month=number(month[1]);
  }
@@ -66,12 +68,15 @@ function validate(value){
  if(out.type==='unknown'&&PARTS.some(key=>out[key]!==null)||out.type==='relative'&&['year','month','day'].some(key=>out[key]!==null)||!['unknown','relative'].includes(out.type)&&classify(out)!==out.type)throw new Error('结构化时间精度不一致');
  return out;
 }
-function normalize(value,timeText){
+function normalize(value,timeText,strict=true){
  const out=validate(value),text=raw(timeText);
  if(out.rawText!==text)throw new Error('结构化时间与原文时间不一致');
  // Unknown is a deliberate safe fallback for ranges, repeats or unsupported text.
  if(out.type==='unknown')return out;
  const expected=fromText(text);
+ // Legacy stored precision may be lower, but no non-null part may contradict
+ // the raw text. AI responses keep the exact, strict parser boundary.
+ if(!strict&&['partial','date'].includes(out.type)&&classify(out)===out.type&&['partial','date','date_time'].includes(expected.type)&&PARTS.every(key=>out[key]===null||out[key]===expected[key]))return out;
  if(FIELDS.some(key=>out[key]!==expected[key]))throw new Error('结构化时间包含原文未确认的内容');
  return out;
 }
@@ -82,7 +87,7 @@ function ground(value,timeText,source){
  validate(candidate);const text=raw(timeText);
  if(typeof source!=='string')return empty(text);
  // "号" and "日" are equivalent date markers; no other facts are borrowed.
- const compact=s=>s.replace(/\s/g,'').replace(/号/g,'日');
+ const compact=s=>s.replace(/[^\S\r\n\u2028\u2029\v\f]/g,'').replace(/号/g,'日');
  if(!text||!compact(source).includes(compact(text)))return empty(text);
  return fromText(text);
 }

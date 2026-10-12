@@ -23,7 +23,7 @@ test('strict field limits and time errors have finite diagnostic categories whil
     ['TASK_DETAILS',n=>task(n).details=['x'.repeat(501)]],
     ['STEP_TEXT',n=>step(n).text='x'.repeat(61)],
     ['STEP_DETAILS',n=>step(n).details=['x'.repeat(501)]],
-    ['STEP_DETAILS',n=>step(n).details=Array(6).fill('细节')],
+    ['STEP_DETAILS',n=>step(n).details=Array(21).fill('细节')],
     ['STEP_COUNT',n=>task(n).steps=Array.from({length:11},()=>({text:'步骤',details:[]}))],
     ['STRUCTURED_TIME',n=>task(n).timeSpec={type:'unknown',rawText:''}],
     ['STRUCTURED_TIME',n=>task(n).timeSpec={type:'partial',year:null,month:13,day:1,hour:null,minute:null,rawText:''}],
@@ -51,7 +51,7 @@ test('strict field limits and time errors have finite diagnostic categories whil
 
 test('valid exact text boundaries still pass without rewriting model wording',async()=>{
   const value=batch(),n=value.notices[0],t=task(n),s=step(n);
-  n.title='题'.repeat(40);n.summary='摘'.repeat(140);t.text='任'.repeat(60);t.scope='conditional';t.condition='条'.repeat(120);t.details=['细'.repeat(500)];s.text='步'.repeat(60);s.details=Array(5).fill('节'.repeat(500));
+  n.title='题'.repeat(40);n.summary='摘'.repeat(140);t.text='任'.repeat(60);t.scope='conditional';t.condition='条'.repeat(120);t.details=['细'.repeat(500)];s.text='步'.repeat(60);s.details=Array(20).fill('节'.repeat(500));
   const reply=await analyze(source,{apiKey:'test'},async()=>upstream(value));
   assert.deepEqual(reply.result,value);assert.equal(reply.usageAvailable,true);
 });

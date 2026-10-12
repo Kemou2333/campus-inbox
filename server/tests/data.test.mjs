@@ -131,9 +131,9 @@ test('AI may group necessary same-person actions into steps without accepting lo
 
 test('steps validate practical limits and optional v4 compatibility',()=>{
  const old=D.task(analysis.tasks[0],true);assert.deepEqual(old.steps,[]);
- const max={text:'字'.repeat(60),details:Array(5).fill('字'.repeat(500))};
+ const max={text:'字'.repeat(60),details:Array(20).fill('字'.repeat(500))};
  assert.equal(D.task({...analysis.tasks[0],steps:Array(10).fill(max)},true).steps.length,10);
- for(const steps of [null,{},Array(11).fill(max),[{...max,text:'字'.repeat(61)}],[{...max,text:' '}],[{...max,details:Array(6).fill('详情')}],[{...max,details:['字'.repeat(501)]}],[{...max,details:[' ']}]]){
+ for(const steps of [null,{},Array(11).fill(max),[{...max,text:'字'.repeat(61)}],[{...max,text:' '}],[{...max,details:Array(21).fill('详情')}],[{...max,details:['字'.repeat(501)]}],[{...max,details:[' ']}]]){
   assert.throws(()=>D.task({...analysis.tasks[0],steps},true));
  }
 });

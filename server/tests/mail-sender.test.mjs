@@ -6,6 +6,7 @@ import {join} from 'node:path';
 import {createMailSender} from '../mail-sender.mjs';
 import nodemailer from '../vendor/nodemailer-10.0.16.mjs';
 
+// Synthetic sequential-number address used only by mock/offline transports; no live SMTP call.
 const PASSWORD_ENV={MAIL_LOGIN_ENABLED:'true',SMTP_HOST:'smtp.qq.com',SMTP_USER:'123456789@qq.com',SMTP_PASSWORD:'fake-test-authorization-code'};
 const OAUTH_ENV={MAIL_LOGIN_ENABLED:'true',SMTP_HOST:'smtp-mail.outlook.com',SMTP_PORT:'587',SMTP_SECURE:'false',SMTP_USER:'sender@outlook.com',SMTP_AUTH_MODE:'oauth2',SMTP_OAUTH_CLIENT_ID:'test-client',SMTP_OAUTH_CLIENT_SECRET:'test-secret',SMTP_OAUTH_REFRESH_TOKEN:'environment-refresh'};
 const MESSAGE={email:'123456789@qq.com',code:'012345',expiresMinutes:5};

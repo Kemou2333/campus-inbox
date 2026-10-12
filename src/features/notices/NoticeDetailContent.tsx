@@ -29,8 +29,10 @@ export function NoticeDetailContent({notice:n,app,actions,expandedTaskIDs,onTask
   {!!n.tasks.length&&<Box><Typography component="h3" sx={{mb:1,fontSize:18,fontWeight:700}}>待办</Typography>
    <Box className="task-list">{n.tasks.map((t,index)=>{
     const expanded=expandedTaskIDs.has(t.id),bodyID=`task-body-${t.id}`,audience=t.scope==='role'&&t.condition?`${taskAudience(t)} · ${t.condition}`:taskAudience(t);
-    const audienceHint=t.dismissed?'不适用':t.scope==='role'?t.assignee||'指定执行者':t.scope==='all'?'全体同学':t.condition&&Array.from(t.condition).length<=22?t.condition:t.scope==='conditional'?'条件适用':'对象待确认';
+    const audienceHint=t.dismissed?'不适用':t.scope==='role'?t.assignee&&Array.from(t.assignee).length<=22?t.assignee:'指定执行者':t.scope==='all'?'全体同学':t.condition&&Array.from(t.condition).length<=22?t.condition:t.scope==='conditional'?'条件适用':'对象待确认';
     const showAudience=audience!==audienceHint&&(overview.audiences.length!==1||Array.from(overview.audiences[0]??'').length>28);
+    const showAudienceHint=t.dismissed||overview.audiences.length!==1||overview.audiences[0]!==audience||Array.from(audience).length>28;
+    const ownTime=taskTime(t),showTime=!!ownTime&&!sameHeadlineTime(ownTime,n),showMeta=showAudienceHint||showTime||t.steps.length>0;
     return <Box key={t.id} className="task-item" sx={{opacity:t.dismissed?.6:1,borderTop:index?'1px solid':'none',borderColor:'divider',py:.75}}>
      <Stack direction="row" sx={{alignItems:'flex-start',gap:.25}}>
       <Checkbox checked={t.completed} disabled={t.dismissed} onChange={()=>app.act(n.id,v=>toggleTask(v,t.id),t.completed?'已恢复待办':'已完成事项')} slotProps={{input:{'aria-label':`完成：${t.text}`}}} sx={{ml:-1,mt:.1}}/>
@@ -38,11 +40,11 @@ export function NoticeDetailContent({notice:n,app,actions,expandedTaskIDs,onTask
        <Button className="task-expand" aria-expanded={expanded} aria-controls={bodyID} aria-label={`${expanded?'收起事项':'展开事项'}：${plainReadingText(t.text)}`} onClick={()=>onTaskExpandedChange(t.id)} endIcon={<ExpandMore sx={{transform:expanded?'rotate(180deg)':'none'}}/>} sx={{width:'100%',justifyContent:'space-between',textAlign:'left',borderRadius:'8px',px:.75,py:1,gap:1,color:'text.primary','& .MuiButton-endIcon':{ml:0,color:'text.secondary'}}}>
         <Typography component="span" sx={{fontSize:{xs:18,sm:20},fontWeight:700,lineHeight:1.5,overflowWrap:'anywhere',textDecoration:t.completed?'line-through':'none',color:t.completed?'text.secondary':'text.primary'}}>{plainReadingText(t.text)}</Typography>
        </Button>
-       <Stack direction="row" className="task-meta" sx={{gap:.75,px:.75,mt:.25,mb:.5,flexWrap:'wrap',alignItems:'center'}}>
-        <Chip size="small" label={audienceHint} color={t.scope==='all'?'primary':'warning'} variant="outlined" sx={{'& .MuiChip-label':{fontSize:12}}}/>
-        {taskTime(t)&&!sameHeadlineTime(taskTime(t),n)&&<Typography className="task-time" title={taskTime(t)} sx={{fontSize:14,fontWeight:600,color:'primary.main',overflowWrap:'anywhere'}}>{displayTime(taskTime(t))}</Typography>}
+       {showMeta&&<Stack direction="row" className="task-meta" sx={{gap:.75,px:.75,mt:.25,mb:.5,flexWrap:'wrap',alignItems:'center'}}>
+        {showAudienceHint&&<Chip size="small" label={audienceHint} color={t.scope==='all'?'primary':'warning'} variant="outlined" sx={{maxWidth:'100%',height:'auto',minHeight:24,'& .MuiChip-label':{fontSize:12,lineHeight:1.5,whiteSpace:'normal',overflowWrap:'anywhere',py:.25}}}/>}
+        {showTime&&<Typography className="task-time" title={ownTime} sx={{fontSize:14,fontWeight:600,color:'primary.main',overflowWrap:'anywhere'}}>{displayTime(ownTime)}</Typography>}
         {t.steps.length>0&&<Typography aria-label={`已完成${t.steps.filter(step=>step.completed).length}步，共${t.steps.length}步`} sx={{fontSize:12,color:'text.secondary'}}>{t.steps.filter(step=>step.completed).length}/{t.steps.length}</Typography>}
-       </Stack>
+       </Stack>}
       </Box>
      </Stack>
      <Collapse in={expanded} timeout={reducedMotion?0:180} unmountOnExit><Box id={bodyID} className="task-content" sx={{ml:{xs:0,sm:5.5},mt:1,p:1.5,borderLeft:'2px solid',borderColor:'primary.main',bgcolor:'action.hover',borderRadius:'0 8px 8px 0'}}>

@@ -20,25 +20,25 @@ function date(x){
  return x;
 }
 function strings(x,name){if(!Array.isArray(x)||x.length>100)throw new Error(`${name}必须为数组，最多 100 项`);return x.map(v=>text(v,name));}
-function optionalTimeSpec(x,key,raw){
+function optionalTimeSpec(x,key,raw,strict=true){
  if(!Object.hasOwn(x,key))return {};
  const T=root.CampusTime||(typeof require==='function'?require('./time.js'):null);
  if(!T)throw new Error('结构化时间模块未载入');
- return {[key]:T.normalize(x[key],raw)};
+ return {[key]:T.normalize(x[key],raw,strict)};
 }
 function timeline(x,strict=false){if(x===undefined)return [];if(!Array.isArray(x)||x.length>100)throw new Error('时间节点格式不正确');return x.map(v=>{
  if(!object(v))throw new Error('时间节点格式不正确');
  const required=['label','time','timeText','location'],fields=[...required,'timeSpec'];
  if(strict&&(required.some(k=>!Object.hasOwn(v,k))||Object.keys(v).some(k=>!fields.includes(k))))throw new Error('时间节点字段不完整或包含多余字段');
  const timeText=text(v.timeText,'原文时间',500,true);
- return {label:text(v.label,'节点名称',200),time:date(v.time),timeText,location:v.location===null?null:text(v.location,'地点',500),...optionalTimeSpec(v,'timeSpec',timeText)};
+ return {label:text(v.label,'节点名称',200),time:date(v.time),timeText,location:v.location===null?null:text(v.location,'地点',500),...optionalTimeSpec(v,'timeSpec',timeText,strict)};
 });}
 function step(x,strict=false){
  if(!object(x))throw new Error('步骤必须为结构化对象');
  const fields=['text','details'];
  if(strict&&(fields.some(k=>!Object.hasOwn(x,k))||Object.keys(x).some(k=>!fields.includes(k))))throw new Error('步骤字段不完整或包含多余字段');
  const details=x.details===undefined&&!strict?[]:x.details;
- if(!Array.isArray(details)||details.length>5)throw new Error('步骤细节最多5项');
+ if(!Array.isArray(details)||details.length>20)throw new Error('步骤细节最多20项');
  return {text:text(x.text,'步骤名称',60),details:details.map(v=>text(v,'步骤细节',500))};
 }
 function steps(x,strict=false){if(x===undefined)return [];if(!Array.isArray(x)||x.length>10)throw new Error('每个事项最多10个步骤');return x.map(v=>step(v,strict));}
@@ -57,7 +57,7 @@ function task(x,strict=false){
  const details=strings(x.details===undefined?[]:x.details,'执行细节');
  if(strict&&(details.length>20||details.some(v=>v.length>500)))throw new Error('执行细节过长');
  const timeText=text(x.timeText===undefined?'':x.timeText,'任务时间',500,true);
- return {text:text(x.text,'任务名称',strict?60:2000),assignee,scope,condition,details,steps:steps(x.steps,strict),time:date(x.time===undefined?null:x.time),timeText,location:x.location==null?null:text(x.location,'任务地点',500),...optionalTimeSpec(x,'timeSpec',timeText)};
+ return {text:text(x.text,'任务名称',strict?60:2000),assignee,scope,condition,details,steps:steps(x.steps,strict),time:date(x.time===undefined?null:x.time),timeText,location:x.location==null?null:text(x.location,'任务地点',500),...optionalTimeSpec(x,'timeSpec',timeText,strict)};
 }
 function analysis(x,strict=false){
  if(!object(x))throw new Error('整理结果必须为 JSON 对象');
@@ -70,7 +70,7 @@ function analysis(x,strict=false){
  const reminders=strings(x.reminders===undefined?[]:x.reminders,'提醒');
  if(strict&&((kind==='task')!==!!x.tasks.length||(kind==='reminder'&&!reminders.length)||reminders.length>20||reminders.some(v=>v.length>500)))throw new Error('通知类别与内容不一致');
  const deadlineText=x.deadlineText===undefined?'':text(x.deadlineText,'截止描述',500,true);
- return {schemaVersion:4,kind,title:text(x.title,'标题',strict?40:200),summary:text(x.summary,'摘要',strict?140:2000),deadline:date(x.deadline),deadlineText,timeline:timeline(x.timeline,strict),tasks:x.tasks.map(t=>task(t,strict)),materials:strings(x.materials,'材料清单'),warnings:strings(x.warnings,'注意事项'),reminders,...optionalTimeSpec(x,'deadlineSpec',deadlineText)};
+ return {schemaVersion:4,kind,title:text(x.title,'标题',strict?40:200),summary:text(x.summary,'摘要',strict?140:2000),deadline:date(x.deadline),deadlineText,timeline:timeline(x.timeline,strict),tasks:x.tasks.map(t=>task(t,strict)),materials:strings(x.materials,'材料清单'),warnings:strings(x.warnings,'注意事项'),reminders,...optionalTimeSpec(x,'deadlineSpec',deadlineText,strict)};
 }
 function batch(x,strict=false){
  if(!strict&&object(x)&&Array.isArray(x.tasks))return {schemaVersion:4,notices:[analysis(x)]};

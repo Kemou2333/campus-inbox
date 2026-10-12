@@ -3,6 +3,8 @@ import type { TimeSpec } from './types';
 const fields = ['type', 'year', 'month', 'day', 'hour', 'minute', 'rawText'] as const;
 const parts = ['year', 'month', 'day', 'hour', 'minute'] as const;
 const numberPattern = '(?:\\d{1,2}|[零〇一二三四五六七八九十两]{1,3})';
+// Accept typographic spacing inside one date, but never join separate lines.
+const dateGap = '[^\\S\\r\\n\\u2028\\u2029\\v\\f]*';
 
 function empty(rawText: string): TimeSpec {
   return { type: 'unknown', year: null, month: null, day: null, hour: null, minute: null, rawText };
@@ -45,8 +47,8 @@ export function timeFromText(rawText: string): TimeSpec {
   const s = rawText.trim(), out = empty(s);
   if (new RegExp(`(?:月|日|号|时|点)\\s*[-~～—–至到]\\s*(?:\\d|[一二三四五六七八九十])`).test(s)) return out;
   if (!s || /(?:每(?:天|日|周|星期|月|年)|隔周|逢周)/.test(s)) return out;
-  if (new RegExp(`(?:\\d{1,4}|[一二三四五六七八九十]{1,3})\\s*(?:至|到|[-~～—–])\\s*(?:\\d{1,4}|[一二三四五六七八九十]{1,3})(?:年|月|日|号|时|点)`).test(s)) return out;
-  const dates = [...s.matchAll(new RegExp(`(?:(\\d{4})年)?(${numberPattern})月(${numberPattern})(?:日|号)|(\\d{4})[-/]([0-9]{1,2})[-/]([0-9]{1,2})|(${numberPattern})(?:日|号)`, 'g'))];
+  if (new RegExp(`(?:\\d{1,4}|[一二三四五六七八九十]{1,3})\\s*(?:至|到|[-~～—–])\\s*(?:\\d{1,4}|[一二三四五六七八九十]{1,3})${dateGap}(?:年|月|日|号|时|点)`).test(s)) return out;
+  const dates = [...s.matchAll(new RegExp(`(?:(\\d{4})${dateGap}年${dateGap})?(${numberPattern})${dateGap}月${dateGap}(${numberPattern})${dateGap}(?:日|号)|(\\d{4})[-/]([0-9]{1,2})[-/]([0-9]{1,2})|(${numberPattern})${dateGap}(?:日|号)`, 'g'))];
   const clocks = [...s.matchAll(new RegExp(`(\\d{1,2})[:：](\\d{2})|(${numberPattern})(?:时|点)(?:(${numberPattern})分)?`, 'g'))];
   const pointIndex = dates[0]?.index ?? clocks[0]?.index ?? Infinity;
   if (dates.length > 1 || clocks.length > 1 || [...s.matchAll(/(?:至|到|[~～—–])\s*(?:\d|[一二三四五六七八九十])/g)].some(m => (m.index ?? 0) > pointIndex)) return out;
@@ -56,8 +58,8 @@ export function timeFromText(rawText: string): TimeSpec {
     else if (m[4] !== undefined) { out.year = Number(m[4]); out.month = Number(m[5]); out.day = Number(m[6]); }
     else out.day = chineseNumber(m[7]);
   } else {
-    const year = s.match(/(?:^|[^\d])(\d{4})年(?!级|度|第|第一|第二|春|秋|学期)/);
-    const month = s.match(new RegExp(`(${numberPattern})月`));
+    const year = s.match(new RegExp(`(?:^|[^\\d])(\\d{4})${dateGap}年(?!${dateGap}(?:级|度|第|第一|第二|春|秋|学期))`));
+    const month = s.match(new RegExp(`(${numberPattern})${dateGap}月`));
     if (year && !/学年/.test(s)) out.year = Number(year[1]);
     if (month) out.month = chineseNumber(month[1]);
   }
@@ -77,7 +79,7 @@ export function timeFromText(rawText: string): TimeSpec {
   return out;
 }
 
-export function parseTimeSpec(value: unknown, rawText: string): TimeSpec {
+export function parseTimeSpec(value: unknown, rawText: string, strict = true): TimeSpec {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('结构化时间格式不正确');
   const o = value as Record<string, unknown>;
   if (fields.some(key => !(key in o)) || fields.some(key => key === 'type' || key === 'rawText' ? typeof o[key] !== 'string' : o[key] !== null && !Number.isInteger(o[key]))) throw new Error('结构化时间字段不完整');
@@ -88,6 +90,10 @@ export function parseTimeSpec(value: unknown, rawText: string): TimeSpec {
     return s;
   }
   const expected = timeFromText(rawText);
+  // Older saved records can safely state less precision than today's parser.
+  // Keep those fields unchanged, while refusing contradictions or new facts.
+  if (!strict && ['partial','date'].includes(s.type) && classify(s) === s.type
+    && ['partial','date','date_time'].includes(expected.type) && parts.every(key => s[key] === null || s[key] === expected[key])) return s;
   if (fields.some(key => s[key] !== expected[key])) throw new Error('结构化时间包含原文未确认的内容');
   return s;
 }

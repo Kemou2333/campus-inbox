@@ -45,14 +45,14 @@ export function parseDate(value: unknown): string | null {
   if (!Number.isFinite(Date.parse(value))) throw new Error('日期无法识别');
   return value;
 }
-function timeSpec(value: Record<string, unknown>, key: 'timeSpec' | 'deadlineSpec', raw: string) {
-  return key in value ? { [key]: parseTimeSpec(value[key], raw) } : {};
+function timeSpec(value: Record<string, unknown>, key: 'timeSpec' | 'deadlineSpec', raw: string, strict = true) {
+  return key in value ? { [key]: parseTimeSpec(value[key], raw, strict) } : {};
 }
 
 function parseStep(value: unknown, strict: boolean): AnalysisStep {
   const o = object(value, '步骤');
   fields(o, ['text', 'details'], [], strict);
-  return { text: text(o.text, '步骤名称', 60), details: strings(strict ? o.details : o.details ?? [], '步骤细节', 5, 500) };
+  return { text: text(o.text, '步骤名称', 60), details: strings(strict ? o.details : o.details ?? [], '步骤细节', 20, 500) };
 }
 function parseTask(value: unknown, strict: boolean): AnalysisTask {
   const o = typeof value === 'string' && !strict ? { text: value } : object(value, '事项');
@@ -69,7 +69,7 @@ function parseTask(value: unknown, strict: boolean): AnalysisTask {
     text: text(o.text, '事项名称', strict ? 60 : 2000), assignee, scope: scope as AnalysisTask['scope'], condition,
     details: strings(strict ? o.details : o.details ?? [], '执行细节', strict ? 20 : 100, strict ? 500 : 2000),
     steps: array(o.steps ?? [], '步骤', 10).map(v => parseStep(v, strict)),
-    time: parseDate(o.time), timeText, location: o.location == null ? null : text(o.location, '地点', 500), ...timeSpec(o, 'timeSpec', timeText),
+    time: parseDate(o.time), timeText, location: o.location == null ? null : text(o.location, '地点', 500), ...timeSpec(o, 'timeSpec', timeText, strict),
   };
 }
 function parseTimeline(value: unknown, strict: boolean): TimelineEntry[] {
@@ -77,7 +77,7 @@ function parseTimeline(value: unknown, strict: boolean): TimelineEntry[] {
     const o = object(value, '时间节点');
     fields(o, ['label', 'time', 'timeText', 'location'], ['timeSpec'], strict);
     const timeText = text(o.timeText, '原文时间', 500, true);
-    return { label: text(o.label, '节点名称', 200), time: parseDate(o.time), timeText, location: o.location == null ? null : text(o.location, '地点', 500), ...timeSpec(o, 'timeSpec', timeText) };
+    return { label: text(o.label, '节点名称', 200), time: parseDate(o.time), timeText, location: o.location == null ? null : text(o.location, '地点', 500), ...timeSpec(o, 'timeSpec', timeText, strict) };
   });
 }
 
@@ -96,7 +96,7 @@ export function parseAnalysis(value: unknown, strict = true): NoticeAnalysis {
     schemaVersion: 4, kind: kind as NoticeAnalysis['kind'], title: text(o.title, '标题', strict ? 40 : 200),
     summary: text(o.summary, '摘要', strict ? 140 : 2000), deadline: parseDate(o.deadline), deadlineText,
     timeline: parseTimeline(o.timeline, strict), tasks, materials: strings(strict ? o.materials : o.materials ?? [], '材料'), warnings: strings(strict ? o.warnings : o.warnings ?? [], '注意事项'), reminders,
-    ...timeSpec(o, 'deadlineSpec', deadlineText),
+    ...timeSpec(o, 'deadlineSpec', deadlineText, strict),
   };
 }
 export function parseAnalysisBatch(value: unknown): AnalysisBatch {

@@ -19,18 +19,25 @@ export async function exampleFingerprint(notice:Notice):Promise<string> {
 
 function registry(value:unknown):LegacyExampleFingerprint[] {
   if(!Array.isArray(value)||value.length>2000||value.some(entry=>!entry||typeof entry!=='object'||Object.keys(entry).some(key=>!['id','fingerprint'].includes(key))||typeof entry.id!=='string'||!entry.id||entry.id.length>150||typeof entry.fingerprint!=='string'||!/^[a-f0-9]{64}$/.test(entry.fingerprint)))return [];
-  if(new Set(value.map(entry=>entry.id)).size!==value.length)return [];
-  return value as LegacyExampleFingerprint[];
+  const entries=value as LegacyExampleFingerprint[];
+  return entries.filter((entry,index)=>entries.findIndex(other=>other.id===entry.id&&other.fingerprint===entry.fingerprint)===index);
 }
 
 /** The catalog may contain fingerprints from several built-in releases.
  * Replace only verified, untouched built-ins. Every other record remains a
  * user's record, and protects its original from being loaded twice. */
 export async function mergeExamples(current:Notice[],incoming:Notice[],legacyRegistry:unknown){
-  const expected=new Map(registry(legacyRegistry).map(entry=>[entry.id,entry.fingerprint]));
+  const expected=new Map<string,Set<string>>();
+  for(const entry of registry(legacyRegistry)){
+    const versions=expected.get(entry.id)??new Set<string>();versions.add(entry.fingerprint);expected.set(entry.id,versions);
+  }
   let removable=new Set<string>();
   try{
-    const checked=await Promise.all(current.filter(n=>expected.has(n.id)).map(async n=>({id:n.id,unchanged:await exampleFingerprint(n)===expected.get(n.id)})));
+    const latest=new Map(await Promise.all(incoming.map(async n=>[n.id,await exampleFingerprint(n)] as const)));
+    const checked=await Promise.all(current.filter(n=>expected.has(n.id)).map(async n=>{
+      const fingerprint=await exampleFingerprint(n);
+      return {id:n.id,unchanged:expected.get(n.id)!.has(fingerprint)&&latest.get(n.id)!==fingerprint};
+    }));
     removable=new Set(checked.filter(n=>n.unchanged).map(n=>n.id));
   }catch{/* Without a complete fingerprint check, no existing records move. */}
   const retained=current.filter(n=>!removable.has(n.id));
