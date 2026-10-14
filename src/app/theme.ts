@@ -10,7 +10,7 @@ export function makeTheme(dark:boolean,native:NativeTheme|null){
  const text=dark?'#F0F2F7':'#1B2026';
  const outline=dark?'#657083':'#84909A';
  return createTheme({
-  palette:{mode:dark?'dark':'light',primary:{main:primary,contrastText:onPrimary},secondary:{main:dark?'#C5BDEA':'#506176'},
+  palette:{mode:dark?'dark':'light',primary:{main:primary,contrastText:onPrimary},secondary:{main:system?.secondary||(dark?'#C5BDEA':'#506176')},
    background:{default:dark?'#15171C':'#F7F9FA',paper:dark?'#1E2129':'#FFFFFF'},
    text:{primary:text,secondary:dark?'#AEB6C4':'#58636F'},divider:dark?'#373C48':'#DCE2E7',
    action:{hover:alpha(primary,dark?.08:.06),selected:alpha(primary,dark?.15:.12)},

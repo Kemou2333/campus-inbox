@@ -3,7 +3,9 @@ import { canonicalEmail } from '../../server/contracts/email-policy.mjs';
 
 export interface AuthSession { key: string; username: string; expiresAt: string; email?: string | null }
 export interface AuthStatus { username: string; expiresAt: string; email?: string | null }
-export interface AuthOptions { emailEnabled: boolean; inviteEnabled: boolean; domains: string[] }
+export interface AuthOptions { emailEnabled: boolean; inviteEnabled: boolean; domains: string[]; imageCaptchaEnabled?:boolean }
+export interface AuthCaptcha {id:string;answer:string}
+export interface AuthImageChallenge {id:string;image:string;expiresAt:string;retryAfterSeconds:number}
 export interface EmailChallenge { challengeId: string; retryAfterSeconds: number; expiresAt: string }
 export type EmailPurpose = 'login' | 'bind' | 'register' | 'password';
 interface AuthErrorDetails { code?: string; retryAfterSeconds?: number; username?: string }
@@ -36,6 +38,7 @@ function optionalEmail(value: unknown): string | null | undefined {
 export class AuthClient {
   private endpoint: string;
   private fetcher: typeof fetch;
+  private captchaClientID=crypto.randomUUID();
   constructor(endpoint: string, fetcher: typeof fetch = fetch) {
     this.endpoint = normalizeSyncEndpoint(endpoint).replace(/\/sync$/, '/auth');
     this.fetcher = fetcher.bind(globalThis);
@@ -84,12 +87,17 @@ export class AuthClient {
     if (!/^\d{6}$/.test(trimmed)) throw new AuthError('请填写邮件中的 6 位数字验证码。', { code: 'EMAIL_CODE_INVALID' });
     return { challengeId, code: trimmed };
   }
-  async register(invite: string, username: string, password: string): Promise<AuthSession> {
-    if (!/^[A-HJ-NP-Z2-9]{8}$/.test(invite.trim().toUpperCase())) throw new AuthError('请填写正确的 8 位邀请码。');
-    return this.session(await this.request('register', { invite: invite.trim().toUpperCase(), username, password }));
+  async imageChallenge(purpose:'login'|'register'|'email'):Promise<AuthImageChallenge>{
+    const value=await this.request('challenge',{purpose,clientId:this.captchaClientID});
+    if(!value||typeof value.id!=='string'||!/^[A-Za-z0-9_-]{24,100}$/.test(value.id)||typeof value.image!=='string'||value.image.length>150000||!/^data:image\/(?:svg\+xml|png);base64,[A-Za-z0-9+/=]+$/.test(value.image)||!validExpiry(value.expiresAt)||!Number.isSafeInteger(value.retryAfterSeconds)||Number(value.retryAfterSeconds)<0||Number(value.retryAfterSeconds)>86400)throw formatError();
+    return {id:value.id,image:value.image,expiresAt:value.expiresAt,retryAfterSeconds:Number(value.retryAfterSeconds)};
   }
-  async login(username: string, password: string): Promise<AuthSession> {
-    return this.session(await this.request('login', { username, password }));
+  async register(invite: string, username: string, password: string,captcha?:AuthCaptcha): Promise<AuthSession> {
+    if (!/^[A-HJ-NP-Z2-9]{8}$/.test(invite.trim().toUpperCase())) throw new AuthError('请填写正确的 8 位邀请码。');
+    return this.session(await this.request('register', { invite: invite.trim().toUpperCase(), username, password,...(captcha?{captcha}:{}) }));
+  }
+  async login(username: string, password: string,captcha?:AuthCaptcha): Promise<AuthSession> {
+    return this.session(await this.request('login', { username, password,...(captcha?{captcha}:{}) }));
   }
   async status(key: string): Promise<AuthStatus | null> {
     const value = await this.request('status', {}, key);
@@ -100,12 +108,13 @@ export class AuthClient {
     const value = await this.request('options', {});
     if (!value || typeof value.emailEnabled !== 'boolean' || typeof value.inviteEnabled !== 'boolean' || !Array.isArray(value.domains)
       || value.domains.length > 50 || !value.domains.every(domain => typeof domain === 'string' && domain.length <= 254 && /^[a-z0-9][a-z0-9.-]*\.[a-z0-9-]+$/.test(domain))) throw formatError();
-    return { emailEnabled: value.emailEnabled, inviteEnabled: value.inviteEnabled, domains: [...value.domains] as string[] };
+    if(value.imageCaptchaEnabled!==undefined&&typeof value.imageCaptchaEnabled!=='boolean')throw formatError();
+    return { emailEnabled: value.emailEnabled, inviteEnabled: value.inviteEnabled, domains: [...value.domains] as string[],...(value.imageCaptchaEnabled===undefined?{}:{imageCaptchaEnabled:value.imageCaptchaEnabled}) };
   }
-  async requestEmail(email: string, purpose: EmailPurpose = 'login', key?: string): Promise<EmailChallenge> {
+  async requestEmail(email: string, purpose: EmailPurpose = 'login', key?: string,captcha?:AuthCaptcha): Promise<EmailChallenge> {
     if (!['login', 'bind', 'register', 'password'].includes(purpose)) throw new AuthError('请选择注册或绑定邮箱。');
     if (purpose === 'bind' && !key) throw new AuthError('请先登录原账号，再绑定邮箱。', { code: 'AUTH_REQUIRED' });
-    const value = await this.request('email/request', { email: emailValue(email), purpose }, key);
+    const value = await this.request('email/request', { email: emailValue(email), purpose,...(captcha?{captcha}:{}) }, key);
     if (!value || typeof value.challengeId !== 'string' || !keyPattern.test(value.challengeId) || !validExpiry(value.expiresAt)
       || !Number.isSafeInteger(value.retryAfterSeconds) || Number(value.retryAfterSeconds) < 0 || Number(value.retryAfterSeconds) > 86400) throw formatError();
     return { challengeId: value.challengeId, retryAfterSeconds: Number(value.retryAfterSeconds), expiresAt: value.expiresAt };

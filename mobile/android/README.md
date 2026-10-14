@@ -11,7 +11,9 @@
 - 日历功能打开手机的日历编辑界面，由用户确认保存。应用不读取已有日程，不申请读写日历权限，也不能获知日程最后是否保存。
 - 通知先保存在这个应用自己的本地空间中；登录后持续同步文字、进度与笔记，网页和手机可接着办理。附件仅留在添加它的设备，可用完整备份迁移；卸载应用会清除本机数据。
 - 文件通过系统选择器添加或保存，无「管理所有文件」等广泛存储权限。当前不包含直接拍照附件。
-- 本地提醒由用户主动设置，在 Android 13 及以上此时才申请通知权限。使用非精确闹钟，系统节电可能延迟；不申请特殊精确闹钟权限。未来提醒在重启、升级后恢复，不包含服务器推送、小组件或静默日历写入。
+- 创建提醒可选择「应用通知」或「日历」。应用通知由手机系统 AlarmManager 定时发送，无需后台常驻或额外注册，在 Android 13 及以上仅用户点击设置时申请通知权限。使用非精确闹钟，系统节电可能延迟；强行停止应用会暂停，重新打开后恢复未来提醒，不申请特殊精确闹钟权限。重启、同签名升级后恢复未来提醒；已错过不超过24小时的已知计划在恢复时补发，更早的已知过期计划清理，不改通知正文或未知提醒记录。通知权限关闭时保留待发记录，允许后再次打开可在24小时窗口内补发。提醒计划仅本机，不包含服务器推送、小组件或静默日历写入。
+- 每个任务有独立通知编号，设置第二个任务不会覆盖第一个。完成单个任务仅取消对应提醒；删除或完成整条通知时取消其所有本机子提醒和已显示的通知。
+- 默认外观跟随系统，已有手动深浅色选择仍保留。Manifest 未拦截 `uiMode`，系统切换深浅色时按默认方式重建 Activity 并重新取得能力/动态色；Android 12 起动态取色，较旧系统使用内置配色。
 
 ## 项目与构建
 
@@ -40,11 +42,11 @@ AGP 固定为 8.11.1，AndroidX WebKit 固定为 1.16.0。发布 APK 要用本�
 | `saveChunk` | `{ token, base64 }` | `{ bytes }`，累计原始字节数 |
 | `saveFinish` | `{ token }` | 系统保存结束后返回 `{ status: "saved" \| "cancelled" }` |
 | `saveCancel` | `{ token }` | `{ status: "cancelled" }` |
-| `scheduleReminder` | `{ id, title, body?, triggerMillis }` | `{ status: "scheduled" \| "permission-denied", approximate: true }` |
+| `scheduleReminder` | `{ id, noticeId?, title, body?, triggerMillis }` | `{ status: "scheduled" \| "permission-denied", approximate: true }`；`noticeId`为父通知，旧记录缺省沿用`id` |
 | `cancelReminder` | `{ id }` | `{ status: "cancelled" }` |
 | `consumeOpenedNotice` | `{}` | `{ id: string \| null }` |
 
-`id` 使用 1–80 个英文、数字或 `_.:-`；文件最多 96 MiB，每个 base64 块最多 262144 个字符，按序等待回复后发送下一块。`size` 是原始文件字节数，不能是 base64 字符数。`saveFinish` 打开系统另存为界面，因此不应使用普通请求那样的短超时。
+桥请求 `id` 使用 1–80 个英文、数字或 `_.:-`；提醒 `payload.id` 最多320字符、父通知`noticeId`最多150字符。子任务提醒使用`通知ID::task::任务ID`，取消父ID精确关联该父的所有子计划，取消子ID仅影响这一计划。文件最多 96 MiB，每个 base64 块最多 262144 个字符，按序等待回复后发送下一块。`size` 是原始文件字节数，不能是 base64 字符数。`saveFinish` 打开系统另存为界面，因此不应使用普通请求那样的短超时。
 
 `theme` 含 `dark`、`primary`、`onPrimary`、`primaryContainer`、`onPrimaryContainer`、`surface`、`surfaceVariant`、`onSurface`、`outline`、`secondary`、`tertiary`，颜色值为 `#RRGGBB`。不支持消息桥的旧 WebView 会继续使用网页的普通功能，原生专属能力不可用。
 

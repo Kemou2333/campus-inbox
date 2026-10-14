@@ -34,6 +34,16 @@ public final class NativeHostChecks {
         check(NativePolicy.validReminder("notice-v5:1", 1_800_000_060_000L, 1_800_000_000_000L), "future reminder accepted");
         check(!NativePolicy.validReminder("notice-v5:1", 1_800_000_000_000L, 1_800_000_000_000L), "past reminder rejected");
         check(!NativePolicy.validReminder("../secret", 1_800_000_060_000L, 1_800_000_000_000L), "unsafe reminder id rejected");
+        String taskAlarm = "n".repeat(150) + "::task::" + "t".repeat(150);
+        check(NativePolicy.validReminderId(taskAlarm), "longest saved task alarm identity accepted");
+        check(!NativePolicy.validReminderId("n".repeat(321)), "alarm identity upper limit enforced");
+        check("notice-a".equals(NativePolicy.reminderNoticeId("notice-a", "")), "legacy alarm opens its original notice");
+        check("notice-a".equals(NativePolicy.reminderNoticeId("notice-a::task::task-a", "notice-a")), "child alarm opens its parent notice");
+        check(NativePolicy.reminderBelongsTo("notice-a::task::task-a", "notice-a", "notice-a"), "parent cancellation includes its task alarm");
+        check(!NativePolicy.reminderBelongsTo("notice-a::task::task-b", "notice-a", "notice-a::task::task-a"), "task cancellation keeps sibling alarm");
+        check(!NativePolicy.reminderBelongsTo("notice-ab::task::task-a", "notice-ab", "notice-a"), "parent cancellation never uses an ambiguous prefix");
+        check(NativePolicy.validStoredReminder("notice-a", "notice-a", 1_800_000_000_000L), "known past record can be inspected without guessing an owner");
+        check(!NativePolicy.validStoredReminder("notice-a", "other", 1_800_000_000_000L), "foreign or unknown record is preserved rather than acted upon");
         fails(() -> NativePolicy.decodeChunk("not base64!"), "invalid chunk rejected");
         fails(() -> NativePolicy.decodeChunk("A".repeat(NativePolicy.MAX_CHUNK_CHARS + 4)), "oversized chunk rejected");
 

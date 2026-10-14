@@ -7,7 +7,7 @@ import {createServer} from 'node:net';
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';
 
-const releaseFiles=['server/index.mjs','server/analyze.mjs','server/service.mjs','server/image-captcha.mjs','server/auth.mjs','server/sync.mjs','server/email-auth.mjs','server/mail-sender.mjs','server/manage-invites.mjs','worker/prompt.mjs','server/contracts/data.js','server/contracts/time.js','server/contracts/email-policy.mjs','server/vendor/nodemailer-10.0.16.mjs','server/vendor/NODEMAILER-LICENSE','server/vendor/NODEMAILER-SOURCE.md'];
+const releaseFiles=['server/backup-state.py','server/campus-backup.service','server/campus-backup.timer','server/admin.mjs','server/admin-ui.mjs','server/contracts/source-evidence.js','server/index.mjs','server/analyze.mjs','server/service.mjs','server/image-captcha.mjs','server/auth.mjs','server/sync.mjs','server/email-auth.mjs','server/mail-sender.mjs','server/manage-invites.mjs','worker/prompt.mjs','server/contracts/data.js','server/contracts/time.js','server/contracts/email-policy.mjs','server/vendor/nodemailer-10.0.16.mjs','server/vendor/NODEMAILER-LICENSE','server/vendor/NODEMAILER-SOURCE.md'];
 test('CI release and restricted installer agree on all runtime and vendor files',async()=>{
   const project=new URL('../../',import.meta.url);
   const [workflow,installer]=await Promise.all([readFile(new URL('.github/workflows/backend.yml',project),'utf8'),readFile(new URL('server/install-release.py',project),'utf8')]);
@@ -54,10 +54,10 @@ test('the complete production release boots without dist or frontend dependencie
       const attempt=await fetch('http://127.0.0.1:'+port+'/auth/register',{method:'POST',
         headers:{Origin:'https://kemou2333.github.io','Content-Type':'application/json','X-Real-IP':`198.51.100.${i},203.0.113.1`},
         body:JSON.stringify({username:'proxy-test',password:'test-only-password',invite:'ABCDEFGH'})});
-      assert.equal(attempt.status,i<5?400:429);
+      assert.equal(attempt.status,i<5?428:429);
     }
     const valid=await fetch('http://127.0.0.1:'+port+'/auth/register',{method:'POST',headers:{Origin:'https://kemou2333.github.io','Content-Type':'application/json','X-Real-IP':'198.51.100.99'},body:JSON.stringify({username:'proxy-test',password:'test-only-password',invite:'ABCDEFGH'})});
-    assert.equal(valid.status,400);
+    assert.equal(valid.status,428);
   }finally{
     if(child&&child.exitCode===null){child.kill('SIGTERM');await once(child,'exit');}
     await rm(folder,{recursive:true,force:true});

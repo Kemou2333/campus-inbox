@@ -1,16 +1,20 @@
 {
   "model": "deepseek-flash",
   "thinking": "mixed",
-  "paidCallsForLatestResults": 12,
-  "sourceCount": 17,
-  "generationMethod": "Mixed provenance: 12 retained r5/disabled notices, one retained r6/low long notice, and selected r12/r14 low first responses from authorized 2026-10-12 experiments. One natural provider response per intentional trial; no automatic paid retries or response repair. Public examples underwent manual privacy redaction only. Original sources and first provider responses remain private; original hashes identify those unedited records. Deterministic date grounding and local IDs/progress fields are app transformations, not manual semantic corrections. The selected math response was initially rejected by the former five-detail validator; its exact first provider content was then revalidated offline against the bounded twenty-detail contract without another provider request or semantic edits.",
+  "paidCallsForLatestResults": 15,
+  "sourceCount": 18,
+  "generationMethod": "Mixed provenance: 12 retained r5/disabled notices, one retained r6/low long notice, and selected r12/r14 low first responses from authorized 2026-10-12 experiments. One natural provider response per intentional trial; no automatic paid retries or response repair. Public examples underwent manual privacy redaction only. Original sources and first provider responses remain private; original hashes identify those unedited records. Deterministic date grounding and local IDs/progress fields are app transformations, not manual semantic corrections. The selected math response was initially rejected by the former five-detail validator; its exact first provider content was then revalidated offline against the bounded twenty-detail contract without another provider request or semantic edits. The 2026-10-14 experiment intentionally compared r15/r16 linear-algebra extraction and new r17 math/r18 aid first responses. Three selected original responses were appended; the r15 response was not selected because of semantic limitations. Initial r16 source-count and r17 step-group contract rejections remain recorded, while exact unchanged first responses were accepted in free bounded compatibility replays. Source references were deterministically expanded and manually reanchored through privacy edits to the redacted original; no semantic wording was repaired.",
   "limitations": [
     "AI can still omit or misclassify facts. Return-vs-leave applicability may overlap; check the original.",
     "Exam schedules may be classified as reminders.",
     "Public examples are privacy-redacted demonstrations; hidden links and contacts cannot be used to sign up. Consult your own original notice.",
     "Some retained summaries are generic or repeat a separately displayed deadline; display-layer shortening does not alter the provider result.",
     "The selected math response omits audio as a permitted material format; this omission is preserved rather than silently corrected.",
-    "Math platform URLs use consistent A/B privacy placeholders to keep the source conflict visible without publishing the URLs."
+    "Math platform URLs use consistent A/B privacy placeholders to keep the source conflict visible without publishing the URLs.",
+    "Source links are AI-associated and bounded by the program; a valid highlighted paragraph does not verify every claim. Group references may be broad.",
+    "The selected r17 math output still omits audio as an allowed material; the original and this limitation are retained.",
+    "The selected linear outline retains some repeated midterm information and first-person contact wording.",
+    "Two selected first responses originally failed the then-current reference contract; free compatibility validation is explicitly distinguished from paid first-response acceptance."
   ],
   "results": [
     {
@@ -423,17 +427,123 @@
       },
       "estimatedCostRmb": 0.025167,
       "costBasis": "conservative estimate, not supplier invoice"
+    },
+    {
+      "exampleId": "example-reading-v212-0",
+      "title": "线性代数课程安排与成绩构成",
+      "case": "own-linear-algebra",
+      "sourceIndex": 0,
+      "testedAt": "2026-10-14T12:04:27.331Z",
+      "trialId": "r16-linear-01",
+      "sourceSha256": "f65d408d44b86cdfcaeb74e4734b3dbef76899ea589c8685060d182e4a8f3d9e",
+      "firstProviderContentSha256": "81e11e6d98650d83da3dfed9522dc1fee3f95331ca5abbf84538f5dafa22c40f",
+      "canonicalJobRecordSha256": "1357912b773a2389a4c36b8b335d5f5a0b9f9d65086d922328f43c789d6b50c2",
+      "normalizedOriginalAnalysisSha256": "74a8a98654b0f68664b94a2da8145d70a882b1dbbf0d625eb79a31dc2e8e7dde",
+      "manualWordEdits": true,
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "manualSourceRefReanchoring": true,
+      "deterministicSourceRefExpansion": true,
+      "revision": "r16",
+      "thinking": "low",
+      "reasoningEffort": "low",
+      "promptSha256": "de90b31b42fbc81345407a188a24a2257b3f94bb72fac34b00108d11da912a1f",
+      "originalPaidAccepted": false,
+      "originalHarnessSuccess": false,
+      "freeReplayAccepted": true,
+      "freeReplayTrialId": "free-r16-linear-final-client",
+      "sourceRefCompatibility": "Initial maximum-three-span rejection; exact first response revalidated offline with maximum eight spans and inherited group references.",
+      "associatedPaths": 14,
+      "unassociatedAfterPrivacy": [],
+      "publishedOriginalSha256": "024fe8447b16969da041a6862c563829d311633800ab46c780cdea6de254d566",
+      "publishedRecordSha256": "b4d4d69b367944a6164833ca86861b3c55b0fb331eb520c2d56867d3fdf96d17",
+      "semanticLimitations": [
+        "Midterm information occurs in two sections.",
+        "Contact uses first-person wording, not the named course assistant.",
+        "Image/QR placeholder appears in the contact section."
+      ]
+    },
+    {
+      "exampleId": "example-reading-v212-1",
+      "title": "高等数学II-1线上网课学习任务通知",
+      "case": "math-online",
+      "sourceIndex": 0,
+      "testedAt": "2026-10-14T12:09:14.804Z",
+      "trialId": "r17-math-01",
+      "sourceSha256": "2c512c9620bbcc20cef07037ff143f5a88798a3540d1fa401ad05e05e28580b1",
+      "firstProviderContentSha256": "2fda40c33b4b9de77b446a282e7d439c2f7390ed74d6c005439e09740922d42e",
+      "canonicalJobRecordSha256": "edf88c09ef138c89ff839d597c4babeff87a95ce0a9f8e01760d07a9c91e7928",
+      "normalizedOriginalAnalysisSha256": "6029f8ec79fc7dd1322f69d0a8207f864b1bdbf9b3208c3f0e3b32862b322941",
+      "manualWordEdits": true,
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "manualSourceRefReanchoring": true,
+      "deterministicSourceRefExpansion": true,
+      "revision": "r17",
+      "thinking": "low",
+      "reasoningEffort": "low",
+      "promptSha256": "9c8481909c5425425ead8c78b10e9547b8ac1ebbef6e1059d09eca5c212c845f",
+      "originalPaidAccepted": false,
+      "originalHarnessSuccess": false,
+      "freeReplayAccepted": true,
+      "freeReplayTrialId": "free-r17-math-step-groups",
+      "sourceRefCompatibility": "Initial nested-step-group rejection; exact first response revalidated offline with explicitly bounded task/step/timeline group support.",
+      "associatedPaths": 39,
+      "unassociatedAfterPrivacy": [],
+      "publishedOriginalSha256": "76808315129d215d10f99bbdc5d9163df19cf6003fecda38e355e90222e101cb",
+      "publishedRecordSha256": "617c675fd3db9b72e746fcf9c2ce2d300cd8abe04d720b20d82830c5f5494088",
+      "semanticLimitations": [
+        "Audio is still omitted as an allowed material format in the structured result.",
+        "Ten warnings repeat some deadline and originality facts.",
+        "Summary counts three actions while the UI groups them into two platform tasks."
+      ]
+    },
+    {
+      "exampleId": "example-reading-v212-2",
+      "title": "国家助学金申请",
+      "case": "financial-aid",
+      "sourceIndex": 0,
+      "testedAt": "2026-10-14T12:13:14.623Z",
+      "trialId": "r18-aid-01",
+      "sourceSha256": "976f88e1a2d02adaa043937da92e35c41f107e7aa121fc08415611a6aee6bd77",
+      "firstProviderContentSha256": "24d4f64138aa5b0f0cd03df59375158564a9092c996bc96a71d893a3208a43d4",
+      "canonicalJobRecordSha256": "628550473ec705cfe078fc87adff6351f686a2908683df540616d0394d8bf4a5",
+      "normalizedOriginalAnalysisSha256": "156abd88d48a6418940fadad7f1f75a6710c749d2f88bbbe573805321e5eddee",
+      "manualWordEdits": true,
+      "manualPrivacyEdits": true,
+      "manualContentCorrections": false,
+      "manualSourceRefReanchoring": true,
+      "deterministicSourceRefExpansion": true,
+      "revision": "r18",
+      "thinking": "low",
+      "reasoningEffort": "low",
+      "promptSha256": "df77b78b0f40f576d458464c1470759631d273f175fd5a39a4989e2259898254",
+      "originalPaidAccepted": true,
+      "originalHarnessSuccess": true,
+      "freeReplayAccepted": false,
+      "freeReplayTrialId": null,
+      "sourceRefCompatibility": "Accepted naturally in the paid first response under the final bounded contract.",
+      "associatedPaths": 14,
+      "unassociatedAfterPrivacy": [],
+      "publishedOriginalSha256": "0cad576e8ba40e9f659e3ef874cfc60320815873a388e8f02ad8e604763f24a0",
+      "publishedRecordSha256": "d27bd265978b6bfd8f7c62304b1d9491318cc0d51cc7c4da97570ccfc4a00eea",
+      "semanticLimitations": [
+        "The eligibility section says submit separately from the next section explaining pending approval; summary/current-state section retain the prerequisite."
+      ]
     }
   ],
   "promptRevisions": [
     "r5",
     "r6",
     "r12",
-    "r14"
+    "r14",
+    "r16",
+    "r17",
+    "r18"
   ],
   "privacyReview": {
     "policyVersion": 1,
-    "reviewedAt": "2026-10-12",
+    "reviewedAt": "2026-10-14",
     "manualReview": true,
     "disclosure": "公开示例已脱敏：人物姓名为化名，联系方式、群号、具体链接及可识别班级信息已替换；公开原文并非未经修改的测试原文。",
     "redactedCategories": [
@@ -445,12 +555,15 @@
     ],
     "contentCorrections": false,
     "untouchedLegacyPolicy": "Only complete fingerprint matches are replaced. User notes, progress, attachments and edits remain intact.",
-    "reviewedNotices": 19
+    "reviewedNotices": 22,
+    "manualSourceRefReanchoring": true,
+    "unchangedLegacyRecordsReviewed": 19,
+    "newReviewedRecords": 3
   },
   "paidCallsIn20261012Experiment": 12,
   "selectedNewFirstResponses": 6,
-  "paidCallsForLatestResultsMeaning": "Distinct original provider calls represented by the entire 19-notice catalog, including historical calls; not new calls made today.",
-  "catalogDistinctOriginalProviderCalls": 12,
+  "paidCallsForLatestResultsMeaning": "Distinct original provider responses represented in the 22-notice catalog, including historical responses; not the number of calls made today. The 2026-10-14 experiment made four paid calls and selected three first responses; compatibility replays were free and did not repair provider text.",
+  "catalogDistinctOriginalProviderCalls": 15,
   "experiment20261012": {
     "realProviderCalls": 12,
     "selectedFirstResponses": 6,
@@ -460,5 +573,116 @@
     "offlineSelectedResponseRevalidations": 6,
     "additionalOfflineDateParserReplays": 1,
     "manualSemanticCorrections": 0
+  },
+  "experiment20261014": {
+    "realProviderCalls": 4,
+    "selectedFirstResponses": 3,
+    "selectedSourceCount": 3,
+    "automaticPaidRetries": 0,
+    "providerCallsForPublicExamplePreparation": 0,
+    "initialPaidContractRejections": 2,
+    "selectedResponseOfflineRevalidations": 2,
+    "selectedCompatibilityReplayRuns": 3,
+    "additionalR15OfflineClientReplay": 1,
+    "manualSemanticCorrections": 0,
+    "totalTokens": 46940,
+    "conservativeEstimatedCostRmb": 0.364406,
+    "costIsInvoice": false,
+    "experimentRevisions": [
+      "r15",
+      "r16",
+      "r17",
+      "r18"
+    ],
+    "trials": [
+      {
+        "trialId": "r15-linear-02",
+        "providerCalls": 1,
+        "originalPaidAccepted": true,
+        "originalHarnessSuccess": false,
+        "selectedForPublicExamples": false,
+        "providerElapsedMs": 61704,
+        "usage": {
+          "prompt_tokens": 2799,
+          "completion_tokens": 10808,
+          "total_tokens": 13607,
+          "prompt_tokens_details": {
+            "cached_tokens": 1536
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 9982
+          },
+          "prompt_cache_hit_tokens": 1536,
+          "prompt_cache_miss_tokens": 1263
+        },
+        "firstProviderContentSha256": "d0e805a3416400828a5b0c06a66afcf39222e4a32c9882d95d98a08a809bda7c"
+      },
+      {
+        "trialId": "r16-linear-01",
+        "providerCalls": 1,
+        "originalPaidAccepted": false,
+        "originalHarnessSuccess": false,
+        "selectedForPublicExamples": true,
+        "providerElapsedMs": 34770,
+        "usage": {
+          "prompt_tokens": 2724,
+          "completion_tokens": 5877,
+          "total_tokens": 8601,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 5372
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 2468
+        },
+        "firstProviderContentSha256": "81e11e6d98650d83da3dfed9522dc1fee3f95331ca5abbf84538f5dafa22c40f"
+      },
+      {
+        "trialId": "r17-math-01",
+        "providerCalls": 1,
+        "originalPaidAccepted": false,
+        "originalHarnessSuccess": false,
+        "selectedForPublicExamples": true,
+        "providerElapsedMs": 75043,
+        "usage": {
+          "prompt_tokens": 3866,
+          "completion_tokens": 13547,
+          "total_tokens": 17413,
+          "prompt_tokens_details": {
+            "cached_tokens": 1664
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 12196
+          },
+          "prompt_cache_hit_tokens": 1664,
+          "prompt_cache_miss_tokens": 2202
+        },
+        "firstProviderContentSha256": "2fda40c33b4b9de77b446a282e7d439c2f7390ed74d6c005439e09740922d42e"
+      },
+      {
+        "trialId": "r18-aid-01",
+        "providerCalls": 1,
+        "originalPaidAccepted": true,
+        "originalHarnessSuccess": true,
+        "selectedForPublicExamples": true,
+        "providerElapsedMs": 25983,
+        "usage": {
+          "prompt_tokens": 2586,
+          "completion_tokens": 4733,
+          "total_tokens": 7319,
+          "prompt_tokens_details": {
+            "cached_tokens": 1792
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 4311
+          },
+          "prompt_cache_hit_tokens": 1792,
+          "prompt_cache_miss_tokens": 794
+        },
+        "firstProviderContentSha256": "24d4f64138aa5b0f0cd03df59375158564a9092c996bc96a71d893a3208a43d4"
+      }
+    ]
   }
 }

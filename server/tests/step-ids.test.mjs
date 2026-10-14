@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import '../contracts/data.js';
+import {parseSourceRefs,parseCorrections} from '../contracts/source-evidence.js';
 const D=globalThis.CampusData;
 const action={text:'办理请假',assignee:'请假学生',scope:'conditional',condition:'需要请假的同学',details:[],time:null,timeText:'',location:null,steps:[{text:'上传截图',details:['发给通知发布者']},{text:'填写办事簿',details:[]}]};
 const model={schemaVersion:4,kind:'task',title:'请假通知',summary:'需要请假的同学办理。',deadline:null,deadlineText:'',timeline:[],tasks:[action],materials:[],warnings:[],reminders:[]};
@@ -17,7 +18,10 @@ test('new model steps receive private random identities without changing model c
 });
 
 test('old v1-v4 backups migrate IDs consistently in independent browser runtimes',()=>{
- const code=readFileSync(new URL('../contracts/data.js',import.meta.url),'utf8'),one={},two={};
+ const originalCode=readFileSync(new URL('../contracts/data.js',import.meta.url),'utf8');
+ // VM evaluates only the legacy IIFE; its real shared ESM validators are explicitly injected.
+ const code=originalCode.replace(/^import \{parseSourceRefs,parseCorrections\} from '\.\/source-evidence\.js';\r?\n/,'');assert.notEqual(code,originalCode);
+ const one={parseSourceRefs,parseCorrections},two={parseSourceRefs,parseCorrections};
  vm.runInNewContext(code,one);vm.runInNewContext(code,two);
  const old=oldRecord(),before=structuredClone(old);
  for(const version of [1,2,3,4]){

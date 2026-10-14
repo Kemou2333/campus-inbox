@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {analyze,ServiceError} from '../analyze.mjs';
+import {segmentSource} from '../contracts/source-evidence.js';
 
 // Deliberately fake provider envelopes; all cases run without a paid request.
 const config={apiKey:'fake-source-mapping-key'};
@@ -12,7 +13,7 @@ test('two topics pasted in one explicit module become two cards in one call with
   const original='【评教通知】请课程结束前评教。\n\n【宿舍提醒】离开宿舍时锁门。';
   let calls=0;
   const parsed=await analyze({sources:[{text:original}]},config,async(_url,options)=>{
-    calls++;assert.deepEqual(JSON.parse(JSON.parse(options.body).messages[1].content),{sources:[{sourceId:1,text:original}]});
+    calls++;assert.deepEqual(JSON.parse(JSON.parse(options.body).messages[1].content),{sources:[{sourceId:1,segments:segmentSource(original).map(segment=>({id:segment.index,text:segment.text}))}]});
     return response([information('课程评教',1),information('宿舍安全',1)]);
   });
   assert.equal(calls,1);assert.deepEqual(parsed.result.sourceIndexes,[0,0]);assert.equal(parsed.result.notices.length,2);

@@ -12,6 +12,7 @@ final class NativePolicy {
     static final int MAX_CHUNK_CHARS = 262_144;
     static final long MAX_EXPORT_BYTES = 96L * 1024 * 1024;
     static final long MAX_CALENDAR_TIME = 4_102_444_800_000L; // 2100-01-01 UTC
+    static final long MISSED_REMINDER_WINDOW = 24L * 60 * 60 * 1000;
 
     private NativePolicy() {}
 
@@ -76,7 +77,25 @@ final class NativePolicy {
     }
 
     static boolean validReminderId(String id) {
-        return id != null && id.matches("[A-Za-z0-9_.:-]{1,100}");
+        return id != null && id.matches("[A-Za-z0-9_.:-]{1,320}");
+    }
+
+    static boolean validNoticeId(String id) {
+        return id != null && id.matches("[A-Za-z0-9_.:-]{1,150}");
+    }
+
+    static String reminderNoticeId(String id, String parent) {
+        String notice = parent == null || parent.isEmpty() ? id : parent;
+        if (!validReminderId(id) || !validNoticeId(notice)) throw new IllegalArgumentException("提醒对应的通知编号不正确");
+        return notice;
+    }
+
+    static boolean reminderBelongsTo(String id, String parent, String target) {
+        return validReminderId(target) && (target.equals(id) || target.equals(reminderNoticeId(id, parent)));
+    }
+
+    static boolean validStoredReminder(String id, String storedId, long trigger) {
+        return validReminderId(id) && id.equals(storedId) && trigger > 0 && trigger <= MAX_CALENDAR_TIME;
     }
 
     static boolean validReminder(String id, long trigger, long now) {

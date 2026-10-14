@@ -18,7 +18,7 @@ const modelResponse=()=>Response.json({choices:[{finish_reason:'stop',message:{c
 }]})}}],usage:{prompt_tokens:8,completion_tokens:12}});
 
 test('real invitation sessions share one paid allowance across devices, and logout cannot read cached AI output',async t=>{
-  const configuration={signingSecret:secret,allowedOrigins:[origin],stateFile:':memory:'};
+  const configuration={imageCaptcha:false,signingSecret:secret,allowedOrigins:[origin],stateFile:':memory:'};
   let auth,calls=0;
   const sync=await createSyncService(configuration,{authenticate:key=>auth.getIdentity(key)});
   auth=await createAuthService(configuration,{provision:sync.provision});
@@ -48,7 +48,7 @@ test('real invitation sessions share one paid allowance across devices, and logo
 test('failed invitation and password attempt limits persist after an auth process restart',async t=>{
   const directory=await mkdtemp(join(tmpdir(),'campus-public-access-'));
   t.after(()=>rm(directory,{recursive:true,force:true}));
-  const configuration={signingSecret:secret,allowedOrigins:[origin],stateFile:join(directory,'auth.sqlite')};
+  const configuration={imageCaptcha:false,signingSecret:secret,allowedOrigins:[origin],stateFile:join(directory,'auth.sqlite')};
   let time=Date.parse('2026-10-07T08:00:00Z');
   let auth=await createAuthService(configuration,{now:()=>time});
   t.after(()=>auth?.close());

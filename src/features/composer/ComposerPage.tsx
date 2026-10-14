@@ -1,10 +1,10 @@
 import {useEffect,useRef,useState,type ClipboardEvent} from 'react';
-import {Alert,Box,Button,Dialog,DialogActions,DialogContent,DialogTitle,IconButton,LinearProgress,Paper,Stack,TextField,Tooltip,Typography,useMediaQuery} from '@mui/material';
+import {Alert,Box,Button,Checkbox,Collapse,Dialog,DialogActions,DialogContent,DialogTitle,FormControlLabel,IconButton,LinearProgress,Paper,Stack,TextField,Tooltip,Typography,useMediaQuery} from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
 import AttachFile from '@mui/icons-material/AttachFile';
 import ContentPaste from '@mui/icons-material/ContentPaste';
-import type {CampusController,DraftSelection} from '../../app/useCampus';
+import type {CampusController,Draft,DraftSelection} from '../../app/useCampus';
 import {AttachmentList} from '../attachments/AttachmentList';
 import {readClipboard,readTransfer,type ClipboardImport} from '../../infrastructure/clipboard-import';
 
@@ -13,6 +13,27 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
  const importLock=useRef(false);const [dragTarget,setDragTarget]=useState<string|null>(null);
  const [importWarnings,setImportWarnings]=useState<Record<string,string>>({});
  const [aiNotice,setAiNotice]=useState(false);
+ const reducedMotion=useMediaQuery('(prefers-reduced-motion: reduce)');
+ const draftElements=useRef(new Map<string,HTMLElement>());
+ const [leavingDrafts,setLeavingDrafts]=useState<{draft:Draft;index:number}[]>([]);
+ const pendingFocus=useRef<{previous:Element|null;nextID?:string;knownIDs?:Set<string>}|null>(null);
+ useEffect(()=>{
+  const intent=pendingFocus.current;if(!intent)return;
+  const next=intent.knownIDs?app.drafts.find(d=>!intent.knownIDs!.has(d.id)):app.drafts.find(d=>d.id===intent.nextID)??app.drafts[0];
+  if(!next)return;pendingFocus.current=null;
+  if(document.activeElement!==document.body&&document.activeElement!==intent.previous)return;
+  draftElements.current.get(next.id)?.querySelector<HTMLTextAreaElement>('textarea:not([aria-hidden="true"])')?.focus();
+ },[app.drafts]);
+ function addDraft(){pendingFocus.current={previous:document.activeElement,knownIDs:new Set(app.drafts.map(d=>d.id))};app.addDraft();}
+ function removeDraft(draft:Draft,index:number){
+  const active=document.activeElement;
+  if(active&&draftElements.current.get(draft.id)?.contains(active))pendingFocus.current={previous:active,nextID:app.drafts[index+1]?.id??app.drafts[index-1]?.id};
+  // Save/delete immediately. A departing visual snapshot does not delay persistence.
+  if(!reducedMotion)setLeavingDrafts(old=>[...old.filter(row=>row.draft.id!==draft.id),{draft,index}]);
+  void app.removeDraft(draft.id).catch(error=>{setLeavingDrafts(old=>old.filter(row=>row.draft.id!==draft.id));app.report(error);});
+ }
+ const draftRows=app.drafts.map((draft,index)=>({draft,index,leaving:false}));
+ for(const row of leavingDrafts){if(!app.drafts.some(d=>d.id===row.draft.id))draftRows.splice(Math.min(row.index,draftRows.length),0,{...row,leaving:true});}
  const [showWaitHint,setShowWaitHint]=useState(false);
  useEffect(()=>{setShowWaitHint(false);if(!app.busy||app.stage!=='提交中')return;const timer=setTimeout(()=>setShowWaitHint(true),5_000);return()=>clearTimeout(timer);},[app.busy,app.stage]);
  const topNavigation=useMediaQuery('(min-width:960px), (min-width:600px) and (max-height:500px)');
@@ -63,19 +84,21 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
  }
  return <Stack spacing={2} className="page-enter">
   <Typography variant={embedded?"h5":"h4"} component={embedded?"h2":"h1"}>新增通知</Typography>
+  <FormControlLabel sx={{m:0,alignItems:'center','& .MuiFormControlLabel-label':{fontSize:13,color:'text.secondary'}}} control={<Checkbox size="small" checked={app.maintenanceReviewConsent} disabled={app.busy} onChange={event=>app.setMaintenanceReviewConsent(event.target.checked)}/>} label="允许作者查看本次原文与结果来排查问题（可选）"/>
   {app.pending&&<Alert severity="info" action={<Button onClick={app.recoverResult}>保存结果</Button>}>上次整理的结果还没保存，无需再次调用 AI。</Alert>}
   {!!app.legacyRecords.length&&<Alert severity="info" action={<Button onClick={app.recoverLegacyResult}>保存结果</Button>}>旧版有 {app.legacyRecords.length} 条整理结果未保存，无需重新调用 AI。</Alert>}
   {app.legacyMissingFiles&&<Alert severity="info" onClose={()=>app.setLegacyMissingFiles(false)}>旧版草稿文字已保留，草稿附件需要重新添加。</Alert>}
-  {app.drafts.map((draft,index)=><Paper key={draft.id} variant="outlined"
+  {draftRows.map(({draft,index,leaving})=><Collapse key={draft.id} in={!leaving} appear timeout={reducedMotion?0:180} unmountOnExit onExited={()=>setLeavingDrafts(old=>old.filter(row=>row.draft.id!==draft.id))}>
+   <Paper ref={element=>{if(element)draftElements.current.set(draft.id,element);else draftElements.current.delete(draft.id);}} className="composer-draft" variant="outlined" inert={leaving?true:undefined} aria-hidden={leaving?true:undefined}
    onDragOver={event=>{event.preventDefault();if(app.busy||adding){event.dataTransfer.dropEffect='none';return;}event.dataTransfer.dropEffect='copy';setDragTarget(draft.id);}}
    onDragLeave={event=>{if(!(event.relatedTarget instanceof Node)||!event.currentTarget.contains(event.relatedTarget))setDragTarget(null);}}
    onDrop={event=>{event.preventDefault();setDragTarget(null);if(app.busy||importLock.current)return;const content=readTransfer(event.dataTransfer);void importContent(draft.id,()=>content);}}
-   sx={{p:{xs:1.5,sm:2},borderColor:dragTarget===draft.id?'primary.main':undefined,bgcolor:dragTarget===draft.id?'action.hover':undefined}}>
+   sx={{p:{xs:1.5,sm:2},opacity:leaving?0:1,transition:reducedMotion?'none':'opacity 160ms ease',borderColor:dragTarget===draft.id?'primary.main':undefined,bgcolor:dragTarget===draft.id?'action.hover':undefined}}>
    <Stack direction="row" sx={{alignItems:"center",justifyContent:"space-between",mb:1.5}}>
     <Typography variant="h6">通知 {index+1}</Typography>
     <Stack direction="row" sx={{gap:.5,alignItems:'center'}}>
      {!draft.text&&<Tooltip title="粘贴文字与图片"><span><IconButton sx={{border:'1px solid',borderColor:'divider'}} aria-label={`给通知${index+1}粘贴原文`} disabled={app.busy||adding} onClick={()=>void importContent(draft.id,readClipboard,{start:0,end:0,expectedText:draft.text})}><ContentPaste fontSize="small"/></IconButton></span></Tooltip>}
-     {(app.drafts.length>1||draft.text||draft.attachments.length>0)&&<IconButton aria-label={`移除通知${index+1}`} disabled={app.busy||adding} onClick={()=>void app.removeDraft(draft.id).catch(app.report)}><Close/></IconButton>}
+     {(app.drafts.length>1||draft.text||draft.attachments.length>0)&&<IconButton aria-label={`移除通知${index+1}`} disabled={app.busy||adding||leaving} onClick={()=>removeDraft(draft,index)}><Close/></IconButton>}
     </Stack>
    </Stack>
    <TextField className="composer-text" placeholder="粘贴通知，图片和文件会作为附件…" multiline minRows={5} maxRows={embedded?9:13} value={draft.text} disabled={app.busy||adding} onChange={e=>app.changeDraft(draft.id,e.target.value)} onPaste={event=>pasteEvent(draft.id,event)} slotProps={{htmlInput:{'aria-label':`通知${index+1}原文`}}} error={total>4000} helperText={!draft.text.trim()&&draft.attachments.length?'补充通知文字后可整理。':undefined}/>
@@ -85,9 +108,9 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
     {index===app.drafts.length-1&&<Typography className="composer-count" aria-label={`本次通知总字数 ${total}，上限4000`} color={total>4000?'error.main':'text.secondary'} variant="body2" sx={{whiteSpace:'nowrap',fontVariantNumeric:'tabular-nums'}}>{total}/4000</Typography>}
    </Stack>
    <AttachmentList ids={draft.attachments} platform={app.platform} onRemove={app.busy||adding?undefined:id=>void app.detach(draft.id,id).catch(app.report)}/>
-  </Paper>)}
+  </Paper></Collapse>)}
   <input hidden ref={input} type="file" multiple onChange={e=>void picked(e.target.files)}/>
-  <Tooltip title="再加一条通知"><span style={{alignSelf:'center'}}><IconButton aria-label="再加一条通知" sx={{border:'1px solid',borderColor:'divider',color:'primary.main'}} disabled={app.busy||adding||app.drafts.length>=20} onClick={()=>app.addDraft()}><Add/></IconButton></span></Tooltip>
+  <Tooltip title="再加一条通知"><span style={{alignSelf:'center'}}><IconButton aria-label="再加一条通知" sx={{border:'1px solid',borderColor:'divider',color:'primary.main'}} disabled={app.busy||adding||app.drafts.length>=20} onClick={addDraft}><Add/></IconButton></span></Tooltip>
   <Box className="composer-actions" sx={{py:1,position:shortViewport&&!embedded?'static':'sticky',bottom:embedded?0:topNavigation?16:'calc(80px + var(--safe-bottom))',zIndex:2,bgcolor:'background.default'}}>
    {app.busy&&<LinearProgress sx={{mb:1,borderRadius:1}}/>}
    {app.busy&&showWaitHint&&<Typography variant="body2" color="text.secondary" role="status" sx={{mb:1}}>正在确认提交，请稍等。提交成功后可关闭页面，稍后回来查看。</Typography>}

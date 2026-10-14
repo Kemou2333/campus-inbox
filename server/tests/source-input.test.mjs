@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {modelInput,analyze} from '../analyze.mjs';
 import {createService} from '../service.mjs';
+import {segmentSource} from '../contracts/source-evidence.js';
 const token='test-access-code-at-least-twenty-characters',origin='https://kemou2333.github.io';
 const config={apiKey:'test-key',accessToken:token,allowedOrigins:[origin]};
 const item=title=>({schemaVersion:4,kind:'information',title,summary:'原文信息。',deadline:null,deadlineText:'',timeline:[],tasks:[],materials:[],warnings:[],reminders:['原文信息']});
@@ -19,7 +20,7 @@ test('module input is bounded and excludes attachments and local identifiers',()
 });
 test('one module batch makes one upstream call without duplicating originals',async()=>{
  const sources=[{text:'甲\n---\n继续'},{text:'乙'}];let calls=0;
- const r=await analyze({sources},config,async(_,opts)=>{calls++;const user=JSON.parse(JSON.parse(opts.body).messages[1].content);assert.deepEqual(user,{sources:sources.map((s,i)=>({sourceId:i+1,text:s.text}))});assert.equal(Object.hasOwn(user,'notice'),false);return envelope(2);});
+ const r=await analyze({sources},config,async(_,opts)=>{calls++;const user=JSON.parse(JSON.parse(opts.body).messages[1].content);assert.deepEqual(user,{sources:sources.map((s,i)=>({sourceId:i+1,segments:segmentSource(s.text).map(segment=>({id:segment.index,text:segment.text}))}))});assert.equal(Object.hasOwn(user,'notice'),false);assert(user.sources.every(source=>!Object.hasOwn(source,'text')));return envelope(2);});
  assert.equal(r.result.notices.length,2);assert.equal(calls,1);
 });
 test('module preflight rejects invalid body before paid request and daily quota',async()=>{
