@@ -106,7 +106,8 @@ describe('safe built-in example upgrades',()=>{
     const provenance=JSON.parse(await readFile(new URL('../public/examples-provenance.json',import.meta.url),'utf8'));
     const examples=parseBackup(JSON.parse(await readFile(new URL('../public/examples.json',import.meta.url),'utf8')));
     const fresh=examples.filter(n=>n.id.startsWith('example-reading-v211-'));
-    expect(examples).toHaveLength(19);expect(fresh).toHaveLength(6);
+    expect(examples.length).toBeGreaterThanOrEqual(19);
+    expect(examples).toHaveLength(provenance.privacyReview.reviewedNotices);expect(fresh).toHaveLength(6);
     expect(provenance.selectedNewFirstResponses).toBe(6);expect(provenance.paidCallsIn20261012Experiment).toBe(12);
     expect(provenance.experiment20261012).toMatchObject({realProviderCalls:12,selectedFirstResponses:6,providerCallsForPublicExamplePreparation:0,offlineSelectedResponseRevalidations:6,additionalOfflineDateParserReplays:1});
     expect(provenance.catalogDistinctOriginalProviderCalls).toBe(new Set(provenance.results.map((row:{firstProviderContentSha256:string})=>row.firstProviderContentSha256)).size);
