@@ -11,7 +11,7 @@ export interface AnalysisJob {
 }
 export interface AnalysisJobPage { jobs: AnalysisJob[]; hasMore: boolean; nextBefore?: string }
 export interface JobDraft { id: string; text: string; attachments: string[] }
-export interface LocalAnalysisSubmission { requestId: string; sources: JobDraft[]; jobId: string | null; createdAt: string }
+export interface LocalAnalysisSubmission { requestId: string; sources: JobDraft[]; jobId: string | null; createdAt: string; maintenanceReviewConsent?:boolean }
 type StoragePort = Pick<Storage, 'getItem' | 'setItem'>;
 const id = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_-]{1,150}$/.test(v);
 const instant = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v) && Number.isFinite(Date.parse(v));
@@ -103,7 +103,7 @@ export class AnalysisJobJournal {
     const raw=this.storage.getItem(this.key);if(!raw)return{version:1,submissions:[],dismissed:[]};
     try{
       const v=JSON.parse(raw);if(v.version!==1||!Array.isArray(v.submissions)||v.submissions.length>100||!Array.isArray(v.dismissed)||!v.dismissed.every(id))throw invalid();
-      for(const s of v.submissions){if(!id(s.requestId)||s.jobId!==null&&!id(s.jobId)||!instant(s.createdAt)||!Array.isArray(s.sources)||!s.sources.length||s.sources.length>20
+      for(const s of v.submissions){if(s.maintenanceReviewConsent!==undefined&&typeof s.maintenanceReviewConsent!=='boolean'||!id(s.requestId)||s.jobId!==null&&!id(s.jobId)||!instant(s.createdAt)||!Array.isArray(s.sources)||!s.sources.length||s.sources.length>20
         ||s.sources.some((d:JobDraft)=>!id(d.id)||typeof d.text!=='string'||!d.text.trim()||!Array.isArray(d.attachments)||!d.attachments.every(id)))throw invalid();}
       return v;
     }catch{throw new AnalysisError('本机的待整理记录暂时无法读取，请保留原文。','INVALID_JOB_JOURNAL');}

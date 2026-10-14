@@ -8,7 +8,7 @@ function request(path,body,key){return new Request('https://api.example.test'+pa
 test('real invitation login, sync and metering share one stable account across devices and logout',async()=>{
   let auth,calls=0;
   const sync=await createSyncService({stateFile:':memory:',signingSecret:secret,allowedOrigins:[origin]},{authenticate:key=>auth.getIdentity(key)});
-  auth=await createAuthService({stateFile:':memory:',signingSecret:secret,allowedOrigins:[origin]},{provision:sync.provision});
+  auth=await createAuthService({imageCaptcha:false,stateFile:':memory:',signingSecret:secret,allowedOrigins:[origin]},{provision:sync.provision});
   const response={schemaVersion:4,notices:[{schemaVersion:4,kind:'information',title:'测试通知',summary:'用于免费集成检查。',deadline:null,deadlineText:'',tasks:[],timeline:[],materials:[],warnings:[],reminders:[]}]};
   const ai=await createService({apiKey:'fake-provider-key',accessToken:secret,requireAccess:false,requireIdentity:true,accountDailyLimit:1,allowedOrigins:[origin]},{accountForToken:key=>auth.getIdentity(key)?sync.accountForKey(key):null,modelFetch:async()=>{calls++;return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(response)}}],usage:{prompt_tokens:1,completion_tokens:2}});}});
   try{

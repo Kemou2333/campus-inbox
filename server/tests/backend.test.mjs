@@ -5,6 +5,8 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createService} from '../service.mjs';
 import {analyze,groundDates,ServiceError} from '../analyze.mjs';
+import {segmentSource} from '../contracts/source-evidence.js';
+const marked=text=>segmentSource(text).map(segment=>({id:segment.index,text:segment.text}));
 const origin='https://kemou2333.github.io',token='test-access-code-at-least-twenty-characters';
 const notice={schemaVersion:4,kind:'task',title:'登记通知',summary:'离校同学填写登记。',deadline:null,deadlineText:'9月30日18:00前',tasks:[{text:'填写离校登记表',assignee:'离校同学',details:['填写姓名与学号'],time:null,timeText:'9月30日18:00前',location:null}],timeline:[],materials:['离校登记表'],warnings:[],reminders:[]};
 const result={schemaVersion:4,notices:[notice]};
@@ -127,7 +129,7 @@ test('explicit source boundaries preserve original order, use one call and groun
  const batchResult={schemaVersion:4,notices:[dated,{...dated,title:'返校'}]};let calls=0;
  const output=await analyze(input,{apiKey:'test'},async(_url,options)=>{
   calls++;const payload=JSON.parse(options.body),user=JSON.parse(payload.messages[1].content);
-  assert.deepEqual(user,{sources:[{sourceId:1,text:first.trim()},{sourceId:2,text:second.trim()}]});
+  assert.deepEqual(user,{sources:[{sourceId:1,segments:marked(first)},{sourceId:2,segments:marked(second)}]});
   assert.ok(!Object.hasOwn(user,'notice'));
   return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(batchResult)}}],usage:{prompt_tokens:9,completion_tokens:12}});
  });
@@ -143,7 +145,7 @@ test('explicit source boundaries preserve original order, use one call and groun
  assert.equal(oversizedCalls,0);
  for(const original of ['未分段的一条通知。','说明中 inline --- 不是分隔线。','只有一段\n---\n']){
   let singleCalls=0;
-  await analyze(original,{apiKey:'test'},async(_url,options)=>{singleCalls++;assert.deepEqual(JSON.parse(JSON.parse(options.body).messages[1].content),{notice:original});return mock();});
+  await analyze(original,{apiKey:'test'},async(_url,options)=>{singleCalls++;assert.deepEqual(JSON.parse(JSON.parse(options.body).messages[1].content),{sources:[{sourceId:1,segments:marked(original)}]});return mock();});
   assert.equal(singleCalls,1);
  }
 });

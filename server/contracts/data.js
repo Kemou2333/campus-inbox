@@ -1,3 +1,4 @@
+import {parseSourceRefs,parseCorrections} from './source-evidence.js';
 /* Browser and Worker share the same validation rules. User text is never HTML. */
 (function(root){
 'use strict';
@@ -62,7 +63,7 @@ function task(x,strict=false){
 function analysis(x,strict=false){
  if(!object(x))throw new Error('整理结果必须为 JSON 对象');
  if(strict&&x.schemaVersion!==4)throw new Error('需要第4版通知格式');
- const required=['schemaVersion','kind','title','summary','deadline','deadlineText','timeline','tasks','materials','warnings','reminders'],fields=[...required,'deadlineSpec'];
+ const required=['schemaVersion','kind','title','summary','deadline','deadlineText','timeline','tasks','materials','warnings','reminders'],fields=[...required,'deadlineSpec','sourceRefs','reminderTitles'];
  if(strict&&(required.some(k=>!Object.hasOwn(x,k))||Object.keys(x).some(k=>!fields.includes(k))))throw new Error('通知字段不完整或包含多余字段');
  if(!Array.isArray(x.tasks)||x.tasks.length>100)throw new Error('任务必须为数组，最多100项');
  const kind=x.kind===undefined?(x.tasks.length?'task':'information'):x.kind;
@@ -70,7 +71,10 @@ function analysis(x,strict=false){
  const reminders=strings(x.reminders===undefined?[]:x.reminders,'提醒');
  if(strict&&((kind==='task')!==!!x.tasks.length||(kind==='reminder'&&!reminders.length)||reminders.length>20||reminders.some(v=>v.length>500)))throw new Error('通知类别与内容不一致');
  const deadlineText=x.deadlineText===undefined?'':text(x.deadlineText,'截止描述',500,true);
- return {schemaVersion:4,kind,title:text(x.title,'标题',strict?40:200),summary:text(x.summary,'摘要',strict?140:2000),deadline:date(x.deadline),deadlineText,timeline:timeline(x.timeline,strict),tasks:x.tasks.map(t=>task(t,strict)),materials:strings(x.materials,'材料清单'),warnings:strings(x.warnings,'注意事项'),reminders,...optionalTimeSpec(x,'deadlineSpec',deadlineText,strict)};
+ const titles=x.reminderTitles;
+ if(titles!==undefined&&(!Array.isArray(titles)||titles.length!==reminders.length||titles.some(t=>typeof t!=='string'||Array.from(t.trim()).length<2||Array.from(t.trim()).length>16)))throw new Error('提醒标题格式不正确');
+ const result={schemaVersion:4,kind,title:text(x.title,'标题',strict?40:200),summary:text(x.summary,'摘要',strict?140:2000),deadline:date(x.deadline),deadlineText,timeline:timeline(x.timeline,strict),tasks:x.tasks.map(t=>task(t,strict)),materials:strings(x.materials,'材料清单'),warnings:strings(x.warnings,'注意事项'),reminders,...(titles===undefined?{}:{reminderTitles:titles.map(t=>t.trim())}),...optionalTimeSpec(x,'deadlineSpec',deadlineText,strict)};
+ const refs=parseSourceRefs(x.sourceRefs,result);return {...result,...(refs===undefined?{}:{sourceRefs:refs})};
 }
 function batch(x,strict=false){
  if(!strict&&object(x)&&Array.isArray(x.tasks))return {schemaVersion:4,notices:[analysis(x)]};
@@ -100,7 +104,8 @@ function notice(x){
  const createdAt=date(x.createdAt);if(!createdAt)throw new Error('缺少创建时间');
  const audienceOverride=x.audienceOverride===undefined?'':x.audienceOverride;
  if(!['','all'].includes(audienceOverride))throw new Error('本地适用范围设置不正确');
- return {...normalized,id:noticeID,originalText:text(x.originalText,'通知原文',MAX_STORED_TEXT),createdAt,completed:x.completed,localDeadline:date(x.localDeadline===undefined?null:x.localDeadline),reminderNotes:reminderNotes(x.reminderNotes,normalized.reminders.length),note:text(x.note===undefined?'':x.note,'笔记',MAX_NOTE,true),audienceOverride,attachments:attachmentIDs(x.attachments),tasks:normalized.tasks.map((t,i)=>({...t,...states[i],steps:t.steps.map((s,j)=>({...s,...states[i].steps[j]}))}))};
+ const originalText=text(x.originalText,'通知原文',MAX_STORED_TEXT),refs=parseSourceRefs(x.sourceRefs,normalized,originalText),corrections=parseCorrections(x.corrections,normalized);
+ return {...normalized,...(refs===undefined?{}:{sourceRefs:refs}),...(corrections===undefined?{}:{corrections}),id:noticeID,originalText,createdAt,completed:x.completed,localDeadline:date(x.localDeadline===undefined?null:x.localDeadline),reminderNotes:reminderNotes(x.reminderNotes,normalized.reminders.length),note:text(x.note===undefined?'':x.note,'笔记',MAX_NOTE,true),audienceOverride,attachments:attachmentIDs(x.attachments),tasks:normalized.tasks.map((t,i)=>({...t,...states[i],steps:t.steps.map((s,j)=>({...s,...states[i].steps[j]}))}))};
 }
 function notices(x){if(!Array.isArray(x)||x.length>MAX_NOTICES)throw new Error(`最多保存 ${MAX_NOTICES} 条通知`);const ids=new Set();return x.map(v=>{const n=notice(v);if(ids.has(n.id))throw new Error('存在重复的通知编号');ids.add(n.id);return n;});}
 function backup(x){if(!object(x)||x.app!=='campus-inbox'||![1,2,3,4].includes(x.version))throw new Error('请选择校园 Inbox 导出的 JSON 备份');return notices(x.notices);}

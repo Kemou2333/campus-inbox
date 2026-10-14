@@ -101,6 +101,7 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
             onClick={() => void run('sync', syncNow)}>立即同步</Button>
           <Button variant="outlined" disabled={busy} onClick={() => { setError(''); setLogoutOpen(true); }}>退出登录</Button>
           {app.authOptions?.emailEnabled&&!app.email&&<Button variant="outlined" disabled={busy} onClick={onLogin}>绑定邮箱</Button>}
+          {app.username.normalize('NFKC').trim().toLowerCase()==='kemou'&&<Button component="a" href="https://123.57.30.129/admin" target="_blank" rel="noopener noreferrer" variant="outlined">管理后台</Button>}
         </Stack>
       </> : <>
         <Typography color="text.secondary">登录后，手机和网页可以共用通知与进度。</Typography>

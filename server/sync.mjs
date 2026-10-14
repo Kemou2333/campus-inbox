@@ -22,7 +22,7 @@ function unique(values){if(new Set(values).size!==values.length)throw new Servic
 /** Validate one externally supplied v5 boundary; retain its original text,
  * timestamps and field values. No attachment binaries or unknown fields enter SQLite. */
 export function validateCloudNotice(record,expectedID){
-  shape(record,['schemaVersion','kind','title','summary','deadline','deadlineText','timeline','tasks','materials','warnings','reminders','id','originalText','createdAt','updatedAt','completed','dismissed','note','localDeadline','audienceOverride','attachments'],['deadlineSpec']);
+  shape(record,['schemaVersion','kind','title','summary','deadline','deadlineText','timeline','tasks','materials','warnings','reminders','id','originalText','createdAt','updatedAt','completed','dismissed','note','localDeadline','audienceOverride','attachments'],['deadlineSpec','sourceRefs','corrections','reminderTitles']);
   if(record.schemaVersion!==5||id(record.id)!==expectedID||!Array.isArray(record.attachments)||record.attachments.length)throw new ServiceError('同步只接受第5版文字记录，附件留在本机。',400);
   boolean(record.dismissed);
   if(!D.date(record.updatedAt))throw new ServiceError('同步记录缺少更新时间。',400);
@@ -57,6 +57,10 @@ export async function createSyncService(config,options={}){
     CREATE TABLE IF NOT EXISTS creation_usage (day TEXT NOT NULL,ip_hash TEXT NOT NULL,count INTEGER NOT NULL,PRIMARY KEY(day,ip_hash));
     CREATE TABLE IF NOT EXISTS analysis_jobs (id TEXT PRIMARY KEY,account INTEGER NOT NULL REFERENCES accounts(id),request_id TEXT NOT NULL,input_hash TEXT NOT NULL,sources TEXT NOT NULL,status TEXT NOT NULL,created TEXT NOT NULL,updated TEXT NOT NULL,result TEXT,error_code TEXT,bytes INTEGER NOT NULL,UNIQUE(account,request_id));
     CREATE INDEX IF NOT EXISTS jobs_owner_created ON analysis_jobs(account,created DESC,id DESC);`);
+  const jobColumns=new Set(db.prepare('PRAGMA table_info(analysis_jobs)').all().map(column=>column.name));
+  // Old jobs remain private: migration never grants review consent retroactively.
+  for(const [name,type] of [['review_consent','INTEGER NOT NULL DEFAULT 0'],['provider_called','INTEGER'],['cache_reuse','INTEGER'],['token_usage','TEXT']])if(!jobColumns.has(name))db.exec(`ALTER TABLE analysis_jobs ADD COLUMN ${name} ${type}`);
+  db.exec('CREATE INDEX IF NOT EXISTS jobs_admin_created ON analysis_jobs(created DESC,id DESC)');
   if(file!==':memory:')await chmod(file,0o600);
   const stmt={
     findAccount:db.prepare('SELECT accounts.id,accounts.identity,accounts.revision FROM sessions JOIN accounts ON accounts.id=sessions.account WHERE sessions.key_hash=?'),
@@ -82,6 +86,8 @@ export async function createSyncService(config,options={}){
     jobUsage:db.prepare("SELECT COUNT(*) AS count,COALESCE(SUM(bytes),0) AS bytes,COALESCE(SUM(CASE WHEN status IN ('accepted','running') THEN 1 ELSE 0 END),0) AS pending FROM analysis_jobs WHERE account=?"),
     globalJobUsage:db.prepare("SELECT COALESCE(SUM(bytes),0) AS bytes,COALESCE(SUM(CASE WHEN status IN ('accepted','running') THEN 1 ELSE 0 END),0) AS pending FROM analysis_jobs"),
     insertJob:db.prepare("INSERT INTO analysis_jobs(id,account,request_id,input_hash,sources,status,created,updated,bytes) VALUES(?,?,?,?,?,'accepted',?,?,?)"),
+    jobConsent:db.prepare('UPDATE analysis_jobs SET review_consent=? WHERE account=? AND id=?'),
+    jobMetrics:db.prepare('UPDATE analysis_jobs SET provider_called=?,cache_reuse=?,token_usage=? WHERE account=? AND id=?'),
     startJob:db.prepare("UPDATE analysis_jobs SET status='running',updated=? WHERE account=? AND id=? AND status='accepted'"),
     finishJob:db.prepare("UPDATE analysis_jobs SET status='completed',result=?,updated=?,bytes=?,error_code=NULL WHERE account=? AND id=? AND status IN ('accepted','running')"),
     stageJob:db.prepare("UPDATE analysis_jobs SET result=?,updated=?,bytes=? WHERE account=? AND id=? AND status IN ('accepted','running')"),
@@ -167,14 +173,22 @@ export async function createSyncService(config,options={}){
     if(row&&row.input_hash!==inputHash)throw new ServiceError('同一任务编号不能提交不同原文，请重新创建任务。',409);
     return jobView(row);
   }
-  function acceptJob(account,requestID,inputHash,sources){
+  function acceptJob(account,requestID,inputHash,sources,reviewConsent=false){
+    if(typeof reviewConsent!=='boolean')throw new ServiceError('维护查阅选项格式不正确。',400);
     return transaction(()=>{
       const existing=findJobRequest(account,requestID,inputHash);if(existing)return existing;
       checkJobCapacity(account);
       const id=randomUUID(),created=new Date(now()).toISOString(),json=JSON.stringify(sources),bytes=Buffer.byteLength(json);
       stmt.insertJob.run(id,account.id,requestID,inputHash,json,created,created,bytes);
+      stmt.jobConsent.run(reviewConsent?1:0,account.id,id);
       return jobView(stmt.job.get(account.id,id));
     });
+  }
+  function jobMetrics(account,jobID,value){
+    if(!value||typeof value.providerCalled!=='boolean'||typeof value.cacheReuse!=='boolean')throw new Error('Job metrics are invalid');
+    const usage=value.usage&&['input','output','reasoning'].every(key=>Number.isSafeInteger(value.usage[key])&&value.usage[key]>=0)?value.usage:null;
+    const safe=usage?{input:usage.input,output:usage.output,reasoning:usage.reasoning}:null;
+    stmt.jobMetrics.run(value.providerCalled?1:0,value.cacheReuse?1:0,safe?JSON.stringify(safe):null,account.id,jobID);
   }
   function checkJobCapacity(account){
     const usage=stmt.jobUsage.get(account.id),global=stmt.globalJobUsage.get();
@@ -262,7 +276,7 @@ export async function createSyncService(config,options={}){
     const hasMore=rows.length>20,jobs=rows.slice(0,20),last=jobs.at(-1);
     return {jobs:jobs.map(row=>jobView(row)),hasMore,...(hasMore?{nextBefore:Buffer.from(JSON.stringify([last.created,last.id])).toString('base64url')}:{})};
   }
-  const jobs={findRequest:findJobRequest,checkCapacity:checkJobCapacity,accept:acceptJob,start:startJob,stage:stageJob,complete:completeJob,retrySave:retryJobSave,fail:failJob,list:listJobs,get:(account,id)=>jobView(stmt.job.get(account.id,id),true)};
+  const jobs={findRequest:findJobRequest,checkCapacity:checkJobCapacity,accept:acceptJob,metrics:jobMetrics,start:startJob,stage:stageJob,complete:completeJob,retrySave:retryJobSave,fail:failJob,list:listJobs,get:(account,id)=>jobView(stmt.job.get(account.id,id),true)};
   async function handle(request,ip='unknown'){
     const origin=request.headers.get('Origin'),accepted=(config.allowedOrigins||[]).includes(origin),path=new URL(request.url).pathname;
     const reply=(body,status=200,headers={})=>new Response(status===204?null:JSON.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Vary':'Origin',...(accepted?{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Expose-Headers':'Retry-After','Access-Control-Max-Age':'600'}:{}),...headers}});
@@ -290,5 +304,28 @@ export async function createSyncService(config,options={}){
       return reply(exchange(account,body));
     }catch(error){return reply({error:error instanceof ServiceError?error.message:'同步暂时不可用，请稍后重试。'},error.status||503);}
   }
-  return {handle,provision,jobs,accountForKey:key=>typeof key==='string'&&/^[A-Za-z0-9_-]{43}$/.test(key)?stmt.findAccount.get(sha(key))||null:null,close:()=>db.close()};
+  const jobMetadata=row=>({id:row.id,ownerSubject:row.identity.slice(7),status:row.status,createdAt:row.created,updatedAt:row.updated,bytes:row.bytes,reviewConsent:row.review_consent===1,providerCalled:row.provider_called===null?null:row.provider_called===1,cacheReuse:row.cache_reuse===null?null:row.cache_reuse===1,tokenUsage:row.token_usage?JSON.parse(row.token_usage):null,code:row.error_code||null});
+  const metadataColumns='j.id,j.status,j.created,j.updated,j.bytes,j.review_consent,j.provider_called,j.cache_reuse,j.token_usage,j.error_code,a.identity';
+  const adminReader={
+    summary:()=>({...db.prepare("SELECT COUNT(*) AS jobs,COALESCE(SUM(status='completed'),0) AS completed,COALESCE(SUM(status='failed'),0) AS failed,COALESCE(SUM(status IN ('accepted','running')),0) AS pending,COALESCE(SUM(provider_called=1),0) AS knownProviderCalls,COALESCE(SUM(cache_reuse=1),0) AS knownCacheReuses,COALESCE(SUM(provider_called IS NULL),0) AS unknownProviderCalls,COALESCE(SUM(bytes),0) AS jobBytes FROM analysis_jobs").get(),...db.prepare('SELECT COUNT(json) AS notices,COALESCE(SUM(bytes),0) AS noticeBytes FROM records').get()}),
+    accountStats:subject=>db.prepare("SELECT COUNT(*) AS jobs,COALESCE(SUM(status='completed'),0) AS completed,COALESCE(SUM(status='failed'),0) AS failed,MAX(created) AS lastJobAt FROM analysis_jobs WHERE account=(SELECT id FROM accounts WHERE identity=?)").get('invite:'+subject),
+    jobs:({subject,before,limit=20}={})=>{
+      let sql=`SELECT ${metadataColumns} FROM analysis_jobs j JOIN accounts a ON a.id=j.account WHERE 1=1`,args=[];
+      if(subject){sql+=' AND a.identity=?';args.push('invite:'+subject);}
+      if(before){sql+=' AND (j.created<? OR (j.created=? AND j.id<?))';args.push(before[0],before[0],before[1]);}
+      sql+=' ORDER BY j.created DESC,j.id DESC LIMIT ?';args.push(limit);
+      return db.prepare(sql).all(...args).map(jobMetadata);
+    },
+    job:(id,{viewerSubject,contentDays=30}={})=>{
+      const row=db.prepare(`SELECT ${metadataColumns} FROM analysis_jobs j JOIN accounts a ON a.id=j.account WHERE j.id=?`).get(id);
+      if(!row)return null;
+      const metadata=jobMetadata(row),own=metadata.ownerSubject===viewerSubject,consented=row.review_consent===1,withinRetention=Date.parse(row.created)>=now()-contentDays*86400000;
+      const allowed=own||consented&&withinRetention;
+      if(!allowed)return {...metadata,contentAvailable:false,contentReason:consented?'review_window_expired':'review_not_consented'};
+      // Only after the server evaluates owner/consent/age do we read the payload.
+      const content=db.prepare('SELECT sources,result FROM analysis_jobs WHERE id=?').get(id);
+      return {...metadata,contentAvailable:true,sources:JSON.parse(content.sources),result:content.result?JSON.parse(content.result):null};
+    }
+  };
+  return {handle,provision,jobs,adminReader,accountForKey:key=>typeof key==='string'&&/^[A-Za-z0-9_-]{43}$/.test(key)?stmt.findAccount.get(sha(key))||null:null,close:()=>db.close()};
 }

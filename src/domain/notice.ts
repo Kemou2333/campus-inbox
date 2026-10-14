@@ -1,5 +1,7 @@
 import type { AnalysisBatch, AnalysisStep, AnalysisTask, Backup, BackupAttachment, Notice, NoticeAnalysis, NoticeStatus, NoteTarget, Priority, SortOrder, Step, Task, TimelineEntry } from './types';
 import { deadlineReferenceISO, parseTimeSpec, timeFromText, timeSpecToISO } from './time';
+import {parseSourceRefs} from './source-evidence';
+import {parseCorrections} from './corrections';
 
 export const MAX_TEXT = 4000;
 export const MAX_NOTE = 4000;
@@ -84,7 +86,7 @@ function parseTimeline(value: unknown, strict: boolean): TimelineEntry[] {
 /** Boundary for AI and old records. User progress is deliberately excluded. */
 export function parseAnalysis(value: unknown, strict = true): NoticeAnalysis {
   const o = object(value, '整理结果');
-  fields(o, ['schemaVersion', 'kind', 'title', 'summary', 'deadline', 'deadlineText', 'timeline', 'tasks', 'materials', 'warnings', 'reminders'], ['deadlineSpec'], strict);
+  fields(o, ['schemaVersion', 'kind', 'title', 'summary', 'deadline', 'deadlineText', 'timeline', 'tasks', 'materials', 'warnings', 'reminders'], ['deadlineSpec','sourceRefs','reminderTitles'], strict);
   if (strict && o.schemaVersion !== 4) throw new Error('AI 整理格式版本不正确');
   const tasks = array(o.tasks, '事项').map(t => parseTask(t, strict));
   const kind = o.kind ?? (tasks.length ? 'task' : 'information');
@@ -92,12 +94,19 @@ export function parseAnalysis(value: unknown, strict = true): NoticeAnalysis {
   const reminders = strings(strict ? o.reminders : o.reminders ?? [], '提醒', strict ? 20 : 100, strict ? 500 : 2000);
   if (strict && ((kind === 'task') !== !!tasks.length || kind === 'reminder' && !reminders.length)) throw new Error('通知类别与内容不一致');
   const deadlineText = text(o.deadlineText ?? '', '截止描述', 500, true);
-  return {
+  const result:NoticeAnalysis = {
     schemaVersion: 4, kind: kind as NoticeAnalysis['kind'], title: text(o.title, '标题', strict ? 40 : 200),
     summary: text(o.summary, '摘要', strict ? 140 : 2000), deadline: parseDate(o.deadline), deadlineText,
     timeline: parseTimeline(o.timeline, strict), tasks, materials: strings(strict ? o.materials : o.materials ?? [], '材料'), warnings: strings(strict ? o.warnings : o.warnings ?? [], '注意事项'), reminders,
     ...timeSpec(o, 'deadlineSpec', deadlineText, strict),
   };
+  if(o.reminderTitles!==undefined){
+    const titles=strings(o.reminderTitles,'提醒标题',20,16);
+    if(titles.length!==reminders.length||titles.some(title=>Array.from(title).length<2))throw new Error('提醒标题须与提醒对应，且为2–16字');
+    result.reminderTitles=titles;
+  }
+  const sourceRefs=parseSourceRefs(o.sourceRefs,result);if(sourceRefs!==undefined)result.sourceRefs=sourceRefs;
+  return result;
 }
 export function parseAnalysisBatch(value: unknown): AnalysisBatch {
   const o = object(value, '整理结果');
@@ -165,12 +174,15 @@ export function parseNotice(value: unknown): Notice {
   uniqueIDs(reminders, '提醒');
   const audienceOverride = o.audienceOverride ?? '';
   if (audienceOverride !== '' && audienceOverride !== 'all') throw new Error('适用范围设置不正确');
-  return {
+  const result:Notice = {
     ...a, schemaVersion: 5, id: noticeID, tasks, originalText: text(o.originalText, '通知原文', 12000), createdAt,
     updatedAt: parseDate(o.updatedAt) ?? createdAt, completed: bool(o.completed), dismissed: bool(o.dismissed),
     note: text(o.note ?? '', '通知笔记', MAX_NOTE, true), localDeadline: parseDate(o.localDeadline), audienceOverride,
     reminders, attachments,
   };
+  if(a.sourceRefs!==undefined)result.sourceRefs=parseSourceRefs(a.sourceRefs,result,result.originalText);
+  const corrections=parseCorrections(o.corrections,result);if(corrections!==undefined)result.corrections=corrections;
+  return result;
 }
 export function parseNotices(value: unknown): Notice[] {
   const result = array(value, '通知列表', MAX_NOTICES).map(parseNotice);
@@ -179,11 +191,13 @@ export function parseNotices(value: unknown): Notice[] {
 }
 export function createNotice(value: unknown, originalText: string, now = new Date().toISOString()): Notice {
   const a = parseAnalysis(value);
-  return {
+  const result:Notice = {
     ...a, schemaVersion: 5, id: newID(), originalText: text(originalText, '通知原文', MAX_TEXT), createdAt: now, updatedAt: now,
     completed: false, dismissed: false, note: '', localDeadline: null, audienceOverride: '', reminders: a.reminders.map(text => ({ id: newID(), text, note: '' })), attachments: [],
     tasks: a.tasks.map(t => ({ ...t, id: newID(), completed: false, dismissed: false, note: '', localDeadline: null, steps: t.steps.map(s => ({ ...s, id: newID(), completed: false, note: '' })) })),
   };
+  if(a.sourceRefs!==undefined)result.sourceRefs=parseSourceRefs(a.sourceRefs,result,result.originalText);
+  return result;
 }
 
 export function parseBackup(value: unknown): Notice[] {

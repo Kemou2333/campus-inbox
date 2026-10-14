@@ -7,6 +7,7 @@ import type {Notice,SortOrder} from '../../domain/types';
 import type {CampusController} from '../../app/useCampus';
 import {NoticeCard,type NoticeActions} from './NoticeCard';
 import {transitionRows} from './transition-rows';
+import {effectiveNotice} from '../../domain/corrections';
 
 export interface FeedViewState {tab:0|1|2;query:string;sort:SortOrder;expandedIDs:Set<string>;expandedTaskIDs:Set<string>}
 export const createFeedViewState=():FeedViewState=>({tab:0,query:'',sort:'priority',expandedIDs:new Set(),expandedTaskIDs:new Set()});
@@ -40,7 +41,7 @@ export function FeedPage({app,actions,onCompose,focusID,onFocusHandled,embedded=
  const complete=app.notices.filter(n=>['completed','dismissed'].includes(getNoticeStatus(n)));
  const records=useMemo(()=>{
   const status=tab===0?'pending':tab===1?'reminder':'completed';const needle=query.trim().toLocaleLowerCase();
-  return sortNotices(app.notices.filter(n=>(status==='completed'?['completed','dismissed'].includes(getNoticeStatus(n)):getNoticeStatus(n)===status)&&(!needle||[n.title,n.summary,n.originalText,n.note,n.deadlineText,...n.materials,...n.warnings,...n.timeline.flatMap(t=>[t.label,t.timeText,t.location]),...n.tasks.flatMap(t=>[t.text,t.assignee,t.condition,t.timeText,t.location,t.note,...t.details,...t.steps.flatMap(s=>[s.text,s.note,...s.details])]),...n.reminders.flatMap(r=>[r.text,r.note])].join('\n').toLocaleLowerCase().includes(needle))),sort,now);
+  return sortNotices(app.notices.map(effectiveNotice).filter(n=>(status==='completed'?['completed','dismissed'].includes(getNoticeStatus(n)):getNoticeStatus(n)===status)&&(!needle||[n.title,n.summary,n.originalText,n.note,n.deadlineText,...n.materials,...n.warnings,...n.timeline.flatMap(t=>[t.label,t.timeText,t.location]),...n.tasks.flatMap(t=>[t.text,t.assignee,t.condition,t.timeText,t.location,t.note,...t.details,...t.steps.flatMap(s=>[s.text,s.note,...s.details])]),...n.reminders.flatMap(r=>[r.text,r.note])].join('\n').toLocaleLowerCase().includes(needle))),sort,now);
  },[app.notices,tab,query,sort,now]);
  const [animationEmpty,setAnimationEmpty]=useState(records.length===0);
  useEffect(()=>{

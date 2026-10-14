@@ -11,7 +11,7 @@ import {ALLOWED_EMAIL_DOMAINS} from '../contracts/email-policy.mjs';
 const origin='https://app.example.test',email='review@163.com',password='a simple password';
 async function fixture(options={}){
   let time=options.time??Date.parse('2026-10-08T08:00:00Z');const messages=[],identities=[];
-  const config={stateFile:options.file||':memory:',signingSecret:'email-test-signing-secret-not-for-deployment',allowedOrigins:[origin]};
+  const config={imageCaptcha:false,stateFile:options.file||':memory:',signingSecret:'email-test-signing-secret-not-for-deployment',allowedOrigins:[origin]};
   const service={now:()=>time,limits:options.limits,provision:async identity=>{
     identities.push(identity);
     if(options.provision)return options.provision(identity);
@@ -37,7 +37,7 @@ async function fixture(options={}){
 
 test('email options are explicit and disabled mail leaves invitation login available',async t=>{
   const f=await fixture({disabled:true});t.after(()=>f.auth.close());
-  assert.deepEqual((await f.request('options')).body,{emailEnabled:false,inviteEnabled:true,domains:[...ALLOWED_EMAIL_DOMAINS]});
+  assert.deepEqual((await f.request('options')).body,{emailEnabled:false,inviteEnabled:true,imageCaptchaEnabled:false,domains:[...ALLOWED_EMAIL_DOMAINS]});
   assert.equal((await f.request('email/request',{email,purpose:'login'})).status,503);
   assert.equal((await f.request('email/verify',{challengeId:'A'.repeat(43),code:'123456'})).status,503);
   const old=await f.register();assert.equal((await f.request('login',{username:old.username,password})).status,200);

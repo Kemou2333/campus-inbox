@@ -12,6 +12,17 @@ describe('notification reading',()=>{
  it('does not execute raw HTML, executable URLs or fetch remote images',()=>{const html=render('<script>alert(1)</script>\n\n[危险](javascript:alert%281%29)\n\n![图片](https://example.edu/secret.png)');expect(html).not.toMatch(/<script|<img|href="javascript:/);expect(html).toContain('危险');});
  it('retains the whole text of long Chinese emphasis',()=>{const text='将家长短信截图发给通知发布者';expect(render(`**${text}**`)).toContain(`<strong>${text}</strong>`);});
  it('keeps inline headings free from nested paragraphs',()=>{const html=render('提交 **截图**',true);expect(html).not.toContain('<p>');expect(html).toContain('<strong>截图</strong>');});
+ it('renders a percentage and Chinese punctuation emphasized directly next to Chinese prose',()=>{
+  const html=render('线上学习：需完成不少于**20%**的视频观看并完成课程问答。');
+  expect(html).toContain('<strong>20%</strong>的视频观看');expect(html).not.toContain('**20%**');
+  expect(render('取得**（合格）**后提交')).toContain('<strong>（合格）</strong>后');
+  expect(render('不少于__20%__的视频',true)).toContain('<strong>20%</strong>的视频');
+ });
+ it('keeps escaped stars, code and URL contents literal while repairing nearby prose',()=>{
+  const escaped=render(String.raw`不少于\*\*20%\*\*的视频`);expect(escaped).toContain('**20%**');expect(escaped).not.toContain('<strong>');
+  const html=render('`**20%**的`\n\n```text\n**20%**的\n```\n\n[原链接](https://example.edu/**20%**的)\n\n不少于**20%**的视频');
+  expect(html).toContain('**20%**的</code>');expect(html).toContain('href="https://example.edu/**20%25**%E7%9A%84"');expect(html.match(/<strong>/g)).toHaveLength(1);
+ });
  it('only permits HTTP and HTTPS links',()=>{for(const url of ['javascript:alert(1)','data:text/html,test','file:///tmp/x','//example.com'])expect(safeMarkdownURL(url)).toBe('');expect(safeMarkdownURL('https://example.edu/x')).toBe('https://example.edu/x');});
- for(const dark of [false,true])it(`${dark?'dark':'light'} text and accent roles meet normal-text contrast`,()=>{const t=makeTheme(dark,null);for(const surface of [t.palette.background.default,t.palette.background.paper]){expect(contrast(t.palette.text.primary,surface)).toBeGreaterThanOrEqual(4.5);expect(contrast(t.palette.text.secondary,surface)).toBeGreaterThanOrEqual(4.5);expect(contrast(t.palette.primary.main,surface)).toBeGreaterThanOrEqual(4.5);}expect(contrast(t.palette.primary.main,t.palette.primary.contrastText)).toBeGreaterThanOrEqual(4.5);});
+ for(const dark of [false,true])it(`${dark?'dark':'light'} text and accent roles meet normal-text contrast`,()=>{const t=makeTheme(dark,null);for(const surface of [t.palette.background.default,t.palette.background.paper]){expect(contrast(t.palette.text.primary,surface)).toBeGreaterThanOrEqual(4.5);expect(contrast(t.palette.text.secondary,surface)).toBeGreaterThanOrEqual(4.5);expect(contrast(t.palette.primary.main,surface)).toBeGreaterThanOrEqual(4.5);expect(contrast(t.palette.secondary.main,surface)).toBeGreaterThanOrEqual(4.5);}expect(contrast(t.palette.primary.main,t.palette.primary.contrastText)).toBeGreaterThanOrEqual(4.5);});
 });

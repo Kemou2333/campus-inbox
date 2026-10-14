@@ -48,6 +48,9 @@ export interface NoticeAnalysis {
   materials: string[];
   warnings: string[];
   reminders: string[];
+  /** AI-selected original paragraph numbers; a link is not proof of correctness. */
+  sourceRefs?: Record<string, number[]>;
+  reminderTitles?: string[];
 }
 export interface AnalysisBatch { schemaVersion: 4; notices: NoticeAnalysis[]; sourceIndexes?: number[] }
 
@@ -79,6 +82,8 @@ export interface Notice extends Omit<NoticeAnalysis, 'schemaVersion' | 'tasks' |
   reminders: Reminder[];
   attachments: string[];
   tasks: Task[];
+  /** User wording stays separate from the immutable original AI fields. */
+  corrections?: {updatedAt: string; values: {path: string; value: string}[]};
 }
 
 export interface BackupAttachment { id: string; name: string; type: string; size: number; data: string }

@@ -12,7 +12,7 @@ import {canonicalUsername,createAuthService} from '../auth.mjs';
 const origin='https://app.example.test',password='a simple password';
 async function fixture(options={}){
   let time=Date.parse('2026-10-06T08:00:00Z');const identities=[];
-  const config={stateFile:':memory:',signingSecret:'unit-test-signing-secret-not-for-deployment',allowedOrigins:[origin],...options.config};
+  const config={imageCaptcha:false,stateFile:':memory:',signingSecret:'unit-test-signing-secret-not-for-deployment',allowedOrigins:[origin],...options.config};
   const auth=await createAuthService(config,{now:()=>time,provision:identity=>{identities.push(identity);return {key:randomBytes(32).toString('base64url')};},...options.service});
   async function request(path,body={},key,headers={},ip='test-network'){
     const response=await auth.handle(new Request(`https://service.example.test/auth/${path}`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',...(key?{Authorization:`Bearer ${key}`}:{ }),...headers},body:JSON.stringify(body)}),ip);

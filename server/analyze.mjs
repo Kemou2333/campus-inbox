@@ -1,6 +1,7 @@
 import './contracts/time.js';
 import './contracts/data.js';
 import {promptForInput} from '../worker/prompt.mjs';
+import {segmentSource,parseSourceRefs,evidencePaths} from './contracts/source-evidence.js';
 const D=globalThis.CampusData;
 const T=globalThis.CampusTime;
 const record=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -123,7 +124,9 @@ export function modelInput(notice){
 /** Shared with the cost guard so it reserves the same bounded provider payload. */
 export function modelPayload(notice,config={}){
   const input=modelInput(notice);
-  return {model:config.model||'deepseek-flash',thinking:{type:config.thinkingMode==='low'?'enabled':'disabled'},...(config.thinkingMode==='low'?{reasoning_effort:'low'}:{}),max_tokens:config.thinkingMode==='low'?32768:12288,response_format:{type:'json_object'},messages:[{role:'system',content:promptForInput(input)},{role:'user',content:JSON.stringify(input)}]};
+  const sources=input.sources||[{sourceId:1,text:input.notice}];
+  const marked={sources:sources.map(source=>({sourceId:source.sourceId,segments:segmentSource(source.text).map(segment=>({id:segment.index,text:segment.text}))}))};
+  return {model:config.model||'deepseek-flash',thinking:{type:config.thinkingMode==='low'?'enabled':'disabled'},...(config.thinkingMode==='low'?{reasoning_effort:'low'}:{}),max_tokens:config.thinkingMode==='low'?32768:12288,response_format:{type:'json_object'},messages:[{role:'system',content:promptForInput(input)},{role:'user',content:JSON.stringify(marked)}]};
 }
 function sourceMapping(parsed,sources){
   if(!Array.isArray(parsed?.notices)||!parsed.notices.length||parsed.notices.length>20)throw new Error('source');
@@ -176,6 +179,12 @@ export async function analyze(notice,config,modelFetch=fetch,signal){
     try{
       const grounded=sources?{...parsed,notices:parsed.notices.map((item,index)=>groundDates({notices:[item]},sources[mapping.indexes[index]].text).notices[0])}:groundDates(parsed,notice);
       result=D.batch(grounded,true);
+      result.notices=result.notices.map((item,index)=>{
+        const text=sources?sources[mapping.indexes[index]].text:typeof notice==='string'?notice:'';
+        const refs=parseSourceRefs(item.sourceRefs,item,text);
+        if(config.requireSourceEvidence&&(refs===undefined||evidencePaths(item).some(path=>!refs[path])||!item.reminderTitles&&item.reminders.length))throw new Error('出处或提醒标题缺少');
+        return refs===undefined?item:{...item,sourceRefs:refs};
+      });
     }catch(error){throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:validationCode(error)});}
     if(!result.notices.every((item,index)=>ownSourceLinks(item,sources?sources[mapping.indexes[index]].text:notice)))throw new ServiceError('AI 返回的链接无法对应原通知，请稍后重试。',502,{usage,finishReason,failureCode:'SOURCE_LINK'});
     // Old clients still accept ordinary one-source/one-card batches unchanged.

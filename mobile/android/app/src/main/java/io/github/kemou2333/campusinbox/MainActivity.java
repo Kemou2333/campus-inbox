@@ -85,7 +85,7 @@ public final class MainActivity extends Activity {
                 if (text != null && !text.isEmpty() && text.length() <= 20_000 && shareQueue.size() < 10) shareQueue.addLast(text);
             }
             String notice = state.getString("openedNotice");
-            if (NativePolicy.validReminderId(notice)) openedNotice = notice;
+            if (NativePolicy.validNoticeId(notice)) openedNotice = notice;
         } else {
             receiveShare(getIntent());
             receiveOpenedNotice(getIntent());
@@ -292,7 +292,7 @@ public final class MainActivity extends Activity {
                     break;
                 case "scheduleReminder": scheduleReminder(payload, reply, id); break;
                 case "cancelReminder":
-                    String reminderId = checkedText(payload, "id", 100, true);
+                    String reminderId = checkedText(payload, "id", 320, true);
                     if (!NativePolicy.validReminderId(reminderId)) throw new IllegalArgumentException("通知编号不正确");
                     reminders.cancel(reminderId);
                     respond(reply, id, new JSONObject().put("status", "cancelled"));
@@ -307,7 +307,8 @@ public final class MainActivity extends Activity {
     private Intent calendarIntent() { return new Intent(Intent.ACTION_INSERT).setData(CalendarContract.Events.CONTENT_URI); }
 
     private void scheduleReminder(JSONObject payload, JavaScriptReplyProxy reply, String requestId) throws JSONException {
-        String id = checkedText(payload, "id", 100, true);
+        String id = checkedText(payload, "id", 320, true);
+        NativePolicy.reminderNoticeId(id, checkedText(payload, "noticeId", 150, false));
         checkedText(payload, "title", 200, true);
         checkedText(payload, "body", 1000, false);
         if (!NativePolicy.validReminder(id, checkedLong(payload, "triggerMillis"), System.currentTimeMillis())) {
@@ -328,7 +329,7 @@ public final class MainActivity extends Activity {
                 respond(reply, requestId, new JSONObject().put("status", "permission-denied").put("approximate", true));
                 return;
             }
-            reminders.schedule(checkedText(payload, "id", 100, true), checkedText(payload, "title", 200, true),
+            reminders.schedule(checkedText(payload, "id", 320, true), checkedText(payload, "noticeId", 150, false), checkedText(payload, "title", 200, true),
                     checkedText(payload, "body", 1000, false), checkedLong(payload, "triggerMillis"));
             respond(reply, requestId, new JSONObject().put("status", "scheduled").put("approximate", true));
         } catch (Exception error) { reject(reply, requestId, safeError(error)); }
@@ -490,7 +491,7 @@ public final class MainActivity extends Activity {
     private void receiveOpenedNotice(Intent intent) {
         if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction())) return;
         String id = intent.getStringExtra("campusNoticeId");
-        if (NativePolicy.validReminderId(id)) openedNotice = id;
+        if (NativePolicy.validNoticeId(id)) openedNotice = id;
     }
 
     private void signalOpenedNotice() {

@@ -1,0 +1,9 @@
+[Unit]
+Description=Daily Campus Inbox backup
+[Timer]
+OnCalendar=*-*-* 03:15:00 UTC
+RandomizedDelaySec=1800
+Persistent=true
+Unit=campus-backup.service
+[Install]
+WantedBy=timers.target

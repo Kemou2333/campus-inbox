@@ -5,6 +5,7 @@ import {mkdir,chmod} from 'node:fs/promises';
 import {dirname} from 'node:path';
 import {boundedText,ServiceError} from './analyze.mjs';
 import {createEmailAuth} from './email-auth.mjs';
+import {createImageCaptcha,captchaAnswerHash} from './image-captcha.mjs';
 
 const scrypt=promisify(derive),DAY=86400000,SESSION_TTL=30*DAY;
 const ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -34,6 +35,8 @@ export async function createAuthService(config,options={}){
     CREATE TABLE IF NOT EXISTS invite_codes(code_hash TEXT PRIMARY KEY,created INTEGER NOT NULL,used_by TEXT REFERENCES invite_users(id),used_at INTEGER);
     CREATE TABLE IF NOT EXISTS invite_sessions(key_hash TEXT PRIMARY KEY,user TEXT NOT NULL REFERENCES invite_users(id),created INTEGER NOT NULL,expires INTEGER NOT NULL);
     CREATE INDEX IF NOT EXISTS invite_sessions_user ON invite_sessions(user);
+    CREATE TABLE IF NOT EXISTS auth_image_challenges(id TEXT PRIMARY KEY,client TEXT NOT NULL,network TEXT NOT NULL,origin TEXT NOT NULL,purpose TEXT NOT NULL,answer_hash TEXT NOT NULL,created INTEGER NOT NULL,expires INTEGER NOT NULL,attempts INTEGER NOT NULL DEFAULT 0);
+    CREATE INDEX IF NOT EXISTS auth_image_client ON auth_image_challenges(client,created);
     CREATE TABLE IF NOT EXISTS invite_usage(bucket TEXT NOT NULL,subject TEXT NOT NULL,period INTEGER NOT NULL,count INTEGER NOT NULL,expires INTEGER NOT NULL,PRIMARY KEY(bucket,subject,period));`);
   if(file!==':memory:')await chmod(file,0o600);
   const stmt={
@@ -49,11 +52,22 @@ export async function createAuthService(config,options={}){
     deleteSession:db.prepare('DELETE FROM invite_sessions WHERE key_hash=?'),
     pruneSessions:db.prepare('DELETE FROM invite_sessions WHERE user=? AND key_hash NOT IN (SELECT key_hash FROM invite_sessions WHERE user=? ORDER BY created DESC,rowid DESC LIMIT 20)'),
     usage:db.prepare('SELECT count FROM invite_usage WHERE bucket=? AND subject=? AND period=?'),
+    rollingUsage:db.prepare('SELECT COALESCE(SUM(count),0) AS count,MIN(period) AS oldest FROM invite_usage WHERE bucket=? AND subject=? AND period>?'),
     countUsage:db.prepare('INSERT INTO invite_usage(bucket,subject,period,count,expires) VALUES (?,?,?,1,?) ON CONFLICT(bucket,subject,period) DO UPDATE SET count=count+1'),
     cleanUsage:db.prepare('DELETE FROM invite_usage WHERE expires<?'),
     cleanSessions:db.prepare('DELETE FROM invite_sessions WHERE expires<?'),
+    image:db.prepare('SELECT * FROM auth_image_challenges WHERE id=?'),
+    imageRecent:db.prepare('SELECT created FROM auth_image_challenges WHERE client=? ORDER BY created DESC LIMIT 1'),
+    imageCount:db.prepare('SELECT COUNT(*) AS count FROM auth_image_challenges'),
+    imageCreate:db.prepare('INSERT INTO auth_image_challenges(id,client,network,origin,purpose,answer_hash,created,expires) VALUES(?,?,?,?,?,?,?,?)'),
+    imageAttempt:db.prepare('UPDATE auth_image_challenges SET attempts=attempts+1 WHERE id=?'),
+    imageRemove:db.prepare('DELETE FROM auth_image_challenges WHERE id=?'),
+    imagePruneClient:db.prepare('DELETE FROM auth_image_challenges WHERE client=?'),
+    imageClean:db.prepare('DELETE FROM auth_image_challenges WHERE expires<=? OR attempts>=5'),
+    publicUsers:db.prepare('SELECT id,username,created FROM invite_users ORDER BY created DESC,id DESC LIMIT ? OFFSET ?'),
   };
-  const now=options.now||Date.now,limits={accountLimit:500,registerIPDay:5,registerIPMinute:5,loginIPMinute:5,loginUserMinute:5,...options.limits};
+  const now=options.now||Date.now,limits={accountLimit:500,registerIPDay:5,registerIPMinute:5,loginIPMinute:10,loginUserMinute:5,loginIPHour:100,loginUserHour:20,challengeClientMinute:10,challengeIPMinute:60,challengeIPHour:300,...options.limits};
+  const imageCaptchaEnabled=config.imageCaptcha!==false,imageCaptcha=options.imageCaptcha||createImageCaptcha;
   const transaction=operation=>{db.exec('BEGIN IMMEDIATE');try{const result=operation();db.exec('COMMIT');return result;}catch(error){db.exec('ROLLBACK');throw error;}};
   const hashSubject=value=>createHmac('sha256',config.signingSecret).update('invite-auth:'+value).digest('hex');
   let hashing=0;
@@ -68,7 +82,45 @@ export async function createAuthService(config,options={}){
     if((stmt.usage.get(bucket,subject,period)?.count||0)>=limit)throw new ServiceError('请求较多，请稍后再试。',429);
     stmt.countUsage.run(bucket,subject,period,(period+1)*window);
   }
-  function clean(){stmt.cleanUsage.run(now());stmt.cleanSessions.run(now());}
+  function rollingRate(bucket,subject,limit,window,code='AUTH_RATE_LIMIT'){
+    const t=now(),name='rolling-auth:'+bucket,usage=stmt.rollingUsage.get(name,subject,t-window);
+    if(usage.count>=limit){const issue=new ServiceError('请求较多，请稍后再试。',429);issue.code=code;issue.retryAfterSeconds=Math.max(1,Math.ceil((usage.oldest+window-t)/1000));throw issue;}
+    stmt.countUsage.run(name,subject,t,t+window);
+  }
+  function clean(){stmt.cleanUsage.run(now());stmt.cleanSessions.run(now());stmt.imageClean.run(now());}
+  function challenge(body,ip,origin){
+    if(!imageCaptchaEnabled)throw new ServiceError('图形验证未启用。',404);
+    if(!['login','register','email'].includes(body.purpose)||typeof body.clientId!=='string'||!/^[A-Za-z0-9_-]{24,64}$/.test(body.clientId))throw new ServiceError('验证码请求格式不正确。',400);
+    const t=now(),network=hashSubject('image-ip:'+ip),client=hashSubject('image-client:'+body.clientId+':'+origin),id=randomBytes(24).toString('base64url');
+    transaction(()=>{
+      clean();
+      const recent=stmt.imageRecent.get(client);
+      if(recent&&t-recent.created<6000){const issue=new ServiceError('请稍后再换一张验证码。',429);issue.code='AUTH_CAPTCHA_RATE_LIMIT';issue.retryAfterSeconds=Math.max(1,Math.ceil((recent.created+6000-t)/1000));throw issue;}
+      rollingRate('image-client-refresh',client,1,6000,'AUTH_CAPTCHA_RATE_LIMIT');
+      rollingRate('image-client-minute',client,limits.challengeClientMinute,60000,'AUTH_CAPTCHA_RATE_LIMIT');
+      rollingRate('image-ip-minute',network,limits.challengeIPMinute,60000,'AUTH_CAPTCHA_RATE_LIMIT');
+      rollingRate('image-ip-hour',network,limits.challengeIPHour,3600000,'AUTH_CAPTCHA_RATE_LIMIT');
+      if(stmt.imageCount.get().count>=1000)throw new ServiceError('验证服务暂时繁忙，请稍后再试。',429);
+    });
+    const generated=imageCaptcha(id),expires=t+5*60000;
+    transaction(()=>{stmt.imagePruneClient.run(client);stmt.imageCreate.run(id,client,network,origin,body.purpose,generated.answerHash,t,expires);});
+    return {id,image:generated.image,expiresAt:new Date(expires).toISOString(),retryAfterSeconds:6};
+  }
+  function verifyImage(body,ip,origin,purpose){
+    if(!imageCaptchaEnabled)return;
+    const value=body.captcha;
+    if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!['id','answer'].includes(key))||typeof value.id!=='string'||!/^[A-Za-z0-9_-]{32}$/.test(value.id)){
+      const issue=new ServiceError('请填写图形验证码。',428);issue.code='AUTH_CAPTCHA_REQUIRED';throw issue;
+    }
+    const row=stmt.image.get(value.id),t=now();
+    const valid=!!row&&row.expires>t&&row.attempts<5&&row.network===hashSubject('image-ip:'+ip)&&row.origin===origin&&row.purpose===purpose;
+    const matches=valid&&typeof value.answer==='string'&&/^\d{4}$/.test(value.answer)&&timingSafeEqual(Buffer.from(captchaAnswerHash(value.id,value.answer),'hex'),Buffer.from(row.answer_hash,'hex'));
+    // A successful answer is consumed before password hashing/email sending.
+    // Incorrect guesses stay counted even when the login request then fails.
+    if(matches){stmt.imageRemove.run(value.id);return;}
+    if(valid){stmt.imageAttempt.run(value.id);if(row.attempts>=4)stmt.imageRemove.run(value.id);}
+    const issue=new ServiceError('图形验证码不正确或已过期。',400);issue.code='AUTH_CAPTCHA_INVALID';throw issue;
+  }
   async function sessionFor(user,ip){
     const issued=options.provision?await options.provision({provider:'invite',subject:user.id},ip):{key:randomBytes(32).toString('base64url')};
     if(!validKey(issued?.key))throw new ServiceError('登录暂时不可用，请稍后重试。',503);
@@ -77,10 +129,11 @@ export async function createAuthService(config,options={}){
     const email=emailAuth.emailForUser(user.id);
     return {key:issued.key,username:user.username,expiresAt:new Date(expires).toISOString(),...(email?{email}:{})};
   }
-  async function register(body,ip){
+  async function register(body,ip,origin){
     const username=canonicalUsername(body.username),password=passwordValue(body.password),invite=inviteValue(body.invite),codeHash=sha(invite),network=hashSubject('ip:'+ip);
     // Commit the attempt counter before validation; failed guesses must not roll it back.
     transaction(()=>{clean();rate('register-minute',network,limits.registerIPMinute,60000);});
+    verifyImage(body,ip,origin,'register');
     if((stmt.usage.get('register-day',network,Math.floor(now()/DAY))?.count||0)>=limits.registerIPDay)throw new ServiceError('今日注册次数已达上限。',429);
     const code=stmt.invite.get(codeHash);if(!code||code.used_by)throw new ServiceError('邀请码无效或已使用。',400);
     if(stmt.user.get(username))throw new ServiceError('此用户名已被使用，请换一个。',409);
@@ -100,14 +153,18 @@ export async function createAuthService(config,options={}){
       issue.code='ACCOUNT_CREATED_LOGIN_PENDING';throw issue;
     }
   }
-  async function login(body,ip){
+  async function login(body,ip,origin){
     let username,user;
     if(typeof body.username==='string'&&body.username.includes('@')){
       username=emailAuth.emailValue(body.username);user=emailAuth.userForEmail(username);
     }else{username=canonicalUsername(body.username);user=stmt.user.get(username);}
     const password=passwordValue(body.password);
     // Email and username aliases share the account's guessing budget.
-    transaction(()=>{clean();rate('login-ip',hashSubject('ip:'+ip),limits.loginIPMinute,60000);rate('login-user',hashSubject('user:'+(user?.id||username)),limits.loginUserMinute,60000);});
+    transaction(()=>{clean();rollingRate('login-ip',hashSubject('ip:'+ip),limits.loginIPMinute,60000);rollingRate('login-ip-hour',hashSubject('ip:'+ip),limits.loginIPHour,3600000);});
+    verifyImage(body,ip,origin,'login');
+    // A request without a solved image cannot lock out a named account. Network
+    // limits cover every attempt; account limits cover actual password guesses.
+    transaction(()=>{rollingRate('login-user',hashSubject('user:'+(user?.id||username)),limits.loginUserMinute,60000);rollingRate('login-user-hour',hashSubject('user:'+(user?.id||username)),limits.loginUserHour,3600000);});
     const hasPassword=!!user&&/^[a-f0-9]{128}$/.test(user.password_hash),salt=hasPassword?user.salt:'00000000000000000000000000000000';
     const actual=await hashPassword(password,salt),expected=hasPassword?Buffer.from(user.password_hash,'hex'):Buffer.alloc(64);
     const matches=timingSafeEqual(actual,expected);
@@ -155,7 +212,7 @@ export async function createAuthService(config,options={}){
   async function handle(request,ip='unknown'){
     const origin=request.headers.get('Origin'),allowed=(config.allowedOrigins||[]).includes(origin),path=new URL(request.url).pathname;
     const reply=(body,status=200)=>new Response(status===204?null:JSON.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Vary':'Origin',...(allowed?{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Max-Age':'600'}:{})}});
-    if(!['/auth/register','/auth/login','/auth/status','/auth/logout','/auth/options','/auth/email/request','/auth/email/verify'].includes(path))return reply({error:'接口不存在。'},404);
+    if(!['/auth/register','/auth/login','/auth/challenge','/auth/status','/auth/logout','/auth/options','/auth/email/request','/auth/email/verify'].includes(path))return reply({error:'接口不存在。'},404);
     if(!allowed)return reply({error:'此应用未获准登录。'},403);
     if(request.method==='OPTIONS')return reply({},204);
     if(request.method!=='POST')return reply({error:'请使用 POST 登录。'},405);
@@ -163,11 +220,12 @@ export async function createAuthService(config,options={}){
     try{
       let body;try{body=JSON.parse(await boundedText(request.body,4096));}catch(error){if(error.status===413)throw new ServiceError('登录请求内容过大。',413);throw new ServiceError('登录请求不是有效 JSON。',400);}
       if(!body||typeof body!=='object'||Array.isArray(body))throw new ServiceError('登录内容格式不正确。',400);
-      if(path==='/auth/options')return reply(emailAuth.options());
-      if(path==='/auth/register')return reply(await register(body,ip));
-      if(path==='/auth/login')return reply(await login(body,ip));
+      if(path==='/auth/options')return reply({...emailAuth.options(),imageCaptchaEnabled});
+      if(path==='/auth/challenge')return reply(challenge(body,ip,origin));
+      if(path==='/auth/register')return reply(await register(body,ip,origin));
+      if(path==='/auth/login')return reply(await login(body,ip,origin));
       const key=request.headers.get('Authorization')?.match(/^Bearer ([A-Za-z0-9_-]{43})$/)?.[1];
-      if(path==='/auth/email/request')return reply(await emailAuth.request(body,ip,key));
+      if(path==='/auth/email/request'){verifyImage(body,ip,origin,'email');return reply(await emailAuth.request(body,ip,key));}
       if(path==='/auth/email/verify')return reply(await emailAuth.verify(body,ip,key));
       if(path==='/auth/logout'){if(key)stmt.deleteSession.run(sha(key));return reply({ok:true});}
       const identity=getIdentity(key);if(!identity)return reply({error:'登录已过期，请重新登录。'},401);
@@ -176,5 +234,7 @@ export async function createAuthService(config,options={}){
       ...(error instanceof ServiceError&&error.code?{code:error.code}:{}),
       ...(error instanceof ServiceError&&error.retryAfterSeconds?{retryAfterSeconds:error.retryAfterSeconds}:{})},error.status||503);}
   }
-  return {handle,getIdentity,issueInvites,close:()=>db.close()};
+  // Internal administrator reader: no password/email/session columns leave it.
+  const adminReader={count:()=>stmt.count.get().count,list:({offset=0,limit=50}={})=>stmt.publicUsers.all(limit,offset).map(row=>({id:row.id,username:row.username,createdAt:new Date(row.created).toISOString()}))};
+  return {handle,getIdentity,issueInvites,adminReader,close:()=>db.close()};
 }

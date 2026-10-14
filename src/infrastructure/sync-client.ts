@@ -145,9 +145,11 @@ export class CloudSync {
     const controller = new AbortController(), abort = () => controller.abort();
     const timer = setTimeout(abort, 15000); signal?.addEventListener('abort', abort, { once: true });
     try {
+      const serialized=JSON.stringify(body);
       const response = await this.fetcher(this.endpoint, {
         method: 'POST', credentials: 'omit', redirect: 'error', referrerPolicy: 'no-referrer', signal: controller.signal,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.metadata!.key}` }, body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.metadata!.key}` }, body: serialized,
+        keepalive:new TextEncoder().encode(serialized).length<=60_000,
       });
       if (!response.ok) {
         const messages: Record<number, string> = { 401: '同步密钥无效，请检查后重新连接', 413: '同步内容超出云空间限制，原记录仍保存在本机', 429: '同步请求较多，稍后会继续', 503: '云同步暂时不可用，原记录仍保存在本机' };

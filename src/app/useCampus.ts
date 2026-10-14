@@ -12,6 +12,7 @@ import {createPlatform, type PlatformCapabilities} from '../platform';
 import {loadConfig, type RuntimeConfig} from './config';
 import {readLegacyWork,restoreLegacyDraft,finishLegacyResult} from '../infrastructure/legacy-work';
 import type {ThemePreference} from './theme';
+import {localReminderID} from '../domain/reminders';
 
 export interface Draft {id:string; text:string; attachments:string[]}
 export interface DraftSelection {start:number;end:number;expectedText:string}
@@ -52,6 +53,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   return [makeDraft()];
  });
  const [busy,setBusy]=useState(false);
+ const [maintenanceReviewConsent,setMaintenanceReviewConsent]=useState(false);
  const [stage,setStage]=useState('');
  const [retryAt,setRetryAt]=useState(0);
  const [toast,setToast]=useState<Toast|null>(null);
@@ -101,7 +103,10 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
    save(current.filter(n=>n.id!==id));tell('已删除',()=>undoChange(before,null,position));
   }catch(e){report(e);}
  }
- function act(id:string,change:(n:Notice)=>Notice,text:string){const result=update(id,change);if(result)tell(text,()=>undoChange(result.before,result.after));}
+ function act(id:string,change:(n:Notice)=>Notice,text:string){const result=update(id,change);if(result){
+  if(!result.after.completed)for(const old of result.before.tasks){const next=result.after.tasks.find(task=>task.id===old.id);if(!old.completed&&!old.dismissed&&next&&(next.completed||next.dismissed))void platform.cancelReminder(localReminderID(id,old.id)).catch(report);}
+  tell(text,()=>undoChange(result.before,result.after));
+ }}
 
  useEffect(()=>repository.subscribe(setNotices),[repository]);
  useEffect(()=>{let alive=true;void loadConfig(platform.kind==='android').then(value=>{if(alive)setConfig(value);});
@@ -128,10 +133,12 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  useEffect(()=>{
   if(!cloud||!sync.connected)return;
   const kick=()=>{if(document.visibilityState==='visible')void cloud.syncNow();};
-  const timer=setInterval(kick,20_000);window.addEventListener('online',kick);window.addEventListener('focus',kick);document.addEventListener('visibilitychange',kick);
-  return()=>{clearInterval(timer);window.removeEventListener('online',kick);window.removeEventListener('focus',kick);document.removeEventListener('visibilitychange',kick);};
+  const visibility=()=>{void cloud.syncNow();};
+  const leaving=()=>{void cloud.syncNow();};
+  const timer=setInterval(kick,20_000);window.addEventListener('online',kick);window.addEventListener('focus',kick);document.addEventListener('visibilitychange',visibility);window.addEventListener('pagehide',leaving);
+  return()=>{clearInterval(timer);window.removeEventListener('online',kick);window.removeEventListener('focus',kick);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('pagehide',leaving);};
  },[cloud,sync.connected]);
- useEffect(()=>{if(!cloud||!sync.connected)return;const timer=setTimeout(()=>void cloud.syncNow(),700);return()=>clearTimeout(timer);},[notices,cloud,sync.connected]);
+ useEffect(()=>{if(!cloud||!sync.connected)return;const timer=setTimeout(()=>void cloud.syncNow(),300);return()=>clearTimeout(timer);},[notices,cloud,sync.connected]);
 
  useEffect(()=>{
   if(!cloud||!config||!jobAccount||!sync.connected)return;
@@ -292,7 +299,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  async function sendJobSubmission(submission:LocalAnalysisSubmission,context:ReturnType<typeof jobContext>,previouslyUncertain=false){
   analyzing.current=true;setBusy(true);setStage('提交中');abort.current=new AbortController();
   try{
-   const job=await submitAnalysisJob(submission.sources.map(d=>({text:d.text})),submission.requestId,{endpoint:config!.apiEndpoint,sessionKey:context.key,signal:abort.current.signal,onHumanVerification:options.onHumanVerification,onStage:s=>{if(context.current())setStage(s==='verifying'?'验证中':'提交中');}});
+   const job=await submitAnalysisJob(submission.sources.map(d=>({text:d.text})),submission.requestId,{endpoint:config!.apiEndpoint,sessionKey:context.key,signal:abort.current.signal,onHumanVerification:options.onHumanVerification,maintenanceReviewConsent:submission.maintenanceReviewConsent===true,onStage:s=>{if(context.current())setStage(s==='verifying'?'验证中':'提交中');}});
    if(!context.current())return false;
    submission.jobId=job.id;context.journal.put(submission);consumeJobDrafts(submission.sources);
    setAnalysisJobs(jobs=>[job,...jobs.filter(j=>j.id!==job.id)]);setUnconfirmedSubmissions(context.journal.all().filter(s=>!s.jobId));
@@ -342,7 +349,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   const sources=structuredClone(draftRef.current.filter(d=>d.text.trim()));
   if(!sources.length||sources.some(d=>!d.text.trim())||sources.reduce((n,d)=>n+d.text.length,0)>4000)throw new Error('通知总字数需在 1–4,000 之间。');
   if(draftRef.current.some(d=>!d.text.trim()&&d.attachments.length))throw new Error('有附件的通知还没填写原文，请补上后再整理。');
-  const submission:LocalAnalysisSubmission={requestId:newID(),sources,jobId:null,createdAt:new Date().toISOString()};
+  const submission:LocalAnalysisSubmission={requestId:newID(),sources,jobId:null,createdAt:new Date().toISOString(),maintenanceReviewConsent};
   // Persist the intent before sending. Reload recovery is read-only until the user explicitly confirms an unknown ACK.
   context.journal.put(submission);return sendJobSubmission(submission,context);
  }
@@ -385,6 +392,6 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   }return received;}finally{receivingShare.current=false;}
  }
  return {notices,drafts,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,bootError:boot.error,
-  report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,attach,detach,removeDraft,analyze,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
+  maintenanceReviewConsent,setMaintenanceReviewConsent,report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,attach,detach,removeDraft,analyze,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;

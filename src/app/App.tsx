@@ -15,6 +15,7 @@ import LoginDialog from '../features/settings/LoginDialog';
 import {NoteDialog,type NoteEditor} from '../features/notes/NoteDialog';
 import {CalendarDialog,type CalendarSelection} from '../features/notices/CalendarDialog';
 import {DetailDialog} from '../features/notices/DetailDialog';
+import {CorrectionDialog,type CorrectionSelection} from '../features/notices/CorrectionDialog';
 import {AboutDialog,HelpDialog} from '../shared/ui/HelpDialog';
 import type {NoticeActions} from '../features/notices/NoticeCard';
 import {ScrollPane} from '../shared/ui/ScrollPane';
@@ -30,6 +31,7 @@ export default function App(){
  const [page,setPage]=useState(0);const [login,setLogin]=useState(false);const [help,setHelp]=useState(()=>!exampleRequest.current&&localStorage.getItem('campus-inbox:tutorial:v2')!=='seen');
  const [about,setAbout]=useState(false);const [note,setNote]=useState<NoteEditor|null>(null);const [details,setDetails]=useState<string|null>(null);const [calendar,setCalendar]=useState<CalendarSelection|null>(null);const [focusID,setFocusID]=useState<string|null>(null);
  const [settingsDialog,setSettingsDialog]=useState(false);
+ const [sourcePath,setSourcePath]=useState<string|undefined>(),[correction,setCorrection]=useState<CorrectionSelection|null>(null);
  const [feedView,setFeedView]=useState(createFeedViewState);
  const [unreadReminderIDs,setUnreadReminderIDs]=useState(()=>readUnreadReminderIDs(localStorage));
  const consumeFocus=useCallback((id:string)=>setFocusID(value=>value===id?null:value),[]);
@@ -37,7 +39,7 @@ export default function App(){
  useEffect(()=>{if(app.latestAddedID){setPage(0);setFocusID(app.latestAddedID);}},[app.latestAddedID]);
  const dark=app.theme==='system'?(app.capabilities?.theme?.dark??systemDark):app.theme==='dark';const theme=makeTheme(dark,app.capabilities?.theme??null);
  useEffect(()=>{document.documentElement.dataset.platform=app.platform.kind;document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.style.colorScheme=dark?'dark':'light';document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme.palette.background.default);if(app.platform.setAppearance)void app.platform.setAppearance(dark).catch(app.report);},[app.platform,dark]);
- const modalRef=useRef(false);modalRef.current=login||help||about||!!note||!!details||!!calendar||settingsDialog||!!verification.request;
+ const modalRef=useRef(false);modalRef.current=login||help||about||!!note||!!details||!!calendar||!!correction||settingsDialog||!!verification.request;
  const lastNotices=useRef(app.notices);
  const unreadReminders=unreadReminderIDs.map(id=>app.notices.find(n=>n.id===id)).filter(n=>n&&getNoticeStatus(n)==='reminder');
  useEffect(()=>writeUnreadReminderIDs(localStorage,unreadReminderIDs),[unreadReminderIDs]);
@@ -45,7 +47,7 @@ export default function App(){
  function viewNewReminders(){const first=unreadReminders[0];if(!first)return;setPage(0);setFocusID(first.id);clearNewReminders();}
  function closeHelp(){setHelp(false);localStorage.setItem('campus-inbox:tutorial:v2','seen');}
  function navigate(next:number){setPage(next);if(split&&next===1){setTimeout(()=>{document.getElementById('compose-pane')?.scrollIntoView({block:'start',behavior:'smooth'});document.querySelector<HTMLTextAreaElement>('#compose-pane textarea')?.focus({preventScroll:true});},0);}else window.scrollTo({top:0,behavior:'instant'});}
- const actions:NoticeActions={note:(notice,target,title,text)=>setNote({noticeID:notice.id,target,title,text}),details:n=>setDetails(n.id),calendar:(notice,task)=>setCalendar({notice,task})};
+ const actions:NoticeActions={note:(notice,target,title,text)=>setNote({noticeID:notice.id,target,title,text}),details:n=>{setSourcePath(undefined);setDetails(n.id);},calendar:(notice,task)=>setCalendar({notice,task}),evidence:(notice,path)=>{setSourcePath(path);setDetails(notice.id);},correct:(notice,path)=>{setDetails(null);setCorrection({noticeID:notice.id,path});}};
  useEffect(()=>{
   const receive=()=>{if(modalRef.current||app.busy||document.querySelector('[role=\"dialog\"]'))return;void app.receiveShare().then(received=>{if(received)navigate(1);}).catch(app.report);};
   const openNotice=()=>{void app.platform.getOpenedNotice().then(id=>{if(id){setPage(0);setFocusID(id);}}).catch(app.report);};
@@ -89,7 +91,8 @@ export default function App(){
    <BottomNavigation value={page} onChange={(_,value)=>navigate(value)} showLabels sx={{bgcolor:'background.paper',height:64,alignItems:'center',px:1,gap:1,'& .MuiBottomNavigationAction-root':{minWidth:0,maxWidth:180,height:48,borderRadius:6,color:'text.secondary'},'& .MuiBottomNavigationAction-root.Mui-selected':{color:'primary.main',bgcolor:'action.selected'},'& .MuiBottomNavigationAction-label':{fontSize:'1rem',fontWeight:600},'& .MuiBottomNavigationAction-label.Mui-selected':{fontSize:'1rem'}}}>{nav.map(item=><BottomNavigationAction key={item.label} label={item.label}/>)}</BottomNavigation>
   </Paper>}
   <NoteDialog editor={note} app={app} onClose={()=>setNote(null)}/>
-  <DetailDialog notice={app.notices.find(n=>n.id===details)??null} app={app} onClose={()=>setDetails(null)}/>
+  <DetailDialog notice={app.notices.find(n=>n.id===details)??null} path={sourcePath} app={app} onCorrect={actions.correct} onClose={()=>setDetails(null)}/>
+  <CorrectionDialog notice={app.notices.find(n=>n.id===correction?.noticeID)??null} path={correction?.path} app={app} onClose={()=>setCorrection(null)}/>
   <CalendarDialog selection={calendar} app={app} onClose={()=>setCalendar(null)}/>
   <LoginDialog open={login} app={app} onClose={()=>setLogin(false)}/>
   <HumanVerificationDialog request={verification.request} onComplete={verification.complete} onCancel={()=>{app.cancel();verification.cancel();}}/>

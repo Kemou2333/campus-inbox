@@ -38,6 +38,8 @@ export type CalendarResult = { status: 'opened' | 'downloaded' | 'cancelled'; sa
 
 export interface LocalReminder {
   id: string;
+  /** Parent record for task alarms. Older bridges can ignore this optional field. */
+  noticeId?: string;
   title: string;
   body?: string;
   triggerMillis: number;
