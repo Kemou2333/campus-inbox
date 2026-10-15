@@ -1,5 +1,7 @@
 # 校园 Inbox
 
+源码协议：[GNU AGPLv3（AGPL-3.0-only）](LICENSE) · [版权与第三方范围](COPYRIGHT.md)
+
 把群里的通知整理成清楚的待办和提醒，分清谁需要办理、截止时间和具体步骤。网页与 Android 共用 Material You 界面，登录同一账号后自动同步通知文字、进度和笔记。
 
 - [打开网页](https://kemou2333.github.io/campus-inbox/)
@@ -65,6 +67,14 @@ python3 mobile/prepare-web.py
 - [邮箱登录与发信](docs/EMAIL-LOGIN.md)
 - [邀请码与账号](docs/INVITE-LOGIN.md)
 - [服务器容量估算](docs/CAPACITY.md)
+
+## 开源协议
+
+本项目原创源码采用 **GNU Affero General Public License v3.0 only（AGPL-3.0-only）**，完整官方原文见 [LICENSE](LICENSE)，项目版权说明见 [COPYRIGHT.md](COPYRIGHT.md)。
+
+AGPL 允许使用、修改、再分发和商用，无需逐次取得作者额外授权。再分发须遵守对应源码、许可证和版权声明等要求；将修改版通过网络提供给用户时，还须向与之交互的用户显著提供该修改版的对应源码。这里不添加“禁止商用”或“使用前必须另行授权”等额外限制；具体权利义务以协议原文为准。
+
+完整项目源码和构建、部署说明位于[本仓库](https://github.com/Kemou2333/campus-inbox)。第三方依赖保持各自原有协议；公开示例中的原通知、用户提交内容不因项目源码采用 AGPL 而被重新授权，也不要求公开用户数据、账号或密钥。
 
 本版还修复了删除卡片时的位置跳动、旧搜索隐藏新增结果等交互问题。空白草稿可直接粘贴；误删草稿可恢复文字和附件。宽屏分类和搜索保持可见，HTML 等附件按文字预览，不执行内容。
 
