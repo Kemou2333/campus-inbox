@@ -24,9 +24,9 @@ describe('原文出处与人工纠错边界',()=>{
  });
  it.each([{'tasks.99.text':[1]},{'__proto__.polluted':[1]},{'summary':[0]},{'summary':[-1]},{'summary':[1.5]},{'summary':[1,1]},{'summary':Array.from({length:9},(_,i)=>i+1)}])('拒绝未知路径或无效段号 %j',refs=>{expect(()=>parseAnalysis({...fixture(),sourceRefs:refs})).toThrow();});
  it('创建时拒绝超出原文段数的出处，不能让虚假引用变成高亮',()=>{expect(()=>createNotice({...fixture(),sourceRefs:{summary:[4]}},original)).toThrow();});
- it('旧通知无出处仍可读取，仅精确完整文字匹配为可能相关',()=>{
+ it('旧通知无出处仍可读取，不猜测或把重复文字误当出处',()=>{
   const n=createNotice(fixture(),original);expect(parseNotice(n).sourceRefs).toBeUndefined();
-  expect(evidenceFor(n,'reminders.0').inferred).toBe(true);expect(evidenceFor(n,'summary').status).toBe('未关联');
+  expect(evidenceFor(n,'reminders.0').segments).toEqual([]);expect(evidenceFor(n,'reminders.0').inferred).toBe(false);expect(evidenceFor(n,'summary').status).toBe('未关联');
  });
  it('可补漏项、修改标题/步骤/提醒，AI与原文/进度/笔记/附件/本地日期不变',()=>{
   let n=record();n.attachments=['local-file'];n.localDeadline='2026-10-21T18:00:00';n=toggleStep(n,n.tasks[0].id,n.tasks[0].steps[0].id);n=updateNote(n,{type:'task',taskId:n.tasks[0].id},'我的进度');

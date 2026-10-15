@@ -115,9 +115,9 @@ export async function createService(config,options={}){
     if(jobRoute&&url.pathname!=='/analysis-jobs')return reply({error:'此任务接口仅支持读取。'},405);
     if(request.signal.aborted)return reply({error:'整理已取消，请重新提交。',code:'CANCELLED'},499);
     if(!(request.headers.get('Content-Type')||'').toLowerCase().startsWith('application/json'))return reply({error:'请求必须使用 JSON。'},415);
-    let notice,requestID,maintenanceReviewConsent=false;
+    let notice,requestID;
     try{const body=JSON.parse(await boundedText(request.body,64000));if(!body||typeof body!=='object'||Array.isArray(body))throw new Error();
-      if(jobRoute){if(Object.keys(body).some(key=>!['sources','requestId','maintenanceReviewConsent'].includes(key))||!Object.hasOwn(body,'sources')||typeof body.requestId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{15,99}$/.test(body.requestId)||Object.hasOwn(body,'maintenanceReviewConsent')&&typeof body.maintenanceReviewConsent!=='boolean')throw new Error();requestID=body.requestId;maintenanceReviewConsent=body.maintenanceReviewConsent===true;notice={sources:body.sources};}
+      if(jobRoute){if(Object.keys(body).some(key=>!['sources','requestId','maintenanceReviewConsent'].includes(key))||!Object.hasOwn(body,'sources')||typeof body.requestId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{15,99}$/.test(body.requestId)||Object.hasOwn(body,'maintenanceReviewConsent')&&typeof body.maintenanceReviewConsent!=='boolean')throw new Error();requestID=body.requestId;notice={sources:body.sources};}
       else{if(Object.keys(body).length!==1)throw new Error();if(Object.hasOwn(body,'notice')){if(typeof body.notice!=='string'||!body.notice.trim()||body.notice.length>D.MAX_TEXT)throw new Error();notice=body.notice.trim();}else if(Object.hasOwn(body,'sources'))notice=body;else throw new Error();}modelInput(notice);if(jobRoute)notice={sources:notice.sources.map(source=>({text:source.text.trim()}))};}
     catch(e){return reply({error:e instanceof ServiceError?e.message:'请提供 1–4,000 字的通知文字。'},e.status||400);}
     const t=now(),hash=createHash('sha256').update(JSON.stringify(modelInput(notice))).digest('hex');
@@ -189,7 +189,7 @@ export async function createService(config,options={}){
     if(saved){
       if(!jobRoute)return reply(saved.result);
       let job;
-      try{job=options.jobs.accept(account,requestID,hash,notice.sources,maintenanceReviewConsent);options.jobs.metrics?.(account,job.id,{providerCalled:false,cacheReuse:true});options.jobs.stage(account,job.id,saved.result);return reply({job:options.jobs.complete(account,job.id)},202);}
+      try{job=options.jobs.accept(account,requestID,hash,notice.sources);options.jobs.metrics?.(account,job.id,{providerCalled:false,cacheReuse:true});options.jobs.stage(account,job.id,saved.result);return reply({job:options.jobs.complete(account,job.id)},202);}
       catch(error){if(job){try{options.jobs.fail(account,job.id,'JOB_SAVE_FAILED');}catch{}}return reply({error:error instanceof ServiceError?error.message:'整理结果暂时无法保存。'},error.status||503);}
     }
     if(publicMode&&!proof&&(accountEntries||entries).length>=3){
@@ -221,7 +221,7 @@ export async function createService(config,options={}){
       // Claim the idempotency key synchronously before the quota write yields.
       // Concurrent repeats can already find this durable task, even if its ACK
       // or budget persistence later fails. No provider runs before both stores.
-      if(jobRoute)acceptedJob=options.jobs.accept(account,requestID,hash,notice.sources,maintenanceReviewConsent);
+      if(jobRoute)acceptedJob=options.jobs.accept(account,requestID,hash,notice.sources);
       usage.costMicro+=reservedCostMicro;usage.requests++;if(publicMode)client.requests++;if(accountKey){usage.accounts??={};usage.accounts[accountKey]=(usage.accounts[accountKey]||0)+1;}await persist();
       if(jobRoute){
         // Both the quota reservation and accepted task are durable before ACK.

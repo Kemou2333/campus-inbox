@@ -53,7 +53,6 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   return [makeDraft()];
  });
  const [busy,setBusy]=useState(false);
- const [maintenanceReviewConsent,setMaintenanceReviewConsent]=useState(false);
  const [stage,setStage]=useState('');
  const [retryAt,setRetryAt]=useState(0);
  const [toast,setToast]=useState<Toast|null>(null);
@@ -299,7 +298,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  async function sendJobSubmission(submission:LocalAnalysisSubmission,context:ReturnType<typeof jobContext>,previouslyUncertain=false){
   analyzing.current=true;setBusy(true);setStage('提交中');abort.current=new AbortController();
   try{
-   const job=await submitAnalysisJob(submission.sources.map(d=>({text:d.text})),submission.requestId,{endpoint:config!.apiEndpoint,sessionKey:context.key,signal:abort.current.signal,onHumanVerification:options.onHumanVerification,maintenanceReviewConsent:submission.maintenanceReviewConsent===true,onStage:s=>{if(context.current())setStage(s==='verifying'?'验证中':'提交中');}});
+   const job=await submitAnalysisJob(submission.sources.map(d=>({text:d.text})),submission.requestId,{endpoint:config!.apiEndpoint,sessionKey:context.key,signal:abort.current.signal,onHumanVerification:options.onHumanVerification,onStage:s=>{if(context.current())setStage(s==='verifying'?'验证中':'提交中');}});
    if(!context.current())return false;
    submission.jobId=job.id;context.journal.put(submission);consumeJobDrafts(submission.sources);
    setAnalysisJobs(jobs=>[job,...jobs.filter(j=>j.id!==job.id)]);setUnconfirmedSubmissions(context.journal.all().filter(s=>!s.jobId));
@@ -349,7 +348,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   const sources=structuredClone(draftRef.current.filter(d=>d.text.trim()));
   if(!sources.length||sources.some(d=>!d.text.trim())||sources.reduce((n,d)=>n+d.text.length,0)>4000)throw new Error('通知总字数需在 1–4,000 之间。');
   if(draftRef.current.some(d=>!d.text.trim()&&d.attachments.length))throw new Error('有附件的通知还没填写原文，请补上后再整理。');
-  const submission:LocalAnalysisSubmission={requestId:newID(),sources,jobId:null,createdAt:new Date().toISOString(),maintenanceReviewConsent};
+  const submission:LocalAnalysisSubmission={requestId:newID(),sources,jobId:null,createdAt:new Date().toISOString()};
   // Persist the intent before sending. Reload recovery is read-only until the user explicitly confirms an unknown ACK.
   context.journal.put(submission);return sendJobSubmission(submission,context);
  }
@@ -392,6 +391,6 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   }return received;}finally{receivingShare.current=false;}
  }
  return {notices,drafts,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,bootError:boot.error,
-  maintenanceReviewConsent,setMaintenanceReviewConsent,report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,attach,detach,removeDraft,analyze,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
+  report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,attach,detach,removeDraft,analyze,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;

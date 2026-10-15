@@ -23,8 +23,7 @@ export function createAdminService(config,{auth,sync,ai,now=Date.now}){
   // Pin already-existing account UUIDs at boot. Registering an allowed-looking
   // name after startup cannot turn a normal account into an administrator.
   const owners=new Set(auth.adminReader.list({limit:500}).filter(account=>names.has(account.username)).map(account=>account.id));
-  const origins=new Set(config.allowedOrigins||[]),contentDays=config.contentDays??30;
-  if(!Number.isSafeInteger(contentDays)||contentDays<1||contentDays>365)throw new Error('ADMIN_REVIEW_DAYS must be 1–365');
+  const origins=new Set(config.allowedOrigins||[]);
   const rates=new Map(),enabled=names.size>0;
   const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY','Permissions-Policy':'camera=(), microphone=(), geolocation=()'};
   return async function handle(request){
@@ -34,7 +33,7 @@ export function createAdminService(config,{auth,sync,ai,now=Date.now}){
     if(url.pathname==='/admin'||url.pathname==='/admin/'){
       if(!['GET','HEAD'].includes(request.method))return reply({error:'请使用支持的请求方法。'},405);
       const nonce=randomBytes(24).toString('base64');
-      return new Response(request.method==='HEAD'?null:adminHtml(nonce),{headers:{...headers,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':`default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; img-src data:; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}'; connect-src 'self'`}});
+      return new Response(request.method==='HEAD'?null:adminHtml(nonce),{headers:{...headers,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':`default-src 'none'; base-uri 'none'; frame-ancestors 'none'; frame-src https://kemou2333.github.io; form-action 'self'; img-src data:; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}'; connect-src 'self'`}});
     }
     if(!accepted)return reply({error:'此应用未获准访问后台。'},403);
     if(request.method==='OPTIONS')return reply({},204);
@@ -52,11 +51,23 @@ export function createAdminService(config,{auth,sync,ai,now=Date.now}){
         let value;try{value=JSON.parse(await boundedText(request.body,1024));}catch{throw new ServiceError('读取请求格式不正确。',400);}
         if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length)throw new ServiceError('后台不接受修改参数。',400);
       }
-      if(url.pathname==='/admin/summary')return reply({accounts:auth.adminReader.count(),...sync.adminReader.summary(),usage:ai.adminSummary(),backup:await backupSummary(config.backupStateFile),reviewPolicy:{contentDays,otherUsersNeedConsent:true,oldJobsConsent:false},readOnly:true});
+      if(url.pathname==='/admin/summary')return reply({accounts:auth.adminReader.count(),...sync.adminReader.summary(),daily:sync.adminReader.daily(),usage:ai.adminSummary(),backup:await backupSummary(config.backupStateFile),readOnly:true});
       if(url.pathname==='/admin/accounts'){
         const raw=url.searchParams.get('offset')||'0';if(!/^\d{1,5}$/.test(raw))throw new ServiceError('分页位置不正确。',400);
         const offset=Number(raw),accounts=auth.adminReader.list({offset,limit:51}),hasMore=accounts.length>50;
         return reply({accounts:accounts.slice(0,50).map(account=>({...account,...sync.adminReader.accountStats(account.id)})),hasMore,nextOffset:hasMore?offset+50:null});
+      }
+      const recordsPath=url.pathname.match(/^\/admin\/accounts\/([0-9a-f-]{36})\/records(?:\/(.+))?$/);
+      if(recordsPath){
+        const subject=recordsPath[1];
+        if(recordsPath[2]){
+          let id;try{id=decodeURIComponent(recordsPath[2]);if(!id||id.length>150||id!==id.trim())throw 0;}catch{throw new ServiceError('通知编号不正确。',400);}
+          const result=sync.adminReader.record(subject,id);return result?reply(result):reply({error:'通知不存在或已删除。'},404);
+        }
+        const raw=url.searchParams.get('before');let before;
+        if(raw){try{if(raw.length>1024)throw 0;before=JSON.parse(Buffer.from(raw,'base64url').toString());if(!Array.isArray(before)||before.length!==2||!Number.isSafeInteger(before[0])||before[0]<1||typeof before[1]!=='string'||!before[1]||before[1].length>150)throw 0;}catch{throw new ServiceError('分页位置不正确。',400);}}
+        const rows=sync.adminReader.records({subject,before,limit:21}),hasMore=rows.length>20,records=rows.slice(0,20),last=records.at(-1);
+        return reply({records,hasMore,nextBefore:hasMore?Buffer.from(JSON.stringify([last.version,last.id])).toString('base64url'):null});
       }
       if(url.pathname==='/admin/jobs'){
         const subject=url.searchParams.get('account')||undefined,beforeRaw=url.searchParams.get('before');
@@ -68,7 +79,7 @@ export function createAdminService(config,{auth,sync,ai,now=Date.now}){
         return reply({jobs:jobs.map(job=>({...job,username:namesByID.get(job.ownerSubject)||'已停用账号'})),hasMore,nextBefore:hasMore?Buffer.from(JSON.stringify([last.createdAt,last.id])).toString('base64url'):null});
       }
       if(/^\/admin\/jobs\/[0-9a-f-]{36}$/.test(url.pathname)){
-        const job=sync.adminReader.job(url.pathname.split('/').at(-1),{viewerSubject:identity.subject,contentDays});
+        const job=sync.adminReader.job(url.pathname.split('/').at(-1));
         return job?reply({job}):reply({error:'任务不存在。'},404);
       }
       return reply({error:'接口不存在。'},404);

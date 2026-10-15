@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {analyze,modelPayload,ServiceError} from '../analyze.mjs';
-import {evidencePaths,parseSourceRefs,segmentSource} from '../contracts/source-evidence.js';
+import {evidencePaths,requiredEvidencePaths,parseSourceRefs,segmentSource} from '../contracts/source-evidence.js';
 
 // Deterministic mock envelopes only. These tests make no provider/network requests.
 const source='课程学习通知。\n普通班同学须提交视频、音频或文字素材。\n2026年10月20日18:00前提交。\n素材须为本人原创。';
@@ -33,6 +33,13 @@ test('valid path coverage survives strict source analysis and strips only transp
  assert.equal(evidencePaths(output.result.notices[0]).every(path=>Object.hasOwn(n.sourceRefs,path)),true);
  assert.equal(evidencePaths(n).some(path=>path.endsWith('.scope')||path==='kind'||path==='deadline'),false);
 });
+test('one original produces one card in the new flow while legacy split responses remain readable',async()=>{
+ const n=analysis(),split={schemaVersion:4,notices:[n,structuredClone(n)]};
+ const provider=async()=>Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(split)}}],usage:{prompt_tokens:21,completion_tokens:34}});
+ await assert.rejects(analyze(source,{...config,oneNoticePerSource:true},provider),error=>error.failureCode==='SOURCE_COUNT'&&error.usageAvailable);
+ assert.equal((await analyze(source,config,provider)).result.notices.length,2);
+ assert.equal((await analyze(source,{...config,oneNoticePerSource:true},async()=>envelope(n))).result.notices.length,1);
+});
 test('task group citations expand for each sentence and specific citations override regardless of object order',async()=>{
  const n=analysis(),refs={title:[1],summary:[2],deadlineText:[3],'warnings.0':[4],'tasks.0.steps.0.details.0':[4],'tasks.0':[2]};
  n.sourceRefs=refs;
@@ -55,8 +62,8 @@ test('step citations override task citations and a sentence overrides both witho
  assert.deepEqual(parsed,parseSourceRefs(Object.fromEntries(Object.entries(refs).reverse()),n,source));
  for(const key of ['tasks.0.steps.1','tasks.0.steps.00','tasks.1.steps.0','tasks.0.steps.__proto__'])assert.throws(()=>parseSourceRefs({[key]:[1]},n,source));
 });
-test('strict mode rejects every missing prose mapping after one mock call, including nested step details',async()=>{
- for(const path of evidencePaths(analysis())){
+test('strict mode rejects missing actionable headings after one mock call',async()=>{
+ for(const path of requiredEvidencePaths(analysis())){
   const n=analysis();delete n.sourceRefs[path];let calls=0;
   await assert.rejects(analyze(source,config,async()=>{calls++;return envelope(n);}),rejected);assert.equal(calls,1);
  }
@@ -79,9 +86,9 @@ test('a paragraph number beyond the actual mapped original is rejected even if a
 test('mapping cardinality is bounded, not an unrestricted model-controlled object',()=>{
  const n=analysis();assert.throws(()=>parseSourceRefs(Object.fromEntries(Array.from({length:181},(_,i)=>[`materials.${i}`,[1]])),{...n,materials:Array(181).fill('材料')},source));
 });
-test('reminder topic titles and body each require their own source map; a topic name is not a quote',async()=>{
+test('information cards require concise topic titles but do not force citation of every paragraph',async()=>{
  const n={sourceId:1,schemaVersion:4,kind:'information',title:'课程信息',summary:'留意课程学习要求。',deadline:null,deadlineText:'',timeline:[],tasks:[],materials:[],warnings:[],reminders:['需完成**20%**的视频观看。'],reminderTitles:['线上学习'],sourceRefs:{title:[1],summary:[1],'reminders.0':[1],'reminderTitles.0':[1]}};
  const output=await analyze('线上学习需完成不少于20%的视频观看。',config,async()=>envelope(n));assert.equal(output.result.notices[0].reminderTitles[0],'线上学习');
- const missing=structuredClone(n);delete missing.sourceRefs['reminderTitles.0'];await assert.rejects(analyze(source,config,async()=>envelope(missing)),rejected);
+ const missing=structuredClone(n);missing.sourceRefs={};const withoutRefs=await analyze(source,config,async()=>envelope(missing));assert.deepEqual(withoutRefs.result.notices[0].sourceRefs,{});
  const absent=structuredClone(n);delete absent.reminderTitles;delete absent.sourceRefs['reminderTitles.0'];await assert.rejects(analyze(source,config,async()=>envelope(absent)),rejected);
 });

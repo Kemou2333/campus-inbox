@@ -65,6 +65,10 @@ describe('cloud analysis jobs',()=>{
   expect(new AnalysisJobJournal('https://example.test/analyze','bob',storage).all()).toEqual([]);expect(new AnalysisJobJournal('https://other.test/analyze','alice',storage).all()).toEqual([]);
   expect([...storage.data.values()].join()).not.toContain('session');a.dismiss('job-1');expect(new AnalysisJobJournal('https://example.test/analyze','alice',storage).dismissed('job-1')).toBe(true);
  });
+ it('recovers legacy queued submissions with an unused maintenance flag without losing sources or file references',()=>{
+  const storage=new MemoryStorage(),journal=new AnalysisJobJournal('https://example.test/analyze','alice',storage),legacy={...submission(),jobId:null,maintenanceReviewConsent:true};journal.put(legacy);
+  const reopened=new AnalysisJobJournal('https://example.test/analyze','alice',storage);expect(reopened.all()).toHaveLength(1);expect(reopened.all()[0].requestId).toBe(requestId);expect(reopened.all()[0].sources).toEqual(legacy.sources);expect(reopened.all()[0].jobId).toBeNull();expect(pendingAnalysisFiles(storage).sort()).toEqual(['file-one','file-two']);
+ });
  it('consumes only the exact submitted draft and preserves a later edit or attachment change',()=>{
   const old=submission().sources;const modified=[{...old[0],text:'新编辑'},{...old[1],attachments:['new-file']},{id:'another',text:'下一条',attachments:[]}];
   expect(withoutSubmittedDrafts(modified,old)).toEqual(modified);expect(withoutSubmittedDrafts([...old,modified[2]],old)).toEqual([modified[2]]);

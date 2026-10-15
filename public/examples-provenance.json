@@ -1,9 +1,9 @@
 {
   "model": "deepseek-flash",
   "thinking": "mixed",
-  "paidCallsForLatestResults": 15,
+  "paidCallsForLatestResults": 17,
   "sourceCount": 18,
-  "generationMethod": "Mixed provenance: 12 retained r5/disabled notices, one retained r6/low long notice, and selected r12/r14 low first responses from authorized 2026-10-12 experiments. One natural provider response per intentional trial; no automatic paid retries or response repair. Public examples underwent manual privacy redaction only. Original sources and first provider responses remain private; original hashes identify those unedited records. Deterministic date grounding and local IDs/progress fields are app transformations, not manual semantic corrections. The selected math response was initially rejected by the former five-detail validator; its exact first provider content was then revalidated offline against the bounded twenty-detail contract without another provider request or semantic edits. The 2026-10-14 experiment intentionally compared r15/r16 linear-algebra extraction and new r17 math/r18 aid first responses. Three selected original responses were appended; the r15 response was not selected because of semantic limitations. Initial r16 source-count and r17 step-group contract rejections remain recorded, while exact unchanged first responses were accepted in free bounded compatibility replays. Source references were deterministically expanded and manually reanchored through privacy edits to the redacted original; no semantic wording was repaired.",
+  "generationMethod": "Mixed provenance: 12 retained r5/disabled notices, one retained r6/low long notice, and selected r12/r14 low first responses from authorized 2026-10-12 experiments. One natural provider response per intentional trial; no automatic paid retries or response repair. Public examples underwent manual privacy redaction only. Original sources and first provider responses remain private; original hashes identify those unedited records. Deterministic date grounding and local IDs/progress fields are app transformations, not manual semantic corrections. The selected math response was initially rejected by the former five-detail validator; its exact first provider content was then revalidated offline against the bounded twenty-detail contract without another provider request or semantic edits. The 2026-10-14 experiment intentionally compared r15/r16 linear-algebra extraction and new r17 math/r18 aid first responses. Three selected original responses were appended; the r15 response was not selected because of semantic limitations. Initial r16 source-count and r17 step-group contract rejections remain recorded, while exact unchanged first responses were accepted in free bounded compatibility replays. Source references were deterministically expanded and manually reanchored through privacy edits to the redacted original; no semantic wording was repaired. The 2026-10-15 experiment made four intentional low-thinking paid first calls: r19 math and foreign-language baselines produced two and ten cards and were not selected; r21 math and foreign-language each produced one card and were appended. The selected two first responses were accepted naturally. Only task headings and optional important cautions/reminder themes carry source links; title, summary and repeated dates are not forced to cite every sentence. Raw originals/responses remain private. Privacy edits and deterministic reference reanchoring do not repair model omissions.",
   "limitations": [
     "AI can still omit or misclassify facts. Return-vs-leave applicability may overlap; check the original.",
     "Exam schedules may be classified as reminders.",
@@ -14,7 +14,11 @@
     "Source links are AI-associated and bounded by the program; a valid highlighted paragraph does not verify every claim. Group references may be broad.",
     "The selected r17 math output still omits audio as an allowed material; the original and this limitation are retained.",
     "The selected linear outline retains some repeated midterm information and first-person contact wording.",
-    "Two selected first responses originally failed the then-current reference contract; free compatibility validation is explicitly distinguished from paid first-response acceptance."
+    "Two selected first responses originally failed the then-current reference contract; free compatibility validation is explicitly distinguished from paid first-response acceptance.",
+    "The r21 selected math first response preserves audio as an allowed material and fits one card, but omits the original conflicting Zhihuishu entrypoint warning and the explicit XueTangX 100-point completion statement.",
+    "The r21 foreign-language response retains signup and three preliminary submissions in one card; comprehensive-ability and written-translation exam formats are not explicit structured details.",
+    "The two r19 quality baselines are not catalog examples: math split into two cards and foreign-language into ten. Their real paid token usage and cost remain counted, with no automatic paid retry.",
+    "Selective source association supports comparison, not automatic verification. Sparse optional source links and older unassociated records are not evidence of a JSON-format failure."
   ],
   "results": [
     {
@@ -33,7 +37,8 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "55d9fcafb51880fd4d2c6c9974c03ddf416e5c39ac868298e3b4cd6866526ced",
-      "publishedRecordSha256": "a6070d191e62592f0c854695e29245b59c426dcfb0981c1c5567c25d4ffb4e43"
+      "publishedRecordSha256": "a6070d191e62592f0c854695e29245b59c426dcfb0981c1c5567c25d4ffb4e43",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v25-1",
@@ -51,7 +56,8 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "82ca4798becdb49e81ba5879f5492eaf7b4b30af717e4ad13290b418dfbca827",
-      "publishedRecordSha256": "9fc63c0a9c37c3255a773a13c43495781ec2b7e64c18e41f51f3c4bb9e182e76"
+      "publishedRecordSha256": "9fc63c0a9c37c3255a773a13c43495781ec2b7e64c18e41f51f3c4bb9e182e76",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v25-2",
@@ -69,7 +75,8 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "07fcef83eca8862e993fb68260f4bd63b552f4613eafceaf70151ef715c93de6",
-      "publishedRecordSha256": "a2f5d89e03919159d47514cff086e71e35993f1d48360c8abe57a22e5c4acd05"
+      "publishedRecordSha256": "a2f5d89e03919159d47514cff086e71e35993f1d48360c8abe57a22e5c4acd05",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v25-3",
@@ -87,7 +94,8 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "ecb689c460cad26f44fddfa129e8ba83c88d76e160bd9d27b0579b93e7790ef0",
-      "publishedRecordSha256": "478f1f480bf2be1fa660a940523a94022c0ef854bebcbca6cfd5edf7c998d4ac"
+      "publishedRecordSha256": "478f1f480bf2be1fa660a940523a94022c0ef854bebcbca6cfd5edf7c998d4ac",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v25-4",
@@ -105,7 +113,8 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "f45efb5fb406a134ee8c257a53a2dd1d3787a0c4c803796d461a69ca405715f5",
-      "publishedRecordSha256": "c5d70567ae672450cf4240730a86a4bceb8f88838122bead568363c028444b79"
+      "publishedRecordSha256": "c5d70567ae672450cf4240730a86a4bceb8f88838122bead568363c028444b79",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v25-5",
@@ -123,7 +132,8 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "7af84a178a8b10ce48a18f9f4aa949b0fedde1fe4a9e0e063c8f19e774561735",
-      "publishedRecordSha256": "690188f6d1cd5b063f5014848a9cc1727056f707a6b1182ccca7af809d612833"
+      "publishedRecordSha256": "690188f6d1cd5b063f5014848a9cc1727056f707a6b1182ccca7af809d612833",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v25-6",
@@ -141,7 +151,8 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "ea3150b4028db627501ac74ad01071b90fac63f9c5e43697b882b4041fe9fa94",
-      "publishedRecordSha256": "db64270164af5ca62b71783687626fec1ff92f1b94cde1b1830f42a576b785c3"
+      "publishedRecordSha256": "db64270164af5ca62b71783687626fec1ff92f1b94cde1b1830f42a576b785c3",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v25-7",
@@ -159,7 +170,8 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "2575c0f7d235ce54e65de31cd25c0449d26e4c13f8ba7b2e75d0626cddc7cbd8",
-      "publishedRecordSha256": "66f018944667cc46234d1ff8fa95bd587e44adecb0778ca0426cd0507df9f388"
+      "publishedRecordSha256": "66f018944667cc46234d1ff8fa95bd587e44adecb0778ca0426cd0507df9f388",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v25-8",
@@ -177,7 +189,8 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "5e655a2c6947cc26d71d88c881af65b7a9209f3c5f994251de817337e93663e1",
-      "publishedRecordSha256": "2c72a1326aa40da6c7def230cd92a71350d778615a91988454d79a6491fb28a5"
+      "publishedRecordSha256": "2c72a1326aa40da6c7def230cd92a71350d778615a91988454d79a6491fb28a5",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v25-9",
@@ -195,7 +208,8 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "5e655a2c6947cc26d71d88c881af65b7a9209f3c5f994251de817337e93663e1",
-      "publishedRecordSha256": "3f0bd8acea66e34cfa728864637b4b846a0d7c9f551a48e007b228c83716e265"
+      "publishedRecordSha256": "3f0bd8acea66e34cfa728864637b4b846a0d7c9f551a48e007b228c83716e265",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v25-10",
@@ -213,7 +227,8 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "5e655a2c6947cc26d71d88c881af65b7a9209f3c5f994251de817337e93663e1",
-      "publishedRecordSha256": "5c5472d995352565ce5cd04b1f0a49bc3b192569ca9e597c6dbcfcd76b224a48"
+      "publishedRecordSha256": "5c5472d995352565ce5cd04b1f0a49bc3b192569ca9e597c6dbcfcd76b224a48",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v25-11",
@@ -231,7 +246,8 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "26955520abeab334434510e060f5b66e8df41eadf03ac22d030f81a206ba28f2",
-      "publishedRecordSha256": "0892b474bc54539d455ae758a6581e2a8a29d7eeb20cffb6c1d605c804c3a282"
+      "publishedRecordSha256": "0892b474bc54539d455ae758a6581e2a8a29d7eeb20cffb6c1d605c804c3a282",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v26-12",
@@ -249,7 +265,8 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "5e1c2ed18a3b72b922e1b4021e5c09265500d081ab997e04524c8088c4df6f81",
-      "publishedRecordSha256": "27c9a475c92ff6ad8128effd199cb276b65eaf0b2e202433294b31b4a21626ef"
+      "publishedRecordSha256": "27c9a475c92ff6ad8128effd199cb276b65eaf0b2e202433294b31b4a21626ef",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v211-0",
@@ -285,7 +302,8 @@
       "knownLimitations": [
         "Structured output omits audio as a permitted original math-material format.",
         "The task summary is broad, and the two platform workflows use long step details."
-      ]
+      ],
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v211-1",
@@ -314,7 +332,8 @@
       },
       "estimatedCostRmb": 0.026453,
       "costBasis": "conservative estimate, not supplier invoice",
-      "appTransformations": "Free replay through space-tolerant date parser: partial month=10, day=14, year=null; raw timeText and first provider content unchanged."
+      "appTransformations": "Free replay through space-tolerant date parser: partial month=10, day=14, year=null; raw timeText and first provider content unchanged.",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v211-2",
@@ -342,7 +361,8 @@
         "reasoning": 4646
       },
       "estimatedCostRmb": 0.052239,
-      "costBasis": "conservative estimate, not supplier invoice"
+      "costBasis": "conservative estimate, not supplier invoice",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v211-3",
@@ -370,7 +390,8 @@
         "reasoning": 1569
       },
       "estimatedCostRmb": 0.021041,
-      "costBasis": "conservative estimate, not supplier invoice"
+      "costBasis": "conservative estimate, not supplier invoice",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v211-4",
@@ -398,7 +419,8 @@
         "reasoning": 3967
       },
       "estimatedCostRmb": 0.047717,
-      "costBasis": "conservative estimate, not supplier invoice"
+      "costBasis": "conservative estimate, not supplier invoice",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v211-5",
@@ -426,7 +448,8 @@
         "reasoning": 1953
       },
       "estimatedCostRmb": 0.025167,
-      "costBasis": "conservative estimate, not supplier invoice"
+      "costBasis": "conservative estimate, not supplier invoice",
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v212-0",
@@ -461,7 +484,8 @@
         "Midterm information occurs in two sections.",
         "Contact uses first-person wording, not the named course assistant.",
         "Image/QR placeholder appears in the contact section."
-      ]
+      ],
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v212-1",
@@ -496,7 +520,8 @@
         "Audio is still omitted as an allowed material format in the structured result.",
         "Ten warnings repeat some deadline and originality facts.",
         "Summary counts three actions while the UI groups them into two platform tasks."
-      ]
+      ],
+      "manualIdentityReview": true
     },
     {
       "exampleId": "example-reading-v212-2",
@@ -529,6 +554,81 @@
       "publishedRecordSha256": "d27bd265978b6bfd8f7c62304b1d9491318cc0d51cc7c4da97570ccfc4a00eea",
       "semanticLimitations": [
         "The eligibility section says submit separately from the next section explaining pending approval; summary/current-state section retain the prerequisite."
+      ],
+      "manualIdentityReview": true
+    },
+    {
+      "exampleId": "example-reading-v213-0",
+      "title": "高等数学II-1线上网课学习任务",
+      "case": "math-online",
+      "sourceIndex": 0,
+      "noticeIndex": 0,
+      "testedAt": "2026-10-15T00:19:14.232Z",
+      "trialId": "r21-math-01",
+      "sourceSha256": "2c512c9620bbcc20cef07037ff143f5a88798a3540d1fa401ad05e05e28580b1",
+      "firstProviderContentSha256": "f4340190da90c1bca7c4da1038dd659ee0dd479eba2a49ffe9fabf22e1148d10",
+      "canonicalJobRecordSha256": "156c0bee9db24f603293f288499d9a28a6dfdfa0557f13de2aef0d742a31f13f",
+      "normalizedOriginalAnalysisSha256": "fd1fa11af68af824984c299cdb9789d7ff7f7be7e24a0328580a6c8bb3440e39",
+      "manualWordEdits": true,
+      "manualPrivacyEdits": true,
+      "manualIdentityReview": true,
+      "manualContentCorrections": false,
+      "manualSourceRefReanchoring": true,
+      "deterministicSourceRefExpansion": true,
+      "revision": "r21",
+      "thinking": "low",
+      "reasoningEffort": "low",
+      "promptSha256": "e1df78ca04a3036728743a8fb2a59ded17ef68f00c7f516fd6ff68842a8b3457",
+      "originalPaidAccepted": true,
+      "originalHarnessSuccess": true,
+      "freeReplayAccepted": false,
+      "freeReplayTrialId": null,
+      "sourceRefCompatibility": "Accepted naturally on the paid first response with one card per original input source and selective task-heading/important-caution evidence.",
+      "associatedPaths": 7,
+      "unassociatedAfterPrivacy": [],
+      "publishedOriginalSha256": "3f721a71c76ae3f0d2760e329a40a9eefd99c008363b0a8bdafed1c63ee1ef05",
+      "publishedRecordSha256": "43ce0662933e77d2f99f6a948db73024a01483e8e7df0eee70e649ef4f0be527",
+      "semanticLimitations": [
+        "The source has contradictory Zhihuishu platform entrypoints; this response chooses the operating-guide entrypoint without retaining the explicit conflict warning.",
+        "The XueTangX task no longer explicitly restates that completing the required videos and material yields 100 platform points.",
+        "Originality requirements still recur in both task material details and cautions; the selected response is not a promise of zero repetition."
+      ]
+    },
+    {
+      "exampleId": "example-reading-v213-1",
+      "title": "2026外研社·国才杯校赛报名与初选",
+      "case": "foreign-language",
+      "sourceIndex": 0,
+      "noticeIndex": 0,
+      "testedAt": "2026-10-15T00:22:03.283Z",
+      "trialId": "r21-foreign-01",
+      "sourceSha256": "0b6934e70edbdaac44193d1e227dadde0894b05e9b5a2f75bb4d16db8317efb0",
+      "firstProviderContentSha256": "03d9b9eab0879b1c5b4908944c802d77db3da61df87020aeff05d6f3c5a9440e",
+      "canonicalJobRecordSha256": "a51f46c5a268c71edca261dc0d0864f8a3a66869d198a43c276576de13b039ab",
+      "normalizedOriginalAnalysisSha256": "a3457d9722dc205eb8cc50b4524f249ea535d4fb94e3a61967847dd30bbe23d8",
+      "manualWordEdits": true,
+      "manualPrivacyEdits": true,
+      "manualIdentityReview": true,
+      "manualContentCorrections": false,
+      "manualSourceRefReanchoring": true,
+      "deterministicSourceRefExpansion": true,
+      "revision": "r21",
+      "thinking": "low",
+      "reasoningEffort": "low",
+      "promptSha256": "e1df78ca04a3036728743a8fb2a59ded17ef68f00c7f516fd6ff68842a8b3457",
+      "originalPaidAccepted": true,
+      "originalHarnessSuccess": true,
+      "freeReplayAccepted": false,
+      "freeReplayTrialId": null,
+      "sourceRefCompatibility": "Accepted naturally on the paid first response with one card per original input source and selective task-heading/important-caution evidence.",
+      "associatedPaths": 10,
+      "unassociatedAfterPrivacy": [],
+      "publishedOriginalSha256": "8e627a2bcfccb733db5a4bf82b6f91e4fbbdaef8564366aaf078e6be794a6253",
+      "publishedRecordSha256": "b1545849069f82424bad1f9f4fa549ece22ddb35602dd0a5a5d2556706706124",
+      "semanticLimitations": [
+        "The response aggregates signup and group joining into one shared task; event-specific information remains inside its details rather than separate signup tasks.",
+        "The comprehensive-ability and written-translation exam-format descriptions are not retained as explicit structured details.",
+        "The original includes broader background and some process subcases that are summarized; users should inspect the original for full wording."
       ]
     }
   ],
@@ -539,11 +639,12 @@
     "r14",
     "r16",
     "r17",
-    "r18"
+    "r18",
+    "r21"
   ],
   "privacyReview": {
     "policyVersion": 1,
-    "reviewedAt": "2026-10-14",
+    "reviewedAt": "2026-10-15",
     "manualReview": true,
     "disclosure": "公开示例已脱敏：人物姓名为化名，联系方式、群号、具体链接及可识别班级信息已替换；公开原文并非未经修改的测试原文。",
     "redactedCategories": [
@@ -555,15 +656,25 @@
     ],
     "contentCorrections": false,
     "untouchedLegacyPolicy": "Only complete fingerprint matches are replaced. User notes, progress, attachments and edits remain intact.",
-    "reviewedNotices": 22,
+    "reviewedNotices": 24,
     "manualSourceRefReanchoring": true,
-    "unchangedLegacyRecordsReviewed": 19,
-    "newReviewedRecords": 3
+    "unchangedLegacyRecordsReviewed": 22,
+    "newReviewedRecords": 2,
+    "manualIdentityReview": true,
+    "identityCategoriesReviewed": [
+      "personal_names",
+      "student_identifiers",
+      "contact_details",
+      "private_group_numbers",
+      "private_links",
+      "indirect_identification"
+    ],
+    "identityReviewedAt": "2026-10-15"
   },
   "paidCallsIn20261012Experiment": 12,
   "selectedNewFirstResponses": 6,
-  "paidCallsForLatestResultsMeaning": "Distinct original provider responses represented in the 22-notice catalog, including historical responses; not the number of calls made today. The 2026-10-14 experiment made four paid calls and selected three first responses; compatibility replays were free and did not repair provider text.",
-  "catalogDistinctOriginalProviderCalls": 15,
+  "paidCallsForLatestResultsMeaning": "Distinct original provider responses represented in the 24-notice catalog, including historical responses; not calls made today. The 2026-10-15 experiment made four paid first calls and selected two r21 responses; the two r19 over-splitting baselines remain private and counted in the experiment.",
+  "catalogDistinctOriginalProviderCalls": 17,
   "experiment20261012": {
     "realProviderCalls": 12,
     "selectedFirstResponses": 6,
@@ -682,6 +793,138 @@
           "prompt_cache_miss_tokens": 794
         },
         "firstProviderContentSha256": "24d4f64138aa5b0f0cd03df59375158564a9092c996bc96a71d893a3208a43d4"
+      }
+    ]
+  },
+  "experiment20261015": {
+    "realProviderCalls": 4,
+    "selectedFirstResponses": 2,
+    "selectedSourceCount": 2,
+    "selectedPublicCards": 2,
+    "automaticPaidRetries": 0,
+    "providerCallsForPublicExamplePreparation": 0,
+    "initialPaidContractRejections": 0,
+    "selectedResponseOfflineRevalidations": 0,
+    "manualSemanticCorrections": 0,
+    "totalTokens": 67442,
+    "conservativeEstimatedCostRmb": 0.544486,
+    "costIsInvoice": false,
+    "experimentRevisions": [
+      "r19",
+      "r21"
+    ],
+    "trials": [
+      {
+        "trialId": "r19-math-01",
+        "providerCalls": 1,
+        "originalPaidAccepted": true,
+        "originalHarnessSuccess": true,
+        "selectedForPublicExamples": false,
+        "originalCardCount": 2,
+        "providerElapsedMs": 65955,
+        "usage": {
+          "prompt_tokens": 3156,
+          "completion_tokens": 13228,
+          "total_tokens": 16384,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 12030
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 3156
+        },
+        "conservativeEstimatedCostRmb": 0.134564,
+        "firstProviderContentSha256": "3ce0631678913a4d6dbbb7d4bf2ae68ef6cfbfdcf79a8b593c616b2792ddfa2d",
+        "remainingLimitations": [
+          "One source split into two cards; repeated task details and steps; cautions overlap."
+        ]
+      },
+      {
+        "trialId": "r19-foreign-01",
+        "providerCalls": 1,
+        "originalPaidAccepted": true,
+        "originalHarnessSuccess": true,
+        "selectedForPublicExamples": false,
+        "originalCardCount": 10,
+        "providerElapsedMs": 119165,
+        "usage": {
+          "prompt_tokens": 3941,
+          "completion_tokens": 22293,
+          "total_tokens": 26234,
+          "prompt_tokens_details": {
+            "cached_tokens": 1536
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 19472
+          },
+          "prompt_cache_hit_tokens": 1536,
+          "prompt_cache_miss_tokens": 2405
+        },
+        "conservativeEstimatedCostRmb": 0.223472,
+        "firstProviderContentSha256": "51b2fb5680541811dd98d33d2e6fb1b6f645812812b8207953e4f548745a0f91",
+        "remainingLimitations": [
+          "One source split into ten cards; dates, signup and background were fragmented across multiple cards."
+        ]
+      },
+      {
+        "trialId": "r21-math-01",
+        "providerCalls": 1,
+        "originalPaidAccepted": true,
+        "originalHarnessSuccess": true,
+        "selectedForPublicExamples": true,
+        "originalCardCount": 1,
+        "providerElapsedMs": 48154,
+        "usage": {
+          "prompt_tokens": 3209,
+          "completion_tokens": 8216,
+          "total_tokens": 11425,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 7286
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 3209
+        },
+        "conservativeEstimatedCostRmb": 0.086576,
+        "firstProviderContentSha256": "f4340190da90c1bca7c4da1038dd659ee0dd479eba2a49ffe9fabf22e1148d10",
+        "remainingLimitations": [
+          "The source has contradictory Zhihuishu platform entrypoints; this response chooses the operating-guide entrypoint without retaining the explicit conflict warning.",
+          "The XueTangX task no longer explicitly restates that completing the required videos and material yields 100 platform points.",
+          "Originality requirements still recur in both task material details and cautions; the selected response is not a promise of zero repetition."
+        ]
+      },
+      {
+        "trialId": "r21-foreign-01",
+        "providerCalls": 1,
+        "originalPaidAccepted": true,
+        "originalHarnessSuccess": true,
+        "selectedForPublicExamples": true,
+        "originalCardCount": 1,
+        "providerElapsedMs": 53903,
+        "usage": {
+          "prompt_tokens": 3994,
+          "completion_tokens": 9405,
+          "total_tokens": 13399,
+          "prompt_tokens_details": {
+            "cached_tokens": 1536
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 7922
+          },
+          "prompt_cache_hit_tokens": 1536,
+          "prompt_cache_miss_tokens": 2458
+        },
+        "conservativeEstimatedCostRmb": 0.099874,
+        "firstProviderContentSha256": "03d9b9eab0879b1c5b4908944c802d77db3da61df87020aeff05d6f3c5a9440e",
+        "remainingLimitations": [
+          "The response aggregates signup and group joining into one shared task; event-specific information remains inside its details rather than separate signup tasks.",
+          "The comprehensive-ability and written-translation exam-format descriptions are not retained as explicit structured details.",
+          "The original includes broader background and some process subcases that are summarized; users should inspect the original for full wording."
+        ]
       }
     ]
   }
