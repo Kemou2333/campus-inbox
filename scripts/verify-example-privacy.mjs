@@ -18,6 +18,9 @@ export function auditPublicExamples(backup,provenance){
   if(!Array.isArray(backup?.notices)||!Array.isArray(provenance?.results))return [{path:'catalog',category:'invalid_catalog'}];
   const review=provenance.privacyReview;
   if(review?.manualReview!==true||review.policyVersion!==1||!review.disclosure?.includes('脱敏')||review.contentCorrections!==false)add('privacyReview','missing_manual_review');
+  // Identity verification is a human attestation tied to the reviewed record
+  // hash. A regex cannot distinguish an unfamiliar real name from a role.
+  if(review?.manualIdentityReview!==true||!Array.isArray(review.identityCategoriesReviewed)||!['personal_names','student_identifiers'].every(category=>review.identityCategoriesReviewed.includes(category)))add('privacyReview','missing_identity_review');
   const sources=new Map(provenance.results.map(result=>[result.exampleId,result]));
   if(sources.size!==provenance.results.length||sources.size!==backup.notices.length)add('results','provenance_count_mismatch');
   function scan(value,path){
@@ -31,15 +34,20 @@ export function auditPublicExamples(backup,provenance){
       ['email',/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i],
       ['identity_number',/(?<!\d)\d{17}[\dXx](?!\d)/],
       ['group_number',/(?:QQ|Q ?Q|群号|qq群|QQ群)[^\n]{0,25}\d{5,12}/i],
-      ['student_identifier',/(?:学号|学生编号|统一认证号)\s*[：:]?\s*\d{6,}/],
+      ['student_identifier',/(?:学号|学生编号|学生证号|一卡通号|校园卡号|统一(?:身份)?认证号)\s*[：:=]?\s*[*_`]{0,2}\s*[A-Za-z]?\d[A-Za-z\d-]{5,23}\b/],
     ];
     for(const [category,pattern] of checks)if(pattern.test(value))add(path,category);
+    // Explicitly labelled person names must carry a nearby pseudonym marker.
+    // Generic "姓名、学号" requirements and unnamed roles remain unchanged.
+    const labelledName=/(?:姓名|联系人姓名|负责人姓名)\s*[：:]\s*[*_`]{0,2}\s*([\u4e00-\u9fff]{2,4})(?![\u4e00-\u9fff])/g;
+    for(const match of value.matchAll(labelledName))if(!/^\s*[*_`]{0,2}\s*[（(]化名[）)]/.test(value.slice(match.index+match[0].length)))add(path,'unmarked_person_name');
   }
   backup.notices.forEach((notice,index)=>{
     const path=`notices[${index}]`,source=sources.get(notice.id);
     scan(notice,path);
     if(!notice.originalText?.startsWith('【脱敏示例】'))add(`${path}.originalText`,'missing_disclosure');
     if(source?.manualPrivacyEdits!==true||source.manualWordEdits!==true||source.manualContentCorrections!==false)add(path,'undisclosed_privacy_edits');
+    if(source?.manualIdentityReview!==true)add(path,'missing_record_identity_review');
     if(!source||source.publishedOriginalSha256!==createHash('sha256').update(notice.originalText??'').digest('hex')||source.publishedRecordSha256!==publicExampleHash(notice))add(path,'reviewed_content_changed');
   });
   return findings;

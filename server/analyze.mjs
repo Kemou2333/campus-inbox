@@ -1,7 +1,7 @@
 import './contracts/time.js';
 import './contracts/data.js';
 import {promptForInput} from '../worker/prompt.mjs';
-import {segmentSource,parseSourceRefs,evidencePaths} from './contracts/source-evidence.js';
+import {segmentSource,parseSourceRefs,requiredEvidencePaths} from './contracts/source-evidence.js';
 const D=globalThis.CampusData;
 const T=globalThis.CampusTime;
 const record=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -175,14 +175,18 @@ export async function analyze(notice,config,modelFetch=fetch,signal){
     if(parsed&&Object.hasOwn(parsed,'refusal'))throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:'SCHEMA_INVALID'});
     if(choice.message.tool_calls||choice.message.function_call)throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:'SCHEMA_INVALID'});
     let mapping;
-    try{mapping=sourceMapping(parsed,sources);parsed=mapping.parsed;}catch{throw new ServiceError('AI 没有完整对应本次原文，请稍后重试。',502,{usage,finishReason,failureCode:'SOURCE_COUNT'});}
+    try{
+      mapping=sourceMapping(parsed,sources);
+      if(config.oneNoticePerSource&&mapping.indexes.length!==(sources?.length||1))throw new Error('source');
+      parsed=mapping.parsed;
+    }catch{throw new ServiceError('AI 没有完整对应本次原文，请稍后重试。',502,{usage,finishReason,failureCode:'SOURCE_COUNT'});}
     try{
       const grounded=sources?{...parsed,notices:parsed.notices.map((item,index)=>groundDates({notices:[item]},sources[mapping.indexes[index]].text).notices[0])}:groundDates(parsed,notice);
       result=D.batch(grounded,true);
       result.notices=result.notices.map((item,index)=>{
         const text=sources?sources[mapping.indexes[index]].text:typeof notice==='string'?notice:'';
         const refs=parseSourceRefs(item.sourceRefs,item,text);
-        if(config.requireSourceEvidence&&(refs===undefined||evidencePaths(item).some(path=>!refs[path])||!item.reminderTitles&&item.reminders.length))throw new Error('出处或提醒标题缺少');
+        if(config.requireSourceEvidence&&(requiredEvidencePaths(item).some(path=>!refs?.[path])||!item.reminderTitles&&item.reminders.length))throw new Error('出处或提醒标题缺少');
         return refs===undefined?item:{...item,sourceRefs:refs};
       });
     }catch(error){throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:validationCode(error)});}

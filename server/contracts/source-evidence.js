@@ -23,6 +23,11 @@ export function evidencePaths(analysis){
  }
  return paths;
 }
+/** New extraction only requires actionable headings. Other source references
+ * stay optional for compatibility and genuinely important cautions. */
+export function requiredEvidencePaths(analysis){
+ return evidencePaths(analysis).filter(path=>/^tasks\.\d+\.text$/.test(path));
+}
 export function parseSourceRefs(value,analysis,sourceText){
  if(value===undefined)return undefined;
  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length>180)throw new Error('出处格式不正确');

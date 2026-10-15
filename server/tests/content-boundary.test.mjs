@@ -55,7 +55,7 @@ test('injection remains user data; model messages contain no service secrets, lo
     assert.deepEqual(JSON.parse(payload.messages[1].content),{sources:[{sourceId:1,segments:segmentSource(text).map(segment=>({id:segment.index,text:segment.text}))}]});
     for(const secret of [config.apiKey,token,'private-local-secret','private-smtp-password'])assert.equal(JSON.stringify(payload.messages).includes(secret),false);
     for(const prompt of [SYSTEM_PROMPT,payload.messages[0].content]){
-      assert.match(prompt,/refusal.*UNSUPPORTED_REQUEST/);assert.match(prompt,/校园反诈、纪律、性教育/);
+      assert.match(prompt,/refusal.*UNSUPPORTED_REQUEST/);assert.match(prompt,/校园反诈、纪律、(?:性教育、)?健康/);
     }
     return envelope();
   });

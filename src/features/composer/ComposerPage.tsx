@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState,type ClipboardEvent} from 'react';
-import {Alert,Box,Button,Checkbox,Collapse,Dialog,DialogActions,DialogContent,DialogTitle,FormControlLabel,IconButton,LinearProgress,Paper,Stack,TextField,Tooltip,Typography,useMediaQuery} from '@mui/material';
+import {Alert,Box,Button,Collapse,Dialog,DialogActions,DialogContent,DialogTitle,IconButton,LinearProgress,Paper,Stack,TextField,Tooltip,Typography,useMediaQuery} from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
 import AttachFile from '@mui/icons-material/AttachFile';
@@ -84,7 +84,6 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
  }
  return <Stack spacing={2} className="page-enter">
   <Typography variant={embedded?"h5":"h4"} component={embedded?"h2":"h1"}>新增通知</Typography>
-  <FormControlLabel sx={{m:0,alignItems:'center','& .MuiFormControlLabel-label':{fontSize:13,color:'text.secondary'}}} control={<Checkbox size="small" checked={app.maintenanceReviewConsent} disabled={app.busy} onChange={event=>app.setMaintenanceReviewConsent(event.target.checked)}/>} label="允许作者查看本次原文与结果来排查问题（可选）"/>
   {app.pending&&<Alert severity="info" action={<Button onClick={app.recoverResult}>保存结果</Button>}>上次整理的结果还没保存，无需再次调用 AI。</Alert>}
   {!!app.legacyRecords.length&&<Alert severity="info" action={<Button onClick={app.recoverLegacyResult}>保存结果</Button>}>旧版有 {app.legacyRecords.length} 条整理结果未保存，无需重新调用 AI。</Alert>}
   {app.legacyMissingFiles&&<Alert severity="info" onClose={()=>app.setLegacyMissingFiles(false)}>旧版草稿文字已保留，草稿附件需要重新添加。</Alert>}

@@ -58,7 +58,7 @@ export async function createSyncService(config,options={}){
     CREATE TABLE IF NOT EXISTS analysis_jobs (id TEXT PRIMARY KEY,account INTEGER NOT NULL REFERENCES accounts(id),request_id TEXT NOT NULL,input_hash TEXT NOT NULL,sources TEXT NOT NULL,status TEXT NOT NULL,created TEXT NOT NULL,updated TEXT NOT NULL,result TEXT,error_code TEXT,bytes INTEGER NOT NULL,UNIQUE(account,request_id));
     CREATE INDEX IF NOT EXISTS jobs_owner_created ON analysis_jobs(account,created DESC,id DESC);`);
   const jobColumns=new Set(db.prepare('PRAGMA table_info(analysis_jobs)').all().map(column=>column.name));
-  // Old jobs remain private: migration never grants review consent retroactively.
+  // Retain the legacy column without rewriting old user content or metadata.
   for(const [name,type] of [['review_consent','INTEGER NOT NULL DEFAULT 0'],['provider_called','INTEGER'],['cache_reuse','INTEGER'],['token_usage','TEXT']])if(!jobColumns.has(name))db.exec(`ALTER TABLE analysis_jobs ADD COLUMN ${name} ${type}`);
   db.exec('CREATE INDEX IF NOT EXISTS jobs_admin_created ON analysis_jobs(created DESC,id DESC)');
   if(file!==':memory:')await chmod(file,0o600);
@@ -86,7 +86,6 @@ export async function createSyncService(config,options={}){
     jobUsage:db.prepare("SELECT COUNT(*) AS count,COALESCE(SUM(bytes),0) AS bytes,COALESCE(SUM(CASE WHEN status IN ('accepted','running') THEN 1 ELSE 0 END),0) AS pending FROM analysis_jobs WHERE account=?"),
     globalJobUsage:db.prepare("SELECT COALESCE(SUM(bytes),0) AS bytes,COALESCE(SUM(CASE WHEN status IN ('accepted','running') THEN 1 ELSE 0 END),0) AS pending FROM analysis_jobs"),
     insertJob:db.prepare("INSERT INTO analysis_jobs(id,account,request_id,input_hash,sources,status,created,updated,bytes) VALUES(?,?,?,?,?,'accepted',?,?,?)"),
-    jobConsent:db.prepare('UPDATE analysis_jobs SET review_consent=? WHERE account=? AND id=?'),
     jobMetrics:db.prepare('UPDATE analysis_jobs SET provider_called=?,cache_reuse=?,token_usage=? WHERE account=? AND id=?'),
     startJob:db.prepare("UPDATE analysis_jobs SET status='running',updated=? WHERE account=? AND id=? AND status='accepted'"),
     finishJob:db.prepare("UPDATE analysis_jobs SET status='completed',result=?,updated=?,bytes=?,error_code=NULL WHERE account=? AND id=? AND status IN ('accepted','running')"),
@@ -173,14 +172,12 @@ export async function createSyncService(config,options={}){
     if(row&&row.input_hash!==inputHash)throw new ServiceError('同一任务编号不能提交不同原文，请重新创建任务。',409);
     return jobView(row);
   }
-  function acceptJob(account,requestID,inputHash,sources,reviewConsent=false){
-    if(typeof reviewConsent!=='boolean')throw new ServiceError('维护查阅选项格式不正确。',400);
+  function acceptJob(account,requestID,inputHash,sources){
     return transaction(()=>{
       const existing=findJobRequest(account,requestID,inputHash);if(existing)return existing;
       checkJobCapacity(account);
       const id=randomUUID(),created=new Date(now()).toISOString(),json=JSON.stringify(sources),bytes=Buffer.byteLength(json);
       stmt.insertJob.run(id,account.id,requestID,inputHash,json,created,created,bytes);
-      stmt.jobConsent.run(reviewConsent?1:0,account.id,id);
       return jobView(stmt.job.get(account.id,id));
     });
   }
@@ -304,11 +301,19 @@ export async function createSyncService(config,options={}){
       return reply(exchange(account,body));
     }catch(error){return reply({error:error instanceof ServiceError?error.message:'同步暂时不可用，请稍后重试。'},error.status||503);}
   }
-  const jobMetadata=row=>({id:row.id,ownerSubject:row.identity.slice(7),status:row.status,createdAt:row.created,updatedAt:row.updated,bytes:row.bytes,reviewConsent:row.review_consent===1,providerCalled:row.provider_called===null?null:row.provider_called===1,cacheReuse:row.cache_reuse===null?null:row.cache_reuse===1,tokenUsage:row.token_usage?JSON.parse(row.token_usage):null,code:row.error_code||null});
-  const metadataColumns='j.id,j.status,j.created,j.updated,j.bytes,j.review_consent,j.provider_called,j.cache_reuse,j.token_usage,j.error_code,a.identity';
+  const jobMetadata=row=>({id:row.id,ownerSubject:row.identity.slice(7),status:row.status,createdAt:row.created,updatedAt:row.updated,bytes:row.bytes,providerCalled:row.provider_called===null?null:row.provider_called===1,cacheReuse:row.cache_reuse===null?null:row.cache_reuse===1,tokenUsage:row.token_usage?JSON.parse(row.token_usage):null,code:row.error_code||null});
+  const metadataColumns='j.id,j.status,j.created,j.updated,j.bytes,j.provider_called,j.cache_reuse,j.token_usage,j.error_code,a.identity';
   const adminReader={
     summary:()=>({...db.prepare("SELECT COUNT(*) AS jobs,COALESCE(SUM(status='completed'),0) AS completed,COALESCE(SUM(status='failed'),0) AS failed,COALESCE(SUM(status IN ('accepted','running')),0) AS pending,COALESCE(SUM(provider_called=1),0) AS knownProviderCalls,COALESCE(SUM(cache_reuse=1),0) AS knownCacheReuses,COALESCE(SUM(provider_called IS NULL),0) AS unknownProviderCalls,COALESCE(SUM(bytes),0) AS jobBytes FROM analysis_jobs").get(),...db.prepare('SELECT COUNT(json) AS notices,COALESCE(SUM(bytes),0) AS noticeBytes FROM records').get()}),
-    accountStats:subject=>db.prepare("SELECT COUNT(*) AS jobs,COALESCE(SUM(status='completed'),0) AS completed,COALESCE(SUM(status='failed'),0) AS failed,MAX(created) AS lastJobAt FROM analysis_jobs WHERE account=(SELECT id FROM accounts WHERE identity=?)").get('invite:'+subject),
+    daily:()=>{
+      // Group saved submissions in Shanghai time. A completed analysis is not
+      // evidence that the student has finished its real-world task.
+      const day=new Date(now()+8*3600000).toISOString().slice(0,10),end=Date.parse(day+'T00:00:00+08:00'),start=end-13*86400000;
+      const rows=db.prepare("SELECT strftime('%Y-%m-%d',created,'+8 hours') AS day,COUNT(*) AS total,COALESCE(SUM(status='completed'),0) AS successful,COALESCE(SUM(status='failed'),0) AS failed,COALESCE(SUM(status IN ('accepted','running')),0) AS pending FROM analysis_jobs WHERE julianday(created)>=julianday(?) AND julianday(created)<julianday(?) GROUP BY day").all(new Date(start).toISOString(),new Date(end+86400000).toISOString());
+      const byDay=new Map(rows.map(row=>[row.day,row])),days=Array.from({length:14},(_,i)=>{const date=new Date(start+i*86400000+8*3600000).toISOString().slice(0,10);return byDay.get(date)||{day:date,total:0,successful:0,failed:0,pending:0};});
+      return {timeZone:'Asia/Shanghai',day,today:days.at(-1),days,unrecognizedDates:db.prepare('SELECT COUNT(*) AS count FROM analysis_jobs WHERE julianday(created) IS NULL').get().count,scope:'persisted_analysis_jobs_by_submission_day'};
+    },
+    accountStats:subject=>({...db.prepare("SELECT COUNT(*) AS jobs,COALESCE(SUM(status='completed'),0) AS completed,COALESCE(SUM(status='failed'),0) AS failed,MAX(created) AS lastJobAt FROM analysis_jobs WHERE account=(SELECT id FROM accounts WHERE identity=?)").get('invite:'+subject),...db.prepare('SELECT COUNT(json) AS notices,COALESCE(SUM(bytes),0) AS noticeBytes FROM records WHERE account=(SELECT id FROM accounts WHERE identity=?)').get('invite:'+subject)}),
     jobs:({subject,before,limit=20}={})=>{
       let sql=`SELECT ${metadataColumns} FROM analysis_jobs j JOIN accounts a ON a.id=j.account WHERE 1=1`,args=[];
       if(subject){sql+=' AND a.identity=?';args.push('invite:'+subject);}
@@ -316,15 +321,23 @@ export async function createSyncService(config,options={}){
       sql+=' ORDER BY j.created DESC,j.id DESC LIMIT ?';args.push(limit);
       return db.prepare(sql).all(...args).map(jobMetadata);
     },
-    job:(id,{viewerSubject,contentDays=30}={})=>{
+    job:id=>{
       const row=db.prepare(`SELECT ${metadataColumns} FROM analysis_jobs j JOIN accounts a ON a.id=j.account WHERE j.id=?`).get(id);
       if(!row)return null;
-      const metadata=jobMetadata(row),own=metadata.ownerSubject===viewerSubject,consented=row.review_consent===1,withinRetention=Date.parse(row.created)>=now()-contentDays*86400000;
-      const allowed=own||consented&&withinRetention;
-      if(!allowed)return {...metadata,contentAvailable:false,contentReason:consented?'review_window_expired':'review_not_consented'};
-      // Only after the server evaluates owner/consent/age do we read the payload.
+      const metadata=jobMetadata(row);
+      // HTTP administrators are already authenticated by exact account UUID.
       const content=db.prepare('SELECT sources,result FROM analysis_jobs WHERE id=?').get(id);
       return {...metadata,contentAvailable:true,sources:JSON.parse(content.sources),result:content.result?JSON.parse(content.result):null};
+    },
+    records:({subject,before,limit=20})=>{
+      let sql="SELECT r.id,r.version,r.bytes,json_extract(r.json,'$.title') AS title,json_extract(r.json,'$.updatedAt') AS updatedAt,json_extract(r.json,'$.completed') AS completed FROM records r JOIN accounts a ON a.id=r.account WHERE a.identity=? AND r.json IS NOT NULL",args=['invite:'+subject];
+      if(before){sql+=' AND (r.version<? OR (r.version=? AND r.id<?))';args.push(before[0],before[0],before[1]);}
+      sql+=' ORDER BY r.version DESC,r.id DESC LIMIT ?';args.push(limit);
+      return db.prepare(sql).all(...args).map(row=>({...row,completed:row.completed===1}));
+    },
+    record:(subject,id)=>{
+      const row=db.prepare('SELECT r.id,r.version,r.json FROM records r JOIN accounts a ON a.id=r.account WHERE a.identity=? AND r.id=? AND r.json IS NOT NULL').get('invite:'+subject,id);
+      return row?{id:row.id,version:row.version,record:JSON.parse(row.json)}:null;
     }
   };
   return {handle,provision,jobs,adminReader,accountForKey:key=>typeof key==='string'&&/^[A-Za-z0-9_-]{43}$/.test(key)?stmt.findAccount.get(sha(key))||null:null,close:()=>db.close()};
