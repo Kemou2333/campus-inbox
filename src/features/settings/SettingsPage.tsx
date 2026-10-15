@@ -92,7 +92,7 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
         <Typography sx={{ fontWeight: 650, overflowWrap: 'anywhere' }}>{app.username}</Typography>
         {!!app.email&&<Typography variant="body2" color="text.secondary" sx={{mt:.5,overflowWrap:'anywhere'}}>{app.email}</Typography>}
         <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>
-          {app.sync.lastSyncedAt ? `上次同步 ${date(app.sync.lastSyncedAt)}` : '通知和办理进度会自动同步。'}
+          {app.sync.lastSyncedAt ? `上次同步 ${date(app.sync.lastSyncedAt)}` : '通知与进度自动同步。'}
         </Typography>
         {app.sync.error && <Alert severity="warning" sx={{ mt: 2 }}>{app.sync.error}</Alert>}
         <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap', mt: 2 }}>
@@ -104,7 +104,7 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
           {app.username.normalize('NFKC').trim().toLowerCase()==='kemou'&&<Button component="a" href="https://123.57.30.129/admin" target="_blank" rel="noopener noreferrer" variant="outlined">管理后台</Button>}
         </Stack>
       </> : <>
-        <Typography color="text.secondary">登录后，手机和网页可以共用通知与进度。</Typography>
+        <Typography color="text.secondary">登录后同步通知与进度。</Typography>
         <Button variant="contained" disabled={busy || !app.auth} onClick={onLogin} sx={{ mt: 2 }}>登录</Button>
       </>}
       {!!app.sync.conflicts.length && <Box sx={{ mt: 3 }}>
@@ -129,13 +129,13 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
         <Button variant="outlined" disabled={busy}
           onClick={() => void run('examples', app.loadExamples)}>{running === 'examples' ? '正在载入…' : '载入示例'}</Button>
       </Stack>
-      <Typography variant="body2" color="text.secondary" sx={{mt:1.5}}>公开示例已脱敏，姓名为化名，联系方式与具体链接已隐藏；个人通知保留原内容。</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{mt:1.5}}>示例通知已隐藏个人信息</Typography>
       <input ref={picker} type="file" accept="application/json,.json" hidden aria-label="选择通知备份"
         onChange={event => {
           const file = event.target.files?.[0]; event.target.value = '';
           if (file) void run('import', () => app.importBackup(file));
         }} />
-      <Typography variant="body2" color="text.secondary" sx={{mt:2}}>通知先保存在本机，登录后文字与进度自动同步；附件留在当前设备。</Typography>
+      
       {!!app.legacyWork.text&&<Button sx={{mt:2}} onClick={()=>setLegacyOpen(true)}>查看旧版未保存编辑</Button>}
     </Paper>
 

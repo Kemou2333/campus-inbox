@@ -363,7 +363,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   // Hashing yields to other edits. Do not overwrite changes made while it ran.
   if(JSON.stringify(repository.load())!==JSON.stringify(current))throw new Error('通知正在更新，请稍后再载入示例。');
   if(merged.added||merged.replaced)save(merged.notices);
-  tell(merged.replaced?'已更新公开示例（已脱敏）':merged.added?`已载入 ${merged.added} 条公开示例（已脱敏）`:'公开示例已载入（已脱敏）');
+  tell(merged.replaced?'示例已更新':merged.added?`已载入 ${merged.added} 条示例`:'示例已载入');
  }
  async function backup(includeAttachments=true){
   const records=repository.load();const data=includeAttachments?exportBackup(records,await exportFiles(records)):exportTextBackup(records);

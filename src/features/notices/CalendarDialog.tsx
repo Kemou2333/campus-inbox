@@ -38,7 +38,7 @@ export function CalendarDialog({selection,app,onClose}:{selection:CalendarSelect
    <TextField label={allDay?'日期':'日期与时间'} type={allDay?'date':'datetime-local'} value={date} onChange={e=>setDate(e.target.value)} slotProps={{inputLabel:{shrink:true}}}/>
    {suggestedTime&&channel==='notification'&&<Typography variant="caption" color="text.secondary">原文没有具体时刻，09:00 仅为建议，请自行确认。</Typography>}
    {!allDay&&<FormControlLabel control={<Checkbox checked={personal} onChange={e=>setPersonal(e.target.checked)}/>} label="同时设为我的截止时间"/>}
-   {channel==='notification'&&<><TextField select label="提前提醒" value={lead} onChange={e=>setLead(Number(e.target.value))}><MenuItem value={0}>在设定时间提醒</MenuItem><MenuItem value={15}>提前 15 分钟</MenuItem><MenuItem value={60}>提前 1 小时</MenuItem><MenuItem value={1440}>提前 1 天</MenuItem></TextField><Typography variant="caption" color="text.secondary">手机系统发送，无需常驻或额外注册。省电可能延迟，强行停止会暂停，重新打开可恢复。仅此手机。</Typography></>}
+   {channel==='notification'&&<><TextField select label="提前提醒" value={lead} onChange={e=>setLead(Number(e.target.value))}><MenuItem value={0}>在设定时间提醒</MenuItem><MenuItem value={15}>提前 15 分钟</MenuItem><MenuItem value={60}>提前 1 小时</MenuItem><MenuItem value={1440}>提前 1 天</MenuItem></TextField><Typography variant="caption" color="text.secondary">仅此手机。省电或强行停止可能影响提醒。</Typography></>}
   </Stack></DialogContent>
   <DialogActions sx={{flexWrap:'wrap'}}><Button onClick={onClose} disabled={busy}>取消</Button><Button variant="contained" onClick={()=>void(channel==='notification'?reminder():calendar())} disabled={busy||!date}>{channel==='notification'?'设置应用通知':'添加到日历'}</Button></DialogActions>
  </Dialog>;
