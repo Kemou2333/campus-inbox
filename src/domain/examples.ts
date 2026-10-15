@@ -1,4 +1,23 @@
 import type {Notice} from './types';
+import exampleIDs from './example-ids.json';
+
+// Exact, reviewed catalog IDs, including legacy built-ins. Progress, notes and
+// corrections never change identity, and a similarly prefixed personal ID is
+// not treated as a built-in. The small registry contains no notice content.
+const exampleIDSet=new Set(exampleIDs);
+export const EXAMPLES_HIDDEN_KEY='campus-inbox:examples-hidden:v1';
+export function isExampleNotice(notice:Pick<Notice,'id'>):boolean{return exampleIDSet.has(notice.id);}
+export function groupExampleNotices<T extends Pick<Notice,'id'>>(notices:T[]):{personal:T[];examples:T[]}{
+  const personal:T[]=[],examples:T[]=[];
+  for(const notice of notices)(isExampleNotice(notice)?examples:personal).push(notice);
+  return {personal,examples};
+}
+export function readExamplesHidden(storage:Pick<Storage,'getItem'>):boolean{
+  try{return storage.getItem(EXAMPLES_HIDDEN_KEY)==='hidden';}catch{return false;}
+}
+export function writeExamplesHidden(storage:Pick<Storage,'setItem'>,hidden:boolean):void{
+  storage.setItem(EXAMPLES_HIDDEN_KEY,hidden?'hidden':'shown');
+}
 
 export interface LegacyExampleFingerprint {id:string;fingerprint:string}
 

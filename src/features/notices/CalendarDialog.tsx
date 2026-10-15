@@ -7,6 +7,7 @@ import type {Notice,Task} from '../../domain/types';
 import {effectiveDeadline,taskDeadline} from '../../domain/notice';
 import {timeFromText,timeSpecToDate} from '../../domain/time';
 import {plainReadingText} from '../../domain/reading';
+import {withTeachingCalendar} from '../../domain/teaching-calendar';
 import {localReminderID} from '../../domain/reminders';
 export interface CalendarSelection {notice:Notice;task?:Task}
 const localInput=(value:string)=>{
@@ -14,11 +15,11 @@ const localInput=(value:string)=>{
  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 export function CalendarDialog({selection,app,onClose}:{selection:CalendarSelection|null;app:CampusController;onClose:()=>void}){
- const [date,setDate]=useState('');const [allDay,setAllDay]=useState(false);const [personal,setPersonal]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [lead,setLead]=useState(60);const [channel,setChannel]=useState<'notification'|'calendar'>('calendar');const [suggestedTime,setSuggestedTime]=useState(false);
- useEffect(()=>{if(!selection)return;const {notice,task}=selection;const due=task?taskDeadline(notice,task):effectiveDeadline(notice);const point=due||task?.time||(task?null:notice.deadline);const calendarDate=timeSpecToDate(timeFromText(task?.timeText||notice.deadlineText));
+ const [date,setDate]=useState('');const [weekHint,setWeekHint]=useState(false);const [allDay,setAllDay]=useState(false);const [personal,setPersonal]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [lead,setLead]=useState(60);const [channel,setChannel]=useState<'notification'|'calendar'>('calendar');const [suggestedTime,setSuggestedTime]=useState(false);
+ useEffect(()=>{if(!selection)return;const notice=withTeachingCalendar(selection.notice,app.preferences.weekOneMonday),task=selection.task?notice.tasks.find(t=>t.id===selection.task!.id):undefined;const due=task?taskDeadline(notice,task):effectiveDeadline(notice);const point=due||task?.time||(task?null:notice.deadline);const spec=task?.timeSpec||notice.deadlineSpec;const calendarDate=(spec?timeSpecToDate(spec):null)||timeSpecToDate(timeFromText(task?.timeText||notice.deadlineText));setWeekHint(/按学期设置/.test(task?.timeText||notice.deadlineText));
   // An explicit event start is useful for a reminder without becoming a deadline.
   setDate(point?localInput(point):calendarDate||'');setAllDay(!point&&!!calendarDate);setChannel(app.capabilities?.localReminders&&(point||!calendarDate)?'notification':'calendar');setSuggestedTime(false);setPersonal(false);setError('');setLead(60);
- },[selection,app.capabilities?.localReminders]);
+ },[selection,app.capabilities?.localReminders,app.preferences.weekOneMonday]);
  const title=selection?.task?.text||selection?.notice.title||'';
  function millis(){const value=new Date(allDay?`${date}T00:00:00`:date).getTime();if(!date||!Number.isFinite(value))throw new Error('请先填写明确的日期和时间。');return value;}
  function savePersonal(){if(!personal||allDay||!selection)return;app.update(selection.notice.id,n=>({...n,updatedAt:new Date().toISOString(),...(selection.task?{tasks:n.tasks.map(t=>t.id===selection.task!.id?{...t,localDeadline:`${date}:00`}:t)}:{localDeadline:`${date}:00`})}));}
@@ -36,6 +37,7 @@ export function CalendarDialog({selection,app,onClose}:{selection:CalendarSelect
    {!date&&<Alert severity="info">原文没有完整日期，请确认后填写。</Alert>}
    {channel==='calendar'&&<FormControlLabel control={<Checkbox checked={allDay} onChange={e=>{setAllDay(e.target.checked);setDate(e.target.checked?date.slice(0,10):date.length===10?`${date}T09:00`:date);setPersonal(false);}}/>} label="全天事项"/>}
    <TextField label={allDay?'日期':'日期与时间'} type={allDay?'date':'datetime-local'} value={date} onChange={e=>setDate(e.target.value)} slotProps={{inputLabel:{shrink:true}}}/>
+   {weekHint&&<Typography variant="caption" color="text.secondary">按本机学期换算，请确认日期。</Typography>}
    {suggestedTime&&channel==='notification'&&<Typography variant="caption" color="text.secondary">原文没有具体时刻，09:00 仅为建议，请自行确认。</Typography>}
    {!allDay&&<FormControlLabel control={<Checkbox checked={personal} onChange={e=>setPersonal(e.target.checked)}/>} label="同时设为我的截止时间"/>}
    {channel==='notification'&&<><TextField select label="提前提醒" value={lead} onChange={e=>setLead(Number(e.target.value))}><MenuItem value={0}>在设定时间提醒</MenuItem><MenuItem value={15}>提前 15 分钟</MenuItem><MenuItem value={60}>提前 1 小时</MenuItem><MenuItem value={1440}>提前 1 天</MenuItem></TextField><Typography variant="caption" color="text.secondary">仅此手机。省电或强行停止可能影响提醒。</Typography></>}

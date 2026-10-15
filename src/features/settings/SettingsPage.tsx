@@ -7,6 +7,7 @@ import type { CampusController } from '../../app/useCampus';
 import type { SyncConflict } from '../../infrastructure/sync-client';
 import type { ThemePreference } from '../../app/theme';
 import {BackupDialog} from './BackupDialog';
+import {CampusPreferencesPanel} from './CampusPreferencesPanel';
 
 interface Props {
   app: CampusController;
@@ -82,6 +83,8 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
         <ToggleButton value="dark">深色</ToggleButton>
       </ToggleButtonGroup>
     </Paper>
+
+    <CampusPreferencesPanel value={app.preferences} onSave={app.setPreferences} disabled={busy}/>
 
     <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 2 }}>

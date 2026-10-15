@@ -29,6 +29,7 @@ export interface NoticeActions {
  calendar:(notice:Notice,task?:Task)=>void;
  evidence:(notice:Notice,path:string)=>void;
  correct:(notice:Notice,path?:string)=>void;
+ share?:(notice:Notice)=>void;
 }
 export type NoticeCardController=Pick<CampusController,'act'|'remove'>;
 export function NoticeCard({notice:n,app,actions,now,expanded,onExpandedChange,expandedTaskIDs,onTaskExpandedChange,disabled=false,readOnly=false}:{notice:Notice;app:NoticeCardController;actions:NoticeActions;now:number;expanded:boolean;onExpandedChange:()=>void;expandedTaskIDs:Set<string>;onTaskExpandedChange:(id:string)=>void;disabled?:boolean;readOnly?:boolean}){
@@ -60,7 +61,7 @@ export function NoticeCard({notice:n,app,actions,now,expanded,onExpandedChange,e
    <Box sx={{flex:1}}/>
    {readOnly?<Tooltip title="原文"><IconButton aria-label={`原文：${n.title}`} onClick={()=>actions.details(n)}><DescriptionOutlined/></IconButton></Tooltip>:<><Button className="notice-dismiss" size="small" color="inherit" startIcon={n.dismissed?<Undo/>:<Block/>} disabled={disabled} onClick={()=>app.act(n.id,v=>setNoticeApplicable(v,v.dismissed),n.dismissed?'已恢复通知':'已设为不适用，可撤销')} sx={{fontSize:13,borderRadius:2,minWidth:0,px:1,whiteSpace:'nowrap',color:'text.secondary','& .MuiButton-startIcon':{display:{xs:'none',sm:'inline-flex'}}}}>{n.dismissed?'恢复':'不适用'}</Button><Tooltip title={n.dismissed?'先恢复通知':done?'恢复':n.kind==='task'?'完成':'知悉'}><span><IconButton className="notice-complete" aria-label={n.dismissed?'完成':done?'恢复':n.kind==='task'?'完成':'知悉'} onClick={()=>app.act(n.id,v=>setNoticeCompleted(v,!done),done?'已恢复':'已完成')} disabled={disabled||n.dismissed} sx={{width:56,height:56,color:'success.main',bgcolor:theme=>alpha(theme.palette.success.main,.12),border:'1px solid',borderColor:theme=>alpha(theme.palette.success.main,.4),'&:hover':{bgcolor:theme=>alpha(theme.palette.success.main,.2)},'& .MuiSvgIcon-root':{fontSize:32}}}>{done&&!n.dismissed?<Undo/>:<Check/>}</IconButton></span></Tooltip>
    <Tooltip title="更多操作"><IconButton aria-label={`更多：${n.title}`} aria-haspopup="menu" aria-expanded={menu?'true':undefined} onClick={e=>setMenu(e.currentTarget)} disabled={disabled}><MoreHoriz/></IconButton></Tooltip>
-   <Menu anchorEl={menu} open={!!menu} onClose={()=>setMenu(null)}><MenuItem onClick={()=>secondary(()=>actions.details(n))}>原文与附件</MenuItem><MenuItem onClick={()=>secondary(()=>actions.correct(n))}>修正整理结果</MenuItem>{n.kind==='task'&&!done&&<MenuItem onClick={()=>secondary(()=>actions.calendar(n))}>创建提醒</MenuItem>}<MenuItem onClick={()=>secondary(()=>app.remove(n.id))} sx={{color:'error.main'}}>删除通知</MenuItem></Menu></>}
+   <Menu anchorEl={menu} open={!!menu} onClose={()=>setMenu(null)}><MenuItem onClick={()=>secondary(()=>actions.details(n))}>原文与附件</MenuItem><MenuItem onClick={()=>secondary(()=>actions.correct(n))}>修正整理结果</MenuItem>{actions.share&&<MenuItem onClick={()=>secondary(()=>actions.share?.(n))}>分享图</MenuItem>}{n.kind==='task'&&!done&&<MenuItem onClick={()=>secondary(()=>actions.calendar(n))}>创建提醒</MenuItem>}<MenuItem onClick={()=>secondary(()=>app.remove(n.id))} sx={{color:'error.main'}}>删除通知</MenuItem></Menu></>}
   </Stack>
   <Box id={bodyID} className="notice-body" aria-hidden={!expanded}>
    <Collapse in={expanded} timeout={reducedMotion?0:220} unmountOnExit><Box sx={{mt:1.5,pt:1.5,borderTop:'1px solid',borderColor:'divider'}}>
