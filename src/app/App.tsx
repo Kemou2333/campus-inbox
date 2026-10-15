@@ -71,7 +71,7 @@ export default function App(){
     <Button onClick={()=>setAbout(true)} sx={{px:0,minWidth:0,color:'text.primary',gap:1.25}}><Box component="img" src="./icon.svg" width={32} height={32} alt=""/><Typography sx={{fontWeight:700,fontSize:'1.125rem',lineHeight:1.4}}>校园 Inbox</Typography></Button>
     <Box sx={{flex:1}}/>
     {wide&&nav.map((item,i)=>split?i===1?null:<Button key={item.label} variant={(i===0?page!==2:page===2)?'contained':'text'} onClick={()=>navigate(i)} sx={{px:2}}>{item.label}</Button>:<Tooltip key={item.label} title={item.label}><IconButton aria-label={item.label} onClick={()=>navigate(i)} sx={{color:page===i?'primary.main':'text.secondary',bgcolor:page===i?'action.selected':undefined}}>{item.icon}</IconButton></Tooltip>)}
-    <Tooltip title={app.sync.connected?'账号与同步':'登录后可以使用 AI 并同步通知'}><Button size="small" variant="outlined" aria-label={app.sync.connected?'查看同步状态':'登录与同步'} onClick={()=>app.sync.connected?navigate(2):setLogin(true)} sx={{minWidth:64,px:1.5}}><Box component="span" sx={{maxWidth:wide?120:64,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{app.sync.connected?(wide&&app.username?app.username:'同步'):'登录'}</Box></Button></Tooltip>
+    <Tooltip title={app.sync.connected?'账号与同步':'登录并同步'}><Button size="small" variant="outlined" aria-label={app.sync.connected?'查看同步状态':'登录与同步'} onClick={()=>app.sync.connected?navigate(2):setLogin(true)} sx={{minWidth:64,px:1.5}}><Box component="span" sx={{maxWidth:wide?120:64,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{app.sync.connected?(wide&&app.username?app.username:'同步'):'登录'}</Box></Button></Tooltip>
     <Tooltip title="使用帮助"><IconButton aria-label="使用帮助" onClick={()=>setHelp(true)}><HelpOutline/></IconButton></Tooltip>
    </Toolbar>
   </AppBar>

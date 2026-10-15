@@ -75,12 +75,12 @@ export function FeedPage({app,actions,onCompose,focusID,onFocusHandled,embedded=
    <TextField select value={sort} onChange={e=>setSort(e.target.value as SortOrder)} size="small" sx={{width:{xs:110,sm:140},flexShrink:0}} aria-label="通知排序"><MenuItem value="priority">优先级</MenuItem><MenuItem value="deadline">截止时间</MenuItem><MenuItem value="newest">最近添加</MenuItem></TextField>
   </Stack>
   </Box>
-  {new URLSearchParams(location.search).get('examples')==='1'&&<Typography className="example-privacy-note" variant="body2" color="text.secondary" sx={{lineHeight:1.6}}>公开示例已脱敏：姓名为化名，联系方式与具体链接已隐藏。个人通知保留原内容。</Typography>}
+  {new URLSearchParams(location.search).get('examples')==='1'&&<Typography className="example-privacy-note" variant="body2" color="text.secondary" sx={{lineHeight:1.6}}>示例通知已隐藏个人信息</Typography>}
   <AnimatedNotices key={tab} records={records} app={app} actions={actions} now={now} expandedIDs={expandedIDs} onExpandedChange={toggleExpanded} expandedTaskIDs={expandedTaskIDs} onTaskExpandedChange={toggleTaskExpanded} onEmpty={setAnimationEmpty}/>
   {!records.length&&animationEmpty&&<Paper variant="outlined" sx={{p:4,textAlign:'center'}}><Typography variant="h6">{query?'没有找到匹配的通知':favoritesOnly?'此分类还没有收藏':tab===0?'暂时没有待办':tab===1?'暂时没有提醒':'还没有完成的通知'}</Typography><Typography color="text.secondary" sx={{mt:1,mb:2}}>{query?'换一个关键词试试。':favoritesOnly?'点通知右上角的星星即可收藏。':'添加通知，或者载入几条示例看看。'}</Typography>{favoritesOnly&&<Button onClick={()=>setView(previous=>({...previous,favoritesOnly:false}))}>显示全部通知</Button>}{!query&&!favoritesOnly&&<Stack direction="row" sx={{justifyContent:"center",gap:1}}><Button variant="contained" onClick={onCompose}>新增通知</Button><Button variant="outlined" onClick={()=>void app.loadExamples().catch(app.report)}>载入示例</Button></Stack>}</Paper>}
   <Box component="footer" className="product-footer" sx={{py:2,borderTop:'1px solid',borderColor:'divider'}}>
    <Typography variant="body2" color="text.secondary">内容由 AI 生成，请注意甄别。</Typography>
-   <Typography variant="body2" color="text.secondary" sx={{mt:.5}}>Kemou 制作 · 把校园通知整理成事项与提醒。</Typography>
+   <Typography variant="body2" color="text.secondary" sx={{mt:.5}}>Kemou 制作</Typography>
   </Box>
  </Stack>;
 }
