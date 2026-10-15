@@ -181,6 +181,7 @@ export function parseNotice(value: unknown): Notice {
     reminders, attachments,
   };
   if(a.sourceRefs!==undefined)result.sourceRefs=parseSourceRefs(a.sourceRefs,result,result.originalText);
+  if(o.favorite!==undefined)result.favorite=bool(o.favorite);
   const corrections=parseCorrections(o.corrections,result);if(corrections!==undefined)result.corrections=corrections;
   return result;
 }
@@ -251,6 +252,9 @@ export function setNoticeCompleted(n: Notice, completed: boolean): Notice {
     tasks: n.tasks.map(t => t.dismissed && !n.dismissed ? t : { ...t, dismissed: false, completed, steps: t.steps.map(s => ({ ...s, completed })) }),
   });
 }
+/** Hiding a whole notification must not rewrite its individual progress or notes. */
+export function setNoticeApplicable(n:Notice,applicable:boolean):Notice{return changed({...n,dismissed:!applicable});}
+export function setFavorite(n:Notice,favorite:boolean):Notice{return changed({...n,favorite});}
 export function updateNote(n: Notice, target: NoteTarget, note: string): Notice {
   const value = text(note, '笔记', MAX_NOTE, true);
   if (target.type === 'notice') return changed({ ...n, note: value });

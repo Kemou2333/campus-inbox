@@ -10,11 +10,11 @@ export function makeTheme(dark:boolean,native:NativeTheme|null){
  const text=dark?'#F0F2F7':'#1B2026';
  const outline=dark?'#657083':'#84909A';
  return createTheme({
-  palette:{mode:dark?'dark':'light',primary:{main:primary,contrastText:onPrimary},secondary:{main:system?.secondary||(dark?'#C5BDEA':'#506176')},
+  palette:{mode:dark?'dark':'light',primary:{main:primary,contrastText:onPrimary},secondary:{main:system?.secondary||(dark?'#C5BDEA':'#6650A4')},
    background:{default:dark?'#15171C':'#F7F9FA',paper:dark?'#1E2129':'#FFFFFF'},
    text:{primary:text,secondary:dark?'#AEB6C4':'#58636F'},divider:dark?'#373C48':'#DCE2E7',
    action:{hover:alpha(primary,dark?.08:.06),selected:alpha(primary,dark?.15:.12)},
-   error:{main:dark?'#F4AAA7':'#BA1A1A'},warning:{main:dark?'#E9C384':'#805500'},success:{main:dark?'#ACD9B6':'#276B3A'}},
+   error:{main:dark?'#F4AAA7':'#BA1A1A'},warning:{main:dark?'#E9C384':'#805500'},success:{main:dark?'#ACD9B6':'#276B3A'},info:{main:dark?'#9DCAFF':'#215D9C'}},
   typography:{fontFamily:'"Noto Sans SC", "Noto Sans CJK SC", system-ui, -apple-system, BlinkMacSystemFont, "Microsoft YaHei", sans-serif',fontSize:14,
    h4:{fontSize:'1.75rem',lineHeight:1.3,fontWeight:650,letterSpacing:'-.02em'},
    h5:{fontSize:'1.375rem',lineHeight:1.4,fontWeight:650},

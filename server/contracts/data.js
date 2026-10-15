@@ -98,6 +98,7 @@ function legacyStepID(noticeID,taskIndex,stepIndex,s){
 }
 function notice(x){
  if(!object(x)||!Array.isArray(x.tasks)||x.tasks.length>100||typeof x.completed!=='boolean')throw new Error('通知记录格式不正确');
+ if(x.favorite!==undefined&&typeof x.favorite!=='boolean')throw new Error('收藏状态格式不正确');
  const noticeID=text(x.id,'通知编号',150);
  const states=x.tasks.map((t,taskIndex)=>{if(!object(t)||typeof t.completed!=='boolean'||(t.dismissed!==undefined&&typeof t.dismissed!=='boolean'))throw new Error('任务完成状态格式不正确');const ids=new Set(),stepStates=steps(t.steps).map((s,stepIndex)=>{const v=t.steps[stepIndex];if(v.completed!==undefined&&typeof v.completed!=='boolean')throw new Error('步骤完成状态格式不正确');const id=v.id===undefined?legacyStepID(noticeID,taskIndex,stepIndex,s):localStepID(v.id);if(ids.has(id))throw new Error('同一事项内的步骤编号重复');ids.add(id);return {id,completed:v.completed===undefined?false:v.completed,note:text(v.note===undefined?'':v.note,'步骤笔记',MAX_NOTE,true)};});return {completed:t.completed,dismissed:t.dismissed===undefined?false:t.dismissed,note:text(t.note===undefined?'':t.note,'事项笔记',MAX_NOTE,true),localDeadline:date(t.localDeadline===undefined?null:t.localDeadline),steps:stepStates};});
  const normalized=analysis(x);

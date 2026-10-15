@@ -81,6 +81,8 @@ export interface Notice extends Omit<NoticeAnalysis, 'schemaVersion' | 'tasks' |
   audienceOverride: '' | 'all';
   reminders: Reminder[];
   attachments: string[];
+  /** Optional for backwards-compatible records; never supplied by the AI. */
+  favorite?: boolean;
   tasks: Task[];
   /** User wording stays separate from the immutable original AI fields. */
   corrections?: {updatedAt: string; values: {path: string; value: string}[]};

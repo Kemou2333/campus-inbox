@@ -6,7 +6,7 @@ html{scroll-padding-top:76px}body{min-width:280px}.rich-text{min-width:0}
 .workspace-pane{scrollbar-gutter:stable;overscroll-behavior:contain;scroll-padding-top:12px}
 .workspace-pane::-webkit-scrollbar{width:10px}.workspace-pane::-webkit-scrollbar-thumb{background:var(--scroll-thumb,#89939c);border-radius:8px;border:2px solid var(--scroll-track,#e6eaee)}.workspace-pane::-webkit-scrollbar-track{background:var(--scroll-track,#e6eaee);border-radius:8px}
 button:focus-visible,a:focus-visible{outline:3px solid #629e96;outline-offset:3px}
-@media(max-width:359px){.notice-actions{gap:4px}.notice-actions .MuiButton-root{padding-left:10px;padding-right:10px}.notice-actions .MuiButton-startIcon{display:none}.notice-actions .MuiIconButton-root{width:48px}}
+@media(max-width:359px){.notice-actions{gap:4px}.notice-actions .MuiButton-root{padding-left:10px;padding-right:10px}.notice-actions .MuiButton-startIcon{display:none}.notice-actions .MuiIconButton-root:not(.notice-complete){width:48px}}
 @media(max-height:500px) and (min-width:600px){.MuiToolbar-root{min-height:48px!important}.notice-card{scroll-margin-top:60px}}
 
 html[data-theme="dark"]{--scroll-thumb:#798591;--scroll-track:#293138}

@@ -28,7 +28,7 @@ const nav=[{label:'通知',icon:<Inbox/>},{label:'整理',icon:<AddCircleOutline
 export default function App(){
  const verification=useHumanVerification();const app=useCampus({onHumanVerification:verification.verify});const wide=useMediaQuery('(min-width:960px), (min-width:600px) and (max-height:500px)');const split=useMediaQuery('(min-width:960px)');const systemDark=useMediaQuery('(prefers-color-scheme:dark)');
  const exampleRequest=useRef(new URLSearchParams(location.search).get('examples')==='1'),exampleStarted=useRef(false);
- const [page,setPage]=useState(0);const [login,setLogin]=useState(false);const [help,setHelp]=useState(()=>!exampleRequest.current&&localStorage.getItem('campus-inbox:tutorial:v2')!=='seen');
+ const [page,setPage]=useState(0);const [login,setLogin]=useState(false);const [help,setHelp]=useState(()=>localStorage.getItem('campus-inbox:tutorial:v2')!=='seen');
  const [about,setAbout]=useState(false);const [note,setNote]=useState<NoteEditor|null>(null);const [details,setDetails]=useState<string|null>(null);const [calendar,setCalendar]=useState<CalendarSelection|null>(null);const [focusID,setFocusID]=useState<string|null>(null);
  const [settingsDialog,setSettingsDialog]=useState(false);
  const [sourcePath,setSourcePath]=useState<string|undefined>(),[correction,setCorrection]=useState<CorrectionSelection|null>(null);
@@ -96,7 +96,7 @@ export default function App(){
   <CalendarDialog selection={calendar} app={app} onClose={()=>setCalendar(null)}/>
   <LoginDialog open={login} app={app} onClose={()=>setLogin(false)}/>
   <HumanVerificationDialog request={verification.request} onComplete={verification.complete} onCancel={()=>{app.cancel();verification.cancel();}}/>
-  <HelpDialog open={help} onClose={closeHelp} onExamples={()=>void app.loadExamples().then(closeHelp).catch(app.report)}/><AboutDialog open={about} onClose={()=>setAbout(false)}/>
+  <HelpDialog open={help} onClose={closeHelp} onCompose={()=>{closeHelp();navigate(1);}} onExamples={()=>app.loadExamples().then(()=>{closeHelp();navigate(0);}).catch(app.report)}/><AboutDialog open={about} onClose={()=>setAbout(false)}/>
   <Snackbar open={!!app.toast} key={app.toast?.id} autoHideDuration={6500} onClose={(_,reason)=>{if(reason!=='clickaway')app.setToast(null);}} message={app.toast?.text} action={app.toast?.undo?<Button color="inherit" onClick={()=>{const undo=app.toast?.undo;app.setToast(null);undo?.();}}>撤销</Button>:undefined} anchorOrigin={{vertical:'bottom',horizontal:'center'}} sx={{bottom:wide?24:84}}/>
   <Snackbar open={!!app.error} onClose={()=>app.setError('')} anchorOrigin={{vertical:'top',horizontal:'center'}}><Alert severity="error" onClose={()=>app.setError('')} variant="filled" sx={{maxWidth:560}}>{app.error}</Alert></Snackbar>
  </ThemeProvider>;
