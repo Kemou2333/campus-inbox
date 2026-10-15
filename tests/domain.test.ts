@@ -205,3 +205,27 @@ describe('local persistence and future repository boundary', () => {
     stop(); repository.save([]); expect(received).toEqual([analysis.title]);
   });
 });
+
+describe('favorites and reversible whole-notice applicability',()=>{
+ test('favorite survives local storage and export/import; older records stay unchanged',async()=>{
+  const {setFavorite}=await import('../src/domain/notice');
+  const original=record(),favorite=setFavorite(original,true);
+  expect(original).not.toHaveProperty('favorite');
+  expect(parseNotice(original)).not.toHaveProperty('favorite');
+  expect(parseBackup(exportTextBackup([favorite]))[0].favorite).toBe(true);
+  const storage=new MemoryStorage(),repo=new LocalRepository(storage);repo.save([favorite]);
+  expect(new LocalRepository(storage).load()[0].favorite).toBe(true);
+  expect(parseNotice(setFavorite(favorite,false)).favorite).toBe(false);
+  expect(()=>parseNotice({...original,favorite:'yes'})).toThrow();
+  expect(()=>parseAnalysis({...analysis,favorite:true})).toThrow();
+ });
+ test('whole-notice not applicable and restore preserve child progress, favorites, notes and attachments',async()=>{
+  const {setFavorite,setNoticeApplicable}=await import('../src/domain/notice');
+  const original=setFavorite({...record(),note:'自己的笔记',attachments:['local-file']},true);
+  original.tasks[0].steps[0].completed=true;original.tasks[0].steps[0].note='已准备';
+  const dismissed=setNoticeApplicable(original,false),restored=setNoticeApplicable(dismissed,true);
+  expect(getNoticeStatus(dismissed)).toBe('dismissed');expect(getNoticeStatus(restored)).toBe('pending');
+  for(const key of ['tasks','note','attachments','favorite'] as const){expect(dismissed[key]).toEqual(original[key]);expect(restored[key]).toEqual(original[key]);}
+  expect(original.dismissed).toBe(false);
+ });
+});

@@ -153,3 +153,21 @@ test('SQLite survives restart and never stores raw bearer keys or raw IPs',async
     f=await fixture({file,key,identities});assert.deepEqual((await (await f.post({cursor:0,changes:[]})).json()).updates[0].record,record);
   }finally{f?.close();await rm(directory,{recursive:true,force:true});}
 });
+
+test('favorite syncs across devices, survives older-client edits, and explicit false removes it',async()=>{
+ const f=await fixture();try{
+  const source={...notice(),favorite:true},second=f.create();
+  const first=await (await f.post({cursor:0,changes:[{id:source.id,baseVersion:0,record:source}]})).json();
+  assert.equal(first.accepted[0].version,1);
+  const pulled=await (await f.post({cursor:0,changes:[]},second)).json();assert.equal(pulled.updates[0].record.favorite,true);
+  const {favorite:_,...older}=source;
+  const edited=await (await f.post({cursor:1,changes:[{id:source.id,baseVersion:1,record:{...older,note:'旧设备的笔记'}}]},second)).json();
+  assert.equal(edited.updates[0].record.favorite,true);assert.equal(edited.updates[0].record.note,'旧设备的笔记');
+  const stale=await (await f.post({cursor:1,changes:[{id:source.id,baseVersion:1,record:{...source,favorite:false}}]})).json();assert.equal(stale.conflicts[0].record.favorite,true);
+  const unfav=await (await f.post({cursor:2,changes:[{id:source.id,baseVersion:2,record:{...edited.updates[0].record,favorite:false}}]})).json();assert.equal(unfav.updates[0].record.favorite,false);
+  const again=await (await f.post({cursor:0,changes:[]},second)).json();assert.equal(again.updates[0].record.favorite,false);
+ }finally{f.close();}
+});
+test('bad favorite values reject the whole batch without altering saved records',async()=>{
+ const f=await fixture();try{for(const favorite of ['yes',1,null,{}]){const source={...notice(),favorite};assert.equal((await f.post({cursor:0,changes:[{id:source.id,baseVersion:0,record:source}]})).status,400);}assert.equal((await (await f.post({cursor:0,changes:[]})).json()).cursor,0);}finally{f.close();}
+});
