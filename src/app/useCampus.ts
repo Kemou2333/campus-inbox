@@ -13,6 +13,7 @@ import {loadConfig, type RuntimeConfig} from './config';
 import {readLegacyWork,restoreLegacyDraft,finishLegacyResult} from '../infrastructure/legacy-work';
 import type {ThemePreference} from './theme';
 import {localReminderID} from '../domain/reminders';
+import {CAMPUS_PREFERENCES_KEY, parseCampusPreferences, readCampusPreferences, type CampusPreferences} from '../domain/campus-preferences';
 
 export interface Draft {id:string; text:string; attachments:string[]}
 export interface DraftSelection {start:number;end:number;expectedText:string}
@@ -42,6 +43,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  const [theme,setThemeState]=useState<ThemePreference>(()=>{
   const t=localStorage.getItem('campus-inbox:theme:v5');return t==='dark'||t==='light'?t:'system';
  });
+ const [preferences,setPreferencesState]=useState(()=>readCampusPreferences(localStorage));
  const [legacyWork]=useState(()=>readLegacyWork(localStorage,sessionStorage));
  const [legacyRecords,setLegacyRecords]=useState(legacyWork.records);
  const [legacyMissingFiles,setLegacyMissingFiles]=useState(legacyWork.missingFiles);
@@ -82,6 +84,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  function report(e:unknown){setError(message(e));}
  function activateJobAccount(account:string|null){jobGeneration.current++;jobReads.current?.abort();jobAccountRef.current=account;jobNextPoll.current=0;jobRefreshRerun.current=false;jobSeenCompleted.current.clear();setJobAccount(account);setAnalysisJobs([]);setUnconfirmedSubmissions([]);setJobStatusError('');}
  function setTheme(value:ThemePreference){localStorage.setItem('campus-inbox:theme:v5',value);setThemeState(value);}
+ function setPreferences(value:CampusPreferences){const next=parseCampusPreferences(value);localStorage.setItem(CAMPUS_PREFERENCES_KEY,JSON.stringify(next));setPreferencesState(next);}
  function save(next:Notice[]){repository.save(next);setNotices(next);}
  function update(id:string,change:(n:Notice)=>Notice){
   try{const current=repository.load();const before=current.find(n=>n.id===id);if(!before){tell('这条通知已在其他设备上移除。');return;}
@@ -390,7 +393,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
    if(empty)changeDraft(empty.id,text);else addDraft(text);received=true;
   }return received;}finally{receivingShare.current=false;}
  }
- return {notices,drafts,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,bootError:boot.error,
+ return {notices,drafts,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,preferences,setPreferences,bootError:boot.error,
   report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,attach,detach,removeDraft,analyze,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;

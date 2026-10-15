@@ -49,6 +49,8 @@ export function displayTime(value:string):string{
 }
 /** The deadline caption is shown once, outside the date value. Relative phrases stay intact. */
 export function headlineTime(value:string):string{
+ const teaching=value.match(/（按学期设置：([^）]+)）$/);
+ if(teaching)return `${displayTime(teaching[1])} · 按学期`;
  return displayTime(value.replace(/^(?:报名)?截止(?:时间)?[：:]?\s*(?=\d)/,''));
 }
 export function timeKey(value:string):string{
