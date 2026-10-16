@@ -9,7 +9,10 @@ services:
     environment:
       BIND_HOST: 0.0.0.0
       PORT: 8787
+      CAMPUS_STATE_DIRECTORY: /var/lib/campus-inbox
       USAGE_STATE_FILE: /var/lib/campus-inbox/usage.json
+      SYNC_STATE_FILE: /var/lib/campus-inbox/sync.sqlite
+      AUTH_STATE_FILE: /var/lib/campus-inbox/auth.sqlite
     ports:
       - "127.0.0.1:8787:8787"
     volumes:

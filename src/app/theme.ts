@@ -23,7 +23,7 @@ export function makeTheme(dark:boolean,native:NativeTheme|null){
    body1:{fontSize:'1rem',lineHeight:1.6},body2:{fontSize:'.875rem',lineHeight:1.6},
    caption:{fontSize:'.75rem',lineHeight:1.5},button:{fontSize:'.875rem',lineHeight:1.4,fontWeight:600,textTransform:'none'}},
   shape:{borderRadius:16},
-  transitions:{easing:{easeInOut:'cubic-bezier(.2,0,0,1)',easeOut:'cubic-bezier(.2,0,0,1)'},duration:{shortest:120,shorter:160,short:200,standard:260,complex:300,enteringScreen:240,leavingScreen:200}},
+  transitions:{easing:{easeInOut:'cubic-bezier(.4,0,.2,1)',easeOut:'cubic-bezier(.2,0,.2,1)'},duration:{shortest:160,shorter:220,short:280,standard:320,complex:380,enteringScreen:320,leavingScreen:260}},
   components:{
    MuiPaper:{defaultProps:{elevation:0},styleOverrides:{root:{backgroundImage:'none'},outlined:{borderColor:dark?'#34464D':'#DCE2E7'}}},
    MuiButton:{defaultProps:{disableElevation:true},styleOverrides:{root:{borderRadius:24,minHeight:48,padding:'10px 18px'},sizeSmall:{padding:'8px 12px'},outlined:{borderColor:outline},text:{padding:'8px 12px'}}},

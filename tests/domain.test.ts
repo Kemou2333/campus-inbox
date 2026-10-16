@@ -173,6 +173,18 @@ describe('time and useful local ordering', () => {
   });
 });
 
+describe('default notice order',()=>{
+ test('expired notices lead; otherwise newest added wins over due dates',()=>{
+  const now=Date.parse('2026-10-17T12:00:00+08:00'),base=record();
+  const oldUrgent={...base,id:'old',createdAt:'2026-10-10T00:00:00Z',localDeadline:'2026-10-17T18:00:00+08:00'};
+  const newerUnknown={...base,id:'new',createdAt:'2026-10-16T00:00:00Z'};
+  const overdue={...base,id:'expired',createdAt:'2026-10-01T00:00:00Z',localDeadline:'2026-10-16T18:00:00+08:00'};
+  expect(sortNotices([oldUrgent,newerUnknown,overdue],'priority',now).map(n=>n.id)).toEqual(['expired','new','old']);
+  expect(sortNotices([oldUrgent,newerUnknown,overdue],'newest',now).map(n=>n.id)).toEqual(['new','old','expired']);
+  expect(sortNotices([oldUrgent,newerUnknown,overdue],'deadline',now).map(n=>n.id)).toEqual(['expired','old','new']);
+ });
+});
+
 describe('local persistence and future repository boundary', () => {
   test('first load migrates legacy once and leaves old bytes and attachment IDs intact', () => {
     const storage = new MemoryStorage(), n = record(), old = JSON.stringify([{ ...n, schemaVersion: 4, attachments: ['old-file'] }]);

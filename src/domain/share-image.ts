@@ -1,22 +1,24 @@
 /** Layout is kept independent of the DOM so long notices can be checked before
  * allocating any image. Text is never turned into HTML or external resources. */
-export type ShareTextKind='title'|'summary'|'fact'|'heading'|'body'|'task'|'step';
+export type ShareTextKind='title'|'summary'|'fact'|'heading'|'body'|'detail'|'task'|'step';
 export type ShareTaskState='pending'|'completed'|'dismissed';
-export interface ShareTextBlock {kind:ShareTextKind;text:string;state?:ShareTaskState}
-export interface ShareImageLine {kind:ShareTextKind;text:string;y:number;state?:ShareTaskState}
+export type ShareTextTone='accent'|'time'|'reminder'|'warning';
+export interface ShareTextBlock {kind:ShareTextKind;text:string;state?:ShareTaskState;tone?:ShareTextTone}
+export interface ShareImageLine extends ShareTextBlock {y:number;block:number}
 export interface ShareImagePage {lines:ShareImageLine[];height:number}
 export const SHARE_IMAGE_WIDTH=900;
 export const SHARE_IMAGE_MAX_HEIGHT=1320;
 export const SHARE_IMAGE_MAX_PAGES=8;
 export const SHARE_IMAGE_MAX_CHARACTERS=18000;
 export const shareTextStyles:Record<ShareTextKind,{size:number;line:number;gap:number;indent:number;weight:number}>={
- title:{size:44,line:59,gap:22,indent:0,weight:750},
- summary:{size:27,line:42,gap:20,indent:0,weight:400},
- fact:{size:25,line:38,gap:12,indent:0,weight:500},
- heading:{size:27,line:42,gap:10,indent:0,weight:700},
- body:{size:25,line:39,gap:12,indent:0,weight:400},
- task:{size:29,line:43,gap:14,indent:42,weight:650},
- step:{size:25,line:38,gap:10,indent:42,weight:400},
+ title:{size:54,line:70,gap:24,indent:0,weight:750},
+ summary:{size:32,line:48,gap:22,indent:0,weight:400},
+ fact:{size:30,line:46,gap:16,indent:16,weight:600},
+ heading:{size:30,line:48,gap:14,indent:0,weight:750},
+ body:{size:31,line:47,gap:16,indent:0,weight:400},
+ detail:{size:30,line:46,gap:14,indent:50,weight:400},
+ task:{size:36,line:54,gap:18,indent:50,weight:700},
+ step:{size:30,line:46,gap:14,indent:50,weight:550},
 };
 
 /** Break even unspaced URLs and CJK text; Array.from keeps surrogate pairs
@@ -26,7 +28,15 @@ export function wrapShareText(text:string,maxWidth:number,measure:(value:string)
  for(const paragraph of text.replace(/\r\n?/g,'\n').split('\n')){
   let line='';
   for(const character of Array.from(paragraph)){
-   if(line&&measure(line+character)>maxWidth){result.push(line);line=character;}
+   if(line&&measure(line+character)>maxWidth){
+    // Carry a preceding character rather than start a line with CJK punctuation.
+    const previous=Array.from(line);
+    if(/^[，。！？、；：）》」』】]$/.test(character)&&previous.length>1){
+     const carried=previous.pop()!;
+     if(measure(carried+character)<=maxWidth){result.push(previous.join(''));line=carried+character;continue;}
+    }
+    result.push(line);line=character;
+   }
    else line+=character;
   }
   result.push(line);
@@ -38,16 +48,17 @@ export function layoutShareImages(blocks:ShareTextBlock[],measure:(value:string,
  if(blocks.reduce((sum,block)=>sum+Array.from(block.text).length,0)>SHARE_IMAGE_MAX_CHARACTERS)throw new Error('内容较长，请关闭“含详情”后重试。通知内容未删减。');
  const pages:ShareImagePage[]=[];
  let lines:ShareImageLine[]=[],cursor=104;
- const bottom=SHARE_IMAGE_MAX_HEIGHT-128;
- function finish(){if(!lines.length)return;pages.push({lines,height:Math.min(SHARE_IMAGE_MAX_HEIGHT,Math.max(560,cursor+120))});lines=[];cursor=104;if(pages.length>SHARE_IMAGE_MAX_PAGES)throw new Error('图片超过 8 页，请关闭“含详情”后重试。通知内容未删减。');}
- for(const block of blocks){
+ const bottom=SHARE_IMAGE_MAX_HEIGHT-140;
+ function finish(){if(!lines.length)return;pages.push({lines,height:Math.min(SHARE_IMAGE_MAX_HEIGHT,Math.max(360,cursor+124))});lines=[];cursor=104;if(pages.length>SHARE_IMAGE_MAX_PAGES)throw new Error('图片超过 8 页，请关闭“含详情”后重试。通知内容未删减。');}
+ for(const [blockIndex,block] of blocks.entries()){
   const style=shareTextStyles[block.kind];
   const wrapped=wrapShareText(block.text,SHARE_IMAGE_WIDTH-120-style.indent,value=>measure(value,block.kind));
-  // Keep a section heading with at least one following text line where possible.
-  if(lines.length&&cursor+style.line+(block.kind==='heading'?55:0)>bottom)finish();
+  // Keep the whole section heading with its first content line where possible.
+  const next=blocks[blockIndex+1],followingLine=block.kind==='heading'&&next?style.gap+shareTextStyles[next.kind].line:0;
+  if(lines.length&&cursor+wrapped.length*style.line+followingLine>bottom&&block.kind==='heading')finish();
   wrapped.forEach((text,index)=>{
    if(cursor+style.line>bottom)finish();
-   lines.push({kind:block.kind,text,y:cursor,state:index===0?block.state:undefined});cursor+=style.line;
+   lines.push({kind:block.kind,text,y:cursor,block:blockIndex,tone:block.tone,state:index===0?block.state:undefined});cursor+=style.line;
   });
   cursor+=style.gap;
  }

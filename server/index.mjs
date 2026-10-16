@@ -1,6 +1,7 @@
 import http from 'node:http';
 import {Readable} from 'node:stream';
 import {isIP} from 'node:net';
+import {isAbsolute,join} from 'node:path';
 import {createService} from './service.mjs';
 import {createSyncService} from './sync.mjs';
 import {createAuthService} from './auth.mjs';
@@ -8,18 +9,22 @@ import {createMailSender} from './mail-sender.mjs';
 import {createAdminService} from './admin.mjs';
 const env=process.env;
 process.umask(0o077);
+// One portable data root, also understood by backup-state.py. Existing explicit
+// per-file paths take priority; changing this variable never moves old files.
+const stateDirectory=env.CAMPUS_STATE_DIRECTORY||'/var/lib/campus-inbox';
+if(!isAbsolute(stateDirectory))throw new Error('CAMPUS_STATE_DIRECTORY must be absolute');
 const adminOrigin=env.ADMIN_ORIGIN||'';
 if(adminOrigin&&new URL(adminOrigin).origin!==adminOrigin)throw new Error('ADMIN_ORIGIN must be an exact origin');
 if(adminOrigin&&!adminOrigin.startsWith('https://')&&!/^http:\/\/127\.0\.0\.1(?::\d+)?$/.test(adminOrigin))throw new Error('ADMIN_ORIGIN requires HTTPS');
 const allowedOrigins=[...new Set([...(env.ALLOWED_ORIGINS||'').split(',').map(x=>x.trim()).filter(Boolean),'https://appassets.androidplatform.net',...(adminOrigin?[adminOrigin]:[])])];
-const sendCode=createMailSender(env);
+const sendCode=createMailSender({...env,SMTP_OAUTH_STATE_FILE:env.SMTP_OAUTH_STATE_FILE||join(stateDirectory,'smtp-oauth.json')});
 let auth;
-const sync=await createSyncService({signingSecret:env.CAMPUS_ACCESS_TOKEN,allowedOrigins,stateFile:env.SYNC_STATE_FILE||'/var/lib/campus-inbox/sync.sqlite'},{authenticate:key=>auth.getIdentity(key)});
-auth=await createAuthService({signingSecret:env.CAMPUS_ACCESS_TOKEN,allowedOrigins,stateFile:env.AUTH_STATE_FILE||'/var/lib/campus-inbox/auth.sqlite'},{provision:sync.provision,sendCode});
-const handleAI=await createService({apiKey:env.DEEPSEEK_API_KEY,accessToken:env.CAMPUS_ACCESS_TOKEN,requireAccess:false,requireIdentity:true,accountDailyLimit:Number(env.ACCOUNT_DAILY_REQUEST_LIMIT)||10,ipDailyLimit:Number(env.IP_DAILY_REQUEST_LIMIT)||10,model:env.AI_MODEL||'deepseek-flash',allowedOrigins,dailyLimit:Number(env.DAILY_REQUEST_LIMIT)||30,stateFile:env.USAGE_STATE_FILE||'/var/lib/campus-inbox/usage.json',
+const sync=await createSyncService({signingSecret:env.CAMPUS_ACCESS_TOKEN,allowedOrigins,stateFile:env.SYNC_STATE_FILE||join(stateDirectory,'sync.sqlite')},{authenticate:key=>auth.getIdentity(key)});
+auth=await createAuthService({signingSecret:env.CAMPUS_ACCESS_TOKEN,allowedOrigins,stateFile:env.AUTH_STATE_FILE||join(stateDirectory,'auth.sqlite')},{provision:sync.provision,sendCode});
+const handleAI=await createService({apiKey:env.DEEPSEEK_API_KEY,accessToken:env.CAMPUS_ACCESS_TOKEN,requireAccess:false,requireIdentity:true,accountDailyLimit:Number(env.ACCOUNT_DAILY_REQUEST_LIMIT)||10,ipDailyLimit:Number(env.IP_DAILY_REQUEST_LIMIT)||10,model:env.AI_MODEL||'deepseek-flash',allowedOrigins,dailyLimit:Number(env.DAILY_REQUEST_LIMIT)||30,stateFile:env.USAGE_STATE_FILE||join(stateDirectory,'usage.json'),
   thinkingMode:env.AI_THINKING_MODE==='none'?'none':'low',captchaMode:env.CAPTCHA_MODE||'image',dailyBudgetRmb:Number(env.AI_DAILY_BUDGET_RMB)||3,requireSourceEvidence:env.AI_REQUIRE_SOURCE_EVIDENCE!=='false',oneNoticePerSource:true
-},{accountForToken:key=>auth.getIdentity(key)?sync.accountForKey(key):null,jobs:sync.jobs});
-const handleAdmin=createAdminService({usernames:(env.ADMIN_USERNAMES||'').split(',').map(name=>name.trim()).filter(Boolean),allowedOrigins,backupStateFile:env.BACKUP_STATUS_FILE||'/var/lib/campus-inbox/backups/status.json'},{auth,sync,ai:handleAI});
+},{accountForToken:key=>auth.getIdentity(key)?sync.accountForKey(key):null,jobs:sync.jobs,questions:sync.questions});
+const handleAdmin=createAdminService({usernames:(env.ADMIN_USERNAMES||'').split(',').map(name=>name.trim()).filter(Boolean),allowedOrigins,backupStateFile:env.BACKUP_STATUS_FILE||join(stateDirectory,'backups/status.json')},{auth,sync,ai:handleAI});
 const handle=(request,ip)=>{const path=new URL(request.url).pathname;return path.startsWith('/admin')?handleAdmin(request):path.startsWith('/auth/')?auth.handle(request,ip):path.startsWith('/sync')?sync.handle(request,ip):handleAI(request,ip);};
 const server=http.createServer(async(req,res)=>{
   try{

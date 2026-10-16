@@ -57,7 +57,8 @@ export async function createSyncService(config,options={}){
     CREATE INDEX IF NOT EXISTS records_revision ON records(account,version);
     CREATE TABLE IF NOT EXISTS creation_usage (day TEXT NOT NULL,ip_hash TEXT NOT NULL,count INTEGER NOT NULL,PRIMARY KEY(day,ip_hash));
     CREATE TABLE IF NOT EXISTS analysis_jobs (id TEXT PRIMARY KEY,account INTEGER NOT NULL REFERENCES accounts(id),request_id TEXT NOT NULL,input_hash TEXT NOT NULL,sources TEXT NOT NULL,status TEXT NOT NULL,created TEXT NOT NULL,updated TEXT NOT NULL,result TEXT,error_code TEXT,bytes INTEGER NOT NULL,UNIQUE(account,request_id));
-    CREATE INDEX IF NOT EXISTS jobs_owner_created ON analysis_jobs(account,created DESC,id DESC);`);
+    CREATE INDEX IF NOT EXISTS jobs_owner_created ON analysis_jobs(account,created DESC,id DESC);
+    CREATE TABLE IF NOT EXISTS notice_questions (account INTEGER NOT NULL REFERENCES accounts(id),request_id TEXT NOT NULL,input_hash TEXT NOT NULL,status TEXT NOT NULL,created INTEGER NOT NULL,response TEXT,PRIMARY KEY(account,request_id));`);
   const jobColumns=new Set(db.prepare('PRAGMA table_info(analysis_jobs)').all().map(column=>column.name));
   // Retain the legacy column without rewriting old user content or metadata.
   for(const [name,type] of [['review_consent','INTEGER NOT NULL DEFAULT 0'],['provider_called','INTEGER'],['cache_reuse','INTEGER'],['token_usage','TEXT']])if(!jobColumns.has(name))db.exec(`ALTER TABLE analysis_jobs ADD COLUMN ${name} ${type}`);
@@ -280,6 +281,22 @@ export async function createSyncService(config,options={}){
     const hasMore=rows.length>20,jobs=rows.slice(0,20),last=jobs.at(-1);
     return {jobs:jobs.map(row=>jobView(row)),hasMore,...(hasMore?{nextBefore:Buffer.from(JSON.stringify([last.created,last.id])).toString('base64url')}:{})};
   }
+  // A process exit can happen after the provider charges. Never redispatch a
+  // running request on startup; retain the owner-scoped idempotency ledger.
+  db.prepare("UPDATE notice_questions SET status='finished',response=? WHERE status='running'").run(JSON.stringify({status:503,body:{error:'提问服务重启，本次结果未能恢复。同一请求不会再次收费。',code:'QUESTION_INTERRUPTED'}}));
+  const questionRequest=db.prepare('SELECT input_hash,status,response FROM notice_questions WHERE account=? AND request_id=?');
+  const questions={
+    findRequest:(account,requestID)=>{const row=questionRequest.get(account.id,requestID);return row?{hash:row.input_hash,status:row.status,response:row.response?JSON.parse(row.response):null}:null;},
+    accept:(account,requestID,hash)=>{
+      // Fail closed at a finite capacity without forgetting any charged ID.
+      if(db.prepare('SELECT COUNT(*) AS count FROM notice_questions').get().count>=100000)throw new ServiceError('提问记录容量已满，请联系维护者。',507);
+      db.prepare("INSERT INTO notice_questions(account,request_id,input_hash,status,created) VALUES(?,?,?,'running',?)").run(account.id,requestID,hash,now());
+    },
+    complete:(account,requestID,response)=>{
+      if(!isObject(response)||!Number.isInteger(response.status)||!isObject(response.body)||Buffer.byteLength(JSON.stringify(response))>16000)throw new Error('Invalid question response');
+      db.prepare("UPDATE notice_questions SET status='finished',response=? WHERE account=? AND request_id=? AND status='running'").run(JSON.stringify(response),account.id,requestID);
+    }
+  };
   const jobs={findRequest:findJobRequest,checkCapacity:checkJobCapacity,accept:acceptJob,metrics:jobMetrics,start:startJob,stage:stageJob,complete:completeJob,retrySave:retryJobSave,fail:failJob,list:listJobs,get:(account,id)=>jobView(stmt.job.get(account.id,id),true)};
   async function handle(request,ip='unknown'){
     const origin=request.headers.get('Origin'),accepted=(config.allowedOrigins||[]).includes(origin),path=new URL(request.url).pathname;
@@ -347,5 +364,5 @@ export async function createSyncService(config,options={}){
       return row?{id:row.id,version:row.version,record:JSON.parse(row.json)}:null;
     }
   };
-  return {handle,provision,jobs,adminReader,accountForKey:key=>typeof key==='string'&&/^[A-Za-z0-9_-]{43}$/.test(key)?stmt.findAccount.get(sha(key))||null:null,close:()=>db.close()};
+  return {handle,provision,jobs,questions,adminReader,accountForKey:key=>typeof key==='string'&&/^[A-Za-z0-9_-]{43}$/.test(key)?stmt.findAccount.get(sha(key))||null:null,close:()=>db.close()};
 }

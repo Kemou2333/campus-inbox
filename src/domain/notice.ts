@@ -296,8 +296,8 @@ export function sortNotices(notices: Notice[], order: SortOrder, now = Date.now(
     const recency = Date.parse(b.createdAt) - Date.parse(a.createdAt);
     if (order === 'newest') return recency;
     if (order === 'priority') {
-      const rank = priority(a, now).rank - priority(b, now).rank;
-      if (rank) return rank;
+      const overdue = Number(priority(b, now).level === 'overdue') - Number(priority(a, now).level === 'overdue');
+      return overdue || recency;
     }
     const ad = effectiveDeadline(a), bd = effectiveDeadline(b);
     return (ad ? Date.parse(ad) : Infinity) - (bd ? Date.parse(bd) : Infinity) || recency;
