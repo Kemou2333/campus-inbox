@@ -87,12 +87,12 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
   {app.pending&&<Alert severity="info" action={<Button onClick={app.recoverResult}>保存结果</Button>}>上次整理的结果还没保存，无需再次调用 AI。</Alert>}
   {!!app.legacyRecords.length&&<Alert severity="info" action={<Button onClick={app.recoverLegacyResult}>保存结果</Button>}>旧版有 {app.legacyRecords.length} 条整理结果未保存，无需重新调用 AI。</Alert>}
   {app.legacyMissingFiles&&<Alert severity="info" onClose={()=>app.setLegacyMissingFiles(false)}>旧版草稿文字已保留，草稿附件需要重新添加。</Alert>}
-  {draftRows.map(({draft,index,leaving})=><Collapse key={draft.id} in={!leaving} appear timeout={reducedMotion?0:180} unmountOnExit onExited={()=>setLeavingDrafts(old=>old.filter(row=>row.draft.id!==draft.id))}>
+  {draftRows.map(({draft,index,leaving})=><Collapse key={draft.id} in={!leaving} appear timeout={reducedMotion?0:320} unmountOnExit onExited={()=>setLeavingDrafts(old=>old.filter(row=>row.draft.id!==draft.id))}>
    <Paper ref={element=>{if(element)draftElements.current.set(draft.id,element);else draftElements.current.delete(draft.id);}} className="composer-draft" variant="outlined" inert={leaving?true:undefined} aria-hidden={leaving?true:undefined}
    onDragOver={event=>{event.preventDefault();if(app.busy||adding){event.dataTransfer.dropEffect='none';return;}event.dataTransfer.dropEffect='copy';setDragTarget(draft.id);}}
    onDragLeave={event=>{if(!(event.relatedTarget instanceof Node)||!event.currentTarget.contains(event.relatedTarget))setDragTarget(null);}}
    onDrop={event=>{event.preventDefault();setDragTarget(null);if(app.busy||importLock.current)return;const content=readTransfer(event.dataTransfer);void importContent(draft.id,()=>content);}}
-   sx={{p:{xs:1.5,sm:2},opacity:leaving?0:1,transition:reducedMotion?'none':'opacity 160ms ease',borderColor:dragTarget===draft.id?'primary.main':undefined,bgcolor:dragTarget===draft.id?'action.hover':undefined}}>
+   sx={{p:{xs:1.5,sm:2},opacity:leaving?0:1,transition:reducedMotion?'none':'opacity 280ms ease-in-out',borderColor:dragTarget===draft.id?'primary.main':undefined,bgcolor:dragTarget===draft.id?'action.hover':undefined}}>
    <Stack direction="row" sx={{alignItems:"center",justifyContent:"space-between",mb:1.5}}>
     <Typography variant="h6">通知 {index+1}</Typography>
     <Stack direction="row" sx={{gap:.5,alignItems:'center'}}>

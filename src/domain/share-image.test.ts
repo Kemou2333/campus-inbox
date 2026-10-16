@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {layoutShareImages,SHARE_IMAGE_MAX_CHARACTERS,SHARE_IMAGE_MAX_HEIGHT,shareImageFileName,shareImageTimestamp,wrapShareText,type ShareTextBlock} from './share-image';
+import {layoutShareImages,SHARE_IMAGE_MAX_CHARACTERS,SHARE_IMAGE_MAX_HEIGHT,shareImageFileName,shareImageTimestamp,shareTextStyles,wrapShareText,type ShareTextBlock} from './share-image';
 
 describe('bounded local share images',()=>{
  it('wraps a long URL and CJK without dropping characters or splitting surrogate pairs',()=>{
@@ -10,6 +10,10 @@ describe('bounded local share images',()=>{
  });
  it('keeps blank paragraphs and explicit line breaks',()=>{
   expect(wrapShareText('第一行\r\n\r\n第二行',100,text=>text.length)).toEqual(['第一行','','第二行']);
+ });
+ it('keeps CJK punctuation off the start of a wrapped line without dropping or overflowing text',()=>{
+  const value='学业安排，及时完成。',wrapped=wrapShareText(value,4,text=>Array.from(text).length);
+  expect(wrapped.join('')).toBe(value);expect(wrapped.every(line=>Array.from(line).length<=4&&!/^[，。]/.test(line))).toBe(true);
  });
  it('paginates all detail text with bounded canvases rather than silently cutting it',()=>{
   const blocks:ShareTextBlock[]=[{kind:'title',text:'完整通知'},{kind:'body',text:'材料和注意事项'.repeat(250)}];
@@ -27,6 +31,19 @@ describe('bounded local share images',()=>{
   expect(pages.flatMap(page=>page.lines).filter(line=>line.state)).toHaveLength(1);
   const materialPage=pages.find(page=>page.lines.some(line=>line.text==='材料'))!;
   expect(materialPage.lines.at(-1)?.text).not.toBe('材料');
+ });
+ it('retains semantic colors and block grouping across wrapped lines and page breaks',()=>{
+  const pages=layoutShareImages([{kind:'fact',text:'截止：10月20日24:00'.repeat(12),tone:'time'},{kind:'heading',text:'注意',tone:'warning'},{kind:'body',text:'完整保留注意内容。',tone:'warning'}],text=>Array.from(text).length*30);
+  const facts=pages.flatMap(page=>page.lines).filter(line=>line.kind==='fact');
+  expect(facts.length).toBeGreaterThan(1);expect(facts.every(line=>line.tone==='time'&&line.block===0)).toBe(true);
+  expect(pages.flatMap(page=>page.lines).find(line=>line.text==='注意')?.tone).toBe('warning');
+ });
+ it('uses distinct reading sizes and crops a short card without a large blank lower half',()=>{
+  expect(shareTextStyles.title.size).toBeGreaterThan(shareTextStyles.task.size);
+  expect(shareTextStyles.task.size).toBeGreaterThan(shareTextStyles.body.size);
+  expect(shareTextStyles.body.size).toBeGreaterThanOrEqual(30);
+  const [page]=layoutShareImages([{kind:'title',text:'评教'}],text=>text.length*50);
+  expect(page.height).toBeLessThan(400);
  });
  it('uses a safe readable PNG filename with an explicit page index',()=>{
   expect(shareImageFileName('课/程:报名?',1,3)).toBe('课程报名-2共3页.png');

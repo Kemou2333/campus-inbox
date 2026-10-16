@@ -26,6 +26,7 @@ import {HumanVerificationDialog} from '../features/security/HumanVerificationDia
 import type {Notice} from '../domain/types';
 
 const ShareImageDialog=lazy(()=>import('../features/sharing/ShareImageDialog'));
+const NoticeQuestionDialog=lazy(()=>import('../features/questions/NoticeQuestionDialog'));
 
 const nav=[{label:'通知',icon:<Inbox/>},{label:'整理',icon:<AddCircleOutline/>},{label:'设置',icon:<SettingsOutlined/>}];
 export default function App(){
@@ -36,6 +37,7 @@ export default function App(){
  const [settingsDialog,setSettingsDialog]=useState(false);
  const [expandCampus,setExpandCampus]=useState(false);
  const [share,setShare]=useState<Notice|null>(null);
+ const [questionID,setQuestionID]=useState<string|null>(null);
  const [sourcePath,setSourcePath]=useState<string|undefined>(),[correction,setCorrection]=useState<CorrectionSelection|null>(null);
  const [feedView,setFeedView]=useState(createFeedViewState);
  const [unreadReminderIDs,setUnreadReminderIDs]=useState(()=>readUnreadReminderIDs(localStorage));
@@ -44,7 +46,7 @@ export default function App(){
  useEffect(()=>{if(app.latestAddedID){setPage(0);setFocusID(app.latestAddedID);}},[app.latestAddedID]);
  const dark=app.theme==='system'?(app.capabilities?.theme?.dark??systemDark):app.theme==='dark';const theme=makeTheme(dark,app.capabilities?.theme??null);
  useEffect(()=>{document.documentElement.dataset.platform=app.platform.kind;document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.style.colorScheme=dark?'dark':'light';document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme.palette.background.default);if(app.platform.setAppearance)void app.platform.setAppearance(dark).catch(app.report);},[app.platform,dark]);
- const modalRef=useRef(false);modalRef.current=login||help||about||!!note||!!details||!!calendar||!!correction||!!share||settingsDialog||!!verification.request;
+ const modalRef=useRef(false);modalRef.current=login||help||about||!!note||!!details||!!calendar||!!correction||!!share||!!questionID||settingsDialog||!!verification.request;
  const lastNotices=useRef(app.notices);
  const unreadReminders=unreadReminderIDs.map(id=>app.notices.find(n=>n.id===id)).filter(n=>n&&getNoticeStatus(n)==='reminder');
  useEffect(()=>writeUnreadReminderIDs(localStorage,unreadReminderIDs),[unreadReminderIDs]);
@@ -53,7 +55,7 @@ export default function App(){
  function closeHelp(){setHelp(false);localStorage.setItem('campus-inbox:tutorial:v2','seen');}
  function navigate(next:number){if(next===2)setExpandCampus(false);setPage(next);if(split&&next===1){setTimeout(()=>{document.getElementById('compose-pane')?.scrollIntoView({block:'start',behavior:'smooth'});document.querySelector<HTMLTextAreaElement>('#compose-pane textarea')?.focus({preventScroll:true});},0);}else window.scrollTo({top:0,behavior:'instant'});}
  function openCampusSettings(){navigate(2);setExpandCampus(true);}
- const actions:NoticeActions={note:(notice,target,title,text)=>setNote({noticeID:notice.id,target,title,text}),details:n=>{setSourcePath(undefined);setDetails(n.id);},calendar:(notice,task)=>setCalendar({notice,task}),evidence:(notice,path)=>{setSourcePath(path);setDetails(notice.id);},correct:(notice,path)=>{setDetails(null);setCorrection({noticeID:notice.id,path});},share:notice=>setShare({...notice,corrections:undefined})};
+ const actions:NoticeActions={note:(notice,target,title,text)=>setNote({noticeID:notice.id,target,title,text}),details:n=>{setSourcePath(undefined);setDetails(n.id);},calendar:(notice,task)=>setCalendar({notice,task}),evidence:(notice,path)=>{setSourcePath(path);setDetails(notice.id);},correct:(notice,path)=>{setDetails(null);setCorrection({noticeID:notice.id,path});},share:notice=>setShare({...notice,corrections:undefined}),question:notice=>setQuestionID(notice.id)};
  useEffect(()=>{
   const receive=()=>{if(modalRef.current||app.busy||document.querySelector('[role=\"dialog\"]'))return;void app.receiveShare().then(received=>{if(received)navigate(1);}).catch(app.report);};
   const openNotice=()=>{void app.platform.getOpenedNotice().then(id=>{if(id){setPage(0);setFocusID(id);}}).catch(app.report);};
@@ -65,6 +67,7 @@ export default function App(){
   if(page!==0){navigate(0);return true;}return false;
  }),[app.platform,page]);
  useEffect(()=>{if(details&&!app.notices.some(n=>n.id===details))setDetails(null);},[app.notices,details]);
+ useEffect(()=>{if(questionID&&!app.notices.some(n=>n.id===questionID))setQuestionID(null);},[app.notices,questionID]);
  useEffect(()=>{const current=new Map(app.notices.map(n=>[n.id,n]));
   const previous=lastNotices.current;setUnreadReminderIDs(ids=>nextUnreadReminderIDs(previous,app.notices,ids));
   for(const previous of lastNotices.current){const n=current.get(previous.id);if(!n||getNoticeStatus(previous)==='pending'&&getNoticeStatus(n)!=='pending')void app.platform.cancelReminder(previous.id).catch(app.report);}
@@ -101,6 +104,7 @@ export default function App(){
   <CorrectionDialog notice={app.notices.find(n=>n.id===correction?.noticeID)??null} path={correction?.path} app={app} onClose={()=>setCorrection(null)}/>
   <CalendarDialog selection={calendar} app={app} onClose={()=>setCalendar(null)}/>
   {share&&<Suspense fallback={null}><ShareImageDialog notice={share} app={app} onClose={()=>setShare(null)}/></Suspense>}
+  {questionID&&<Suspense fallback={null}><NoticeQuestionDialog notice={app.notices.find(n=>n.id===questionID)??null} app={app} onClose={()=>setQuestionID(null)} onLogin={()=>setLogin(true)}/></Suspense>}
   <LoginDialog open={login} app={app} onClose={()=>setLogin(false)}/>
   <HumanVerificationDialog request={verification.request} onComplete={verification.complete} onCancel={()=>{app.cancel();verification.cancel();}}/>
   <HelpDialog open={help} onClose={closeHelp} onCompose={()=>{closeHelp();navigate(1);}} onExamples={()=>app.loadExamples().then(()=>{closeHelp();navigate(0);}).catch(app.report)}/><AboutDialog open={about} onClose={()=>setAbout(false)}/>

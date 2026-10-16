@@ -1,6 +1,6 @@
 import {createHash,createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
 import {readFile,writeFile,rename} from 'node:fs/promises';
-import {analyze,boundedText,ServiceError,modelInput,modelPayload} from './analyze.mjs';
+import {analyze,answerNoticeQuestion,boundedText,ServiceError,modelInput,modelPayload,questionInput,questionPayload} from './analyze.mjs';
 import {createImageCaptcha,captchaAnswerHash} from './image-captcha.mjs';
 const D=globalThis.CampusData;
 const RATE_WINDOW_MS=180000,RATE_LIMIT=5,AUTHENTICATED_IP_RATE_LIMIT=20;
@@ -46,6 +46,7 @@ export async function createService(config,options={}){
     const validMap=value=>value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length<=2000;
     if(usage.clients!==undefined&&(!validMap(usage.clients)||Object.entries(usage.clients).some(([k,v])=>!/^[-\w]{43}$/.test(k)||!v||!Number.isSafeInteger(v.requests)||v.requests<0||!validTimes(v.times,config.requireIdentity?AUTHENTICATED_IP_RATE_LIMIT:RATE_LIMIT))))throw new Error('Invalid address quota state');
     if(usage.accounts!==undefined&&(!validMap(usage.accounts)||Object.entries(usage.accounts).some(([k,v])=>!/^[-\w]{43}$/.test(k)||!Number.isSafeInteger(v)||v<0)))throw new Error('Invalid identity quota state');
+    if(usage.questionAccounts!==undefined&&(!validMap(usage.questionAccounts)||Object.entries(usage.questionAccounts).some(([k,v])=>!/^[-\w]{43}$/.test(k)||!Number.isSafeInteger(v)||v<0||v>5)))throw new Error('Invalid question quota state');
     if(usage.accountRates!==undefined&&(!validMap(usage.accountRates)||Object.entries(usage.accountRates).some(([k,v])=>!/^[-\w]{43}$/.test(k)||!validTimes(v,RATE_LIMIT))))throw new Error('Invalid account rate state');
   }catch(e){if(e.code!=='ENOENT')throw e;}}
   const persist=()=>{if(!config.stateFile)return Promise.resolve();const snapshot=JSON.stringify(usage);const pending=persistQueue.catch(()=>{}).then(async()=>{await writeFile(config.stateFile+'.tmp',snapshot,{mode:0o600});await rename(config.stateFile+'.tmp',config.stateFile);});persistQueue=pending;return pending;};
@@ -77,6 +78,7 @@ export async function createService(config,options={}){
   };
   const handle=async function handle(request,ip='unknown'){
     const origin=request.headers.get('Origin'),accepted=!!origin&&(config.allowedOrigins||[]).includes(origin),url=new URL(request.url);
+    const questionRoute=url.pathname==='/notice-question';
     const jobRoute=url.pathname==='/analysis-jobs'||/^\/analysis-jobs\/[0-9a-f-]{36}(?:\/save)?$/.test(url.pathname);
     let admissionDone;
     const reply=(body,status=200,extraHeaders={})=>{
@@ -84,7 +86,7 @@ export async function createService(config,options={}){
       return new Response(status===204?null:JSON.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Vary':'Origin',...(accepted?{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':jobRoute?'GET, POST, OPTIONS':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization, X-Campus-Proof','Access-Control-Expose-Headers':'Retry-After','Access-Control-Max-Age':'600'}:{}),...extraHeaders}});
     };
     if(url.pathname==='/health'&&request.method==='GET')return reply({status:'ok'});
-    if(url.pathname!=='/analyze'&&!jobRoute)return reply({error:'接口不存在。'},404);
+    if(url.pathname!=='/analyze'&&!jobRoute&&!questionRoute)return reply({error:'接口不存在。'},404);
     if(!accepted)return reply({error:'此网页未获准调用整理服务。'},403);
     if(request.method==='OPTIONS')return reply({},204);
     if(request.method!=='POST'&&!(jobRoute&&request.method==='GET'))return reply({error:'请使用支持的请求方法。'},405);
@@ -95,8 +97,9 @@ export async function createService(config,options={}){
       account=token&&options.accountForToken?await options.accountForToken(token):null;
       if(!account)return reply({error:'请先登录，再整理通知。',code:'AUTH_REQUIRED'},401);
     }
-    if(jobRoute&&!account)return reply({error:'请先登录，再整理通知。',code:'AUTH_REQUIRED'},401);
+    if((jobRoute||questionRoute)&&!account)return reply({error:'请先登录，再使用 AI 服务。',code:'AUTH_REQUIRED'},401);
     if(jobRoute&&!options.jobs)return reply({error:'后台整理服务暂时不可用，请稍后再试。'},503);
+    if(questionRoute&&!options.questions)return reply({error:'提问服务暂时不可用，请稍后再试。',code:'SERVICE_UNAVAILABLE'},503);
     if(jobRoute&&url.pathname.endsWith('/save')){
       if(request.method!=='POST')return reply({error:'请使用POST恢复保存。'},405);
       if(!(request.headers.get('Content-Type')||'').toLowerCase().startsWith('application/json'))return reply({error:'请求必须使用 JSON。'},415);
@@ -117,15 +120,29 @@ export async function createService(config,options={}){
     if(!(request.headers.get('Content-Type')||'').toLowerCase().startsWith('application/json'))return reply({error:'请求必须使用 JSON。'},415);
     let notice,requestID;
     try{const body=JSON.parse(await boundedText(request.body,64000));if(!body||typeof body!=='object'||Array.isArray(body))throw new Error();
-      if(jobRoute){if(Object.keys(body).some(key=>!['sources','requestId','maintenanceReviewConsent'].includes(key))||!Object.hasOwn(body,'sources')||typeof body.requestId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{15,99}$/.test(body.requestId)||Object.hasOwn(body,'maintenanceReviewConsent')&&typeof body.maintenanceReviewConsent!=='boolean')throw new Error();requestID=body.requestId;notice={sources:body.sources};}
-      else{if(Object.keys(body).length!==1)throw new Error();if(Object.hasOwn(body,'notice')){if(typeof body.notice!=='string'||!body.notice.trim()||body.notice.length>D.MAX_TEXT)throw new Error();notice=body.notice.trim();}else if(Object.hasOwn(body,'sources'))notice=body;else throw new Error();}modelInput(notice);if(jobRoute)notice={sources:notice.sources.map(source=>({text:source.text.trim()}))};}
-    catch(e){return reply({error:e instanceof ServiceError?e.message:'请提供 1–4,000 字的通知文字。'},e.status||400);}
-    const t=now(),hash=createHash('sha256').update(JSON.stringify(modelInput(notice))).digest('hex');
+      if(questionRoute){if(Object.keys(body).length!==3||typeof body.requestId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{15,99}$/.test(body.requestId))throw new Error();requestID=body.requestId;notice=questionInput({sourceText:body.sourceText,question:body.question});}
+      else{
+        if(jobRoute){if(Object.keys(body).some(key=>!['sources','requestId','maintenanceReviewConsent'].includes(key))||!Object.hasOwn(body,'sources')||typeof body.requestId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{15,99}$/.test(body.requestId)||Object.hasOwn(body,'maintenanceReviewConsent')&&typeof body.maintenanceReviewConsent!=='boolean')throw new Error();requestID=body.requestId;notice={sources:body.sources};}
+        else{if(Object.keys(body).length!==1)throw new Error();if(Object.hasOwn(body,'notice')){if(typeof body.notice!=='string'||!body.notice.trim()||body.notice.length>D.MAX_TEXT)throw new Error();notice=body.notice.trim();}else if(Object.hasOwn(body,'sources'))notice=body;else throw new Error();}modelInput(notice);if(jobRoute)notice={sources:notice.sources.map(source=>({text:source.text.trim()}))};
+      }}
+    catch(e){return reply({error:e instanceof ServiceError?e.message:questionRoute?'请提供有效的单条原文、问题和请求编号。':'请提供 1–4,000 字的通知文字。'},e.status||400);}
+    const t=now(),hash=createHash('sha256').update(JSON.stringify(questionRoute?{type:'notice-question',...notice}:modelInput(notice))).digest('hex');
+    if(questionRoute){try{
+      const existing=options.questions.findRequest(account,requestID);
+      if(existing){
+        if(existing.hash!==hash)return reply({error:'同一请求编号不能提交不同原文或问题。',code:'REQUEST_ID_CONFLICT'},409);
+        if(existing.response){
+          const remainingQuestions=usage?.day===day()?Math.max(0,5-(usage.questionAccounts?.[sign(usage.day+':account:'+account.id)]||0)):5;
+          return reply(existing.response.status===200?{...existing.response.body,remainingQuestions}:existing.response.body,existing.response.status);
+        }
+        return reply({error:'这次提问仍在处理，请稍后使用同一请求编号查询。',code:'QUESTION_IN_PROGRESS',retryAfterSeconds:3},409,{'Retry-After':'3'});
+      }
+    }catch{return reply({error:'提问记录暂时无法读取，请稍后用同一请求编号查询。',code:'SERVICE_UNAVAILABLE'},503);}}
     if(jobRoute){try{const existing=options.jobs.findRequest(account,requestID,hash);if(existing)return reply({job:existing},202);options.jobs.checkCapacity(account);}catch(error){return reply({error:error instanceof ServiceError?error.message:'整理任务暂时不可用。'},error.status||503);}}
-    if(jobRoute){
-      const key=account.id+':'+requestID,previous=admissions.get(key);
+    if(jobRoute||questionRoute){
+      const key=(questionRoute?'question:':'job:')+account.id+':'+requestID,previous=admissions.get(key);
       if(previous){
-        if(previous.hash!==hash)return reply({error:'同一任务编号不能提交不同原文，请重新创建任务。'},409);
+        if(previous.hash!==hash)return reply({error:questionRoute?'同一请求编号不能提交不同原文或问题。':'同一任务编号不能提交不同原文，请重新创建任务。',...(questionRoute?{code:'REQUEST_ID_CONFLICT'}:{})},409);
         const response=await previous.promise;return reply(response.body,response.status,response.extraHeaders);
       }
       let resolve;const promise=new Promise(done=>{resolve=done;});admissions.set(key,{hash,promise});
@@ -133,7 +150,9 @@ export async function createService(config,options={}){
     }
     try{
     for(const [k,v] of cache)if(t-v.created>15*60000)cache.delete(k);
-    const saved=cache.get(hash);
+    // Questions reuse only their durable request ID, never another account's
+    // response or a different paid request's allowance.
+    const saved=questionRoute?undefined:cache.get(hash);
     if(busy&&!saved)return reply({error:'正在整理另一条通知，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
     if(busy&&usage?.day!==day())return reply({error:'正在整理另一条通知，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
     if(!usage||usage.day!==day())usage={day:day(),requests:0,input:0,output:0,reasoning:0,costMicro:0,...(publicMode?{clients:{}}:{})};
@@ -166,7 +185,7 @@ export async function createService(config,options={}){
     const limited=(error,code)=>reply({error,code,retryAfterSeconds:seconds},429,{'Retry-After':String(seconds)});
     // UTF-8 bytes upper-bound the text input tokens, with extra room for chat
     // framing. Output includes the reasoning budget rather than adding it twice.
-    const payload=saved?null:modelPayload(notice,config);
+    const payload=saved?null:questionRoute?questionPayload(notice,config):modelPayload(notice,config);
     const reservedCostMicro=payload?tokenCostMicro(Buffer.byteLength(JSON.stringify(payload),'utf8')+1024,payload.max_tokens):0;
     const currencyLimited=()=>limited('今日 AI 服务预算已用完，明天再试。','DAILY_COST_LIMIT');
     // Paid failures also consume both caps. Cache reuse does not spend the budget.
@@ -174,6 +193,7 @@ export async function createService(config,options={}){
     if(!saved&&usage.requests>=dailyLimit)return limited('今日整理次数已达上限，明天再试。','DAILY_LIMIT');
     if(publicMode&&!saved&&client.requests>=ipLimit)return limited('此网络今日整理次数已达上限，明天再试。','IP_DAILY_LIMIT');
     if(accountKey&&!saved&&(usage.accounts?.[accountKey]||0)>=accountLimit)return limited('此账号今日整理次数已达上限，明天再试。','ACCOUNT_DAILY_LIMIT');
+    if(questionRoute&&(usage.questionAccounts?.[accountKey]||0)>=5)return limited('此账号今日已提问 5 次，明天再问。','QUESTION_DAILY_LIMIT');
     if(publicMode){
       usage.clients[ipKey]=client;
       // Bound the persisted map: paid clients are at most the global daily cap.
@@ -209,20 +229,45 @@ export async function createService(config,options={}){
     if(usage.costMicro>dailyBudgetMicro-reservedCostMicro)return currencyLimited();
     if(publicMode&&client.requests>=ipLimit)return limited('此网络今日整理次数已达上限，明天再试。','IP_DAILY_LIMIT');
     if(accountKey&&(usage.accounts?.[accountKey]||0)>=accountLimit)return limited('此账号今日整理次数已达上限，明天再试。','ACCOUNT_DAILY_LIMIT');
+    if(questionRoute&&(usage.questionAccounts?.[accountKey]||0)>=5)return limited('此账号今日已提问 5 次，明天再问。','QUESTION_DAILY_LIMIT');
     if(request.signal.aborted)return reply({error:'整理已取消，请重新提交。',code:'CANCELLED'},499);
-    busy=true;let tokensRecorded=false,acceptedJob;
+    const admittedUsage=usage;
+    busy=true;let tokensRecorded=false,acceptedJob,acceptedQuestion=false;
     const recordTokens=async(stats,finishReason,failureCode,usageAvailable)=>{
-      for(const key of ['input','output','reasoning'])usage[key]=Math.min(Number.MAX_SAFE_INTEGER,(usage[key]||0)+(stats?.[key]||0));
-      if(usageAvailable===true&&validTokenCounts(stats))usage.costMicro=Math.min(Number.MAX_SAFE_INTEGER,usage.costMicro-reservedCostMicro+tokenCostMicro(stats.input,stats.output));
-      if(finishReason)usage.lastFinishReason=finishReason;if(failureCode)usage.lastFailureCode=failureCode;else delete usage.lastFailureCode;
-      tokensRecorded=true;await persist();
+      // Settle against the exact day/object that reserved this call. Never
+      // release an old-day reservation from a replacement day's allowance.
+      for(const key of ['input','output','reasoning'])admittedUsage[key]=Math.min(Number.MAX_SAFE_INTEGER,(admittedUsage[key]||0)+(stats?.[key]||0));
+      if(usageAvailable===true&&validTokenCounts(stats))admittedUsage.costMicro=Math.min(Number.MAX_SAFE_INTEGER,admittedUsage.costMicro-reservedCostMicro+tokenCostMicro(stats.input,stats.output));
+      if(finishReason)admittedUsage.lastFinishReason=finishReason;if(failureCode)admittedUsage.lastFailureCode=failureCode;else delete admittedUsage.lastFailureCode;
+      tokensRecorded=true;if(admittedUsage===usage)await persist();
     };
     try{
       // Claim the idempotency key synchronously before the quota write yields.
       // Concurrent repeats can already find this durable task, even if its ACK
       // or budget persistence later fails. No provider runs before both stores.
       if(jobRoute)acceptedJob=options.jobs.accept(account,requestID,hash,notice.sources);
-      usage.costMicro+=reservedCostMicro;usage.requests++;if(publicMode)client.requests++;if(accountKey){usage.accounts??={};usage.accounts[accountKey]=(usage.accounts[accountKey]||0)+1;}await persist();
+      if(questionRoute){options.questions.accept(account,requestID,hash);acceptedQuestion=true;}
+      admittedUsage.costMicro+=reservedCostMicro;admittedUsage.requests++;if(publicMode)client.requests++;if(accountKey){admittedUsage.accounts??={};admittedUsage.accounts[accountKey]=(admittedUsage.accounts[accountKey]||0)+1;}if(questionRoute){admittedUsage.questionAccounts??={};admittedUsage.questionAccounts[accountKey]=(admittedUsage.questionAccounts[accountKey]||0)+1;}await persist();
+      if(questionRoute){
+        // Once admitted, finish independently of the browser connection so a
+        // lost response can be recovered with the same ID without a new charge.
+        const worker=(async()=>{
+          try{
+            const output=await answerNoticeQuestion(notice,config,modelFetch);
+            await recordTokens(output.usage,output.finishReason,undefined,output.usageAvailable);
+            const remainingQuestions=usage?.day===day()?Math.max(0,5-(usage.questionAccounts?.[sign(usage.day+':account:'+account.id)]||0)):5;
+            const response={status:200,body:{...output.result,remainingQuestions}};
+            options.questions.complete(account,requestID,response);return response;
+          }catch(error){
+            if(error instanceof ServiceError&&error.usage&&!tokensRecorded){try{await recordTokens(error.usage,error.finishReason,error.failureCode,error.usageAvailable);}catch{error=new ServiceError('AI 用量暂时无法保存。',503);}}
+            const response={status:error.status||503,body:{error:(error instanceof ServiceError?error.message:'提问服务暂时不可用。')+' 同一请求不会再次收费。',code:publicAIErrorCode(error)||'QUESTION_FAILED'}};
+            options.questions.complete(account,requestID,response);return response;
+          }
+        })();
+        pendingJobs.add(worker);let response;
+        try{response=await worker;}finally{pendingJobs.delete(worker);}
+        return reply(response.body,response.status);
+      }
       if(jobRoute){
         // Both the quota reservation and accepted task are durable before ACK.
         // The background call is not bound to the browser's request signal.
@@ -255,8 +300,13 @@ export async function createService(config,options={}){
       if(cache.size>=50)cache.delete(cache.keys().next().value);cache.set(hash,{created:now(),result:output.result});return reply(output.result);
     }catch(e){
       if(acceptedJob){try{options.jobs.fail(account,acceptedJob.id,'SERVICE_UNAVAILABLE');}catch{}}
-      if(e instanceof ServiceError&&e.usage&&!tokensRecorded){try{await recordTokens(e.usage,e.finishReason,e.failureCode,e.usageAvailable);}catch{return reply({error:'整理服务暂时不可用，请稍后重试。'},503);}}
+      if(e instanceof ServiceError&&e.usage&&!tokensRecorded){try{await recordTokens(e.usage,e.finishReason,e.failureCode,e.usageAvailable);}catch{e=new ServiceError('AI 用量暂时无法保存，请稍后用同一请求编号查询。',503);}}
       const code=publicAIErrorCode(e);
+      if(acceptedQuestion){
+        const body={error:(e instanceof ServiceError?e.message:'提问服务暂时不可用。')+' 同一请求不会再次收费。',code:code||'QUESTION_FAILED'};
+        try{options.questions.complete(account,requestID,{status:e.status||503,body});}catch{return reply({error:'提问结果暂时无法保存，请稍后用同一请求编号查询。',code:'QUESTION_INTERRUPTED'},503);}
+        return reply(body,e.status||503);
+      }
       return reply({error:e instanceof ServiceError?e.message:'整理服务暂时不可用，请稍后重试。',...(code?{code}:{})},e.status||503);
     }finally{if(!jobRoute||!pendingJobs.size)busy=false;}
     }catch(error){

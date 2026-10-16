@@ -33,7 +33,7 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm test
           mkdir -p /tmp/campus-native-checks
-          javac -d /tmp/campus-native-checks mobile/android/app/src/main/java/io/github/kemou2333/campusinbox/NativePolicy.java mobile/android/app/src/main/java/io/github/kemou2333/campusinbox/NativeExport.java mobile/android/checks/NativeHostChecks.java
+          javac -d /tmp/campus-native-checks mobile/android/app/src/main/java/io/github/kemou2333/campusinbox/NativePolicy.java mobile/android/app/src/main/java/io/github/kemou2333/campusinbox/NativeUpdatePolicy.java mobile/android/app/src/main/java/io/github/kemou2333/campusinbox/NativeExport.java mobile/android/checks/NativeHostChecks.java
           java -cp /tmp/campus-native-checks io.github.kemou2333.campusinbox.NativeHostChecks
       - name: Build and package offline web
         run: |

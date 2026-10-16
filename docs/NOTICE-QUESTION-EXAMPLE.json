@@ -1,0 +1,43 @@
+{
+  "version": "2.16.0",
+  "date": "2026-10-17",
+  "exampleID": "example-reading-v25-2",
+  "title": "2026级SRTP项目申报",
+  "sourceText": "【脱敏示例】姓名为化名，联系方式、群号和具体链接已隐藏。\n\n各位同学好，2026级大学生科研训练计划（SRTP）项目申报已经正式启动！@全体成员\n\n《关于组织申报2026级“大学生科研训练计划”（SRTP）项目的通知》\n（链接已脱敏）\n（需使用校园网访问）\n\n📌 参与SRTP的作用\n1. 项目结题后可获得 2个创新学分，直接满足毕业要求的创新学分；\n2. 获得基础的科研训练经历，为后续竞赛、保研、进课题组打基础；\n3. 原则上完成校级SRTP后，大二才有资格申报国家级、市级大创项目。\n\n📌 申报方式\n两种方式二选一即可：\n- 选择老师发布的现有项目，自行找队友组队参加；\n- 自己拟定题目，联系心仪的老师担任指导老师，招募队友组队。\n\n⚠️ 关键时间与平台\n1. 申报平台：新版重庆大学大学生创新创业项目管理平台\n（链接已脱敏）\n2. 截止时间：2026年10月20日24:00",
+  "question": "报名截止时间是什么时候？申报入口和要做的事情是什么？原文没有的不要补充。",
+  "answer": {
+    "answer": "截止时间为2026年10月20日24:00。申报平台是新版重庆大学大学生创新创业项目管理平台（链接已脱敏）；要做的事情是二选一：选择老师发布的现有项目并自行找队友组队参加，或自己拟定题目、联系心仪的老师担任指导老师并招募队友组队。",
+    "evidence": [
+      "1. 申报平台：新版重庆大学大学生创新创业项目管理平台\n（链接已脱敏）\n2. 截止时间：2026年10月20日24:00",
+      "两种方式二选一即可：\n- 选择老师发布的现有项目，自行找队友组队参加；\n- 自己拟定题目，联系心仪的老师担任指导老师，招募队友组队。"
+    ]
+  },
+  "usage": {
+    "input": 603,
+    "output": 1721,
+    "reasoning": 1560
+  },
+  "usageAvailable": true,
+  "finishReason": "stop",
+  "elapsedMs": 8153,
+  "estimatedRmb": 0.017969,
+  "attempts": 1,
+  "automaticRetries": 0,
+  "thinkingMode": "low",
+  "realProviderCall": true,
+  "providerInvoiceVerified": false,
+  "sourceAlreadyRedacted": true,
+  "success": true,
+  "privacyReview": {
+    "date": "2026-10-17",
+    "manuallyReviewedFields": [
+      "sourceText",
+      "question",
+      "answer.answer",
+      "answer.evidence"
+    ],
+    "privatePersonalInformationFound": false,
+    "unchangedRedactedSource": true
+  },
+  "note": "真实首次问答响应；原文沿用已审查脱敏示例。未改写模型回答，估价不等于供应商账单。"
+}

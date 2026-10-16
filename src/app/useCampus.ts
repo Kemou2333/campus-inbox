@@ -3,6 +3,7 @@ import {createLocalRepository} from '../infrastructure/local-repository';
 import {createCloudSync, type CloudSync, type SyncState} from '../infrastructure/sync-client';
 import {createAuthClient, type AuthClient, type AuthSession, type AuthOptions} from '../infrastructure/auth-client';
 import {AnalysisError,type AnalyzeOptions} from '../infrastructure/ai-client';
+import {askNoticeQuestion} from '../infrastructure/notice-question-client';
 import {AnalysisJobsClient,AnalysisJobJournal,submitAnalysisJob,withoutSubmittedDrafts,attachJobFiles,pendingAnalysisFiles,type AnalysisJob,type LocalAnalysisSubmission} from '../infrastructure/analysis-jobs';
 import {addFiles, cleanupFiles, exportFiles, getFile, restoreFiles, MAX_NOTICE_FILES, MAX_NOTICE_FILE_BYTES} from '../infrastructure/attachment-store';
 import {createNotice, exportBackup, exportTextBackup, newID, parseAnalysisBatch, parseBackup, parseNotices} from '../domain/notice';
@@ -393,7 +394,15 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
    if(empty)changeDraft(empty.id,text);else addDraft(text);received=true;
   }return received;}finally{receivingShare.current=false;}
  }
+ async function askQuestion(noticeID:string,question:string,requestId:string,signal:AbortSignal){
+  const key=cloud?.getKey(),notice=noticeRef.current.find(n=>n.id===noticeID);
+  if(!key||!sync.connected||!config)throw new Error('请先登录，再提问。');
+  if(!notice)throw new Error('这条通知已移除。');
+  const result=await askNoticeQuestion({sourceText:notice.originalText,question,requestId},{endpoint:config.apiEndpoint,sessionKey:key,signal,onHumanVerification:options.onHumanVerification});
+  if(cloud?.getKey()!==key)throw new Error('账号已切换，请重新打开通知。');
+  return result;
+ }
  return {notices,drafts,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,preferences,setPreferences,bootError:boot.error,
-  report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,attach,detach,removeDraft,analyze,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
+  report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,attach,detach,removeDraft,analyze,askQuestion,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;

@@ -1,9 +1,10 @@
 import {useEffect,useId,useState,type CSSProperties,type RefObject} from 'react';
 import {createPortal} from 'react-dom';
 import {useTheme} from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 
 type Rect={x:number;y:number;width:number;height:number};
-type FocusFrame={width:number;height:number;target:Rect|null;context:Rect|null;windows:Rect[]};
+type FocusFrame={width:number;height:number;target:Rect|null;clickTarget:Rect|null;context:Rect|null;windows:Rect[]};
 const rect=(r:DOMRect,pad=0):Rect=>({x:r.left-pad,y:r.top-pad,width:r.width+pad*2,height:r.height+pad*2});
 const geometry=(r:Rect)=>({x:r.x,y:r.y,width:r.width,height:r.height}) as CSSProperties;
 const path=(r:Rect)=>`M${r.x},${r.y}h${r.width}v${r.height}h${-r.width}Z`;
@@ -20,25 +21,21 @@ function blockingPath(width:number,height:number,holes:Rect[]){
 }
 /** The visual cut-out moves independently; clicks always reach the actual target. */
 export function GuideFocus({panel,caption,selector,readingSelector,contextSelector,active}:{panel:RefObject<HTMLDivElement|null>;caption:RefObject<HTMLDivElement|null>;selector:string|null;readingSelector?:string|null;contextSelector?:string|null;active:boolean}){
- const theme=useTheme(),mask=useId().replace(/:/g,''),[frame,setFrame]=useState<FocusFrame|null>(null),[entered,setEntered]=useState(false),[focusSelector,setFocusSelector]=useState(selector);
+ const theme=useTheme(),reducedMotion=useMediaQuery('(prefers-reduced-motion: reduce)'),mask=useId().replace(/:/g,''),[frame,setFrame]=useState<FocusFrame|null>(null),[entered,setEntered]=useState(false),[focusSelector,setFocusSelector]=useState(selector);
  useEffect(()=>{
-  // Let the changed checkmark/progress or favorite remain visible before
-  // moving attention to the next control.
-  const pause=active&&(selector==='.notice-favorite'||selector==='[data-guide-finish]')?650:0;
-  if(!pause){setFocusSelector(selector);return;}
-  const timer=setTimeout(()=>setFocusSelector(selector),pause);
+  // Let each new screen or completed action be seen before the existing
+  // 1.1-second transition guides attention to its next control.
+  if(!active){setEntered(false);setFocusSelector(selector);return;}
+  if(reducedMotion){setFocusSelector(selector);setEntered(true);return;}
+  // Later changes retain the current mask and focus geometry during the pause.
+  const timer=setTimeout(()=>{setFocusSelector(selector);setEntered(true);},850);
   return()=>clearTimeout(timer);
- },[selector,active]);
- useEffect(()=>{
-  if(!active){setEntered(false);return;}
-  let second=0;const first=requestAnimationFrame(()=>{second=requestAnimationFrame(()=>setEntered(true));});
-  return()=>{cancelAnimationFrame(first);cancelAnimationFrame(second);};
- },[active]);
+ },[selector,active,reducedMotion]);
  useEffect(()=>{
   const container=panel.current,instruction=caption.current,dialog=container?.closest<HTMLElement>('[role="dialog"]');
   if(!active||!container||!instruction||!dialog){setFrame(null);return;}
   let scheduled=0,highlighted:HTMLElement|null=null;
-  const locked=new Map<HTMLElement,boolean>(),target=()=>focusSelector?dialog.querySelector<HTMLElement>(focusSelector):null,reading=()=>readingSelector?container.querySelector<HTMLElement>(readingSelector):null,context=()=>contextSelector?container.querySelector<HTMLElement>(contextSelector):null;
+  const locked=new Map<HTMLElement,boolean>(),target=()=>selector?dialog.querySelector<HTMLElement>(selector):null,focused=()=>focusSelector?dialog.querySelector<HTMLElement>(focusSelector):null,reading=()=>readingSelector?container.querySelector<HTMLElement>(readingSelector):null,context=()=>contextSelector?container.querySelector<HTMLElement>(contextSelector):null;
   const clearRegions=()=>[dialog.querySelector<HTMLElement>('[data-guide-header]'),instruction,dialog.querySelector<HTMLElement>('[data-guide-navigation]')].filter((value):value is HTMLElement=>!!value);
   function lockControls(element:HTMLElement|null){
    const regions=clearRegions();
@@ -50,10 +47,11 @@ export function GuideFocus({panel,caption,selector,readingSelector,contextSelect
     if(allowed){if(locked.has(control)){control.inert=locked.get(control)!;locked.delete(control);}return;}
     if(!locked.has(control)){locked.set(control,control.inert);control.inert=true;}
    });
-   if(highlighted!==element){highlighted?.classList.remove('guide-focus-target');element?.classList.add('guide-focus-target');highlighted=element;}
+   const nextHighlight=entered?focused():null;
+   if(highlighted!==nextHighlight){highlighted?.classList.remove('guide-focus-target');nextHighlight?.classList.add('guide-focus-target');highlighted=nextHighlight;}
   }
   function measure(){
-   scheduled=0;const element=target(),t=element?.getBoundingClientRect();
+   scheduled=0;const element=target(),t=focused()?.getBoundingClientRect(),click=element?.getBoundingClientRect();
    lockControls(element);
    const windows=clearRegions().map(region=>rect(region.getBoundingClientRect(),2)),read=reading()?.getBoundingClientRect();
    if(read){const p=container!.getBoundingClientRect(),top=Math.max(read.top,p.top,instruction!.getBoundingClientRect().bottom+6),bottom=Math.min(read.bottom,p.bottom);if(bottom>top)windows.push({x:read.left-2,y:top,width:read.width+4,height:bottom-top});}
@@ -61,7 +59,9 @@ export function GuideFocus({panel,caption,selector,readingSelector,contextSelect
    const left=preview?Math.max(preview.left-2,p.left):0,right=preview?Math.min(preview.right+2,p.right):0;
    const top=preview?Math.max(preview.top-2,p.top,captionBottom+4):0,bottom=preview?Math.min(preview.bottom+2,p.bottom):0;
    const readable=right>left&&bottom>top?{x:left,y:top,width:right-left,height:bottom-top}:null;
-   setFrame({width:window.innerWidth,height:window.innerHeight,target:t&&t.width>0&&t.height>0?rect(t,7):null,context:readable,windows});
+   // A changed screen may remove the previous control. Hold its last geometry
+   // until the next focus is ready, while the new notice stays fully readable.
+   setFrame(previous=>({width:window.innerWidth,height:window.innerHeight,target:t&&t.width>0&&t.height>0?rect(t,7):previous?.target??null,clickTarget:click&&click.width>0&&click.height>0?rect(click,7):null,context:readable,windows}));
   }
   function queue(){if(!scheduled)scheduled=requestAnimationFrame(measure);}
   function reveal(){
@@ -80,15 +80,15 @@ export function GuideFocus({panel,caption,selector,readingSelector,contextSelect
   container.addEventListener('scroll',queue,{passive:true});window.addEventListener('resize',reveal);window.visualViewport?.addEventListener('resize',reveal);
   const first=requestAnimationFrame(reveal),settled=setTimeout(reveal,320);queue();
   return()=>{observer.disconnect();mutations.disconnect();container.removeEventListener('scroll',queue);window.removeEventListener('resize',reveal);window.visualViewport?.removeEventListener('resize',reveal);cancelAnimationFrame(first);cancelAnimationFrame(scheduled);clearTimeout(settled);highlighted?.classList.remove('guide-focus-target');locked.forEach((original,element)=>{element.inert=original;});};
- },[active,focusSelector,readingSelector,contextSelector,panel,caption]);
+ },[active,selector,focusSelector,readingSelector,contextSelector,panel,caption,entered]);
  if(!active||!frame)return null;
- const {width,height,target,context,windows}=frame;
+ const {width,height,target,clickTarget,context,windows}=frame;
  const animatedTarget=entered?target:{x:0,y:0,width,height};
- const holes=[...windows,...(context?[context]:[]),...(target?[target]:[])];
- return createPortal(<svg className={`guide-spotlight${entered?' guide-spotlight-entered':''}`} aria-hidden="true" data-target={focusSelector??''} width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{position:'fixed',inset:0,width:'100vw',height:'100dvh',zIndex:theme.zIndex.modal+1,pointerEvents:'none',overflow:'hidden'}}>
-  <defs><mask id={mask} maskUnits="userSpaceOnUse"><rect width={width} height={height} fill="white"/>{windows.map((window,index)=><rect key={index} {...window} rx="8" fill="black"/>)}{context&&<rect className="guide-context-hole" data-context={contextSelector} {...context} fill="black"/>}{animatedTarget&&<rect className="guide-target-hole" style={geometry(animatedTarget)} rx="12" fill="black"/>}</mask></defs>
+ const holes=[...windows,...(context?[context]:[]),...(clickTarget?[clickTarget]:[])];
+ return createPortal(<svg className={`guide-spotlight${entered?' guide-spotlight-entered':''}`} aria-hidden="true" data-target={focusSelector??''} data-pending-target={selector??''} data-focus-ready={entered&&focusSelector===selector} width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{position:'fixed',inset:0,width:'100vw',height:'100dvh',zIndex:theme.zIndex.modal+1,pointerEvents:'none',overflow:'hidden'}}>
+  <defs><mask id={mask} maskUnits="userSpaceOnUse"><rect width={width} height={height} fill="white"/>{windows.map((window,index)=><rect key={index} {...window} rx="8" fill="black"/>)}{context&&<rect className="guide-context-hole" data-context={contextSelector} {...context} fill="black"/>}{animatedTarget&&<rect className="guide-target-hole" style={{...geometry(animatedTarget),...(!entered?{transition:'none'}:{})}} rx="12" fill="black"/>}</mask></defs>
   <rect width={width} height={height} fill="black" opacity={theme.palette.mode==='dark'?.68:.52} mask={`url(#${mask})`}/>
-  {animatedTarget&&<rect className="guide-target-ring" style={geometry(animatedTarget)} rx="12" fill="none" stroke={theme.palette.primary.main} strokeWidth="3"/>}
+  {animatedTarget&&<rect className="guide-target-ring" style={{...geometry(animatedTarget),...(!entered?{transition:'none',opacity:0}:{})}} rx="12" fill="none" stroke={theme.palette.primary.main} strokeWidth="3"/>}
   <path d={blockingPath(width,height,holes)} fill="transparent" style={{pointerEvents:'fill'}} onPointerDown={event=>{event.preventDefault();event.stopPropagation();}} onClick={event=>{event.preventDefault();event.stopPropagation();}}/>
  </svg>,document.body);
 }

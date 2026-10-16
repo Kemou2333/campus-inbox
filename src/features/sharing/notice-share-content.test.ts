@@ -29,6 +29,14 @@ describe('share content allowlist',()=>{
   for(const expected of ['前5章各看第一个视频。','核对教学班号。','视频、音频或文字均可。','本人原创，不接受搬运。','课程学习素材','线上成绩计入平时作业。'])expect(text).toContain(expected);
   expect(text).not.toMatch(/2026|\d+月\d+日/);
  });
+ it('labels known deadlines once and gives time, reminders and warnings distinct tones',()=>{
+  const blocks=noticeShareBlocks(record(),true);
+  expect(blocks.find(block=>block.tone==='time')).toMatchObject({kind:'fact',text:'截止：第16周周日24:00'});
+  expect(blocks.filter(block=>block.tone==='time').every(block=>!block.text.includes('时间：截止'))).toBe(true);
+  expect(blocks.find(block=>block.text==='提醒')?.tone).toBe('reminder');
+  expect(blocks.find(block=>block.text==='注意')?.tone).toBe('warning');
+  expect(blocks.find(block=>block.text==='前5章各看第一个视频。')?.kind).toBe('detail');
+ });
  it('exports user corrections and never mutates the saved AI record or sanitizes personal names',()=>{
   const n=record();n.corrections={updatedAt:n.updatedAt,values:[{path:'title',value:'林同学的课程安排'},{path:'tasks.0.details.0',value:'人工修正后的要求'}]};
   const before=JSON.stringify(n),text=noticeShareBlocks(n,true).map(block=>block.text).join('\n');

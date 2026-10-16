@@ -16,6 +16,12 @@ test('CI release and restricted installer agree on all runtime and vendor files'
   assert.deepEqual(packaged?.sort(),[...releaseFiles].sort());assert.deepEqual(allowed.sort(),[...releaseFiles].sort());
 });
 
+test('optional container includes every runtime import from the production release',async()=>{
+  const dockerfile=await readFile(new URL('../Dockerfile',import.meta.url),'utf8');
+  const copied=[...dockerfile.matchAll(/^COPY (.+)\s+\S+\s*$/gm)].flatMap(match=>match[1].trim().split(/\s+/));
+  for(const file of releaseFiles.filter(path=>/\.(?:mjs|js)$/.test(path)))assert(copied.some(path=>path===file||path.endsWith('/')&&file.startsWith(path)),file+' missing from container');
+});
+
 // Reproduce the limited production archive without a frontend build, a package
 // manifest, node_modules, model requests, or real server credentials.
 test('the complete production release boots without dist or frontend dependencies',async()=>{
@@ -34,7 +40,7 @@ test('the complete production release boots without dist or frontend dependencie
     await new Promise(resolve=>reservation.close(resolve));
     child=spawn(process.execPath,[join(folder,'server/index.mjs')],{
       cwd:folder,
-      env:{PORT:String(port),BIND_HOST:'127.0.0.1',DEEPSEEK_API_KEY:'test-only-key',CAMPUS_ACCESS_TOKEN:'test-only-signing-secret-at-least-twenty-characters',ALLOWED_ORIGINS:'https://kemou2333.github.io',MAIL_LOGIN_ENABLED:'false',USAGE_STATE_FILE:join(folder,'usage.json'),SYNC_STATE_FILE:join(folder,'sync.sqlite'),AUTH_STATE_FILE:join(folder,'auth.sqlite')},
+      env:{PORT:String(port),BIND_HOST:'127.0.0.1',DEEPSEEK_API_KEY:'test-only-key',CAMPUS_ACCESS_TOKEN:'test-only-signing-secret-at-least-twenty-characters',ALLOWED_ORIGINS:'https://kemou2333.github.io',MAIL_LOGIN_ENABLED:'false',CAMPUS_STATE_DIRECTORY:folder},
       stdio:['ignore','pipe','pipe']
     });
     let output='',error='';
@@ -46,6 +52,7 @@ test('the complete production release boots without dist or frontend dependencie
     });
     const response=await fetch('http://127.0.0.1:'+port+'/health');
     assert.equal(response.status,200);assert.deepEqual(await response.json(),{status:'ok'});
+    for(const name of ['auth.sqlite','sync.sqlite'])assert.equal((await readFile(join(folder,name))).subarray(0,15).toString(),'SQLite format 3');
     const options=await fetch('http://127.0.0.1:'+port+'/auth/options',{method:'POST',headers:{Origin:'https://kemou2333.github.io','Content-Type':'application/json'},body:'{}'});
     assert.equal(options.status,200);const availability=await options.json();assert.equal(availability.emailEnabled,false);assert.equal(availability.inviteEnabled,true);
     // A forwarded list is not a real address; different malformed headers must

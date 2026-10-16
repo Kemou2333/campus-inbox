@@ -73,10 +73,17 @@ public final class MainActivity extends Activity {
     private JavaScriptReplyProxy reminderPermissionReply;
     private JSONObject reminderPermissionPayload;
     private String reminderPermissionRequest;
+    private NativeUpdates updates;
+    private boolean foreground;
+    private boolean updateDialogShowing;
+    private final Runnable updateCheck = () -> {
+        if (foreground && updates != null) updates.checkWhenDue(this::offerUpdate);
+    };
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         reminders = new NativeReminders(this);
+        updates = new NativeUpdates(this);
         reminders.restoreAfterBoot();
         try { exports = new NativeExport(getCacheDir()); } catch (IOException ignored) { exports = null; }
         if (state != null) {
@@ -94,6 +101,7 @@ public final class MainActivity extends Activity {
         root = new FrameLayout(this);
         root.setBackgroundColor(themeColor("surface"));
         web = new WebView(this);
+        web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         web.setBackgroundColor(themeColor("surface"));
         root.addView(web, new FrameLayout.LayoutParams(-1, -1));
         setContentView(root);
@@ -531,6 +539,27 @@ public final class MainActivity extends Activity {
         catch (ActivityNotFoundException ignored) { toast(getString(R.string.no_browser)); }
     }
 
+    private void offerUpdate(NativeUpdates.Release release) {
+        runOnUiThread(() -> {
+            if (!foreground || isFinishing() || isDestroyed() || web == null || updateDialogShowing
+                    || !NativePolicy.isTrustedPage(web.getUrl()) || !updates.shouldPrompt(release)) return;
+            // Let onboarding and any current edit dialog finish; cached metadata can be offered on the next resume.
+            web.evaluateJavascript("Boolean(document.querySelector('[role=\"dialog\"],dialog[open]'))", hasDialog -> {
+                if (!"false".equals(hasDialog) || !foreground || isFinishing() || isDestroyed()
+                        || updateDialogShowing || !updates.shouldPrompt(release)) return;
+                updates.markPrompted(release);
+                updateDialogShowing = true;
+                new AlertDialog.Builder(MainActivity.this).setTitle("发现新版本 " + release.version)
+                        .setMessage("可以前往 GitHub 下载更新，手机中的通知会保留。")
+                        .setPositiveButton("去下载", (dialog, which) -> {
+                            if (NativeUpdatePolicy.verifiedDownload(release.download, release.version)) openExternal(release.download);
+                        })
+                        .setNegativeButton("暂不", null)
+                        .setOnDismissListener(dialog -> updateDialogShowing = false).show();
+            });
+        });
+    }
+
     private boolean isDark() {
         return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
     }
@@ -605,10 +634,20 @@ public final class MainActivity extends Activity {
 
     private void toast(String text) { Toast.makeText(this, text, Toast.LENGTH_SHORT).show(); }
 
-    @Override protected void onPause() { if (web != null) web.onPause(); super.onPause(); }
-    @Override protected void onResume() { super.onResume(); if (web != null) web.onResume(); }
+    @Override protected void onPause() {
+        foreground = false;
+        if (web != null) { web.removeCallbacks(updateCheck); web.onPause(); }
+        super.onPause();
+    }
+    @Override protected void onResume() {
+        super.onResume();
+        foreground = true;
+        if (web != null) { web.onResume(); web.removeCallbacks(updateCheck); web.postDelayed(updateCheck, 4000); }
+    }
 
     @Override protected void onDestroy() {
+        if (updates != null) updates.close();
+        if (web != null) web.removeCallbacks(updateCheck);
         if (fileCallback != null) { fileCallback.onReceiveValue(null); fileCallback = null; }
         if (web != null) { web.stopLoading(); web.destroy(); web = null; }
         if (exports != null) io.execute(exports::clear);
