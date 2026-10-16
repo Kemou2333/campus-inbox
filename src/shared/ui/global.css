@@ -13,8 +13,8 @@ html[data-theme="dark"]{--scroll-thumb:#7F9CA6;--scroll-track:#24343D}
 .notice-card{scroll-margin-top:8px}
 @supports not selector(::-webkit-scrollbar){.workspace-pane{scrollbar-width:thin;scrollbar-color:#89939c transparent}}
 
-.guide-spotlight{opacity:0;transition:opacity .35s ease-out}.guide-spotlight-entered{opacity:1}
-.guide-target-hole,.guide-target-ring{transition:x .5s cubic-bezier(.22,.75,.2,1),y .5s cubic-bezier(.22,.75,.2,1),width .5s cubic-bezier(.22,.75,.2,1),height .5s cubic-bezier(.22,.75,.2,1)}
-.guide-focus-target{animation:guide-control-pulse 1.6s ease-in-out .5s 3!important;transform-origin:center;position:relative}
+.guide-spotlight{opacity:0;transition:opacity .55s ease-out}.guide-spotlight-entered{opacity:1}
+.guide-target-hole,.guide-target-ring{transition:x 1.1s cubic-bezier(.4,0,.2,1),y 1.1s cubic-bezier(.4,0,.2,1),width 1.1s cubic-bezier(.4,0,.2,1),height 1.1s cubic-bezier(.4,0,.2,1)}
+.guide-focus-target{animation:guide-control-pulse 2.1s ease-in-out 1.15s 3!important;transform-origin:center;position:relative}
 @keyframes guide-control-pulse{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.045);filter:brightness(1.14)}}
 @media(prefers-reduced-motion:reduce){.guide-focus-target{animation:none!important}.guide-spotlight{transition:none}.guide-target-hole,.guide-target-ring{transition:none}}
