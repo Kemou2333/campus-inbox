@@ -34,6 +34,7 @@ export default function App(){
  const [page,setPage]=useState(0);const [login,setLogin]=useState(false);const [help,setHelp]=useState(()=>localStorage.getItem('campus-inbox:tutorial:v2')!=='seen');
  const [about,setAbout]=useState(false);const [note,setNote]=useState<NoteEditor|null>(null);const [details,setDetails]=useState<string|null>(null);const [calendar,setCalendar]=useState<CalendarSelection|null>(null);const [focusID,setFocusID]=useState<string|null>(null);
  const [settingsDialog,setSettingsDialog]=useState(false);
+ const [expandCampus,setExpandCampus]=useState(false);
  const [share,setShare]=useState<Notice|null>(null);
  const [sourcePath,setSourcePath]=useState<string|undefined>(),[correction,setCorrection]=useState<CorrectionSelection|null>(null);
  const [feedView,setFeedView]=useState(createFeedViewState);
@@ -50,7 +51,8 @@ export default function App(){
  function clearNewReminders(){const shown=new Set(unreadReminders.map(n=>n!.id));setUnreadReminderIDs(ids=>ids.filter(id=>!shown.has(id)));}
  function viewNewReminders(){const first=unreadReminders[0];if(!first)return;setPage(0);setFocusID(first.id);clearNewReminders();}
  function closeHelp(){setHelp(false);localStorage.setItem('campus-inbox:tutorial:v2','seen');}
- function navigate(next:number){setPage(next);if(split&&next===1){setTimeout(()=>{document.getElementById('compose-pane')?.scrollIntoView({block:'start',behavior:'smooth'});document.querySelector<HTMLTextAreaElement>('#compose-pane textarea')?.focus({preventScroll:true});},0);}else window.scrollTo({top:0,behavior:'instant'});}
+ function navigate(next:number){if(next===2)setExpandCampus(false);setPage(next);if(split&&next===1){setTimeout(()=>{document.getElementById('compose-pane')?.scrollIntoView({block:'start',behavior:'smooth'});document.querySelector<HTMLTextAreaElement>('#compose-pane textarea')?.focus({preventScroll:true});},0);}else window.scrollTo({top:0,behavior:'instant'});}
+ function openCampusSettings(){navigate(2);setExpandCampus(true);}
  const actions:NoticeActions={note:(notice,target,title,text)=>setNote({noticeID:notice.id,target,title,text}),details:n=>{setSourcePath(undefined);setDetails(n.id);},calendar:(notice,task)=>setCalendar({notice,task}),evidence:(notice,path)=>{setSourcePath(path);setDetails(notice.id);},correct:(notice,path)=>{setDetails(null);setCorrection({noticeID:notice.id,path});},share:notice=>setShare({...notice,corrections:undefined})};
  useEffect(()=>{
   const receive=()=>{if(modalRef.current||app.busy||document.querySelector('[role=\"dialog\"]'))return;void app.receiveShare().then(received=>{if(received)navigate(1);}).catch(app.report);};
@@ -85,11 +87,11 @@ export default function App(){
    {app.bootError?<Alert severity="error" action={<Button onClick={()=>void rescue().catch(app.report)}>保存原始数据</Button>}>原来的通知无法读取：{app.bootError}。数据仍在本机，暂未覆盖。</Alert>:
     split&&page!==2?<Box className="workspace" sx={{display:'grid',gridTemplateColumns:'minmax(280px, 320px) minmax(0, 1fr)',gap:3,flex:1,minHeight:160}}>
      <ScrollPane id="compose-pane" label="新增通知" onFocus={()=>setPage(1)}><ComposerPage app={app} embedded onDone={()=>setPage(0)} onLogin={()=>setLogin(true)}/></ScrollPane>
-     <ScrollPane id="feed-pane" label="已保存通知" onFocus={()=>setPage(0)}><FeedPage app={app} embedded actions={actions} onCompose={()=>navigate(1)} onSettings={()=>navigate(2)} focusID={focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView}/></ScrollPane>
+     <ScrollPane id="feed-pane" label="已保存通知" onFocus={()=>setPage(0)}><FeedPage app={app} embedded actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} focusID={focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView}/></ScrollPane>
     </Box>:
-    page===0?<FeedPage app={app} actions={actions} onCompose={()=>navigate(1)} onSettings={()=>navigate(2)} focusID={focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView}/>:
+    page===0?<FeedPage app={app} actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} focusID={focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView}/>:
     page===1?<ComposerPage app={app} onDone={()=>navigate(0)} onLogin={()=>setLogin(true)}/>:
-    <SettingsPage app={app} onLogin={()=>setLogin(true)} onHelp={()=>setHelp(true)} onAbout={()=>setAbout(true)} onDialogChange={setSettingsDialog}/>}
+    <SettingsPage app={app} onLogin={()=>setLogin(true)} onHelp={()=>setHelp(true)} onAbout={()=>setAbout(true)} onDialogChange={setSettingsDialog} expandCampus={expandCampus} onShowNotices={()=>{setFeedView(previous=>({...previous,tab:0,query:'',favoritesOnly:false,relevantOnly:false}));navigate(0);}}/>}
   </Container>
   {!wide&&<Paper sx={{position:'fixed',bottom:0,left:0,right:0,borderTop:'1px solid',borderColor:'divider',pb:'var(--safe-bottom)',zIndex:10}}>
    <BottomNavigation value={page} onChange={(_,value)=>navigate(value)} showLabels sx={{bgcolor:'background.paper',height:64,alignItems:'center',px:1,gap:1,'& .MuiBottomNavigationAction-root':{minWidth:0,maxWidth:180,height:48,borderRadius:6,color:'text.secondary'},'& .MuiBottomNavigationAction-root.Mui-selected':{color:'primary.main',bgcolor:'action.selected'},'& .MuiBottomNavigationAction-label':{fontSize:'1rem',fontWeight:600},'& .MuiBottomNavigationAction-label.Mui-selected':{fontSize:'1rem'}}}>{nav.map(item=><BottomNavigationAction key={item.label} label={item.label}/>)}</BottomNavigation>

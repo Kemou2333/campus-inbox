@@ -101,7 +101,7 @@ export function FeedPage({app,actions,onCompose,onSettings,focusID,onFocusHandle
   </Stack>
   {!!allGroups.examples.length&&<Stack className="example-visibility-controls" direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:1,mt:.5}}>
    <Typography className="example-privacy-note" variant="body2" color="text.secondary" sx={{lineHeight:1.6}}>{examplesHidden?`已隐藏 ${allGroups.examples.length} 条示例`:'示例通知已隐藏个人信息'}</Typography>
-   <Tooltip title={examplesHidden?'显示全部示例':'隐藏全部示例'}><IconButton aria-label={examplesHidden?'显示全部示例':'隐藏全部示例'} aria-pressed={examplesHidden} onClick={()=>changeExamplesHidden(!examplesHidden)}>{examplesHidden?<Visibility/>:<VisibilityOff/>}</IconButton></Tooltip>
+   <Button size="small" startIcon={examplesHidden?<Visibility/>:<VisibilityOff/>} aria-label={examplesHidden?'显示全部示例':'隐藏全部示例'} aria-pressed={examplesHidden} onClick={()=>changeExamplesHidden(!examplesHidden)} sx={{flexShrink:0,fontSize:13,px:1}}>{examplesHidden?'显示示例':'隐藏示例'}</Button>
   </Stack>}
   </Box>
   <AnimatedNotices key={tab} records={records} exampleDivider={!!allGroups.personal.length} app={app} actions={actions} now={now} expandedIDs={expandedIDs} onExpandedChange={toggleExpanded} expandedTaskIDs={expandedTaskIDs} onTaskExpandedChange={toggleTaskExpanded} onEmpty={setAnimationEmpty}/>

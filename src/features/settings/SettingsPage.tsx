@@ -8,6 +8,7 @@ import type { SyncConflict } from '../../infrastructure/sync-client';
 import type { ThemePreference } from '../../app/theme';
 import {BackupDialog} from './BackupDialog';
 import {CampusPreferencesPanel} from './CampusPreferencesPanel';
+import {isExampleNotice} from '../../domain/examples';
 
 interface Props {
   app: CampusController;
@@ -15,6 +16,8 @@ interface Props {
   onHelp: () => void;
   onAbout: () => void;
   onDialogChange: (open:boolean) => void;
+  onShowNotices?: () => void;
+  expandCampus?: boolean;
 }
 
 function date(value: string | null): string {
@@ -35,7 +38,7 @@ function Version({ label, record }: { label: string; record: SyncConflict['local
   </Box>;
 }
 
-export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: Props) {
+export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, onShowNotices, expandCampus = false }: Props) {
   const [running, setRunning] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [logoutOpen, setLogoutOpen] = useState(false);
@@ -45,6 +48,7 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
   useEffect(()=>{onDialogChange(logoutOpen||!!conflict||legacyOpen||backupOpen);return()=>onDialogChange(false);},[logoutOpen,conflict,legacyOpen,backupOpen,onDialogChange]);
   const picker = useRef<HTMLInputElement>(null);
   const busy = !!running || app.busy;
+  const hasExamples = app.notices.some(isExampleNotice);
 
   async function run(name: string, operation: () => Promise<unknown>) {
     if (busy) return;
@@ -84,8 +88,6 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
       </ToggleButtonGroup>
     </Paper>
 
-    <CampusPreferencesPanel value={app.preferences} onSave={app.setPreferences} disabled={busy}/>
-
     <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 2 }}>
         <Typography component="h2" variant="h6">账号与同步</Typography>
@@ -122,6 +124,8 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
       </Box>}
     </Paper>
 
+    <CampusPreferencesPanel value={app.preferences} onSave={app.setPreferences} disabled={busy} initiallyExpanded={expandCampus}/>
+
     <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
       <Typography component="h2" variant="h6" sx={{ mb: 2 }}>数据与示例</Typography>
       <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1 }}>
@@ -130,7 +134,7 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange }: 
         <Button variant="outlined" disabled={busy} onClick={() => picker.current?.click()}>
           {running === 'import' ? '正在导入…' : '导入备份'}</Button>
         <Button variant="outlined" disabled={busy}
-          onClick={() => void run('examples', app.loadExamples)}>{running === 'examples' ? '正在载入…' : '载入示例'}</Button>
+          onClick={() => void run('examples', async () => {await app.loadExamples(); onShowNotices?.();})}>{running === 'examples' ? '正在载入…' : hasExamples ? '更新示例' : '载入示例'}</Button>
       </Stack>
       <Typography variant="body2" color="text.secondary" sx={{mt:1.5}}>示例通知已隐藏个人信息</Typography>
       <input ref={picker} type="file" accept="application/json,.json" hidden aria-label="选择通知备份"
