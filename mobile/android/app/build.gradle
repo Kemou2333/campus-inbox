@@ -10,7 +10,7 @@ android {
         applicationId 'io.github.kemou2333.campusinbox'
         minSdk 26
         targetSdk 36
-        versionCode 25
+        versionCode 26
         versionName '2.16.1'
     }
 

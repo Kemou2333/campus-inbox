@@ -24,6 +24,7 @@ import {nextUnreadReminderIDs,readUnreadReminderIDs,writeUnreadReminderIDs} from
 import {useHumanVerification} from '../features/security/useHumanVerification';
 import {HumanVerificationDialog} from '../features/security/HumanVerificationDialog';
 import type {Notice} from '../domain/types';
+import {SearchQueryContext} from '../shared/ui/SearchHighlight';
 
 const ShareImageDialog=lazy(()=>import('../features/sharing/ShareImageDialog'));
 const NoticeQuestionDialog=lazy(()=>import('../features/questions/NoticeQuestionDialog'));
@@ -64,9 +65,11 @@ export default function App(){
  useEffect(()=>app.platform.onBack(()=>{
   const dialog=Array.from(document.querySelectorAll('[role="dialog"]')).at(-1);
   if(dialog){dialog.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',code:'Escape',bubbles:true}));return true;}
+  if(correction){setCorrection(null);return true;}
   if(page!==0){navigate(0);return true;}return false;
- }),[app.platform,page]);
+ }),[app.platform,page,correction]);
  useEffect(()=>{if(details&&!app.notices.some(n=>n.id===details))setDetails(null);},[app.notices,details]);
+ useEffect(()=>{if(correction&&!app.notices.some(n=>n.id===correction.noticeID))setCorrection(null);},[app.notices,correction]);
  useEffect(()=>{if(questionID&&!app.notices.some(n=>n.id===questionID))setQuestionID(null);},[app.notices,questionID]);
  useEffect(()=>{const current=new Map(app.notices.map(n=>[n.id,n]));
   const previous=lastNotices.current;setUnreadReminderIDs(ids=>nextUnreadReminderIDs(previous,app.notices,ids));
@@ -90,9 +93,9 @@ export default function App(){
    {app.bootError?<Alert severity="error" action={<Button onClick={()=>void rescue().catch(app.report)}>保存原始数据</Button>}>原来的通知无法读取：{app.bootError}。数据仍在本机，暂未覆盖。</Alert>:
     split&&page!==2?<Box className="workspace" sx={{display:'grid',gridTemplateColumns:'minmax(280px, 320px) minmax(0, 1fr)',gap:3,flex:1,minHeight:160}}>
      <ScrollPane id="compose-pane" label="新增通知" onFocus={()=>setPage(1)}><ComposerPage app={app} embedded onDone={()=>setPage(0)} onLogin={()=>setLogin(true)}/></ScrollPane>
-     <ScrollPane id="feed-pane" label="已保存通知" onFocus={()=>setPage(0)}><FeedPage app={app} embedded actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} focusID={focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView}/></ScrollPane>
+     <ScrollPane id="feed-pane" label="已保存通知" onFocus={()=>setPage(0)}><FeedPage app={app} embedded actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} focusID={focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView} editingID={correction?.noticeID} onEditingClose={()=>setCorrection(null)}/></ScrollPane>
     </Box>:
-    page===0?<FeedPage app={app} actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} focusID={focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView}/>:
+    page===0?<FeedPage app={app} actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} focusID={focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView} editingID={correction?.noticeID} onEditingClose={()=>setCorrection(null)}/>:
     page===1?<ComposerPage app={app} onDone={()=>navigate(0)} onLogin={()=>setLogin(true)}/>:
     <SettingsPage app={app} onLogin={()=>setLogin(true)} onHelp={()=>setHelp(true)} onAbout={()=>setAbout(true)} onDialogChange={setSettingsDialog} expandCampus={expandCampus} onShowNotices={()=>{setFeedView(previous=>({...previous,tab:0,query:'',favoritesOnly:false,relevantOnly:false}));navigate(0);}}/>}
   </Container>
@@ -100,8 +103,8 @@ export default function App(){
    <BottomNavigation value={page} onChange={(_,value)=>navigate(value)} showLabels sx={{bgcolor:'background.paper',height:64,alignItems:'center',px:1,gap:1,'& .MuiBottomNavigationAction-root':{minWidth:0,maxWidth:180,height:48,borderRadius:6,color:'text.secondary'},'& .MuiBottomNavigationAction-root.Mui-selected':{color:'primary.main',bgcolor:'action.selected'},'& .MuiBottomNavigationAction-label':{fontSize:'1rem',fontWeight:600},'& .MuiBottomNavigationAction-label.Mui-selected':{fontSize:'1rem'}}}>{nav.map(item=><BottomNavigationAction key={item.label} label={item.label}/>)}</BottomNavigation>
   </Paper>}
   <NoteDialog editor={note} app={app} onClose={()=>setNote(null)}/>
-  <DetailDialog notice={app.notices.find(n=>n.id===details)??null} path={sourcePath} app={app} onCorrect={actions.correct} onClose={()=>setDetails(null)}/>
-  <CorrectionDialog notice={app.notices.find(n=>n.id===correction?.noticeID)??null} path={correction?.path} app={app} onClose={()=>setCorrection(null)}/>
+  <SearchQueryContext.Provider value={feedView.query}><DetailDialog notice={app.notices.find(n=>n.id===details)??null} path={sourcePath} app={app} onCorrect={actions.correct} onClose={()=>setDetails(null)}/></SearchQueryContext.Provider>
+  <CorrectionDialog notice={correction?.path?app.notices.find(n=>n.id===correction.noticeID)??null:null} path={correction?.path} app={app} onClose={()=>setCorrection(value=>value?{noticeID:value.noticeID}:null)}/>
   <CalendarDialog selection={calendar} app={app} onClose={()=>setCalendar(null)}/>
   {share&&<Suspense fallback={null}><ShareImageDialog notice={share} app={app} onClose={()=>setShare(null)}/></Suspense>}
   {questionID&&<Suspense fallback={null}><NoticeQuestionDialog notice={app.notices.find(n=>n.id===questionID)??null} app={app} onClose={()=>setQuestionID(null)} onLogin={()=>setLogin(true)}/></Suspense>}

@@ -15,13 +15,16 @@ import type {Notice,SortOrder} from '../../domain/types';
 import type {CampusController} from '../../app/useCampus';
 import {NoticeCard,type NoticeActions} from './NoticeCard';
 import {transitionRows} from './transition-rows';
+import {isLocalDemoNotice} from '../../domain/local-demo';
 import {effectiveNotice} from '../../domain/corrections';
+import {SearchQueryContext,HighlightedText} from '../../shared/ui/SearchHighlight';
+import {noticeSearchMatches} from './search-matches';
 import {groupExampleNotices,isExampleNotice,readExamplesHidden,writeExamplesHidden} from '../../domain/examples';
 
 export interface FeedViewState {tab:0|1|2;query:string;sort:SortOrder;expandedIDs:Set<string>;expandedTaskIDs:Set<string>;favoritesOnly?:boolean;relevantOnly?:boolean}
 export const createFeedViewState=():FeedViewState=>({tab:0,query:'',sort:'priority',expandedIDs:new Set(),expandedTaskIDs:new Set(),favoritesOnly:false,relevantOnly:false});
 
-function AnimatedNotices({records,exampleDivider=false,app,actions,now,expandedIDs,onExpandedChange,expandedTaskIDs,onTaskExpandedChange,onEmpty}:{records:Notice[];exampleDivider?:boolean;app:CampusController;actions:NoticeActions;now:number;expandedIDs:Set<string>;onExpandedChange:(id:string)=>void;expandedTaskIDs:Set<string>;onTaskExpandedChange:(id:string)=>void;onEmpty:(empty:boolean)=>void}){
+function AnimatedNotices({query,editingID,onEditingClose,records,exampleDivider=false,app,actions,now,expandedIDs,onExpandedChange,expandedTaskIDs,onTaskExpandedChange,onEmpty}:{query:string;editingID?:string;onEditingClose?:()=>void;records:Notice[];exampleDivider?:boolean;app:CampusController;actions:NoticeActions;now:number;expandedIDs:Set<string>;onExpandedChange:(id:string)=>void;expandedTaskIDs:Set<string>;onTaskExpandedChange:(id:string)=>void;onEmpty:(empty:boolean)=>void}){
  const [rows,setRows]=useState(()=>records.map(record=>({record,visible:true})));
  const reducedMotion=useMediaQuery('(prefers-reduced-motion: reduce)');
  const current=useRef(records);current.current=records;
@@ -29,10 +32,10 @@ function AnimatedNotices({records,exampleDivider=false,app,actions,now,expandedI
  useEffect(()=>setRows(previous=>transitionRows(previous,records)),[records]);
  useEffect(()=>onEmpty(rows.length===0),[rows.length,onEmpty]);
  return <Stack>{rows.map((row,index)=><Fragment key={row.record.id}>{exampleDivider&&index===exampleStart&&<Divider className="example-group-divider" sx={{mt:1,mb:2,color:'text.secondary',fontSize:'.875rem'}}>示例通知 {exampleCount}</Divider>}<Collapse in={row.visible} timeout={reducedMotion?0:360} onExited={()=>setRows(old=>old.filter(v=>v.record.id!==row.record.id||current.current.some(n=>n.id===v.record.id)))}>
-  <Box sx={{pb:1.5,opacity:row.visible?1:0,transform:row.visible?'none':'translateX(8px)',transition:reducedMotion?'none':'opacity 280ms ease-in-out, transform 340ms cubic-bezier(.4,0,.2,1)'}}><NoticeCard notice={row.record} app={app} actions={actions} now={now} expanded={expandedIDs.has(row.record.id)} onExpandedChange={()=>onExpandedChange(row.record.id)} expandedTaskIDs={expandedTaskIDs} onTaskExpandedChange={onTaskExpandedChange} disabled={!row.visible}/></Box>
+  <Box sx={{pb:1.5,opacity:row.visible?1:0,transform:row.visible?'none':'translateX(8px)',transition:reducedMotion?'none':'opacity 280ms ease-in-out, transform 340ms cubic-bezier(.4,0,.2,1)'}}><NoticeCard notice={row.record} app={app} actions={actions} now={now} expanded={expandedIDs.has(row.record.id)} onExpandedChange={()=>onExpandedChange(row.record.id)} expandedTaskIDs={expandedTaskIDs} onTaskExpandedChange={onTaskExpandedChange} disabled={!row.visible} editing={row.record.id===editingID} onEditingClose={onEditingClose}/>{query.trim()&&<Box className="search-results-context" sx={{px:2,py:1,mt:-1.5,mb:1.5,border:'1px solid',borderColor:'divider',borderRadius:'0 0 12px 12px',bgcolor:'action.hover'}}>{noticeSearchMatches(row.record,query).map((match,i)=><Box key={i} sx={{mb:.75}}><Typography component="div" sx={{fontSize:12,color:'text.secondary',fontWeight:700}}>{match.label}</Typography><Typography component="div" sx={{fontSize:14,lineHeight:1.65,overflowWrap:'anywhere'}}><HighlightedText text={match.text}/></Typography>{match.label==='原文'&&<Button size="small" onClick={()=>actions.details(row.record)} sx={{p:0,minWidth:0}}>查看原文</Button>}</Box>)}</Box>}</Box>
  </Collapse></Fragment>)}</Stack>;
 }
-export function FeedPage({app,actions,onCompose,onSettings,focusID,onFocusHandled,embedded=false,viewState,onViewStateChange}:{app:CampusController;actions:NoticeActions;onCompose:()=>void;onSettings?:()=>void;focusID:string|null;onFocusHandled?:(id:string)=>void;embedded?:boolean;viewState?:FeedViewState;onViewStateChange?:Dispatch<SetStateAction<FeedViewState>>}){
+export function FeedPage({app,actions,onCompose,onSettings,focusID,onFocusHandled,embedded=false,viewState,onViewStateChange,editingID,onEditingClose}:{editingID?:string;onEditingClose?:()=>void;app:CampusController;actions:NoticeActions;onCompose:()=>void;onSettings?:()=>void;focusID:string|null;onFocusHandled?:(id:string)=>void;embedded?:boolean;viewState?:FeedViewState;onViewStateChange?:Dispatch<SetStateAction<FeedViewState>>}){
  const [localView,setLocalView]=useState(createFeedViewState);const [now,setNow]=useState(Date.now());
  const [examplesHidden,setExamplesHidden]=useState(()=>readExamplesHidden(localStorage));
  const readingNotices=useMemo(()=>app.notices.map(n=>withTeachingCalendar(effectiveNotice(n),app.preferences.weekOneMonday)),[app.notices,app.preferences.weekOneMonday]);
@@ -72,7 +75,8 @@ export function FeedPage({app,actions,onCompose,onSettings,focusID,onFocusHandle
   if(handledFocus.current===focusID)return;
   const n=app.notices.find(n=>n.id===focusID);if(!n)return;
   // Opening a real reminder must not silently change an explicit hide choice.
-  if(examplesHidden&&isExampleNotice(n)){handledFocus.current=focusID;onFocusHandled?.(focusID);return;}
+  if(examplesHidden&&isLocalDemoNotice(n))changeExamplesHidden(false);
+  else if(examplesHidden&&isExampleNotice(n)){handledFocus.current=focusID;onFocusHandled?.(focusID);return;}
   handledFocus.current=focusID;
   setTab(getNoticeStatus(n)==='pending'?0:getNoticeStatus(n)==='reminder'?1:2);setQuery('');
   setView(previous=>({...previous,favoritesOnly:false,relevantOnly:false,expandedIDs:new Set([...previous.expandedIDs,focusID])}));
@@ -81,7 +85,7 @@ export function FeedPage({app,actions,onCompose,onSettings,focusID,onFocusHandle
   if(focusScroll.current!==null)clearTimeout(focusScroll.current);
   focusScroll.current=setTimeout(()=>{focusScroll.current=null;document.getElementById(`notice-${focusID}`)?.scrollIntoView({behavior:'smooth',block:'start'});},150);
  },[focusID,app.notices,onFocusHandled,examplesHidden]);
- return <Stack spacing={2} className="page-enter notice-feed" sx={{maxWidth:760,width:'100%',mx:'auto'}}>
+ return <SearchQueryContext.Provider value={query}><Stack spacing={2} className="page-enter notice-feed" sx={{maxWidth:760,width:'100%',mx:'auto'}}>
   <Box ref={controls} className="feed-controls" sx={{position:embedded?'sticky':'static',top:0,zIndex:3,bgcolor:'background.default',pb:embedded?1.5:0}}>
   {!embedded&&<Stack direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:2}}>
    <Typography variant="h4" component="h1">通知</Typography>
@@ -103,14 +107,14 @@ export function FeedPage({app,actions,onCompose,onSettings,focusID,onFocusHandle
   </Stack>
   {!!allGroups.examples.length&&<Stack className="example-visibility-controls" direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:1,mt:.5}}>
    <Typography className="example-privacy-note" variant="body2" color="text.secondary" sx={{lineHeight:1.6}}>{examplesHidden?`已隐藏 ${allGroups.examples.length} 条示例`:'示例通知已隐藏个人信息'}</Typography>
-   <Button size="small" startIcon={examplesHidden?<Visibility/>:<VisibilityOff/>} aria-label={examplesHidden?'显示全部示例':'隐藏全部示例'} aria-pressed={examplesHidden} onClick={()=>changeExamplesHidden(!examplesHidden)} sx={{flexShrink:0,fontSize:13,px:1}}>{examplesHidden?'显示示例':'隐藏示例'}</Button>
+   <Button size="small" startIcon={examplesHidden?<Visibility/>:<VisibilityOff/>} variant={examplesHidden?'contained':'text'} aria-label={examplesHidden?'显示全部示例':'隐藏全部示例'} aria-pressed={examplesHidden} onClick={()=>changeExamplesHidden(!examplesHidden)} sx={{flexShrink:0,fontSize:13,px:1}}>{examplesHidden?'显示示例':'隐藏示例'}</Button>
   </Stack>}
   </Box>
-  <AnimatedNotices key={tab} records={records} exampleDivider={!!allGroups.personal.length} app={app} actions={actions} now={now} expandedIDs={expandedIDs} onExpandedChange={toggleExpanded} expandedTaskIDs={expandedTaskIDs} onTaskExpandedChange={toggleTaskExpanded} onEmpty={setAnimationEmpty}/>
-  {!records.length&&animationEmpty&&<Paper variant="outlined" sx={{p:4,textAlign:'center'}}><Typography variant="h6">{query?'没有找到匹配的通知':favoritesOnly?'此分类还没有收藏':tab===0?'暂时没有待办':tab===1?'暂时没有提醒':'还没有完成的通知'}</Typography><Typography color="text.secondary" sx={{mt:1,mb:2}}>{query?'换一个关键词试试。':favoritesOnly?'点通知右上角的星星即可收藏。':'添加通知，或者看看示例。'}</Typography>{favoritesOnly&&<Button onClick={()=>setView(previous=>({...previous,favoritesOnly:false}))}>显示全部通知</Button>}{!query&&!favoritesOnly&&<Stack direction="row" sx={{justifyContent:"center",flexWrap:'wrap',gap:1}}><Button variant="contained" onClick={onCompose}>新增通知</Button>{examplesHidden&&allGroups.examples.length?<Button variant="outlined" onClick={()=>changeExamplesHidden(false)}>显示示例</Button>:<Button variant="outlined" onClick={()=>void app.loadExamples().catch(app.report)}>载入示例</Button>}</Stack>}</Paper>}
+  <AnimatedNotices query={query} editingID={editingID} onEditingClose={onEditingClose} key={tab} records={records} exampleDivider={!!allGroups.personal.length} app={app} actions={actions} now={now} expandedIDs={expandedIDs} onExpandedChange={toggleExpanded} expandedTaskIDs={expandedTaskIDs} onTaskExpandedChange={toggleTaskExpanded} onEmpty={setAnimationEmpty}/>
+  {!records.length&&animationEmpty&&<Paper variant="outlined" sx={{p:4,textAlign:'center'}}><Typography variant="h6">{query?'没有找到匹配的通知':favoritesOnly?'此分类还没有收藏':tab===0?'暂时没有待办':tab===1?'暂时没有提醒':'还没有完成的通知'}</Typography><Typography color="text.secondary" sx={{mt:1,mb:2}}>{query?'换一个关键词试试。':favoritesOnly?'点通知右上角的星星即可收藏。':'添加通知，或者看看示例。'}</Typography>{favoritesOnly&&<Button onClick={()=>setView(previous=>({...previous,favoritesOnly:false}))}>显示全部通知</Button>}{!query&&!favoritesOnly&&<Stack direction="row" sx={{justifyContent:"center",flexWrap:'wrap',gap:1}}><Button variant="contained" onClick={onCompose}>新增通知</Button>{examplesHidden&&allGroups.examples.length?<Button variant="contained" color="secondary" onClick={()=>changeExamplesHidden(false)}>显示示例</Button>:<Button variant="contained" color="secondary" onClick={()=>void app.loadExamples().catch(app.report)}>显示示例</Button>}</Stack>}</Paper>}
   <Box component="footer" className="product-footer" sx={{py:2,borderTop:'1px solid',borderColor:'divider'}}>
    <Typography variant="body2" color="text.secondary">内容由 AI 生成，请注意甄别。</Typography>
    <Typography variant="body2" color="text.secondary" sx={{mt:.5}}>Kemou 制作</Typography>
   </Box>
- </Stack>;
+ </Stack></SearchQueryContext.Provider>;
 }

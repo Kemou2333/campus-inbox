@@ -4,6 +4,7 @@ import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
 import AttachFile from '@mui/icons-material/AttachFile';
 import ContentPaste from '@mui/icons-material/ContentPaste';
+import AutoAwesomeOutlined from '@mui/icons-material/AutoAwesomeOutlined';
 import type {CampusController,Draft,DraftSelection} from '../../app/useCampus';
 import {AttachmentList} from '../attachments/AttachmentList';
 import {readClipboard,readTransfer,type ClipboardImport} from '../../infrastructure/clipboard-import';
@@ -44,7 +45,8 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
  const retryText=retrySeconds>3600?'稍后再试':retrySeconds>=60?`${Math.ceil(retrySeconds/60)} 分钟后`:`${retrySeconds} 秒后`;
  const total=app.drafts.reduce((n,d)=>n+d.text.length,0);const hasContent=app.drafts.some(d=>d.text.trim());
  async function analyze(){try{if(await app.analyze())onDone();}catch(e){app.report(e);}}
- async function submit(){if(!app.cloud?.getKey()){onLogin();return;}if(localStorage.getItem('campus-inbox:ai-notice:v1')!=='seen'){setAiNotice(true);return;}await analyze();}
+ async function submit(){if(app.demoDraftID){try{if(await app.analyzeDemo())onDone();}catch(e){app.report(e);}return;}if(!app.cloud?.getKey()){onLogin();return;}if(localStorage.getItem('campus-inbox:ai-notice:v1')!=='seen'){setAiNotice(true);return;}await analyze();}
+ function fillDemo(){const id=app.fillDemoDraft();if(id)requestAnimationFrame(()=>{const element=draftElements.current.get(id);element?.scrollIntoView({block:'nearest',behavior:reducedMotion?'instant':'smooth'});element?.querySelector<HTMLTextAreaElement>('textarea:not([aria-hidden="true"])')?.focus({preventScroll:true});});}
  function acknowledge(){localStorage.setItem('campus-inbox:ai-notice:v1','seen');setAiNotice(false);void analyze();}
  async function picked(files:FileList|null){const id=target;if(!files||!id||importLock.current)return;importLock.current=true;setAdding(true);try{await app.attach(id,Array.from(files));setImportWarnings(old=>({...old,[id]:''}));}catch(e){app.report(e);}finally{importLock.current=false;setAdding(false);if(input.current)input.current.value='';}}
  async function importContent(id:string,read:()=>Promise<ClipboardImport>,selection?:DraftSelection){
@@ -84,6 +86,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
  }
  return <Stack spacing={2} className="page-enter">
   <Typography variant={embedded?"h5":"h4"} component={embedded?"h2":"h1"}>新增通知</Typography>
+  <Stack direction="row" sx={{alignItems:'center',gap:1,flexWrap:'wrap'}}><Button variant="contained" color="secondary" startIcon={<AutoAwesomeOutlined/>} disabled={app.busy||adding} onClick={fillDemo}>一键填入示例</Button><Typography variant="body2" color="text.secondary">无需注册</Typography></Stack>
   {app.pending&&<Alert severity="info" action={<Button onClick={app.recoverResult}>保存结果</Button>}>上次整理的结果还没保存，无需再次调用 AI。</Alert>}
   {!!app.legacyRecords.length&&<Alert severity="info" action={<Button onClick={app.recoverLegacyResult}>保存结果</Button>}>旧版有 {app.legacyRecords.length} 条整理结果未保存，无需重新调用 AI。</Alert>}
   {app.legacyMissingFiles&&<Alert severity="info" onClose={()=>app.setLegacyMissingFiles(false)}>旧版草稿文字已保留，草稿附件需要重新添加。</Alert>}
@@ -100,6 +103,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
      {(app.drafts.length>1||draft.text||draft.attachments.length>0)&&<IconButton aria-label={`移除通知${index+1}`} disabled={app.busy||adding||leaving} onClick={()=>removeDraft(draft,index)}><Close/></IconButton>}
     </Stack>
    </Stack>
+   {draft.id===app.demoDraftID&&<Typography variant="body2" color="secondary.main" sx={{mb:1,fontWeight:600}}>示例体验</Typography>}
    <TextField className="composer-text" placeholder="粘贴通知，图片和文件会作为附件…" multiline minRows={5} maxRows={embedded?9:13} value={draft.text} disabled={app.busy||adding} onChange={e=>app.changeDraft(draft.id,e.target.value)} onPaste={event=>pasteEvent(draft.id,event)} slotProps={{htmlInput:{'aria-label':`通知${index+1}原文`}}} error={total>4000} helperText={!draft.text.trim()&&draft.attachments.length?'补充通知文字后可整理。':undefined}/>
    {importWarnings[draft.id]&&<Alert severity="warning" sx={{mt:1}} onClose={()=>setImportWarnings(old=>({...old,[draft.id]:''}))}>{importWarnings[draft.id]}</Alert>}
    <Stack direction="row" spacing={1} sx={{alignItems:"center",justifyContent:'space-between',mt:1}}>
@@ -114,7 +118,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
    {app.busy&&<LinearProgress sx={{mb:1,borderRadius:1}}/>}
    {app.busy&&showWaitHint&&<Typography variant="body2" color="text.secondary" role="status" sx={{mb:1}}>正在确认提交，确认后可离开。</Typography>}
    <Stack direction="row" sx={{alignItems:'center',gap:1}}>
-     <Button fullWidth variant="contained" sx={{whiteSpace:'nowrap',minHeight:56,fontSize:16}} disabled={app.busy||adding||!!retrySeconds||!hasContent||total>4000||app.pending||!!app.legacyRecords.length||!!app.unconfirmedSubmissions.length||!app.config} onClick={()=>void submit()}>{app.busy?app.stage:retrySeconds?retryText:app.cloud?.getKey()?'整理通知':'登录后整理'}</Button>
+     <Button fullWidth variant="contained" sx={{whiteSpace:'nowrap',minHeight:56,fontSize:16}} disabled={app.busy||adding||!hasContent||!app.demoDraftID&&(!!retrySeconds||total>4000||app.pending||!!app.legacyRecords.length||!!app.unconfirmedSubmissions.length||!app.config)} onClick={()=>void submit()}>{app.busy?app.stage:app.demoDraftID?'整理示例':retrySeconds?retryText:app.cloud?.getKey()?'整理通知':'登录后整理'}</Button>
      {app.busy&&<Button sx={{flexShrink:0,whiteSpace:'nowrap'}} onClick={app.cancel}>停止等待</Button>}
    </Stack>
   </Box>
