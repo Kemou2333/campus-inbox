@@ -1,6 +1,6 @@
 import {describe,test,expect,vi} from 'vitest';
 import {askNoticeQuestion,parseQuestionAnswer} from './notice-question-client';
-import {prepareQuestion,readQuestion,saveQuestionResult} from './question-journal';
+import {markQuestionRejected,prepareQuestion,readQuestion,saveQuestionResult} from './question-journal';
 const input={sourceText:'请在10月20日前提交申请表。',question:'要交什么？',requestId:'12345678-1234-1234-1234-123456789abc'};
 const result={answer:'提交**申请表**。',evidence:['提交申请表'],remainingQuestions:4};
 const reply=(value:unknown,status=200)=>new Response(JSON.stringify(value),{status});
@@ -51,5 +51,13 @@ describe('question recovery journal',()=>{
  });
  test('an unwritable journal stops before issuing a new request',async()=>{
   const storage=memory();storage.setItem=()=>{throw new Error('storage full');};await expect(prepareQuestion(storage,'one','n',input.sourceText,input.question)).rejects.toThrow('storage full');
+ });
+});
+
+describe('pre-admission errors',()=>{
+ test('keeps the request ID but does not present rejected input as a running answer',async()=>{
+  const storage=memory(),first=await prepareQuestion(storage,'one','n',input.sourceText,input.question);
+  markQuestionRejected(storage,first);expect((await readQuestion(storage,'one','n',input.sourceText))?.rejectedBeforeAdmission).toBe(true);
+  const retry=await prepareQuestion(storage,'one','n',input.sourceText,input.question);expect(retry.requestId).toBe(first.requestId);expect(retry.rejectedBeforeAdmission).toBe(false);
  });
 });

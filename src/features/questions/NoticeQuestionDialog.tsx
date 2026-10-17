@@ -4,15 +4,17 @@ import Close from '@mui/icons-material/Close';
 import SendOutlined from '@mui/icons-material/SendOutlined';
 import type {Notice} from '../../domain/types';
 import type {CampusController} from '../../app/useCampus';
-import {prepareQuestion,readQuestion,saveQuestionResult,type QuestionRecord} from '../../infrastructure/question-journal';
+import {markQuestionRejected,prepareQuestion,readQuestion,saveQuestionResult,type QuestionRecord} from '../../infrastructure/question-journal';
 import type {NoticeQuestionAnswer} from '../../infrastructure/notice-question-client';
 import {RichText} from '../../shared/ui/RichText';
+import {AnalysisError} from '../../infrastructure/ai-client';
+import {readableQuestionAnswer} from './answer-reading';
 
 export default function NoticeQuestionDialog({notice,app,onClose,onLogin}:{notice:Notice|null;app:CampusController;onClose:()=>void;onLogin:()=>void}){
  const [question,setQuestion]=useState(''),[answer,setAnswer]=useState<NoticeQuestionAnswer|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[recoverable,setRecoverable]=useState(false);
  const active=useRef<AbortController|null>(null),context=useRef(0);
  useEffect(()=>{const generation=++context.current;active.current?.abort();active.current=null;setBusy(false);setQuestion('');setAnswer(null);setError('');setRecoverable(false);
-  if(notice&&app.sync.connected&&app.username)void readQuestion(localStorage,app.username,notice.id,notice.originalText).then(record=>{if(context.current!==generation||!record)return;setQuestion(record.question);setAnswer(record.result??null);setRecoverable(!record.result);}).catch(()=>{});
+  if(notice&&app.sync.connected&&app.username)void readQuestion(localStorage,app.username,notice.id,notice.originalText).then(record=>{if(context.current!==generation||!record)return;setQuestion(record.question);setAnswer(record.result??null);setRecoverable(!record.result&&!record.rejectedBeforeAdmission);}).catch(()=>{});
   return()=>{context.current++;active.current?.abort();};
  },[notice?.id,notice?.originalText,app.username,app.sync.connected]);
  function close(){active.current?.abort();onClose();}
@@ -25,7 +27,7 @@ export default function NoticeQuestionDialog({notice,app,onClose,onLogin}:{notic
    const result=record.result??await app.askQuestion(notice.id,record.question,record.requestId,controller.signal);
    saveQuestionResult(localStorage,record,result);
    if(context.current===generation){setAnswer(result);setRecoverable(false);}
-  }catch(e){if(context.current===generation){setError(e instanceof Error?e.message:'暂时无法回答。');setRecoverable(!!record);}}
+  }catch(e){if(context.current===generation){setError(e instanceof Error?e.message:'暂时无法回答。');const rejected=e instanceof AnalysisError&&[400,401,403,413,415].includes(e.status);if(record&&rejected)try{markQuestionRejected(localStorage,record);}catch{/* Keep the original error visible. */}setRecoverable(!!record&&!rejected);}}
   finally{if(context.current===generation){setBusy(false);active.current=null;}}
  }
  return <Dialog open={!!notice} onClose={close} aria-labelledby="question-heading"><DialogTitle id="question-title-row" component="div" sx={{display:'flex',alignItems:'center',gap:1}}><Typography id="question-heading" component="h2" variant="h5" sx={{flex:1}}>问这条通知</Typography><IconButton aria-label="关闭提问" onClick={close}><Close/></IconButton></DialogTitle>
@@ -34,7 +36,7 @@ export default function NoticeQuestionDialog({notice,app,onClose,onLogin}:{notic
    <TextField autoFocus multiline minRows={2} maxRows={5} label="想问什么？" placeholder="例如：我要交什么材料？" value={question} disabled={busy} onChange={e=>{setQuestion(e.target.value);setAnswer(null);setError('');setRecoverable(false);}} slotProps={{htmlInput:{maxLength:240}}} helperText={`${question.length}/240`}/>
    {busy&&<Stack role="status" direction="row" sx={{gap:1,alignItems:'center',mt:2}}><CircularProgress size={18}/><Typography>正在看原文…</Typography></Stack>}
    {error&&<Alert severity="warning" sx={{mt:2}}>{error}</Alert>}
-   {answer&&<Box className="notice-question-answer" role="status" sx={{mt:2,p:2,bgcolor:'action.hover',borderLeft:'3px solid',borderColor:'primary.main',borderRadius:1}}><RichText text={answer.answer}/>{!!answer.evidence.length&&<Box sx={{mt:2,pt:1.5,borderTop:'1px solid',borderColor:'divider'}}><Typography variant="caption" sx={{color:'primary.main',fontWeight:700}}>原文依据</Typography>{answer.evidence.map((quote,i)=><Typography key={i} component="blockquote" sx={{m:0,mt:1,fontSize:14,lineHeight:1.7,color:'text.secondary',whiteSpace:'pre-wrap'}}>{quote}</Typography>)}</Box>}</Box>}
+   {answer&&<Box className="notice-question-answer" role="status" sx={{mt:2,p:2,bgcolor:'action.hover',borderLeft:'3px solid',borderColor:'primary.main',borderRadius:1,'& .rich-text > p + p':{mt:1.5},'& .rich-text li + li':{mt:.75}}}><RichText text={readableQuestionAnswer(answer.answer)}/>{!!answer.evidence.length&&<Box component="details" className="question-evidence" sx={{mt:2,pt:.75,borderTop:'1px solid',borderColor:'divider'}}><Box component="summary" sx={{color:'primary.main',fontSize:14,fontWeight:700,cursor:'pointer',py:.75}}>原文依据 {answer.evidence.length}</Box>{answer.evidence.map((quote,i)=><Typography key={i} component="blockquote" sx={{m:0,mt:1,fontSize:14,lineHeight:1.7,color:'text.secondary',whiteSpace:'pre-wrap'}}>{quote}</Typography>)}</Box>}</Box>}
   </DialogContent><DialogActions><Button onClick={close}>{busy?'稍后再看':'关闭'}</Button><Button variant="contained" startIcon={<SendOutlined/>} disabled={busy||!question.trim()||question.length>240||!!notice&&notice.originalText.length>4000} onClick={()=>void send()}>{app.sync.connected?recoverable?'查看本次结果':'提问':'登录后提问'}</Button></DialogActions>
  </Dialog>;
 }
