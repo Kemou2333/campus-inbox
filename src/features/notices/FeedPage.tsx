@@ -40,7 +40,9 @@ export function FeedPage({app,actions,onCompose,onSettings,focusID,onFocusHandle
  const [examplesHidden,setExamplesHidden]=useState(()=>readExamplesHidden(localStorage));
  const readingNotices=useMemo(()=>app.notices.map(n=>withTeachingCalendar(effectiveNotice(n),app.preferences.weekOneMonday)),[app.notices,app.preferences.weekOneMonday]);
  const allGroups=useMemo(()=>groupExampleNotices(readingNotices),[readingNotices]);
+ const catalogExamples=allGroups.examples.filter(n=>!isLocalDemoNotice(n));
  function changeExamplesHidden(hidden:boolean){setExamplesHidden(hidden);try{writeExamplesHidden(localStorage,hidden);}catch{app.report(new Error('示例显示偏好未能保存。'));}}
+ async function showCatalogExamples(){try{if(!catalogExamples.length)await app.loadExamples();changeExamplesHidden(false);}catch(error){app.report(error);}}
  const {tab,query,sort,expandedIDs,expandedTaskIDs,favoritesOnly=false,relevantOnly=false}=viewState??localView;const setView=onViewStateChange??setLocalView;
  const setTab=(value:FeedViewState['tab'])=>setView(previous=>({...previous,tab:value}));
  const setQuery=(value:string)=>setView(previous=>({...previous,query:value}));
@@ -57,7 +59,7 @@ export function FeedPage({app,actions,onCompose,onSettings,focusID,onFocusHandle
  // matches only examples. The example group has a separate visible count.
  const configured=hasProfile(app.preferences.profile),relevant=!!(relevantOnly&&configured);
  const scoped=readingNotices.filter(n=>!relevant||matchNoticeProfile(n,app.preferences.profile)!=='unmatched');
- const displayed=examplesHidden?scoped.filter(n=>!isExampleNotice(n)):scoped;
+ const displayed=examplesHidden?scoped.filter(n=>!isExampleNotice(n)||isLocalDemoNotice(n)):scoped;
  const counted=allGroups.personal.length?scoped.filter(n=>!isExampleNotice(n)):displayed;
  const favorites=counted.filter(n=>n.favorite),population=favoritesOnly?favorites:counted;
  const pending=population.filter(n=>getNoticeStatus(n)==='pending');
@@ -65,7 +67,7 @@ export function FeedPage({app,actions,onCompose,onSettings,focusID,onFocusHandle
  const complete=population.filter(n=>['completed','dismissed'].includes(getNoticeStatus(n)));
  const records=useMemo(()=>{
   const status=tab===0?'pending':tab===1?'reminder':'completed';const needle=query.trim().toLocaleLowerCase();
-  const matching=readingNotices.filter(n=>(!relevant||matchNoticeProfile(n,app.preferences.profile)!=='unmatched')&&(!examplesHidden||!isExampleNotice(n))&&(!favoritesOnly||n.favorite)&&(status==='completed'?['completed','dismissed'].includes(getNoticeStatus(n)):getNoticeStatus(n)===status)&&(!needle||[n.title,n.summary,n.originalText,n.note,n.deadlineText,...n.materials,...n.warnings,...n.timeline.flatMap(t=>[t.label,t.timeText,t.location]),...n.tasks.flatMap(t=>[t.text,t.assignee,t.condition,t.timeText,t.location,t.note,...t.details,...t.steps.flatMap(s=>[s.text,s.note,...s.details])]),...n.reminders.flatMap(r=>[r.text,r.note])].join('\n').toLocaleLowerCase().includes(needle)));
+  const matching=readingNotices.filter(n=>(!relevant||matchNoticeProfile(n,app.preferences.profile)!=='unmatched')&&(!examplesHidden||!isExampleNotice(n)||isLocalDemoNotice(n))&&(!favoritesOnly||n.favorite)&&(status==='completed'?['completed','dismissed'].includes(getNoticeStatus(n)):getNoticeStatus(n)===status)&&(!needle||[n.title,n.summary,n.originalText,n.note,n.deadlineText,...n.materials,...n.warnings,...n.timeline.flatMap(t=>[t.label,t.timeText,t.location]),...n.tasks.flatMap(t=>[t.text,t.assignee,t.condition,t.timeText,t.location,t.note,...t.details,...t.steps.flatMap(s=>[s.text,s.note,...s.details])]),...n.reminders.flatMap(r=>[r.text,r.note])].join('\n').toLocaleLowerCase().includes(needle)));
   const groups=groupExampleNotices(matching);
   return [...sortNotices(groups.personal,sort,now),...sortNotices(groups.examples,sort,now)];
  },[readingNotices,app.preferences.profile,relevant,tab,query,sort,now,favoritesOnly,examplesHidden]);
@@ -75,8 +77,7 @@ export function FeedPage({app,actions,onCompose,onSettings,focusID,onFocusHandle
   if(handledFocus.current===focusID)return;
   const n=app.notices.find(n=>n.id===focusID);if(!n)return;
   // Opening a real reminder must not silently change an explicit hide choice.
-  if(examplesHidden&&isLocalDemoNotice(n))changeExamplesHidden(false);
-  else if(examplesHidden&&isExampleNotice(n)){handledFocus.current=focusID;onFocusHandled?.(focusID);return;}
+  if(examplesHidden&&isExampleNotice(n)&&!isLocalDemoNotice(n)){handledFocus.current=focusID;onFocusHandled?.(focusID);return;}
   handledFocus.current=focusID;
   setTab(getNoticeStatus(n)==='pending'?0:getNoticeStatus(n)==='reminder'?1:2);setQuery('');
   setView(previous=>({...previous,favoritesOnly:false,relevantOnly:false,expandedIDs:new Set([...previous.expandedIDs,focusID])}));
@@ -105,13 +106,14 @@ export function FeedPage({app,actions,onCompose,onSettings,focusID,onFocusHandle
    <Tooltip title={configured?'只隐藏明确不符合条件的通知':'填写年级、专业和身份'}><span><Button size="small" startIcon={<PersonOutline/>} aria-pressed={relevant} disabled={!configured&&!onSettings} variant={relevant?'contained':'text'} onClick={()=>configured?setView(previous=>({...previous,relevantOnly:!previous.relevantOnly})):onSettings?.()} sx={{fontSize:13,px:1}}>{configured?'与我相关':'设置条件'}</Button></span></Tooltip>
    {relevant&&<Typography variant="caption" color="text.secondary">未确定的仍保留</Typography>}
   </Stack>
-  {!!allGroups.examples.length&&<Stack className="example-visibility-controls" direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:1,mt:.5}}>
-   <Typography className="example-privacy-note" variant="body2" color="text.secondary" sx={{lineHeight:1.6}}>{examplesHidden?`已隐藏 ${allGroups.examples.length} 条示例`:'示例通知已隐藏个人信息'}</Typography>
+  {!!catalogExamples.length&&<Stack className="example-visibility-controls" direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:1,mt:.5}}>
+   <Typography className="example-privacy-note" variant="body2" color="text.secondary" sx={{lineHeight:1.6}}>{examplesHidden?`已隐藏 ${catalogExamples.length} 条示例`:'示例通知已隐藏个人信息'}</Typography>
    <Button size="small" startIcon={examplesHidden?<Visibility/>:<VisibilityOff/>} variant={examplesHidden?'contained':'text'} aria-label={examplesHidden?'显示全部示例':'隐藏全部示例'} aria-pressed={examplesHidden} onClick={()=>changeExamplesHidden(!examplesHidden)} sx={{flexShrink:0,fontSize:13,px:1}}>{examplesHidden?'显示示例':'隐藏示例'}</Button>
   </Stack>}
   </Box>
   <AnimatedNotices query={query} editingID={editingID} onEditingClose={onEditingClose} key={tab} records={records} exampleDivider={!!allGroups.personal.length} app={app} actions={actions} now={now} expandedIDs={expandedIDs} onExpandedChange={toggleExpanded} expandedTaskIDs={expandedTaskIDs} onTaskExpandedChange={toggleTaskExpanded} onEmpty={setAnimationEmpty}/>
-  {!records.length&&animationEmpty&&<Paper variant="outlined" sx={{p:4,textAlign:'center'}}><Typography variant="h6">{query?'没有找到匹配的通知':favoritesOnly?'此分类还没有收藏':tab===0?'暂时没有待办':tab===1?'暂时没有提醒':'还没有完成的通知'}</Typography><Typography color="text.secondary" sx={{mt:1,mb:2}}>{query?'换一个关键词试试。':favoritesOnly?'点通知右上角的星星即可收藏。':'添加通知，或者看看示例。'}</Typography>{favoritesOnly&&<Button onClick={()=>setView(previous=>({...previous,favoritesOnly:false}))}>显示全部通知</Button>}{!query&&!favoritesOnly&&<Stack direction="row" sx={{justifyContent:"center",flexWrap:'wrap',gap:1}}><Button variant="contained" onClick={onCompose}>新增通知</Button>{examplesHidden&&allGroups.examples.length?<Button variant="contained" color="secondary" onClick={()=>changeExamplesHidden(false)}>显示示例</Button>:<Button variant="contained" color="secondary" onClick={()=>void app.loadExamples().catch(app.report)}>显示示例</Button>}</Stack>}</Paper>}
+  {!records.length&&animationEmpty&&<Paper variant="outlined" sx={{p:4,textAlign:'center'}}><Typography variant="h6">{query?'没有找到匹配的通知':favoritesOnly?'此分类还没有收藏':tab===0?'暂时没有待办':tab===1?'暂时没有提醒':'还没有完成的通知'}</Typography><Typography color="text.secondary" sx={{mt:1,mb:2}}>{query?'换一个关键词试试。':favoritesOnly?'点通知右上角的星星即可收藏。':'添加通知，或者看看示例。'}</Typography>{favoritesOnly&&<Button onClick={()=>setView(previous=>({...previous,favoritesOnly:false}))}>显示全部通知</Button>}{!query&&!favoritesOnly&&<Stack direction="row" sx={{justifyContent:"center",flexWrap:'wrap',gap:1}}><Button variant="contained" onClick={onCompose}>新增通知</Button><Button variant="contained" color="secondary" onClick={()=>void showCatalogExamples()}>显示示例</Button></Stack>}</Paper>}
+  {!!records.length&&(examplesHidden||!catalogExamples.length)&&<Box sx={{display:'flex',justifyContent:'center',py:1}}><Button variant="contained" color="secondary" onClick={()=>void showCatalogExamples()}>显示示例</Button></Box>}
   <Box component="footer" className="product-footer" sx={{py:2,borderTop:'1px solid',borderColor:'divider'}}>
    <Typography variant="body2" color="text.secondary">内容由 AI 生成，请注意甄别。</Typography>
    <Typography variant="body2" color="text.secondary" sx={{mt:.5}}>Kemou 制作</Typography>

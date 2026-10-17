@@ -86,7 +86,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
  }
  return <Stack spacing={2} className="page-enter">
   <Typography variant={embedded?"h5":"h4"} component={embedded?"h2":"h1"}>新增通知</Typography>
-  <Stack direction="row" sx={{alignItems:'center',gap:1,flexWrap:'wrap'}}><Button variant="contained" color="secondary" startIcon={<AutoAwesomeOutlined/>} disabled={app.busy||adding} onClick={fillDemo}>一键填入示例</Button><Typography variant="body2" color="text.secondary">无需注册</Typography></Stack>
+  <Stack direction="row" sx={{alignItems:'center',gap:1,flexWrap:'wrap'}}><Button variant="contained" color="secondary" startIcon={<AutoAwesomeOutlined/>} disabled={app.busy||adding} onClick={fillDemo}>一键填入示例</Button></Stack>
   {app.pending&&<Alert severity="info" action={<Button onClick={app.recoverResult}>保存结果</Button>}>上次整理的结果还没保存，无需再次调用 AI。</Alert>}
   {!!app.legacyRecords.length&&<Alert severity="info" action={<Button onClick={app.recoverLegacyResult}>保存结果</Button>}>旧版有 {app.legacyRecords.length} 条整理结果未保存，无需重新调用 AI。</Alert>}
   {app.legacyMissingFiles&&<Alert severity="info" onClose={()=>app.setLegacyMissingFiles(false)}>旧版草稿文字已保留，草稿附件需要重新添加。</Alert>}

@@ -63,7 +63,7 @@ describe('safe built-in example upgrades',()=>{
   test('the catalog retains earlier fingerprints and adds the 13 unredacted 2.10 built-ins without publishing their content',async()=>{
     const previous=JSON.parse(await readFile(new URL('../public/examples-legacy-2.4.json',import.meta.url),'utf8'));
     const current=JSON.parse(await readFile(new URL('../public/examples-legacy.json',import.meta.url),'utf8'));
-    expect(current.slice(0,13)).toEqual(previous);expect(current).toHaveLength(27);
+    expect(current.slice(0,13)).toEqual(previous);expect(current).toHaveLength(28);
     expect(current[13].id).toBe('example-reading-v25-12');
     expect(current[13].fingerprint).toMatch(/^[a-f0-9]{64}$/);
     for(const item of current){expect(Object.keys(item).sort()).toEqual(['fingerprint','id']);expect(item.fingerprint).toMatch(/^[a-f0-9]{64}$/);}
@@ -99,7 +99,7 @@ describe('safe built-in example upgrades',()=>{
     const low=provenance.results.filter((r:{revision:string;reasoningEffort:string})=>r.revision==='r6'&&r.reasoningEffort==='low');
     expect(low).toHaveLength(1);expect(low[0]).toMatchObject({exampleId:'example-reading-v26-12',revision:'r6',thinking:'enabled',manualWordEdits:true,manualPrivacyEdits:true,manualContentCorrections:false});
     expect(provenance.results.map((r:{exampleId:string})=>r.exampleId)).toEqual(examples.map(n=>n.id));
-    for(const result of provenance.results){expect(result.promptSha256).toMatch(/^[a-f0-9]{64}$/);expect(result.sourceSha256).toMatch(/^[a-f0-9]{64}$/);expect(result.firstProviderContentSha256).toMatch(/^[a-f0-9]{64}$/);}
+    for(const result of provenance.results){expect(result.promptSha256).toMatch(/^[a-f0-9]{64}$/);expect(result.sourceSha256).toMatch(/^[a-f0-9]{64}$/);expect(result.firstProviderContentSha256??result.firstServerRecordSnapshotSha256).toMatch(/^[a-f0-9]{64}$/);expect(!!result.firstProviderContentSha256!==!!result.firstServerRecordSnapshotSha256).toBe(true);}
   });
 
   test('the six new redacted examples retain honest first-response and free-revalidation provenance',async()=>{
@@ -110,7 +110,7 @@ describe('safe built-in example upgrades',()=>{
     expect(examples).toHaveLength(provenance.privacyReview.reviewedNotices);expect(fresh).toHaveLength(6);
     expect(provenance.selectedNewFirstResponses).toBe(6);expect(provenance.paidCallsIn20261012Experiment).toBe(12);
     expect(provenance.experiment20261012).toMatchObject({realProviderCalls:12,selectedFirstResponses:6,providerCallsForPublicExamplePreparation:0,offlineSelectedResponseRevalidations:6,additionalOfflineDateParserReplays:1});
-    expect(provenance.catalogDistinctOriginalProviderCalls).toBe(new Set(provenance.results.map((row:{firstProviderContentSha256:string})=>row.firstProviderContentSha256)).size);
+    expect(provenance.catalogDistinctOriginalProviderCalls).toBe(new Set(provenance.results.map((row:{firstProviderContentSha256?:string;firstServerRecordSnapshotSha256?:string})=>row.firstProviderContentSha256??row.firstServerRecordSnapshotSha256)).size);
     expect(provenance.sourceCount).toBe(new Set(provenance.results.map((row:{sourceSha256:string})=>row.sourceSha256)).size);
     const basketball=fresh.find(n=>n.id==='example-reading-v211-1')!;
     expect(basketball.deadlineSpec).toMatchObject({month:10,day:14,year:null,rawText:'10 月14日23:59'});expect(basketball.deadline).toBeNull();

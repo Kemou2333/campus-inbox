@@ -1,0 +1,140 @@
+{
+  "description": "One real production-account browser test and the reviewed public basketball replacement.",
+  "privacy": "示例通知已隐藏个人信息。",
+  "sourceIsPreviouslyRedactedPublicExample": true,
+  "accountIdentifiersPublished": false,
+  "requestOrJobIdentifiersPublished": false,
+  "rawProviderResponseClaimed": false,
+  "sourceAndResponseWordingChanged": false,
+  "publicApplicationTransformations": "Only application IDs and record timestamps were replaced for the public catalog. The already-redacted source and all first server-snapshot semantic fields were preserved; no wording was shortened or repaired.",
+  "provenance": {
+    "exampleId": "example-reading-v211-1",
+    "title": "报名本科生院篮球队",
+    "case": "r21-real-account-basketball-20261017",
+    "sourceIndex": 0,
+    "testedAt": "2026-10-17T15:27:36.544Z",
+    "revision": "r21",
+    "thinking": "enabled",
+    "reasoningEffort": "low",
+    "promptSha256": "e1df78ca04a3036728743a8fb2a59ded17ef68f00c7f516fd6ff68842a8b3457",
+    "sourceSha256": "eb4897168a7df51de237d1d0c9078b4b1308ca8b959d27d4340885ed46055725",
+    "firstServerRecordSnapshotSha256": "4177840270b27a5e1de69685ed733e86e27954c123573a48f0a8f3c27ec4ec50",
+    "snapshotKind": "first completed server notice snapshot; not verbatim raw provider content",
+    "manualWordEdits": true,
+    "manualPrivacyEdits": true,
+    "manualIdentityReview": true,
+    "manualContentCorrections": false,
+    "privacyPreparation": "The browser submitted the existing manually-redacted public original. Every returned field was manually checked; no additional semantic or privacy wording edits were needed.",
+    "publishedOriginalSha256": "eb4897168a7df51de237d1d0c9078b4b1308ca8b959d27d4340885ed46055725",
+    "publishedRecordSha256": "fa5d4208aefb30a01b72f59748cfdeab55281b6f290eca72e327051fb48930a1",
+    "providerCalled": true,
+    "cacheReuse": false,
+    "realProviderCalls": 1,
+    "automaticPaidRetries": 0,
+    "realAuthenticatedBrowserFlow": true,
+    "firstResponseValidation": "Accepted by the real production backend and saved into cloud sync on the first intentional submission.",
+    "serverElapsedMs": 10249,
+    "browserObservedCompleteMs": 19706,
+    "browserAcceptedMs": 588,
+    "tokens": {
+      "input": 2136,
+      "output": 1982,
+      "total": 4118,
+      "reasoning": 1709
+    },
+    "reasoningTokensIncludedInOutput": true,
+    "estimatedCostRmb": 0.024154,
+    "costBasis": "Estimate from server token usage; not a supplier invoice.",
+    "appTransformations": "Only application IDs and record timestamps were replaced for the public catalog. The already-redacted source and all first server-snapshot semantic fields were preserved; no wording was shortened or repaired.",
+    "knownLimitations": [
+      "A short promotional phrase remains in task details. No wording was manually corrected for this public example.",
+      "Browser completion includes polling and sync delay; it differs from server/provider elapsed time."
+    ]
+  },
+  "notice": {
+    "schemaVersion": 5,
+    "kind": "task",
+    "title": "报名本科生院篮球队",
+    "summary": "本科生院篮球队招募2026级男女新同学，报名需加纳新群并填写预选信息收集表。",
+    "deadline": null,
+    "deadlineText": "10 月14日23:59",
+    "timeline": [],
+    "tasks": [
+      {
+        "text": "加入纳新群并填写预选信息收集表",
+        "assignee": "2026级新同学（男女均可）",
+        "scope": "conditional",
+        "condition": "2026级新同学，男女均可，有篮球爱好",
+        "details": [
+          "男女同学赛制不同，均可参与；欢迎热爱篮球的同学，别被“院队”二字吓退。"
+        ],
+        "steps": [
+          {
+            "text": "加入纳新QQ群",
+            "details": [
+              "纳新QQ群群号已脱敏。"
+            ],
+            "id": "example-reading-v211-1-task-0-step-0",
+            "completed": false,
+            "note": ""
+          },
+          {
+            "text": "填写重大杯本科生院篮球队预选信息收集表",
+            "details": [
+              "使用【腾讯文档】填写；链接已脱敏。"
+            ],
+            "id": "example-reading-v211-1-task-0-step-1",
+            "completed": false,
+            "note": ""
+          }
+        ],
+        "time": null,
+        "timeText": "",
+        "location": null,
+        "id": "example-reading-v211-1-task-0",
+        "completed": false,
+        "dismissed": false,
+        "note": "",
+        "localDeadline": null
+      }
+    ],
+    "materials": [],
+    "warnings": [],
+    "reminders": [],
+    "deadlineSpec": {
+      "type": "partial",
+      "year": null,
+      "month": 10,
+      "day": 14,
+      "hour": 23,
+      "minute": 59,
+      "rawText": "10 月14日23:59"
+    },
+    "reminderTitles": [],
+    "sourceRefs": {
+      "tasks.0.text": [
+        10,
+        11,
+        12
+      ]
+    },
+    "id": "example-reading-v211-1",
+    "originalText": "【脱敏示例】姓名为化名，联系方式、群号和具体链接已隐藏。\n\n【本科生院团委文体部】\n2026重大杯本科生院篮球队招募令\n\n🏀2026级新同学，大学新篇伊始，想找一支一起出汗、一起进步的队伍吗？本科生院篮球队诚挚邀请你的加入。这里有球友，有赛场，也有你的舞台。别被\"院队\"二字吓退，我们欢迎每颗热爱篮球的心。一起训练，一起上场，一起把胜利攥在手里，等你加入！[表情]\n报名流程\n1. 首先加入纳新QQ群：【群号已脱敏】\n2. 再填写【腾讯文档】重大杯本科生院篮球队预选信息收集表\n（链接已脱敏）\n\n‼重要提醒\n报名截止时间10 月14日23:59，请各位同学抓紧时间，在截止时间前完成报名操作。\n男女同学赛制不同，均可参与。\n加入本科生院篮球队吧，让我们一起在球场上绽放青春光彩✨，共同书写属于2026级的篮球传奇🏀！期待你的参与！\n@全体成员 有这方面爱好的男女同学可以入群询问！，注意时间⚠️⚠️⚠️。",
+    "createdAt": "2026-10-12T06:08:05.588Z",
+    "updatedAt": "2026-10-17T00:00:00.000Z",
+    "completed": false,
+    "dismissed": false,
+    "note": "",
+    "localDeadline": null,
+    "audienceOverride": "",
+    "attachments": []
+  },
+  "validation": {
+    "automaticPrivacyGate": "passed: 24 catalog records and unchanged reviewed onboarding fixture",
+    "manualFieldReview": true,
+    "otherPublicRecordsChanged": 0,
+    "onboardingFixtureChanged": false,
+    "upgradePolicy": "Only the exact complete old record fingerprint is replaceable. Progress, notes, corrections, attachments, schedules, favorites and user wording changes protect the current record.",
+    "mergeUpgradeCheck": "passed: exact old fingerprint upgrades once; edited notes/progress/corrections/attachments/favorites remain intact"
+  }
+}
