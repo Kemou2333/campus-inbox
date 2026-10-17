@@ -3,6 +3,7 @@ import {open} from 'node:fs/promises';
 import {canonicalUsername} from './auth.mjs';
 import {boundedText,ServiceError} from './analyze.mjs';
 import {adminHtml} from './admin-ui.mjs';
+import {adminTestRuns} from './test-records.mjs';
 
 export async function backupSummary(file){
   if(!file)return {status:'not_configured'};
@@ -52,6 +53,7 @@ export function createAdminService(config,{auth,sync,ai,now=Date.now}){
         if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length)throw new ServiceError('后台不接受修改参数。',400);
       }
       if(url.pathname==='/admin/summary')return reply({accounts:auth.adminReader.count(),...sync.adminReader.summary(),daily:sync.adminReader.daily(),usage:ai.adminSummary(),backup:await backupSummary(config.backupStateFile),readOnly:true});
+      if(url.pathname==='/admin/test-runs')return reply({records:adminTestRuns(),readOnly:true,includedInBusinessStatistics:false});
       if(url.pathname==='/admin/accounts'){
         const raw=url.searchParams.get('offset')||'0';if(!/^\d{1,5}$/.test(raw))throw new ServiceError('分页位置不正确。',400);
         const offset=Number(raw),accounts=auth.adminReader.list({offset,limit:51}),hasMore=accounts.length>50;

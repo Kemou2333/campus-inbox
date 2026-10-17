@@ -1,6 +1,7 @@
 import {Box,Link} from '@mui/material';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import {remarkSearchHighlight,searchMarkStyle,useSearchQuery} from './SearchHighlight';
 
 type ReadingNode={type:string;value?:string;children?:ReadingNode[];position?:{start:{offset?:number};end:{offset?:number}}};
 /** CommonMark treats % and Chinese brackets as punctuation. Closing emphasis next to
@@ -37,6 +38,7 @@ export function safeMarkdownURL(value:string){
 }
 /** Text and safe links only: no HTML execution or remote image downloads. */
 export function RichText({text,inline=false}:{text:string;inline?:boolean}){
+ const query=useSearchQuery();
  return <Box component={inline?'span':'div'} className="rich-text" sx={{overflowWrap:'anywhere',
   '& p':{m:0,whiteSpace:'pre-wrap'},'& p + p':{mt:.75},'& strong':{fontWeight:700,color:'text.primary'},
   '& ul, & ol':{my:.75,pl:2.5},'& li + li':{mt:.35},'& li > p':{display:'inline'},
@@ -45,8 +47,8 @@ export function RichText({text,inline=false}:{text:string;inline?:boolean}){
   '& blockquote':{m:0,my:.75,pl:1.5,borderLeft:'3px solid',borderColor:'divider'},
   '& table':{display:'block',overflowX:'auto',borderCollapse:'collapse',my:1},'& th, & td':{border:'1px solid',borderColor:'divider',p:1,textAlign:'left'},
   '& h1, & h2, & h3, & h4, & h5, & h6':{fontSize:'1em',fontWeight:700,mt:1,mb:.5}}}>
-  <Markdown remarkPlugins={[remarkGfm,remarkChineseEmphasis]} skipHtml urlTransform={safeMarkdownURL}
-   allowedElements={inline?['p','strong','em','del','code','a','br']:undefined}
+  <Markdown remarkPlugins={[remarkGfm,remarkChineseEmphasis,[remarkSearchHighlight,{query}]]} skipHtml urlTransform={safeMarkdownURL}
+   allowedElements={inline?['p','strong','em','del','code','a','br','mark']:undefined}
    unwrapDisallowed={inline}
    components={{
     p:({children})=>inline?<span>{children}</span>:<p>{children}</p>,
@@ -56,6 +58,7 @@ export function RichText({text,inline=false}:{text:string;inline?:boolean}){
      const bare=words===href||safeMarkdownURL(words)===href;
      return <Link href={href} title={bare?href:undefined} target="_blank" rel="noopener noreferrer" underline="always">{bare?new URL(href).host:children}</Link>;
     },
+    mark:({children})=><Box component="mark" className="search-match" sx={searchMarkStyle}>{children}</Box>,
     img:()=>null,
     input:()=>null
    }}>{text}</Markdown>

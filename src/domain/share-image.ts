@@ -5,10 +5,12 @@ export type ShareTaskState='pending'|'completed'|'dismissed';
 export type ShareTextTone='accent'|'time'|'reminder'|'warning';
 export interface ShareTextBlock {kind:ShareTextKind;text:string;state?:ShareTaskState;tone?:ShareTextTone}
 export interface ShareImageLine extends ShareTextBlock {y:number;block:number}
-export interface ShareImagePage {lines:ShareImageLine[];height:number}
+export interface ShareImagePage {lines:ShareImageLine[];height:number;scale:number;width:number;outputHeight:number}
 export const SHARE_IMAGE_WIDTH=900;
-export const SHARE_IMAGE_MAX_HEIGHT=1320;
-export const SHARE_IMAGE_MAX_PAGES=8;
+/** At most 24 MB of RGBA pixels; the canvas is released after one PNG. */
+export const SHARE_IMAGE_MAX_PIXELS=6_000_000;
+export const SHARE_IMAGE_MAX_EDGE=16384;
+export const SHARE_IMAGE_MIN_SCALE=.5;
 export const SHARE_IMAGE_MAX_CHARACTERS=18000;
 export const shareTextStyles:Record<ShareTextKind,{size:number;line:number;gap:number;indent:number;weight:number}>={
  title:{size:54,line:70,gap:24,indent:0,weight:750},
@@ -46,28 +48,26 @@ export function wrapShareText(text:string,maxWidth:number,measure:(value:string)
 
 export function layoutShareImages(blocks:ShareTextBlock[],measure:(value:string,kind:ShareTextKind)=>number):ShareImagePage[]{
  if(blocks.reduce((sum,block)=>sum+Array.from(block.text).length,0)>SHARE_IMAGE_MAX_CHARACTERS)throw new Error('内容较长，请关闭“含详情”后重试。通知内容未删减。');
- const pages:ShareImagePage[]=[];
- let lines:ShareImageLine[]=[],cursor=104;
- const bottom=SHARE_IMAGE_MAX_HEIGHT-140;
- function finish(){if(!lines.length)return;pages.push({lines,height:Math.min(SHARE_IMAGE_MAX_HEIGHT,Math.max(360,cursor+124))});lines=[];cursor=104;if(pages.length>SHARE_IMAGE_MAX_PAGES)throw new Error('图片超过 8 页，请关闭“含详情”后重试。通知内容未删减。');}
+ const lines:ShareImageLine[]=[];
+ let cursor=104;
  for(const [blockIndex,block] of blocks.entries()){
   const style=shareTextStyles[block.kind];
   const wrapped=wrapShareText(block.text,SHARE_IMAGE_WIDTH-120-style.indent,value=>measure(value,block.kind));
-  // Keep the whole section heading with its first content line where possible.
-  const next=blocks[blockIndex+1],followingLine=block.kind==='heading'&&next?style.gap+shareTextStyles[next.kind].line:0;
-  if(lines.length&&cursor+wrapped.length*style.line+followingLine>bottom&&block.kind==='heading')finish();
   wrapped.forEach((text,index)=>{
-   if(cursor+style.line>bottom)finish();
    lines.push({kind:block.kind,text,y:cursor,block:blockIndex,tone:block.tone,state:index===0?block.state:undefined});cursor+=style.line;
   });
   cursor+=style.gap;
  }
- finish();return pages;
+ if(!lines.length)return [];
+ const height=Math.max(360,cursor+124);
+ const scale=Math.min(1,SHARE_IMAGE_MAX_EDGE/height,Math.sqrt(SHARE_IMAGE_MAX_PIXELS/(SHARE_IMAGE_WIDTH*height)));
+ if(scale<SHARE_IMAGE_MIN_SCALE)throw new Error('内容过长，无法生成清晰长图。请关闭“含详情”后重试，通知内容未删减。');
+ return [{lines,height,scale,width:Math.floor(SHARE_IMAGE_WIDTH*scale),outputHeight:Math.floor(height*scale)}];
 }
 
-export function shareImageFileName(title:string,page:number,total:number):string{
+export function shareImageFileName(title:string):string{
  const safe=Array.from(title.replace(/[<>:"/\\|?*\u0000-\u001f]/g,'').trim()).slice(0,40).join('')||'校园通知';
- return `${safe}${total>1?`-${page+1}共${total}页`:''}.png`;
+ return `${safe}.png`;
 }
 
 export function shareImageTimestamp(date:Date):string{

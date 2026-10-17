@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {mkdtemp,rm,writeFile} from 'node:fs/promises';
+import {mkdtemp,readFile,rm,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
@@ -49,6 +49,26 @@ test('administrator lists omit original text, result, email, session and passwor
     const result=await s.request(path);assert.equal(result.status,200);const text=JSON.stringify(result.body);
     for(const sensitive of ['private-original-sentinel','仅本地检查。',s.sessions[0].key,'password_hash','salt','email'])assert.equal(text.includes(sensitive),false);
   }
+});
+test('reviewed real test runs are administrator-only and never create user jobs or change business totals',async t=>{
+  const s=await setup();t.after(s.close);s.job();
+  const before=(await s.request('/admin/summary')).body;
+  assert.equal((await s.request('/admin/test-runs',null)).status,401);
+  assert.equal((await s.request('/admin/test-runs',s.sessions[1])).status,403);
+  assert.equal((await s.request('/admin/test-runs',s.sessions[0],'https://attacker.test')).status,403);
+  const response=await s.request('/admin/test-runs');assert.equal(response.status,200);
+  assert.equal(response.headers.get('Cache-Control'),'no-store');assert.equal(response.body.readOnly,true);assert.equal(response.body.includedInBusinessStatistics,false);
+  const rows=response.body.records;assert.equal(rows.length,3);assert.equal(new Set(rows.map(row=>row.id)).size,3);
+  assert.deepEqual(rows.map(row=>row.sourceVersion),['2.16.0','2.16.1','2.16.1']);
+  assert.deepEqual(rows.map(row=>row.elapsedMs),[8153,5463,10404]);
+  const first=JSON.parse(await readFile(new URL('../../docs/NOTICE-QUESTION-EXAMPLE.json',import.meta.url),'utf8'));
+  const next=JSON.parse(await readFile(new URL('../../docs/NOTICE-QUESTION-EXAMPLE-2.16.1.json',import.meta.url),'utf8'));
+  for(const [index,original] of [first,...next.cases].entries()){assert.equal(rows[index].sourceText,original.sourceText);assert.equal(rows[index].question,original.question);assert.deepEqual({answer:rows[index].answer,evidence:rows[index].evidence},original.result||original.answer);assert.deepEqual(rows[index].usage,original.usage);assert.equal(rows[index].estimatedRmb,original.estimatedRmb);}
+  for(const row of rows){assert.equal(row.origin,'direct-provider-test');assert.equal(row.realProviderCall,true);assert.equal(row.sourceAlreadyRedacted,true);assert.equal(row.automaticRetries,0);assert.equal(row.providerInvoiceVerified,false);assert(row.sourceText&&row.question&&row.answer&&row.evidence.length&&row.usage.input&&row.knownLimitations.length);assert(!Object.hasOwn(row,'ownerSubject'));}
+  const copied=rows.find(row=>row.title==='本科生评教');assert(copied.sourceText.includes('\u0014\u0014\b'));assert.match(copied.answer,/\*\*现在做什么\*\*/);
+  assert.equal((await s.request('/admin/test-runs',s.sessions[0],origin,'POST',{insertJob:true})).status,400);
+  assert.deepEqual((await s.request('/admin/summary')).body,before);
+  assert.equal((await s.request('/admin/jobs')).body.jobs.length,1);
 });
 test('registering an allowed-looking name after administrator startup never grants a new account permission',async t=>{
   const s=await setup({usernames:['kemou','late-admin']});t.after(s.close);

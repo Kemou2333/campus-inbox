@@ -22,7 +22,7 @@ function productIcon(ctx:CanvasRenderingContext2D,x:number,y:number,size:number)
  ctx.lineWidth=3.5;ctx.beginPath();ctx.moveTo(28,39);ctx.lineTo(32,43);ctx.lineTo(41,33);ctx.stroke();ctx.restore();
 }
 
-/** One bounded canvas is reused, then released. No DOM screenshot engine,
+/** One bounded long canvas is rendered, then released. No DOM screenshot engine,
  * downloaded fonts, remote images, workers, HTML or network requests are used. */
 export async function renderShareImages(notice:Notice,details:boolean,generatedAt:Date,signal?:AbortSignal):Promise<ShareImage[]>{
  const canvas=document.createElement('canvas');canvas.width=SHARE_IMAGE_WIDTH;canvas.height=1;
@@ -32,16 +32,16 @@ export async function renderShareImages(notice:Notice,details:boolean,generatedA
   const blocks=noticeShareBlocks(notice,details),pages=layoutShareImages(blocks,(value,kind)=>{ctx.font=font(kind);return ctx.measureText(value).width;});
   const result:ShareImage[]=[];
   const stamp=shareImageTimestamp(generatedAt);
-  for(const [index,page] of pages.entries()){
-   check(signal);canvas.height=page.height;ctx.fillStyle='#edf3f2';ctx.fillRect(0,0,canvas.width,canvas.height);
-   ctx.fillStyle='#ffffff';ctx.beginPath();ctx.roundRect(20,20,canvas.width-40,canvas.height-40,24);ctx.fill();ctx.strokeStyle='#cddcdd';ctx.lineWidth=2;ctx.stroke();
+  for(const page of pages){
+   check(signal);canvas.width=page.width;canvas.height=page.outputHeight;ctx.scale(page.scale,page.scale);
+   ctx.fillStyle='#edf3f2';ctx.fillRect(0,0,SHARE_IMAGE_WIDTH,page.height);
+   ctx.fillStyle='#ffffff';ctx.beginPath();ctx.roundRect(20,20,SHARE_IMAGE_WIDTH-40,page.height-40,24);ctx.fill();ctx.strokeStyle='#cddcdd';ctx.lineWidth=2;ctx.stroke();
    ctx.textBaseline='top';ctx.fillStyle='#366c61';ctx.font='650 24px system-ui, sans-serif';ctx.fillText(`校园通知 · ${details?'详细版':'简洁版'}`,60,50);
-   ctx.textAlign='right';ctx.fillStyle='#60717c';ctx.fillText(`${index+1} / ${pages.length}`,canvas.width-60,50);ctx.textAlign='left';
    for(const [lineIndex,line] of page.lines.entries()){
     const style=shareTextStyles[line.kind],tone=line.tone?tones[line.tone]:undefined,state=blocks[line.block].state;
     if((line.kind==='heading'||line.kind==='fact')&&page.lines[lineIndex-1]?.block!==line.block){
      const group=page.lines.filter(item=>item.block===line.block),height=group.length*style.line;
-     ctx.fillStyle=tone?.surface??'#f1f4f5';ctx.beginPath();ctx.roundRect(48,line.y-7,canvas.width-96,height+1,10);ctx.fill();
+     ctx.fillStyle=tone?.surface??'#f1f4f5';ctx.beginPath();ctx.roundRect(48,line.y-7,SHARE_IMAGE_WIDTH-96,height+1,10);ctx.fill();
      if(line.kind==='heading'){ctx.fillStyle=tone?.text??tones.accent.text;ctx.beginPath();ctx.roundRect(48,line.y-7,5,height+1,2);ctx.fill();}
     }
     ctx.font=font(line.kind);ctx.fillStyle=tone?.text??(line.kind==='summary'||line.kind==='detail'?'#435664':line.kind==='task'?'#174f45':'#192e3e');
@@ -52,12 +52,10 @@ export async function renderShareImages(notice:Notice,details:boolean,generatedA
      if(line.state==='dismissed'){ctx.beginPath();ctx.moveTo(x+6,y+size*.5);ctx.lineTo(x+size-6,y+size*.5);ctx.stroke();}
     }
    }
-   const footer=canvas.height-88;ctx.strokeStyle='#d5e2e3';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(60,footer-22);ctx.lineTo(canvas.width-60,footer-22);ctx.stroke();
+   const footer=page.height-88;ctx.strokeStyle='#d5e2e3';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(60,footer-22);ctx.lineTo(SHARE_IMAGE_WIDTH-60,footer-22);ctx.stroke();
    productIcon(ctx,60,footer,44);ctx.fillStyle='#245E59';ctx.font='750 28px system-ui, sans-serif';ctx.fillText('校园 Inbox',118,footer+5);
-   ctx.textAlign='right';ctx.fillStyle='#5d6f7b';ctx.font='23px system-ui, sans-serif';ctx.fillText(stamp,canvas.width-60,footer+9);ctx.textAlign='left';
+   ctx.textAlign='right';ctx.fillStyle='#5d6f7b';ctx.font='23px system-ui, sans-serif';ctx.fillText(stamp,SHARE_IMAGE_WIDTH-60,footer+9);ctx.textAlign='left';
    const blob=await png(canvas);check(signal);result.push({blob,width:canvas.width,height:canvas.height});
-   // Give navigation and cancellation a chance between pages on small phones.
-   await new Promise<void>(resolve=>setTimeout(resolve,0));
   }
   return result;
  }finally{canvas.width=1;canvas.height=1;}

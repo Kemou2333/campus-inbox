@@ -1,5 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {createLocalRepository} from '../infrastructure/local-repository';
+import {createLocalDemoRepository} from '../infrastructure/local-demo-repository';
+import {createGuestDemoNotice,GUEST_DEMO_MARKER,GUEST_DEMO_SOURCE,isGuestDemoDraft,waitForGuestDemo} from '../infrastructure/guest-demo';
 import {createCloudSync, type CloudSync, type SyncState} from '../infrastructure/sync-client';
 import {createAuthClient, type AuthClient, type AuthSession, type AuthOptions} from '../infrastructure/auth-client';
 import {AnalysisError,type AnalyzeOptions} from '../infrastructure/ai-client';
@@ -16,7 +18,7 @@ import type {ThemePreference} from './theme';
 import {localReminderID} from '../domain/reminders';
 import {CAMPUS_PREFERENCES_KEY, parseCampusPreferences, readCampusPreferences, type CampusPreferences} from '../domain/campus-preferences';
 
-export interface Draft {id:string; text:string; attachments:string[]}
+export interface Draft {id:string; text:string; attachments:string[];demo?:typeof GUEST_DEMO_MARKER}
 export interface DraftSelection {start:number;end:number;expectedText:string}
 export interface Toast {id:number; text:string; undo?:()=>void}
 const DRAFT_KEY='campus-inbox:draft:v5';
@@ -29,7 +31,8 @@ const initialSync:SyncState={connected:false,status:'disconnected',lastSyncedAt:
 /** Business operations live here; presentation components do not write storage or call AI. */
 export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={}){
  const [platform]=useState(createPlatform);
- const [repository]=useState(createLocalRepository);
+ const [personalRepository]=useState(createLocalRepository);
+ const [repository]=useState(()=>createLocalDemoRepository(personalRepository));
  const [boot]=useState(()=>{try{return {notices:repository.load(),error:''};}catch(e){return {notices:[] as Notice[],error:message(e)};}});
  const [notices,setNotices]=useState(boot.notices);
  const [error,setError]=useState(boot.error);
@@ -122,7 +125,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  useEffect(()=>{
   if(!config||boot.error)return;
   let c:CloudSync;
-  try{c=createCloudSync(repository,config.syncEndpoint);}catch(e){report(e);return;}
+  try{c=createCloudSync(personalRepository,config.syncEndpoint);}catch(e){report(e);return;}
   const a=createAuthClient(config.syncEndpoint);setCloud(c);setAuth(a);
   const unsubscribe=c.subscribe(setSync);
   let alive=true;
@@ -132,7 +135,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
    else {activateJobAccount(null);c.disconnect();tell('登录已过期，请重新登录。');}
   }).catch(()=>{/* Offline work remains available; server authenticates every request. */});
   return()=>{alive=false;unsubscribe();};
- },[config,repository,boot.error]);
+ },[config,personalRepository,boot.error]);
  useEffect(()=>{
   if(!cloud||!sync.connected)return;
   const kick=()=>{if(document.visibilityState==='visible')void cloud.syncNow();};
@@ -169,7 +172,16 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  }
  function replaceDrafts(next:Draft[]){draftRef.current=next;setDrafts(next);}
  function fileReferences(draftList=draftRef.current){return [...noticeRef.current,...draftList.map(d=>({attachments:d.attachments}) as Notice),{attachments:pendingAnalysisFiles()} as Notice];}
- function changeDraft(id:string,text:string){replaceDrafts(draftRef.current.map(d=>d.id===id?{...d,text}:d));}
+ function changeDraft(id:string,text:string){replaceDrafts(draftRef.current.map(d=>{if(d.id!==id)return d;if(d.demo)tell('示例已修改，需登录后使用 AI 整理。');const {demo:_,...ordinary}=d;return {...ordinary,text};}));}
+ function fillDemoDraft(){
+  if(busy||analyzing.current||attaching.current.size)return;
+  const existing=draftRef.current.find(isGuestDemoDraft);if(existing){tell('示例已填入，点击“整理示例”即可。');return existing.id;}
+  const empty=draftRef.current.find(d=>!d.text.trim()&&!d.attachments.length);
+  if(!empty&&draftRef.current.length>=20){tell('草稿已满，请先移除一条。');return;}
+  const example={...(empty??makeDraft()),text:GUEST_DEMO_SOURCE,demo:GUEST_DEMO_MARKER};
+  replaceDrafts(empty?draftRef.current.map(d=>d.id===empty.id?example:d):[...draftRef.current,example]);
+  tell('示例已填入，其他草稿会保留。');return example.id;
+ }
  function pasteDraft(id:string,text:string){const target=draftRef.current.find(d=>d.id===id);if(!target||target.text||busy){tell('输入框已有内容，请新建通知后再粘贴。');return;}changeDraft(id,text);}
  function insertDraft(id:string,text:string,selection?:DraftSelection){
   const target=draftRef.current.find(d=>d.id===id);if(!target||busy||analyzing.current)throw new Error('这条草稿暂时不能粘贴。');
@@ -189,7 +201,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   if(existing.reduce((n,f)=>n+(f?.size??0),0)+files.reduce((n,f)=>n+f.size,0)>MAX_NOTICE_FILE_BYTES)throw new Error('每条通知的附件总大小最多 20 MB。');
   const ids=await addFiles(files);const current=draftRef.current;
   if(!current.some(d=>d.id===id)){await cleanupFiles(ids,fileReferences(current));throw new Error('草稿已移除，附件没有保存。');}
-  replaceDrafts(current.map(d=>d.id===id?{...d,attachments:[...d.attachments,...ids]}:d));
+  replaceDrafts(current.map(d=>{if(d.id!==id)return d;const {demo:_,...ordinary}=d;return {...ordinary,attachments:[...d.attachments,...ids]};}));
   }finally{attaching.current.delete(id);}
  }
  async function detach(draftID:string,fileID:string){
@@ -356,6 +368,21 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   // Persist the intent before sending. Reload recovery is read-only until the user explicitly confirms an unknown ACK.
   context.journal.put(submission);return sendJobSubmission(submission,context);
  }
+ async function analyzeDemo(){
+  if(analyzing.current||busy)return false;
+  const source=draftRef.current.find(isGuestDemoDraft);
+  if(!source)throw new Error('示例已修改。请登录后整理，或重新填入示例。');
+  analyzing.current=true;setBusy(true);setStage('示例整理中');const controller=new AbortController();abort.current=controller;
+  try{
+   await waitForGuestDemo(controller.signal);
+   if(!draftRef.current.some(d=>d.id===source.id&&isGuestDemoDraft(d)))throw new Error('示例已修改，请重新整理。');
+   const notice=createGuestDemoNotice(source.id),current=repository.load();
+   if(!current.some(n=>n.id===notice.id))save([...current,notice]);
+   // Only this explicit sample is consumed. Personal drafts and attachments remain intact.
+   consumeJobDrafts([source]);setLatestAddedID(notice.id);tell('示例已整理');return true;
+  }catch(error){if(controller.signal.aborted){tell('已停止，示例原文仍在。');return false;}throw error;}
+  finally{analyzing.current=false;setBusy(false);setStage('');if(abort.current===controller)abort.current=null;}
+ }
  function recoverResult(){try{const raw=localStorage.getItem(RESULT_KEY);const value=resultRef.current||(raw?JSON.parse(raw):null);if(value)commitResult(value);}catch(e){report(e);}}
  function recoverLegacyResult(){try{const current=repository.load();save([...current,...legacyRecords.filter(n=>!current.some(old=>old.id===n.id))]);finishLegacyResult(localStorage,sessionStorage);setLegacyRecords([]);tell('旧版整理结果已保存');}catch(e){report(e);}}
  async function exportLegacyWork(){const result=await platform.saveFile(new Blob([legacyWork.text],{type:'text/plain;charset=utf-8'}),'campus-inbox-old-drafts.txt');if(result.status!=='cancelled')tell('旧版草稿已导出');}
@@ -402,7 +429,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   if(cloud?.getKey()!==key)throw new Error('账号已切换，请重新打开通知。');
   return result;
  }
- return {notices,drafts,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,preferences,setPreferences,bootError:boot.error,
-  report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,attach,detach,removeDraft,analyze,askQuestion,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
+ return {notices,drafts,demoDraftID:drafts.find(isGuestDemoDraft)?.id??null,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,preferences,setPreferences,bootError:boot.error,
+  report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,fillDemoDraft,attach,detach,removeDraft,analyze,analyzeDemo,askQuestion,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;
