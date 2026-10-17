@@ -7,7 +7,7 @@ import {createServer} from 'node:net';
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';
 
-const releaseFiles=['server/backup-state.py','server/campus-backup.service','server/campus-backup.timer','server/admin.mjs','server/admin-ui.mjs','server/contracts/source-evidence.js','server/index.mjs','server/analyze.mjs','server/service.mjs','server/image-captcha.mjs','server/auth.mjs','server/sync.mjs','server/email-auth.mjs','server/mail-sender.mjs','server/manage-invites.mjs','worker/prompt.mjs','server/contracts/data.js','server/contracts/time.js','server/contracts/email-policy.mjs','server/vendor/nodemailer-10.0.16.mjs','server/vendor/NODEMAILER-LICENSE','server/vendor/NODEMAILER-SOURCE.md'];
+const releaseFiles=['server/test-records.mjs','server/backup-state.py','server/campus-backup.service','server/campus-backup.timer','server/admin.mjs','server/admin-ui.mjs','server/contracts/source-evidence.js','server/index.mjs','server/analyze.mjs','server/service.mjs','server/image-captcha.mjs','server/auth.mjs','server/sync.mjs','server/email-auth.mjs','server/mail-sender.mjs','server/manage-invites.mjs','worker/prompt.mjs','server/contracts/data.js','server/contracts/time.js','server/contracts/email-policy.mjs','server/vendor/nodemailer-10.0.16.mjs','server/vendor/NODEMAILER-LICENSE','server/vendor/NODEMAILER-SOURCE.md'];
 test('CI release and restricted installer agree on all runtime and vendor files',async()=>{
   const project=new URL('../../',import.meta.url);
   const [workflow,installer]=await Promise.all([readFile(new URL('.github/workflows/backend.yml',project),'utf8'),readFile(new URL('server/install-release.py',project),'utf8')]);
