@@ -150,7 +150,8 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   if(!cloud||!config||!jobAccount||!sync.connected)return;
   const kick=()=>{if(document.visibilityState==='visible')void refreshAnalysisJobs();};
   const poll=()=>{if(Date.now()>=jobNextPoll.current)kick();};
-  kick();const timer=setInterval(poll,5_000);window.addEventListener('online',kick);window.addEventListener('focus',kick);document.addEventListener('visibilitychange',kick);
+  // Check the due timestamp often enough: a 5s clock plus a 5s deadline skips the next tick after network latency.
+  kick();const timer=setInterval(poll,1_000);window.addEventListener('online',kick);window.addEventListener('focus',kick);document.addEventListener('visibilitychange',kick);
   return()=>{clearInterval(timer);window.removeEventListener('online',kick);window.removeEventListener('focus',kick);document.removeEventListener('visibilitychange',kick);jobReads.current?.abort();};
  },[cloud,config,jobAccount,sync.connected]);
 
