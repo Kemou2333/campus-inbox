@@ -10,8 +10,8 @@ android {
         applicationId 'io.github.kemou2333.campusinbox'
         minSdk 26
         targetSdk 36
-        versionCode 24
-        versionName '2.16.0'
+        versionCode 25
+        versionName '2.16.1'
     }
 
     signingConfigs {
