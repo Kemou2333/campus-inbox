@@ -22,7 +22,7 @@ afterEach(()=>vi.unstubAllGlobals());
 const analysis:NoticeAnalysis={schemaVersion:4,kind:'task',title:'办理事项',summary:'通知摘要',deadline:null,deadlineText:'',timeline:[],tasks:[{text:'提交材料',assignee:null,scope:'all',condition:'',details:[],steps:[],time:null,timeText:'',location:null}],materials:[],warnings:[],reminders:[]};
 function notice(id:string,createdAt='2026-10-01T00:00:00Z',extra:Partial<Notice>={}):Notice{return {...createNotice(analysis,'通知原文',createdAt),id,...extra};}
 function feed(notices:Notice[],view:Partial<FeedViewState>={}){
-  const app={notices,preferences:structuredClone(EMPTY_CAMPUS_PREFERENCES),report:vi.fn(),loadExamples:vi.fn()} as unknown as CampusController;
+  const app={notices,unreadNoticeIDs:[],markNoticeRead:vi.fn(),localDataScope:'device',preferences:structuredClone(EMPTY_CAMPUS_PREFERENCES),report:vi.fn(),loadExamples:vi.fn()} as unknown as CampusController;
   const html=renderToStaticMarkup(createElement(FeedPage,{app,actions:{} as NoticeActions,onCompose:()=>{},focusID:null,viewState:{...createFeedViewState(),...view}}));
   return {html,ids:[...html.matchAll(/data-notice-id="([^"]+)"/g)].map(match=>match[1]),text:html.replace(/<style[^>]*>[\s\S]*?<\/style>/g,'').replace(/<[^>]+>/g,'')};
 }
