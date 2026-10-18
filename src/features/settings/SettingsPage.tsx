@@ -9,6 +9,10 @@ import type { ThemePreference } from '../../app/theme';
 import {BackupDialog} from './BackupDialog';
 import {CampusPreferencesPanel} from './CampusPreferencesPanel';
 import {isExampleNotice} from '../../domain/examples';
+import {TrashDialog} from './TrashDialog';
+import {ProblemHelpDialog} from './ProblemHelpDialog';
+import {AndroidDownloads} from '../../shared/ui/AndroidDownloads';
+import {friendlyErrorMessage} from '../../shared/error-message';
 
 interface Props {
   app: CampusController;
@@ -45,7 +49,8 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
   const [conflict, setConflict] = useState<SyncConflict | null>(null);
   const [legacyOpen,setLegacyOpen]=useState(false);
   const [backupOpen,setBackupOpen]=useState(false);
-  useEffect(()=>{onDialogChange(logoutOpen||!!conflict||legacyOpen||backupOpen);return()=>onDialogChange(false);},[logoutOpen,conflict,legacyOpen,backupOpen,onDialogChange]);
+  const [trashOpen,setTrashOpen]=useState(false),[downloadsOpen,setDownloadsOpen]=useState(false),[problemOpen,setProblemOpen]=useState(false);
+  useEffect(()=>{onDialogChange(logoutOpen||!!conflict||legacyOpen||backupOpen||trashOpen||downloadsOpen||problemOpen);return()=>onDialogChange(false);},[logoutOpen,conflict,legacyOpen,backupOpen,trashOpen,downloadsOpen,problemOpen,onDialogChange]);
   const picker = useRef<HTMLInputElement>(null);
   const busy = !!running || app.busy;
   const hasExamples = app.notices.some(isExampleNotice);
@@ -55,7 +60,7 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
     setError('');
     setRunning(name);
     try { await operation(); }
-    catch (value) { setError(value instanceof Error ? value.message : '操作未完成，请重试。'); }
+    catch (value) { setError(friendlyErrorMessage(value)); }
     finally { setRunning(null); }
   }
 
@@ -99,7 +104,7 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
         <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>
           {app.sync.lastSyncedAt ? `上次同步 ${date(app.sync.lastSyncedAt)}` : '通知与进度自动同步。'}
         </Typography>
-        {app.sync.error && <Alert severity="warning" sx={{ mt: 2 }}>{app.sync.error}</Alert>}
+        {app.sync.error && <Alert severity="warning" sx={{ mt: 2 }}>{friendlyErrorMessage(app.sync.error)}</Alert>}
         <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap', mt: 2 }}>
           <Button variant="contained" disabled={busy || app.sync.status === 'syncing'}
             startIcon={running === 'sync' || app.sync.status === 'syncing' ? <CircularProgress size={18} color="inherit" /> : undefined}
@@ -135,6 +140,7 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
           {running === 'import' ? '正在导入…' : '导入备份'}</Button>
         <Button variant="outlined" disabled={busy}
           onClick={() => void run('examples', async () => {await app.loadExamples(); onShowNotices?.();})}>{running === 'examples' ? '正在载入…' : hasExamples ? '更新示例' : '载入示例'}</Button>
+        <Button variant="outlined" disabled={busy} onClick={()=>setTrashOpen(true)}>回收站{app.trashItems.length?` ${app.trashItems.length}`:''}</Button>
       </Stack>
       <Typography variant="body2" color="text.secondary" sx={{mt:1.5}}>示例通知已隐藏个人信息</Typography>
       <input ref={picker} type="file" accept="application/json,.json" hidden aria-label="选择通知备份"
@@ -147,10 +153,15 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
     </Paper>
 
     <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
+      <Button onClick={()=>setDownloadsOpen(true)}>安卓下载</Button>
+      <Button onClick={()=>setProblemOpen(true)}>遇到问题</Button>
       <Button onClick={onHelp}>帮助</Button>
       <Button onClick={onAbout}>关于</Button>
     </Stack>
 
+    <TrashDialog open={trashOpen} app={app} onClose={()=>setTrashOpen(false)}/>
+    <ProblemHelpDialog open={problemOpen} app={app} onClose={()=>setProblemOpen(false)}/>
+    <Dialog open={downloadsOpen} onClose={()=>setDownloadsOpen(false)} fullWidth maxWidth="xs"><DialogTitle>下载</DialogTitle><DialogContent><AndroidDownloads/></DialogContent><DialogActions><Button onClick={()=>setDownloadsOpen(false)}>关闭</Button></DialogActions></Dialog>
     <BackupDialog open={backupOpen} app={app} onClose={()=>setBackupOpen(false)}/>
     <Dialog open={logoutOpen} onClose={() => { if (!running) setLogoutOpen(false); }}>
       <DialogTitle>退出登录？</DialogTitle>

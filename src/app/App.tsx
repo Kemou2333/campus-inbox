@@ -20,7 +20,6 @@ import {AboutDialog,HelpDialog} from '../shared/ui/HelpDialog';
 import type {NoticeActions} from '../features/notices/NoticeCard';
 import {ScrollPane} from '../shared/ui/ScrollPane';
 import {getNoticeStatus} from '../domain/notice';
-import {nextUnreadReminderIDs,readUnreadReminderIDs,writeUnreadReminderIDs} from '../features/notices/unread-reminders';
 import {useHumanVerification} from '../features/security/useHumanVerification';
 import {HumanVerificationDialog} from '../features/security/HumanVerificationDialog';
 import type {Notice} from '../domain/types';
@@ -41,7 +40,8 @@ export default function App(){
  const [questionID,setQuestionID]=useState<string|null>(null);
  const [sourcePath,setSourcePath]=useState<string|undefined>(),[correction,setCorrection]=useState<CorrectionSelection|null>(null);
  const [feedView,setFeedView]=useState(createFeedViewState);
- const [unreadReminderIDs,setUnreadReminderIDs]=useState(()=>readUnreadReminderIDs(localStorage));
+ const [dismissedUnreadPrompts,setDismissedUnreadPrompts]=useState<string[]>([]);
+ useEffect(()=>setDismissedUnreadPrompts([]),[app.localDataScope]);
  const consumeFocus=useCallback((id:string)=>setFocusID(value=>value===id?null:value),[]);
  useEffect(()=>{if(!exampleRequest.current||exampleStarted.current||app.bootError)return;exampleStarted.current=true;void app.loadExamples().catch(app.report);},[app.bootError]);
  useEffect(()=>{if(app.latestAddedID){setPage(0);setFocusID(app.latestAddedID);}},[app.latestAddedID]);
@@ -49,10 +49,9 @@ export default function App(){
  useEffect(()=>{document.documentElement.dataset.platform=app.platform.kind;document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.style.colorScheme=dark?'dark':'light';document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme.palette.background.default);if(app.platform.setAppearance)void app.platform.setAppearance(dark).catch(app.report);},[app.platform,dark]);
  const modalRef=useRef(false);modalRef.current=login||help||about||!!note||!!details||!!calendar||!!correction||!!share||!!questionID||settingsDialog||!!verification.request;
  const lastNotices=useRef(app.notices);
- const unreadReminders=unreadReminderIDs.map(id=>app.notices.find(n=>n.id===id)).filter(n=>n&&getNoticeStatus(n)==='reminder');
- useEffect(()=>writeUnreadReminderIDs(localStorage,unreadReminderIDs),[unreadReminderIDs]);
- function clearNewReminders(){const shown=new Set(unreadReminders.map(n=>n!.id));setUnreadReminderIDs(ids=>ids.filter(id=>!shown.has(id)));}
- function viewNewReminders(){const first=unreadReminders[0];if(!first)return;setPage(0);setFocusID(first.id);clearNewReminders();}
+ const unreadReminders=app.notices.filter(n=>app.unreadNoticeIDs.includes(n.id)&&!dismissedUnreadPrompts.includes(n.id)&&getNoticeStatus(n)==='reminder');
+ function clearNewReminders(){setDismissedUnreadPrompts(ids=>[...new Set([...ids,...unreadReminders.map(n=>n.id)])]);}
+ function viewNewReminders(){const first=unreadReminders[0];if(!first)return;setPage(0);setFocusID(first.id);app.markNoticeRead(first.id);}
  function closeHelp(){setHelp(false);localStorage.setItem('campus-inbox:tutorial:v2','seen');}
  function navigate(next:number){if(next===2)setExpandCampus(false);setPage(next);if(split&&next===1){setTimeout(()=>{document.getElementById('compose-pane')?.scrollIntoView({block:'start',behavior:'smooth'});document.querySelector<HTMLTextAreaElement>('#compose-pane textarea')?.focus({preventScroll:true});},0);}else window.scrollTo({top:0,behavior:'instant'});}
  function openCampusSettings(){navigate(2);setExpandCampus(true);}
@@ -72,7 +71,6 @@ export default function App(){
  useEffect(()=>{if(correction&&!app.notices.some(n=>n.id===correction.noticeID))setCorrection(null);},[app.notices,correction]);
  useEffect(()=>{if(questionID&&!app.notices.some(n=>n.id===questionID))setQuestionID(null);},[app.notices,questionID]);
  useEffect(()=>{const current=new Map(app.notices.map(n=>[n.id,n]));
-  const previous=lastNotices.current;setUnreadReminderIDs(ids=>nextUnreadReminderIDs(previous,app.notices,ids));
   for(const previous of lastNotices.current){const n=current.get(previous.id);if(!n||getNoticeStatus(previous)==='pending'&&getNoticeStatus(n)!=='pending')void app.platform.cancelReminder(previous.id).catch(app.report);}
   lastNotices.current=app.notices;
  },[app.notices,app.platform]);
@@ -89,7 +87,7 @@ export default function App(){
   </AppBar>
   <Container maxWidth={false} component="main" sx={{maxWidth:split&&page!==2?1240:900,px:{xs:1,sm:3},pt:{xs:1.5,sm:3},pb:split&&page!==2?0:wide?3:'calc(80px + var(--safe-bottom))',...(split&&page!==2?{display:'flex',flexDirection:'column',height:'calc(100dvh - 77px - var(--safe-top))',minHeight:0,'@media (max-height:500px)':{height:'calc(100dvh - 61px - var(--safe-top))'}}:{})}}>
    <AnalysisJobStatus app={app} onRestore={()=>navigate(1)}/>
-   {!!unreadReminders.length&&<Alert className="new-reminders-prompt" severity="info" role="status" onClose={clearNewReminders} action={<Button onClick={viewNewReminders} sx={{whiteSpace:'nowrap'}}>查看</Button>} sx={{mb:2,flexShrink:0}}>新增提醒 {unreadReminders.length}</Alert>}
+   {!!unreadReminders.length&&<Alert className="new-reminders-prompt" severity="info" role="status" onClose={clearNewReminders} action={<Button onClick={viewNewReminders} sx={{whiteSpace:'nowrap'}}>查看</Button>} sx={{mb:2,flexShrink:0}}>未读提醒 {unreadReminders.length}</Alert>}
    {app.bootError?<Alert severity="error" action={<Button onClick={()=>void rescue().catch(app.report)}>保存原始数据</Button>}>原来的通知无法读取：{app.bootError}。数据仍在本机，暂未覆盖。</Alert>:
     split&&page!==2?<Box className="workspace" sx={{display:'grid',gridTemplateColumns:'minmax(280px, 320px) minmax(0, 1fr)',gap:3,flex:1,minHeight:160}}>
      <ScrollPane id="compose-pane" label="新增通知" onFocus={()=>setPage(1)}><ComposerPage app={app} embedded onDone={()=>setPage(0)} onLogin={()=>setLogin(true)}/></ScrollPane>

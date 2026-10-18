@@ -5,6 +5,7 @@ import VisibilityOffOutlined from '@mui/icons-material/VisibilityOffOutlined';
 import type {CampusController} from '../../app/useCampus';
 import {AuthError,type AuthSession,type EmailChallenge,type AuthImageChallenge,type AuthCaptcha} from '../../infrastructure/auth-client';
 import {canonicalEmail} from '../../../server/contracts/email-policy.mjs';
+import {friendlyErrorMessage} from '../../shared/error-message';
 
 interface Props {open:boolean;app:CampusController;onClose:()=>void}
 const normalUsername=(value:string)=>value.normalize('NFKC').trim().toLowerCase();
@@ -33,7 +34,7 @@ export function LoginDialog({open,app,onClose}:Props){
  async function loadImage(){
   if(!app.auth||imageLoading||Date.now()<imageRetryAt)return;setImageLoading(true);setImageAnswer('');
   try{const value=await app.auth.imageChallenge(imagePurpose);setImageChallenge(value);setImageRetryAt(Date.now()+value.retryAfterSeconds*1000);setClock(Date.now());}
-  catch(issue){setImageChallenge(null);setError(issue instanceof Error?issue.message:'验证码暂时无法载入');if(issue instanceof AuthError&&issue.retryAfterSeconds)setImageRetryAt(Date.now()+issue.retryAfterSeconds*1000);}
+  catch(issue){setImageChallenge(null);setError(friendlyErrorMessage(issue));if(issue instanceof AuthError&&issue.retryAfterSeconds)setImageRetryAt(Date.now()+issue.retryAfterSeconds*1000);}
   finally{setImageLoading(false);}
  }
  function captcha():AuthCaptcha|undefined{
@@ -56,7 +57,7 @@ export function LoginDialog({open,app,onClose}:Props){
   if(busy)return;if(value==='register')setRegistration(emailEnabled?'email':'invite');setMode(value);setError('');setChallenge(null);setCode('');setRepeated('');setTransferApproved(false);
  }
  function fail(issue:unknown){
-  setError(issue instanceof Error?issue.message:'操作未完成，请重试。');
+  setError(friendlyErrorMessage(issue));
   if(issue instanceof AuthError&&issue.retryAfterSeconds){setRetryAt(Date.now()+issue.retryAfterSeconds*1000);setClock(Date.now());}
  }
  function validatePassword(){
@@ -104,7 +105,7 @@ export function LoginDialog({open,app,onClose}:Props){
    if(accountCreated||issue instanceof AuthError&&['ACCOUNT_CREATED_LOGIN_PENDING','EMAIL_LOGIN_PENDING'].includes(issue.code||'')){
     setMode('login');setInvite('');setChallenge(null);setCode('');
     if(settingPassword||registration==='email')setUsername(email);
-    setError(issue instanceof AuthError?issue.message:'账号已创建，请稍后登录。');
+    setError(issue instanceof AuthError?friendlyErrorMessage(issue):'账号已创建，请稍后登录。');
    }else {fail(issue);if(imageEnabled&&!emailForm){setImageAnswer('');setImageChallenge(null);}}
   }finally{setWorking(false);}
  }

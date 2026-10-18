@@ -9,6 +9,7 @@ import type {Notice,NoteTarget} from '../../domain/types';
 import {updateNote} from '../../domain/notice';
 import {GuideFocus} from '../../features/onboarding/GuideFocus';
 import {canAdvanceGuide} from '../../features/onboarding/guide-progress';
+import {AndroidDownloads} from './AndroidDownloads';
 const guideSteps=[
  {title:'粘贴通知',description:'先用这条通知试试看。'},
  {title:'生成待办',description:'点「模拟整理」，看看结果。'},
@@ -42,6 +43,7 @@ export function HelpDialog({open,onClose,onExamples,onCompose}:{open:boolean;onC
    <Box ref={caption} data-guide-caption sx={{position:intro||compact?'static':'sticky',top:0,zIndex:2,bgcolor:'background.paper',pb:1}}><Typography component="h3" ref={title} tabIndex={-1} sx={{fontSize:{xs:26,sm:28},fontWeight:700,lineHeight:1.4,outline:'none'}}>{intro?'你好，我是校园 Inbox':current.title}</Typography>
    <Typography id="guide-description" sx={{mt:1,mb:1,fontSize:{xs:19,sm:20},fontWeight:500,lineHeight:1.6,whiteSpace:'pre-line'}}>{intro?'帮你把群通知变成清楚的待办。\n一起试试：粘贴、生成、展开、打勾。':description}</Typography>
    <Typography sx={{fontSize:12,color:'text.secondary'}}>示例通知已隐藏个人信息</Typography></Box>
+   {intro&&!window.CampusNative?.postMessage&&<AndroidDownloads compact/>}
    {!intro&&step===0&&<Stack spacing={1.5}><TextField data-guide-original multiline minRows={3} maxRows={6} value={pasted?demoReadingText:''} placeholder="演示通知会粘贴到这里" slotProps={{input:{readOnly:true},htmlInput:{'aria-label':'演示通知原文'}}}/><Button data-guide-paste variant="outlined" onClick={()=>setPasted(true)}>{pasted?'重新粘贴':'粘贴演示通知'}</Button></Stack>}
    {!intro&&step===1&&<Stack spacing={2}><Box data-guide-original sx={{p:2,mt:1,maxHeight:{xs:180,sm:220},overflowY:'auto',bgcolor:'action.hover',borderRadius:2,lineHeight:1.8,whiteSpace:'pre-line'}}>{demoReadingText}</Box><Button data-guide-generate variant="contained" onClick={generate}>模拟整理</Button></Stack>}
    {!intro&&step>=2&&(demo?<NoticeCard notice={demo} app={app} actions={actions} now={Date.now()} expanded={expanded} onExpandedChange={()=>setExpanded(value=>!value)} expandedTaskIDs={tasks} onTaskExpandedChange={id=>{if(id===firstTask?.id&&!tasks.has(id))setReviewed(true);setTasks(previous=>{const next=new Set(previous);if(next.has(id))next.delete(id);else next.add(id);return next;});}}/>:<Button variant="outlined" onClick={generate}>重新生成演示通知</Button>)}
@@ -57,5 +59,5 @@ export function HelpDialog({open,onClose,onExamples,onCompose}:{open:boolean;onC
  <Dialog open={!!note&&open} onClose={()=>setNote(null)}><DialogTitle>{note?.title}</DialogTitle><DialogContent><TextField multiline minRows={3} value={note?.text??''} label="演示笔记" onChange={event=>setNote(value=>value?{...value,text:event.target.value}:null)}/></DialogContent><DialogActions><Button onClick={()=>setNote(null)}>取消</Button><Button onClick={()=>{if(note)setDemo(value=>value?updateNote(value,note.target,note.text):value);setNote(null);}}>保存演示笔记</Button></DialogActions></Dialog></>;
 }
 export function AboutDialog({open,onClose}:{open:boolean;onClose:()=>void}){
- return <Dialog open={open} onClose={onClose}><DialogTitle>校园 Inbox</DialogTitle><DialogContent><Typography>把校园通知变成待办。</Typography><Typography color="text.secondary" sx={{mt:2}}>Kemou 制作 · 支持网页与安卓</Typography><Typography variant="caption" color="text.secondary" sx={{display:'block',mt:2}}>版本 {appVersion}</Typography></DialogContent><DialogActions><Button variant="contained" onClick={onClose}>关闭</Button></DialogActions></Dialog>;
+ return <Dialog open={open} onClose={onClose}><DialogTitle>校园 Inbox</DialogTitle><DialogContent><Box component="img" src={`${import.meta.env.BASE_URL}onboarding/cover.png`} alt="校园 Inbox：群通知，变成待办" width="380" height="216" sx={{display:'block',width:'100%',maxWidth:380,height:'auto',borderRadius:2,mb:2,mx:'auto'}}/><Typography sx={{fontSize:18,lineHeight:1.7}}>把群通知变成清楚的待办。<br/>看步骤、记进度，也能随时查原文。</Typography><AndroidDownloads compact/><Typography color="text.secondary" sx={{mt:2}}>Kemou 制作 · 支持网页与安卓</Typography><Typography variant="caption" color="text.secondary" sx={{display:'block',mt:2}}>版本 {appVersion}</Typography></DialogContent><DialogActions><Button variant="contained" onClick={onClose}>关闭</Button></DialogActions></Dialog>;
 }

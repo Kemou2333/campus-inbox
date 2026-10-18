@@ -9,6 +9,7 @@ import type {NoticeQuestionAnswer} from '../../infrastructure/notice-question-cl
 import {RichText} from '../../shared/ui/RichText';
 import {AnalysisError} from '../../infrastructure/ai-client';
 import {readableQuestionAnswer} from './answer-reading';
+import {friendlyErrorMessage} from '../../shared/error-message';
 
 export default function NoticeQuestionDialog({notice,app,onClose,onLogin}:{notice:Notice|null;app:CampusController;onClose:()=>void;onLogin:()=>void}){
  const [question,setQuestion]=useState(''),[answer,setAnswer]=useState<NoticeQuestionAnswer|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[recoverable,setRecoverable]=useState(false);
@@ -27,7 +28,7 @@ export default function NoticeQuestionDialog({notice,app,onClose,onLogin}:{notic
    const result=record.result??await app.askQuestion(notice.id,record.question,record.requestId,controller.signal);
    saveQuestionResult(localStorage,record,result);
    if(context.current===generation){setAnswer(result);setRecoverable(false);}
-  }catch(e){if(context.current===generation){setError(e instanceof Error?e.message:'暂时无法回答。');const rejected=e instanceof AnalysisError&&[400,401,403,413,415].includes(e.status);if(record&&rejected)try{markQuestionRejected(localStorage,record);}catch{/* Keep the original error visible. */}setRecoverable(!!record&&!rejected);}}
+  }catch(e){if(context.current===generation){setError(friendlyErrorMessage(e));const rejected=e instanceof AnalysisError&&[400,401,403,413,415].includes(e.status);if(record&&rejected)try{markQuestionRejected(localStorage,record);}catch{/* Keep the original error visible. */}setRecoverable(!!record&&!rejected);}}
   finally{if(context.current===generation){setBusy(false);active.current=null;}}
  }
  return <Dialog open={!!notice} onClose={close} aria-labelledby="question-heading"><DialogTitle id="question-title-row" component="div" sx={{display:'flex',alignItems:'center',gap:1}}><Typography id="question-heading" component="h2" variant="h5" sx={{flex:1}}>问这条通知</Typography><IconButton aria-label="关闭提问" onClick={close}><Close/></IconButton></DialogTitle>

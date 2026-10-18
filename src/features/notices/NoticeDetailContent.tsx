@@ -7,12 +7,11 @@ import {alpha} from '@mui/material/styles';
 import {setTaskApplicable,taskAudience,toggleStep,toggleTask} from '../../domain/notice';
 import {plainReadingText} from '../../domain/reading';
 import type {Notice,NoteTarget} from '../../domain/types';
-import type {CampusController} from '../../app/useCampus';
 import WarningAmberOutlined from '@mui/icons-material/WarningAmberOutlined';
 import Schedule from '@mui/icons-material/Schedule';
 import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined';
 import {RichText} from '../../shared/ui/RichText';
-import type {NoticeActions} from './NoticeCard';
+import type {NoticeActions,NoticeCardController} from './NoticeCard';
 import {displayTime,extraTimeline,formatDate,noticeOverview,sameHeadlineTime,summaryPreview,taskTime} from './notice-overview';
 import {reminderReadingTitle} from './reminder-reading';
 import {EvidenceLink} from './EvidenceLink';
@@ -34,7 +33,8 @@ function DetailSection({title,id,children,warning=false,reminder=false,titleEvid
 }
 
 /** Each task has a separate button and checkbox; opening one never opens or completes its siblings. */
-export function NoticeDetailContent({notice:n,app,actions,expandedTaskIDs,onTaskExpandedChange,onCollapse,readOnly=false,editing=false}:{notice:Notice;app:Pick<CampusController,'act'>;actions:NoticeActions;expandedTaskIDs:Set<string>;onTaskExpandedChange:(id:string)=>void;onCollapse:()=>void;readOnly?:boolean;editing?:boolean}){
+export function NoticeDetailContent({notice:n,app,actions,expandedTaskIDs,onTaskExpandedChange,onCollapse,readOnly=false,editing=false}:{notice:Notice;app:Pick<NoticeCardController,'act'>;actions:NoticeActions;expandedTaskIDs:Set<string>;onTaskExpandedChange:(id:string)=>void;onCollapse:()=>void;readOnly?:boolean;editing?:boolean}){
+ function changeTask(taskID:string,change:(notice:Notice)=>Notice,text:string){const result=app.act(n.id,change,text);if(result){const task=result.after.tasks.find(item=>item.id===taskID);if(task)actions.taskCompletionChanged?.(n.id,taskID,task.completed&&!task.dismissed);}}
  const overview=noticeOverview(n),preview=summaryPreview(n),timeline=extraTimeline(n),reducedMotion=useMediaQuery('(prefers-reduced-motion: reduce)');
  const noteButton=(target:NoteTarget,title:string,text:string)=>readOnly||editing?null:<Tooltip title={text?'编辑笔记':'写笔记'}><IconButton aria-label={`给${title}写笔记`} onClick={()=>actions.note(n,target,title,text)} sx={{color:text?'primary.main':'text.secondary'}}><EditNote/></IconButton></Tooltip>;
  const evidence=(path:string)=>!editing&&evidenceFor(n,path).segments.length?<EvidenceLink notice={n} path={path} onOpen={actions.evidence}/>:undefined;
@@ -51,7 +51,7 @@ export function NoticeDetailContent({notice:n,app,actions,expandedTaskIDs,onTask
     const taskEvidence=evidence(`tasks.${index}.text`);
     return <Box key={t.id} className="task-item" sx={{opacity:t.dismissed?.6:1,borderTop:index?'1px solid':'none',borderColor:'divider',py:.75,px:.5,borderRadius:2,bgcolor:t.completed?theme=>alpha(theme.palette.success.main,.07):undefined}}>
      <Stack direction="row" sx={{alignItems:'flex-start',gap:.25}}>
-      <Checkbox color="success" checked={t.completed} disabled={readOnly||editing||t.dismissed} onChange={()=>app.act(n.id,v=>toggleTask(v,t.id),t.completed?'已恢复待办':'已完成事项')} slotProps={{input:{'aria-label':`完成：${t.text}`}}} sx={{ml:-1,mt:.1,'&.Mui-disabled.Mui-checked':{color:'success.main'}}}/>
+      <Checkbox color="success" checked={t.completed} disabled={readOnly||editing||t.dismissed} onChange={()=>changeTask(t.id,v=>toggleTask(v,t.id),t.completed?'已恢复待办':'已完成事项')} slotProps={{input:{'aria-label':`完成：${t.text}`}}} sx={{ml:-1,mt:.1,'&.Mui-disabled.Mui-checked':{color:'success.main'}}}/>
       <Box sx={{flex:1,minWidth:0}}>
        <Stack direction="row" sx={{alignItems:'flex-start',gap:.25}}>{editing?<Box sx={{flex:1,minWidth:0,px:.75,py:1}}><CorrectionTarget path={`tasks.${index}.text`} label={`待办 ${index+1}标题`}><Typography component="span" sx={{fontSize:{xs:18,sm:20},fontWeight:700,lineHeight:1.5,overflowWrap:'anywhere'}}><HighlightedText text={plainReadingText(t.text)}/></Typography></CorrectionTarget></Box>:<Button className="task-expand" aria-expanded={expanded} aria-controls={bodyID} aria-label={`${expanded?'收起事项':'展开事项'}：${plainReadingText(t.text)}`} onClick={()=>onTaskExpandedChange(t.id)} endIcon={<ExpandMore sx={{transform:expanded?'rotate(180deg)':'none'}}/>} sx={{flex:1,minWidth:0,justifyContent:'space-between',textAlign:'left',borderRadius:'8px',px:.75,py:1,gap:1,color:'text.primary','& .MuiButton-endIcon':{ml:0,color:'text.secondary'}}}>
         <Typography component="span" sx={{fontSize:{xs:18,sm:20},fontWeight:700,lineHeight:1.5,overflowWrap:'anywhere',textDecoration:t.completed?'line-through':'none',color:t.completed?'success.main':'text.primary'}}><HighlightedText text={plainReadingText(t.text)}/></Typography>
@@ -70,7 +70,7 @@ export function NoticeDetailContent({notice:n,app,actions,expandedTaskIDs,onTask
       {t.details.map((detail,i)=><Typography component="div" key={i} sx={{mt:i?.75:0,fontSize:16,color:'text.secondary'}}><CorrectionTarget path={`tasks.${index}.details.${i}`} label={`待办 ${index+1}说明 ${i+1}`}><RichText text={detail}/></CorrectionTarget></Typography>)}
       {!!t.steps.length&&<Stack component="ol" className="task-steps" sx={{mt:t.details.length?1.5:0,mb:0,p:0,listStyle:'none'}}>{t.steps.map((step,stepIndex)=><Box component="li" key={step.id} className="task-step" sx={{py:1,borderTop:stepIndex?'1px solid':'none',borderColor:'divider'}}>
        <Stack direction="row" sx={{alignItems:'flex-start',gap:.25}}>
-        <Checkbox color="success" disabled={readOnly||editing||t.dismissed} checked={step.completed} onChange={()=>app.act(n.id,v=>toggleStep(v,t.id,step.id),step.completed?'已恢复步骤':'已完成步骤')} slotProps={{input:{'aria-label':`完成步骤${stepIndex+1}：${step.text}`}}} sx={{ml:-1.5,mt:-1.25,'&.Mui-disabled.Mui-checked':{color:'success.main'}}}/>
+        <Checkbox color="success" disabled={readOnly||editing||t.dismissed} checked={step.completed} onChange={()=>changeTask(t.id,v=>toggleStep(v,t.id,step.id),step.completed?'已恢复步骤':'已完成步骤')} slotProps={{input:{'aria-label':`完成步骤${stepIndex+1}：${step.text}`}}} sx={{ml:-1.5,mt:-1.25,'&.Mui-disabled.Mui-checked':{color:'success.main'}}}/>
         <Typography component="div" sx={{flex:1,minWidth:0,fontSize:16,fontWeight:600,lineHeight:1.6,textDecoration:step.completed?'line-through':'none',color:step.completed?'success.main':'text.primary'}}><Box component="span" sx={{color:'primary.main',mr:.5}}>{stepIndex+1}.</Box><CorrectionTarget inline path={`tasks.${index}.steps.${stepIndex}.text`} label={`步骤 ${stepIndex+1}`}><RichText text={step.text} inline/></CorrectionTarget></Typography>
        </Stack>
        {step.details.map((detail,i)=><Typography component="div" key={i} sx={{mt:.5,fontSize:15,color:'text.secondary'}}><CorrectionTarget path={`tasks.${index}.steps.${stepIndex}.details.${i}`} label={`步骤 ${stepIndex+1}说明 ${i+1}`}><RichText text={detail}/></CorrectionTarget></Typography>)}
