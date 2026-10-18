@@ -25,13 +25,24 @@ test('student identifiers remain blocked after hashes are re-signed, including M
   }
 });
 
-test('explicit names require a local pseudonym marker while field requirements are retained',async()=>{
+test('explicit names require a reviewed pseudonym without in-body labels while field requirements are retained',async()=>{
   const {backup,provenance}=await fixture();
   backup.notices[0].tasks[0].details.push('姓名：示例甲');resign(backup,provenance);
-  expect(auditPublicExamples(backup,provenance).some(entry=>entry.category==='unmarked_person_name')).toBe(true);
+  expect(auditPublicExamples(backup,provenance).some(entry=>entry.category==='unreviewed_person_name')).toBe(true);
+  backup.notices[0].tasks[0].details[backup.notices[0].tasks[0].details.length-1]='姓名：示例甲（化名）';resign(backup,provenance);
+  expect(auditPublicExamples(backup,provenance).some(entry=>entry.category==='unreviewed_person_name')).toBe(true);
   backup.notices[0].tasks[0].details.pop();
-  backup.notices[0].tasks[0].details.push('姓名：示例甲（化名）','填写姓名、学号和教学班号');resign(backup,provenance);
+  backup.notices[0].tasks[0].details.push('姓名：示例甲','填写姓名、学号和教学班号');resign(backup,provenance);
+  provenance.privacyReview.approvedPseudonyms.push('示例甲');
   expect(auditPublicExamples(backup,provenance)).toEqual([]);
+});
+
+test('removing repeated body declarations still requires a reviewed pseudonym list',async()=>{
+  const {backup,provenance}=await fixture();
+  expect(backup.notices.every((notice:{originalText:string})=>!notice.originalText.startsWith('【脱敏示例】'))).toBe(true);
+  expect(auditPublicExamples(backup,provenance)).toEqual([]);
+  delete provenance.privacyReview.approvedPseudonyms;
+  expect(auditPublicExamples(backup,provenance).some(entry=>entry.category==='missing_pseudonym_review')).toBe(true);
 });
 
 test('a catalog and each changed record need human identity review in addition to privacy hashes',async()=>{

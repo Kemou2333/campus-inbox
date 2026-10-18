@@ -43,7 +43,7 @@
     "warnings": [],
     "reminders": [],
     "id": "example-reading-v25-5",
-    "originalText": "【脱敏示例】姓名为化名，联系方式、群号和具体链接已隐藏。\n\n本科生评教系统已经开放了，请提醒学生（在课程结束前）及时评教。《关于开展2026—2027学年第一学期学生评教的通知》见QQ群文件[表情][表情]\n\n学生评教方式：\n使用微信搜索并关注“重庆大学服务号”，点击菜单“功能”->“评教”，输入统一认证号和密码（或者扫描二维码）即可进入系统。若忘记密码，在统一认证界面点击“忘记密码”按照指引操作即可。\n\n温馨提示：学生评教都将以【匿名】的方式反映，请同学们在评教时不要有所顾虑。",
+    "originalText": "本科生评教系统已经开放了，请提醒学生（在课程结束前）及时评教。《关于开展2026—2027学年第一学期学生评教的通知》见QQ群文件[表情][表情]\n\n学生评教方式：\n使用微信搜索并关注“重庆大学服务号”，点击菜单“功能”->“评教”，输入统一认证号和密码（或者扫描二维码）即可进入系统。若忘记密码，在统一认证界面点击“忘记密码”按照指引操作即可。\n\n温馨提示：学生评教都将以【匿名】的方式反映，请同学们在评教时不要有所顾虑。",
     "createdAt": "2026-10-08T16:16:59.589Z",
     "updatedAt": "2026-10-08T16:16:59.589Z",
     "completed": false,
@@ -68,8 +68,8 @@
     "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
     "manualPrivacyEdits": true,
     "manualContentCorrections": false,
-    "publishedOriginalSha256": "7af84a178a8b10ce48a18f9f4aa949b0fedde1fe4a9e0e063c8f19e774561735",
-    "publishedRecordSha256": "690188f6d1cd5b063f5014848a9cc1727056f707a6b1182ccca7af809d612833",
+    "publishedOriginalSha256": "2427577d4c6eec8bd1595742ff0518b4ccfcf85cff6d66d4b334a9db1364817b",
+    "publishedRecordSha256": "4fa22c6c9cd902c39d5dca5b7354a400ab0eb89ba6d38ecf9e8f37c5e48cb343",
     "manualIdentityReview": true
   }
 }

@@ -110,5 +110,101 @@
   {
     "id": "example-reading-v211-1",
     "fingerprint": "19553478f69e0784c76b94cb2904dcd3dfc9002c4412d845df8d8dd4e9b96654"
+  },
+  {
+    "id": "example-reading-v25-0",
+    "fingerprint": "27586d72cc490ef0af2f8fb72814087cf8ffd72e4dc6cfb1d9235882abff59d5"
+  },
+  {
+    "id": "example-reading-v25-1",
+    "fingerprint": "fa62cfebefc449904a15b4e20ef5d8720f449a150eb54cb9c949c0c309588044"
+  },
+  {
+    "id": "example-reading-v25-2",
+    "fingerprint": "b63dbffb720f01422509ebd047253ce7d181db69469c59676669f2684943c489"
+  },
+  {
+    "id": "example-reading-v25-3",
+    "fingerprint": "6bdb674eb136e5e79a0aac4e77f1c54d50fadcac8c66d587cd954e695a2d922b"
+  },
+  {
+    "id": "example-reading-v25-4",
+    "fingerprint": "4e43393c57a84e862bd0bd4c8507d760d6144125526c63582529f175d119a011"
+  },
+  {
+    "id": "example-reading-v25-5",
+    "fingerprint": "58477d6ffd2fcd188a0d5182a1399a91cce8bdb1fff9602b59eaa7b12013ef6a"
+  },
+  {
+    "id": "example-reading-v25-6",
+    "fingerprint": "ab0b5453f4410244599a696a52a4ba7f67ca33f7577d0875895ee041bae47638"
+  },
+  {
+    "id": "example-reading-v25-7",
+    "fingerprint": "3c6142960dbd9bdda1e7329de5c0c05d912271c632fe037bce91d70e7f1d34dc"
+  },
+  {
+    "id": "example-reading-v25-8",
+    "fingerprint": "57cf75b8553b9e58a608fcf57829f4c57c8bd64cd6e3d995ef5ba724edb80a3c"
+  },
+  {
+    "id": "example-reading-v25-9",
+    "fingerprint": "8f772c1e480b5f7b78115a74344496c04e45f0a61880a71db77dcbdb2faa5ad8"
+  },
+  {
+    "id": "example-reading-v25-10",
+    "fingerprint": "ac9885ff23f39a547969ab15ff0bf81a8e9cae60ca38d4ac6f9e0f6eb4ef9362"
+  },
+  {
+    "id": "example-reading-v25-11",
+    "fingerprint": "d590648349f37d7bae74cea25a8b7d37e21db84c86f43506f6c2a44ad30f1cf2"
+  },
+  {
+    "id": "example-reading-v26-12",
+    "fingerprint": "8f115ed27637f9f4b143be154b094fa43afd0eb6812534c867654c0d6a8a68b6"
+  },
+  {
+    "id": "example-reading-v211-0",
+    "fingerprint": "f3e4c5295dd58cc4f5f111d058d30f6c3e618f58f17b460b4fecca2e751e03b7"
+  },
+  {
+    "id": "example-reading-v211-1",
+    "fingerprint": "ee6654963e65c129da72dc75fadf6fcc5ba9bfa389ca1a22e4cb6378cb3df2da"
+  },
+  {
+    "id": "example-reading-v211-2",
+    "fingerprint": "4b06e822545caf7d2f6df5ddfd6f24bd1c50b77323ed8b33db3b322a1fc71be1"
+  },
+  {
+    "id": "example-reading-v211-3",
+    "fingerprint": "f2d9ab6dd286f5ea46e866ec269080000e1b9a3b59b617403d913204eb9ab5e7"
+  },
+  {
+    "id": "example-reading-v211-4",
+    "fingerprint": "ddf80d0d60b38c356909bbfd328f5e00b94bcc3c7b00f66fc2bb044d67b1e38d"
+  },
+  {
+    "id": "example-reading-v211-5",
+    "fingerprint": "b9e0b469595ab85a789b084192b31abee9eb9bd48a2e5fb6d4448da07b3f5132"
+  },
+  {
+    "id": "example-reading-v212-0",
+    "fingerprint": "ac897cf7f7d3fbec75e42c7c3e3f7b1ed44a9752155e60d188a5a443f5963388"
+  },
+  {
+    "id": "example-reading-v212-1",
+    "fingerprint": "0db696a2aca00fc9c1ba6e8501a44704be418b83272f856530c68a349a3311c8"
+  },
+  {
+    "id": "example-reading-v212-2",
+    "fingerprint": "e1c9e4b2ddb34f9b4f997ba9a22a3df3be3ea2ab061ab5593d3c94c4a958bb2b"
+  },
+  {
+    "id": "example-reading-v213-0",
+    "fingerprint": "e564a554c7df4bde25bafef17920b4c02fc267bfcd628c6ab470e9d55e93177a"
+  },
+  {
+    "id": "example-reading-v213-1",
+    "fingerprint": "f8fbd66d6b44c5dff09cae613f4a82dbd059732c365f62e337c500590d8ac6e5"
   }
 ]
