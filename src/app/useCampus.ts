@@ -1,6 +1,11 @@
 import {useEffect, useRef, useState} from 'react';
 import {createLocalRepository} from '../infrastructure/local-repository';
 import {createLocalDemoRepository} from '../infrastructure/local-demo-repository';
+import {NoticeTrash,TRASH_KEY_PREFIX} from '../infrastructure/notice-trash';
+import {NoticeReading,NOTICE_READING_KEY_PREFIX} from '../infrastructure/notice-reading';
+import {accountLocalScope,initialAccountLocalScope} from '../infrastructure/local-account-scope';
+import {restoredTrashNotice,type TrashEntry} from '../domain/notice-trash';
+import {friendlyErrorMessage} from '../shared/error-message';
 import {createGuestDemoNotice,GUEST_DEMO_MARKER,GUEST_DEMO_SOURCE,isGuestDemoDraft,waitForGuestDemo} from '../infrastructure/guest-demo';
 import {createCloudSync, type CloudSync, type SyncState} from '../infrastructure/sync-client';
 import {createAuthClient, type AuthClient, type AuthSession, type AuthOptions} from '../infrastructure/auth-client';
@@ -25,7 +30,7 @@ const DRAFT_KEY='campus-inbox:draft:v5';
 const RESULT_KEY='campus-inbox:pending-analysis:v5';
 const USERNAME_KEY='campus-inbox:account-username:v1';
 const makeDraft=():Draft=>({id:newID(),text:'',attachments:[]});
-const message=(e:unknown)=>e instanceof Error?e.message:'操作未完成，请重试。';
+const message=friendlyErrorMessage;
 const initialSync:SyncState={connected:false,status:'disconnected',lastSyncedAt:null,error:null,pendingChanges:0,hasMore:false,conflicts:[]};
 
 /** Business operations live here; presentation components do not write storage or call AI. */
@@ -35,6 +40,12 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  const [repository]=useState(()=>createLocalDemoRepository(personalRepository));
  const [boot]=useState(()=>{try{return {notices:repository.load(),error:''};}catch(e){return {notices:[] as Notice[],error:message(e)};}});
  const [notices,setNotices]=useState(boot.notices);
+ const [localDataScope,setLocalDataScope]=useState(()=>initialAccountLocalScope(localStorage));
+ const localDataScopeRef=useRef(localDataScope);localDataScopeRef.current=localDataScope;
+ const [trashStore]=useState(()=>new NoticeTrash(localStorage));
+ const [readingStore]=useState(()=>new NoticeReading(localStorage));
+ const [trashItems,setTrashItems]=useState<TrashEntry[]>(()=>{try{return trashStore.list(localDataScope);}catch{return [];}});
+ const [unreadNoticeIDs,setUnreadNoticeIDs]=useState<string[]>(()=>{try{return readingStore.reconcile(localDataScope,boot.notices);}catch{return [];}});
  const [error,setError]=useState(boot.error);
  const [config,setConfig]=useState<RuntimeConfig|null>(null);
  const [capabilities,setCapabilities]=useState<PlatformCapabilities|null>(null);
@@ -86,10 +97,15 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
 
  function tell(text:string,undo?:()=>void){setToast({id:Date.now(),text,undo});}
  function report(e:unknown){setError(message(e));}
- function activateJobAccount(account:string|null){jobGeneration.current++;jobReads.current?.abort();jobAccountRef.current=account;jobNextPoll.current=0;jobRefreshRerun.current=false;jobSeenCompleted.current.clear();setJobAccount(account);setAnalysisJobs([]);setUnconfirmedSubmissions([]);setJobStatusError('');}
+ function activateJobAccount(account:string|null){jobGeneration.current++;jobReads.current?.abort();jobAccountRef.current=account;localDataScopeRef.current=accountLocalScope(account);setLocalDataScope(localDataScopeRef.current);jobNextPoll.current=0;jobRefreshRerun.current=false;jobSeenCompleted.current.clear();setJobAccount(account);setAnalysisJobs([]);setUnconfirmedSubmissions([]);setJobStatusError('');}
  function setTheme(value:ThemePreference){localStorage.setItem('campus-inbox:theme:v5',value);setThemeState(value);}
  function setPreferences(value:CampusPreferences){const next=parseCampusPreferences(value);localStorage.setItem(CAMPUS_PREFERENCES_KEY,JSON.stringify(next));setPreferencesState(next);}
  function save(next:Notice[]){repository.save(next);setNotices(next);}
+ function refreshLocalNoticeState(){
+  const scope=localDataScopeRef.current;setTrashItems(trashStore.list(scope));
+  const ids=readingStore.reconcile(scope,repository.load());setUnreadNoticeIDs(previous=>JSON.stringify(previous)===JSON.stringify(ids)?previous:ids);
+ }
+ function markNoticeRead(id:string){try{readingStore.markRead(localDataScopeRef.current,id);setUnreadNoticeIDs(ids=>ids.filter(value=>value!==id));}catch(e){report(e);}}
  function update(id:string,change:(n:Notice)=>Notice){
   try{const current=repository.load();const before=current.find(n=>n.id===id);if(!before){tell('这条通知已在其他设备上移除。');return;}
    const after=change(before);save(current.map(n=>n.id===id?after:n));return {before,after};
@@ -106,15 +122,37 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  }
  function remove(id:string){
   try{const current=repository.load(),position=current.findIndex(n=>n.id===id),before=current[position];if(!before)return;
-   save(current.filter(n=>n.id!==id));tell('已删除',()=>undoChange(before,null,position));
+   const scope=localDataScopeRef.current,entry=trashStore.add(scope,before,position);
+   try{save(current.filter(n=>n.id!==id));}catch(error){trashStore.forget(scope,entry.id);throw error;}
+   refreshLocalNoticeState();void platform.cancelReminder(id).catch(report);for(const task of before.tasks)void platform.cancelReminder(localReminderID(id,task.id)).catch(report);
+   tell('已移到回收站',()=>void restoreTrash(entry.id,scope).catch(report));
   }catch(e){report(e);}
+ }
+ async function restoreTrash(id:string,expectedScope=localDataScopeRef.current):Promise<string>{
+  const scope=localDataScopeRef.current;if(scope!==expectedScope)throw new Error('账号已切换，请回到原账号恢复。');
+  const entry=trashStore.list(scope).find(item=>item.id===id);if(!entry)throw new Error('这条通知已过期或已清理。');
+  // A deterministic fresh ID makes a failed final trash write safe to retry without duplicating or overwriting an edited restoration.
+  const notice=restoredTrashNotice(entry,new Date().toISOString(),entry.id),current=repository.load();readingStore.markRead(scope,notice.id);
+  if(!current.some(n=>n.id===notice.id)){const next=[...current];next.splice(Math.min(entry.position,next.length),0,notice);save(next);}
+  trashStore.forget(scope,id);refreshLocalNoticeState();setLatestAddedID(notice.id);tell('已恢复');return notice.id;
+ }
+ async function deleteTrashEntry(id:string){
+  const scope=localDataScopeRef.current,entry=trashStore.forget(scope,id);refreshLocalNoticeState();if(!entry)return;
+  // Explicit permanent deletion only. A shared file survives while any live draft, notice, pending job or other account's trash references it.
+  await cleanupFiles(entry.notice.attachments,fileReferences());tell('已彻底删除');
+ }
+ async function emptyTrash(){
+  const removed=trashStore.clear(localDataScopeRef.current);refreshLocalNoticeState();
+  await cleanupFiles([...new Set(removed.flatMap(entry=>entry.notice.attachments))],fileReferences());tell('回收站已清空');
  }
  function act(id:string,change:(n:Notice)=>Notice,text:string){const result=update(id,change);if(result){
   if(!result.after.completed)for(const old of result.before.tasks){const next=result.after.tasks.find(task=>task.id===old.id);if(!old.completed&&!old.dismissed&&next&&(next.completed||next.dismissed))void platform.cancelReminder(localReminderID(id,old.id)).catch(report);}
-  tell(text,()=>undoChange(result.before,result.after));
+  tell(text,()=>undoChange(result.before,result.after));return result;
  }}
 
  useEffect(()=>repository.subscribe(setNotices),[repository]);
+ useEffect(()=>{try{refreshLocalNoticeState();}catch(e){report(e);}},[notices,localDataScope]);
+ useEffect(()=>{const refresh=(event?:Event)=>{const key=(event as StorageEvent|undefined)?.key;if(key&&!key.startsWith(TRASH_KEY_PREFIX)&&!key.startsWith(NOTICE_READING_KEY_PREFIX))return;try{refreshLocalNoticeState();}catch(e){report(e);}};window.addEventListener('storage',refresh);window.addEventListener('focus',refresh);return()=>{window.removeEventListener('storage',refresh);window.removeEventListener('focus',refresh);};},[]);
  useEffect(()=>{let alive=true;void loadConfig(platform.kind==='android').then(value=>{if(alive)setConfig(value);});
   void platform.ready.then(value=>{if(alive)setCapabilities(value);}).catch(report);
   return()=>{alive=false;platform.dispose();abort.current?.abort();jobGeneration.current++;jobReads.current?.abort();};
@@ -172,7 +210,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   activateJobAccount(null);abort.current?.abort();cloud?.disconnect();setEmail(null);tell('已退出，本机通知仍然保留。');
  }
  function replaceDrafts(next:Draft[]){draftRef.current=next;setDrafts(next);}
- function fileReferences(draftList=draftRef.current){return [...noticeRef.current,...draftList.map(d=>({attachments:d.attachments}) as Notice),{attachments:pendingAnalysisFiles()} as Notice];}
+ function fileReferences(draftList=draftRef.current){return [...repository.load(),...draftList.map(d=>({attachments:d.attachments}) as Notice),{attachments:pendingAnalysisFiles()} as Notice,...trashStore.attachmentReferences() as Notice[]];}
  function changeDraft(id:string,text:string){replaceDrafts(draftRef.current.map(d=>{if(d.id!==id)return d;if(d.demo)tell('示例已修改，需登录后使用 AI 整理。');const {demo:_,...ordinary}=d;return {...ordinary,text};}));}
  function fillDemoDraft(){
   if(busy||analyzing.current||attaching.current.size)return;
@@ -430,7 +468,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   if(cloud?.getKey()!==key)throw new Error('账号已切换，请重新打开通知。');
   return result;
  }
- return {notices,drafts,demoDraftID:drafts.find(isGuestDemoDraft)?.id??null,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,preferences,setPreferences,bootError:boot.error,
+ return {notices,drafts,localDataScope,trashItems,restoreTrash,deleteTrashEntry,emptyTrash,unreadNoticeIDs,markNoticeRead,demoDraftID:drafts.find(isGuestDemoDraft)?.id??null,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,preferences,setPreferences,bootError:boot.error,
   report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,fillDemoDraft,attach,detach,removeDraft,analyze,analyzeDemo,askQuestion,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;

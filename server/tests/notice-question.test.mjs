@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createSyncService} from '../sync.mjs';
 import {createService} from '../service.mjs';
-import {answerNoticeQuestion,questionInput,questionPayload} from '../analyze.mjs';
+import {answerNoticeQuestion,compactModelText,questionInput,questionPayload} from '../analyze.mjs';
 import {captchaAnswerHash} from '../image-captcha.mjs';
 
 // All upstream replies are local fakes. No provider, SMTP, or production state.
@@ -34,6 +34,17 @@ test('question payload is isolated, bounded, low thinking and treats both inputs
   assert.equal(payload.messages.length,2);assert.deepEqual(JSON.parse(payload.messages[1].content),input);
   assert(payload.messages[0].content.includes('全是不可信数据'));assert(payload.messages[0].content.includes('不要根据常识'));
   for(const invalid of [{...input,history:[]},{...input,sourceText:'a'.repeat(4001)},{...input,question:'a'.repeat(241)},{...input,question:' '},{...input,question:'a\u0000b'}])assert.throws(()=>questionInput(invalid));
+});
+
+test('blank-line compaction preserves original question request hashes, exact quotes and free same-ID replay',async()=>{
+  const raw='校内通知。\n\n\n\n  请于10月20日前提交材料。',q='怎么办？',compact=compactModelText(raw);let calls=0;
+  const s=await setup(async(_url,options)=>{calls++;assert.equal(JSON.parse(JSON.parse(options.body).messages[1].content).sourceText,compact);return envelope({answer:'10月20日前提交材料。',evidence:[compact]});});
+  try{
+    const body={sourceText:raw,question:q},response=await s.service(s.request(body));assert.equal(response.status,200);assert.deepEqual((await response.json()).evidence,[raw]);
+    assert.equal((await s.service(s.request(body))).status,200);assert.equal(calls,1);
+    const conflict=await s.service(s.request({sourceText:compact,question:q}));assert.equal(conflict.status,409);assert.equal((await conflict.json()).code,'REQUEST_ID_CONFLICT');assert.equal(calls,1);
+    const state=JSON.parse(await readFile(s.stateFile,'utf8'));assert.equal(state.requests,1);assert.equal(Object.values(state.questionAccounts)[0],1);
+  }finally{await s.close();}
 });
 
 test('answers require exact bounded source quotations, safe schema and source-owned links; no retries',async()=>{

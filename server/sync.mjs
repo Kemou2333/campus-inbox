@@ -8,7 +8,7 @@ const D=globalThis.CampusData;
 const BODY_LIMIT=1024*1024,RECORD_LIMIT=64*1024,ACCOUNT_BYTES=5*1024*1024,GLOBAL_BYTES=256*1024*1024;
 const LIVE_LIMIT=1000,HISTORY_LIMIT=5000,ACCOUNT_LIMIT=500,PAGE_LIMIT=100,PAGE_BYTES=512*1024;
 const JOB_BYTES=512*1024,ACCOUNT_JOB_BYTES=10*1024*1024,GLOBAL_JOB_BYTES=256*1024*1024,JOB_LIMIT=1000;
-const JOB_ERRORS={AI_FORMAT_INVALID:'这次整理结果格式异常，请重新提交。',AI_INCOMPLETE:'这次整理结果未生成完整，请重新提交。',AI_TIMEOUT:'整理服务等待模型超时，请重新提交。',CONTENT_BOUNDARY:'这里只能整理校园通知，请提供原通知中的事项、安全提醒或学习信息。',SERVICE_RESTARTED:'整理服务重启，这次任务未能完成。原文已保留，请重新提交。',JOB_SAVE_FAILED:'结果未能保存到云端。原文已保留，请重新提交。',SERVICE_UNAVAILABLE:'整理服务暂时不可用。原文已保留，请稍后重新提交。'};
+const JOB_ERRORS={AI_FORMAT_INVALID:'AI 没能整理好这次通知，可恢复原文后重新提交。',AI_INCOMPLETE:'AI 只返回了部分内容，可恢复原文、减少本次数量后再提交。',AI_TIMEOUT:'等待 AI 回复超时，可恢复原文后稍后再提交。',CONTENT_BOUNDARY:'这里只能整理校园通知，请提供原通知中的事项、安全提醒或学习信息。',SERVICE_RESTARTED:'服务刚刚重启，这次整理未能完成，可恢复原文后重新提交。',JOB_SAVE_FAILED:'结果未能保存到云端，可恢复原文后重新提交。',SERVICE_UNAVAILABLE:'暂时无法连接整理服务，可恢复原文后稍后再提交。'};
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const isObject=value=>value&&typeof value==='object'&&!Array.isArray(value);
 function shape(value,required,optional=[]){

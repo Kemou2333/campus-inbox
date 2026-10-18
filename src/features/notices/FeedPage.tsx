@@ -7,6 +7,8 @@ import Star from '@mui/icons-material/Star';
 import StarBorder from '@mui/icons-material/StarBorder';
 import {alpha} from '@mui/material/styles';
 import Close from '@mui/icons-material/Close';
+import NavigateBefore from '@mui/icons-material/NavigateBefore';
+import NavigateNext from '@mui/icons-material/NavigateNext';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import {IconButton} from '@mui/material';
@@ -19,6 +21,7 @@ import {isLocalDemoNotice} from '../../domain/local-demo';
 import {effectiveNotice} from '../../domain/corrections';
 import {SearchQueryContext,HighlightedText} from '../../shared/ui/SearchHighlight';
 import {noticeSearchMatches} from './search-matches';
+import {useSearchNavigation} from './useSearchNavigation';
 import {groupExampleNotices,isExampleNotice,readExamplesHidden,writeExamplesHidden} from '../../domain/examples';
 
 export interface FeedViewState {tab:0|1|2;query:string;sort:SortOrder;expandedIDs:Set<string>;expandedTaskIDs:Set<string>;favoritesOnly?:boolean;relevantOnly?:boolean}
@@ -32,11 +35,16 @@ function AnimatedNotices({query,editingID,onEditingClose,records,exampleDivider=
  useEffect(()=>setRows(previous=>transitionRows(previous,records)),[records]);
  useEffect(()=>onEmpty(rows.length===0),[rows.length,onEmpty]);
  return <Stack>{rows.map((row,index)=><Fragment key={row.record.id}>{exampleDivider&&index===exampleStart&&<Divider className="example-group-divider" sx={{mt:1,mb:2,color:'text.secondary',fontSize:'.875rem'}}>示例通知 {exampleCount}</Divider>}<Collapse in={row.visible} timeout={reducedMotion?0:360} onExited={()=>setRows(old=>old.filter(v=>v.record.id!==row.record.id||current.current.some(n=>n.id===v.record.id)))}>
-  <Box sx={{pb:1.5,opacity:row.visible?1:0,transform:row.visible?'none':'translateX(8px)',transition:reducedMotion?'none':'opacity 280ms ease-in-out, transform 340ms cubic-bezier(.4,0,.2,1)'}}><NoticeCard notice={row.record} app={app} actions={actions} now={now} expanded={expandedIDs.has(row.record.id)} onExpandedChange={()=>onExpandedChange(row.record.id)} expandedTaskIDs={expandedTaskIDs} onTaskExpandedChange={onTaskExpandedChange} disabled={!row.visible} editing={row.record.id===editingID} onEditingClose={onEditingClose}/>{query.trim()&&<Box className="search-results-context" sx={{px:2,py:1,mt:-1.5,mb:1.5,border:'1px solid',borderColor:'divider',borderRadius:'0 0 12px 12px',bgcolor:'action.hover'}}>{noticeSearchMatches(row.record,query).map((match,i)=><Box key={i} sx={{mb:.75}}><Typography component="div" sx={{fontSize:12,color:'text.secondary',fontWeight:700}}>{match.label}</Typography><Typography component="div" sx={{fontSize:14,lineHeight:1.65,overflowWrap:'anywhere'}}><HighlightedText text={match.text}/></Typography>{match.label==='原文'&&<Button size="small" onClick={()=>actions.details(row.record)} sx={{p:0,minWidth:0}}>查看原文</Button>}</Box>)}</Box>}</Box>
+  <Box data-search-active={row.visible?'true':'false'} data-search-editing={row.record.id===editingID?'true':undefined} sx={{pb:1.5,opacity:row.visible?1:0,transform:row.visible?'none':'translateX(8px)',transition:reducedMotion?'none':'opacity 280ms ease-in-out, transform 340ms cubic-bezier(.4,0,.2,1)'}}><NoticeCard notice={row.record} unread={app.unreadNoticeIDs.includes(row.record.id)} app={app} actions={actions} now={now} expanded={expandedIDs.has(row.record.id)} onExpandedChange={()=>onExpandedChange(row.record.id)} expandedTaskIDs={expandedTaskIDs} onTaskExpandedChange={onTaskExpandedChange} disabled={!row.visible} editing={row.record.id===editingID} onEditingClose={onEditingClose}/>{query.trim()&&<Box className="search-results-context" data-search-notice-id={row.record.id} sx={{px:2,py:1,mt:-1.5,mb:1.5,border:'1px solid',borderColor:'divider',borderRadius:'0 0 12px 12px',bgcolor:'action.hover'}}>{noticeSearchMatches(row.record,query).map((match,i)=><Box key={i} data-search-task-id={match.path?.startsWith('tasks.')?row.record.tasks[Number(match.path.split('.')[1])]?.id:undefined} sx={{mb:.75}}><Typography component="div" sx={{fontSize:12,color:'text.secondary',fontWeight:700}}>{match.label}</Typography><Typography component="div" data-search-excerpt="true" sx={{fontSize:14,lineHeight:1.65,overflowWrap:'anywhere'}}><HighlightedText text={match.text}/></Typography>{match.label==='原文'&&<Button size="small" onClick={()=>actions.details(row.record)} sx={{p:0,minWidth:0}}>查看原文</Button>}</Box>)}</Box>}</Box>
  </Collapse></Fragment>)}</Stack>;
 }
 export function FeedPage({app,actions,onCompose,onSettings,focusID,onFocusHandled,embedded=false,viewState,onViewStateChange,editingID,onEditingClose}:{editingID?:string;onEditingClose?:()=>void;app:CampusController;actions:NoticeActions;onCompose:()=>void;onSettings?:()=>void;focusID:string|null;onFocusHandled?:(id:string)=>void;embedded?:boolean;viewState?:FeedViewState;onViewStateChange?:Dispatch<SetStateAction<FeedViewState>>}){
  const [localView,setLocalView]=useState(createFeedViewState);const [now,setNow]=useState(Date.now());
+ const taskCollapseTimers=useRef(new Map<string,ReturnType<typeof setTimeout>>()),latestNotices=useRef(app.notices);latestNotices.current=app.notices;
+ const searchResults=useRef<HTMLDivElement>(null);
+ const clearTaskCollapse=(id:string)=>{const timer=taskCollapseTimers.current.get(id);if(timer!==undefined)clearTimeout(timer);taskCollapseTimers.current.delete(id);};
+ const clearTaskCollapses=()=>{for(const timer of taskCollapseTimers.current.values())clearTimeout(timer);taskCollapseTimers.current.clear();};
+ useEffect(()=>{const hidden=()=>{if(document.visibilityState==='hidden')clearTaskCollapses();};window.addEventListener('pagehide',clearTaskCollapses);document.addEventListener('visibilitychange',hidden);return()=>{clearTaskCollapses();window.removeEventListener('pagehide',clearTaskCollapses);document.removeEventListener('visibilitychange',hidden);};},[]);
  const [examplesHidden,setExamplesHidden]=useState(()=>readExamplesHidden(localStorage));
  const readingNotices=useMemo(()=>app.notices.map(n=>withTeachingCalendar(effectiveNotice(n),app.preferences.weekOneMonday)),[app.notices,app.preferences.weekOneMonday]);
  const allGroups=useMemo(()=>groupExampleNotices(readingNotices),[readingNotices]);
@@ -47,8 +55,12 @@ export function FeedPage({app,actions,onCompose,onSettings,focusID,onFocusHandle
  const setTab=(value:FeedViewState['tab'])=>setView(previous=>({...previous,tab:value}));
  const setQuery=(value:string)=>setView(previous=>({...previous,query:value}));
  const setSort=(value:SortOrder)=>setView(previous=>({...previous,sort:value}));
- const toggleExpanded=(id:string)=>setView(previous=>{const ids=new Set(previous.expandedIDs);if(ids.has(id))ids.delete(id);else ids.add(id);return {...previous,expandedIDs:ids};});
- const toggleTaskExpanded=(id:string)=>setView(previous=>{const ids=new Set(previous.expandedTaskIDs);if(ids.has(id))ids.delete(id);else ids.add(id);return {...previous,expandedTaskIDs:ids};});
+ const toggleExpanded=(id:string)=>{if(!expandedIDs.has(id))app.markNoticeRead(id);setView(previous=>{const ids=new Set(previous.expandedIDs);if(ids.has(id))ids.delete(id);else ids.add(id);return {...previous,expandedIDs:ids};});};
+ const toggleTaskExpanded=(id:string)=>{clearTaskCollapse(id);setView(previous=>{const ids=new Set(previous.expandedTaskIDs);if(ids.has(id))ids.delete(id);else ids.add(id);return {...previous,expandedTaskIDs:ids};});};
+ const scopeKey=JSON.stringify([app.localDataScope,tab,favoritesOnly,relevantOnly,examplesHidden,editingID??'']);
+ useEffect(()=>{clearTaskCollapses();},[scopeKey,query]);
+ const search=useSearchNavigation(searchResults,query,scopeKey,(noticeID,taskID)=>{app.markNoticeRead(noticeID);setView(previous=>{const expandedIDs=new Set(previous.expandedIDs);expandedIDs.add(noticeID);const expandedTaskIDs=new Set(previous.expandedTaskIDs);if(taskID)expandedTaskIDs.add(taskID);return {...previous,expandedIDs,expandedTaskIDs};});});
+ const feedActions:NoticeActions={...actions,taskCompletionChanged:(noticeID,taskID,completed)=>{actions.taskCompletionChanged?.(noticeID,taskID,completed);clearTaskCollapse(taskID);if(!completed)return;taskCollapseTimers.current.set(taskID,setTimeout(()=>{taskCollapseTimers.current.delete(taskID);const task=latestNotices.current.find(n=>n.id===noticeID)?.tasks.find(t=>t.id===taskID);if(!task?.completed||task.dismissed)return;setView(previous=>{if(!previous.expandedTaskIDs.has(taskID))return previous;const ids=new Set(previous.expandedTaskIDs);ids.delete(taskID);return {...previous,expandedTaskIDs:ids};});},650));}};
  const handledFocus=useRef<string|null>(null);
  const focusScroll=useRef<ReturnType<typeof setTimeout>|null>(null);
  useEffect(()=>()=>{if(focusScroll.current!==null)clearTimeout(focusScroll.current);},[]);
@@ -102,16 +114,17 @@ export function FeedPage({app,actions,onCompose,onSettings,focusID,onFocusHandle
    <Tooltip title={favoritesOnly?'显示全部通知':'只看收藏'}><IconButton aria-label="只看收藏" aria-pressed={favoritesOnly} onClick={()=>setView(previous=>({...previous,favoritesOnly:!previous.favoritesOnly}))} sx={{color:favoritesOnly?'warning.main':'text.secondary',bgcolor:favoritesOnly?theme=>alpha(theme.palette.warning.main,.1):undefined}}><Badge color="warning" badgeContent={favorites.length} max={99}>{favoritesOnly?<Star/>:<StarBorder/>}</Badge></IconButton></Tooltip>
    <TextField select value={sort} onChange={e=>setSort(e.target.value as SortOrder)} size="small" sx={{width:{xs:110,sm:140},flexShrink:0}} aria-label="通知排序" title="默认：已截止在前，其余按最近添加"><MenuItem value="priority">默认排序</MenuItem><MenuItem value="deadline">截止时间</MenuItem><MenuItem value="newest">最近添加</MenuItem></TextField>
   </Stack>
-  <Stack className="profile-filter-controls" direction="row" sx={{alignItems:'center',gap:1,mt:.5}}>
+  <Stack className="profile-filter-controls" direction="row" sx={{alignItems:'center',gap:1,mt:.5,flexWrap:'wrap'}}>
    <Tooltip title={configured?'只隐藏明确不符合条件的通知':'填写年级、专业和身份'}><span><Button size="small" startIcon={<PersonOutline/>} aria-pressed={relevant} disabled={!configured&&!onSettings} variant={relevant?'contained':'text'} onClick={()=>configured?setView(previous=>({...previous,relevantOnly:!previous.relevantOnly})):onSettings?.()} sx={{fontSize:13,px:1}}>{configured?'与我相关':'设置条件'}</Button></span></Tooltip>
-   {relevant&&<Typography variant="caption" color="text.secondary">未确定的仍保留</Typography>}
+   {relevant&&!query.trim()&&<Typography variant="caption" color="text.secondary">未确定的仍保留</Typography>}
+   {!!query.trim()&&<Stack direction="row" className="search-navigation" sx={{alignItems:'center',gap:.25,ml:'auto'}}><Typography role="status" aria-live="polite" aria-label={`匹配位置 ${search.current}/${search.total}`} sx={{fontSize:13,color:'text.secondary',fontVariantNumeric:'tabular-nums',minWidth:36,textAlign:'center'}}>{search.current}/{search.total}</Typography><Tooltip title="上一处"><span><IconButton aria-label="上一处匹配" disabled={!search.total||!!editingID} onClick={search.previous} sx={{width:40,height:40}}><NavigateBefore/></IconButton></span></Tooltip><Tooltip title="下一处"><span><IconButton aria-label="下一处匹配" disabled={!search.total||!!editingID} onClick={search.next} sx={{width:40,height:40}}><NavigateNext/></IconButton></span></Tooltip></Stack>}
   </Stack>
   {!!catalogExamples.length&&<Stack className="example-visibility-controls" direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:1,mt:.5}}>
    <Typography className="example-privacy-note" variant="body2" color="text.secondary" sx={{lineHeight:1.6}}>{examplesHidden?`已隐藏 ${catalogExamples.length} 条示例`:'示例通知已隐藏个人信息'}</Typography>
    <Button size="small" startIcon={examplesHidden?<Visibility/>:<VisibilityOff/>} variant={examplesHidden?'contained':'text'} aria-label={examplesHidden?'显示全部示例':'隐藏全部示例'} aria-pressed={examplesHidden} onClick={()=>changeExamplesHidden(!examplesHidden)} sx={{flexShrink:0,fontSize:13,px:1}}>{examplesHidden?'显示示例':'隐藏示例'}</Button>
   </Stack>}
   </Box>
-  <AnimatedNotices query={query} editingID={editingID} onEditingClose={onEditingClose} key={tab} records={records} exampleDivider={!!allGroups.personal.length} app={app} actions={actions} now={now} expandedIDs={expandedIDs} onExpandedChange={toggleExpanded} expandedTaskIDs={expandedTaskIDs} onTaskExpandedChange={toggleTaskExpanded} onEmpty={setAnimationEmpty}/>
+  <Box ref={searchResults} className="search-result-list" sx={{'& mark[data-search-current="true"]':{bgcolor:'primary.main',color:'primary.contrastText',outline:'2px solid',outlineColor:'primary.main',outlineOffset:2,borderRadius:.5}}}><AnimatedNotices query={query} editingID={editingID} onEditingClose={onEditingClose} key={tab} records={records} exampleDivider={!!allGroups.personal.length} app={app} actions={feedActions} now={now} expandedIDs={expandedIDs} onExpandedChange={toggleExpanded} expandedTaskIDs={expandedTaskIDs} onTaskExpandedChange={toggleTaskExpanded} onEmpty={setAnimationEmpty}/></Box>
   {!records.length&&animationEmpty&&<Paper variant="outlined" sx={{p:4,textAlign:'center'}}><Typography variant="h6">{query?'没有找到匹配的通知':favoritesOnly?'此分类还没有收藏':tab===0?'暂时没有待办':tab===1?'暂时没有提醒':'还没有完成的通知'}</Typography><Typography color="text.secondary" sx={{mt:1,mb:2}}>{query?'换一个关键词试试。':favoritesOnly?'点通知右上角的星星即可收藏。':'添加通知，或者看看示例。'}</Typography>{favoritesOnly&&<Button onClick={()=>setView(previous=>({...previous,favoritesOnly:false}))}>显示全部通知</Button>}{!query&&!favoritesOnly&&<Stack direction="row" sx={{justifyContent:"center",flexWrap:'wrap',gap:1}}><Button variant="contained" onClick={onCompose}>新增通知</Button><Button variant="contained" color="secondary" onClick={()=>void showCatalogExamples()}>显示示例</Button></Stack>}</Paper>}
   {!!records.length&&(examplesHidden||!catalogExamples.length)&&<Box sx={{display:'flex',justifyContent:'center',py:1}}><Button variant="contained" color="secondary" onClick={()=>void showCatalogExamples()}>显示示例</Button></Box>}
   <Box component="footer" className="product-footer" sx={{py:2,borderTop:'1px solid',borderColor:'divider'}}>
