@@ -42,7 +42,7 @@ export function HelpDialog({open,onClose,onExamples,onCompose}:{open:boolean;onC
    {intro&&<Box component="img" src={`${import.meta.env.BASE_URL}onboarding/cover.png`} alt="校园 Inbox：群通知，变成待办" width="380" height="216" sx={{display:'block',width:'100%',height:'auto',maxWidth:380,maxHeight:compact?140:216,objectFit:'contain',mx:'auto',mb:2,borderRadius:2}}/>}
    <Box ref={caption} data-guide-caption sx={{position:intro||compact?'static':'sticky',top:0,zIndex:2,bgcolor:'background.paper',pb:1}}><Typography component="h3" ref={title} tabIndex={-1} sx={{fontSize:{xs:26,sm:28},fontWeight:700,lineHeight:1.4,outline:'none'}}>{intro?'你好，我是校园 Inbox':current.title}</Typography>
    <Typography id="guide-description" sx={{mt:1,mb:1,fontSize:{xs:19,sm:20},fontWeight:500,lineHeight:1.6,whiteSpace:'pre-line'}}>{intro?'帮你把群通知变成清楚的待办。\n一起试试：粘贴、生成、展开、打勾。':description}</Typography>
-   <Typography sx={{fontSize:12,color:'text.secondary'}}>示例通知已隐藏个人信息</Typography></Box>
+   </Box>
    {intro&&!window.CampusNative?.postMessage&&<AndroidDownloads compact/>}
    {!intro&&step===0&&<Stack spacing={1.5}><TextField data-guide-original multiline minRows={3} maxRows={6} value={pasted?demoReadingText:''} placeholder="演示通知会粘贴到这里" slotProps={{input:{readOnly:true},htmlInput:{'aria-label':'演示通知原文'}}}/><Button data-guide-paste variant="outlined" onClick={()=>setPasted(true)}>{pasted?'重新粘贴':'粘贴演示通知'}</Button></Stack>}
    {!intro&&step===1&&<Stack spacing={2}><Box data-guide-original sx={{p:2,mt:1,maxHeight:{xs:180,sm:220},overflowY:'auto',bgcolor:'action.hover',borderRadius:2,lineHeight:1.8,whiteSpace:'pre-line'}}>{demoReadingText}</Box><Button data-guide-generate variant="contained" onClick={generate}>模拟整理</Button></Stack>}

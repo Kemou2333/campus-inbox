@@ -51,19 +51,28 @@ export async function mergeExamples(current:Notice[],incoming:Notice[],legacyReg
   for(const entry of registry(legacyRegistry)){
     const versions=expected.get(entry.id)??new Set<string>();versions.add(entry.fingerprint);expected.set(entry.id,versions);
   }
-  let removable=new Set<string>();
+  let removable=new Set<string>(),verified=false;
+  const latest=new Map<string,string>(),currentFingerprints=new Map<string,string>();
   try{
-    const latest=new Map(await Promise.all(incoming.map(async n=>[n.id,await exampleFingerprint(n)] as const)));
-    const checked=await Promise.all(current.filter(n=>expected.has(n.id)).map(async n=>{
+    for(const [id,fingerprint] of await Promise.all(incoming.map(async n=>[n.id,await exampleFingerprint(n)] as const)))latest.set(id,fingerprint);
+    const checked=await Promise.all(current.filter(n=>expected.has(n.id)||latest.has(n.id)&&isExampleNotice(n)).map(async n=>{
       const fingerprint=await exampleFingerprint(n);
-      return {id:n.id,unchanged:expected.get(n.id)!.has(fingerprint)&&latest.get(n.id)!==fingerprint};
+      currentFingerprints.set(n.id,fingerprint);
+      return {id:n.id,unchanged:expected.get(n.id)?.has(fingerprint)===true&&latest.get(n.id)!==fingerprint};
     }));
     removable=new Set(checked.filter(n=>n.unchanged).map(n=>n.id));
+    verified=true;
   }catch{/* Without a complete fingerprint check, no existing records move. */}
   const retained=current.filter(n=>!removable.has(n.id));
   const ids=new Set(retained.map(n=>n.id)),originals=new Set(retained.map(n=>n.originalText));
+  const owners=new Map<string,Notice[]>();
+  for(const notice of retained){const sameSource=owners.get(notice.originalText)??[];sameSource.push(notice);owners.set(notice.originalText,sameSource);}
+  // Distinct reviewed catalog IDs may legitimately share one source. Only an
+  // exact current catalog copy permits its siblings; a personal or edited
+  // owner still protects the source from replacement and duplicate loading.
+  const sharedCatalogSources=new Set(verified?[...owners].filter(([,records])=>records.every(n=>isExampleNotice(n)&&latest.has(n.id)&&currentFingerprints.get(n.id)===latest.get(n.id))).map(([source])=>source):[]);
   // Compare against existing records only: several new cards can legitimately
   // belong to the same original, just like one AI analysis of a combined input.
-  const additions=incoming.filter(n=>!ids.has(n.id)&&!originals.has(n.originalText));
+  const additions=incoming.filter(n=>!ids.has(n.id)&&(!originals.has(n.originalText)||isExampleNotice(n)&&sharedCatalogSources.has(n.originalText)));
   return {notices:[...retained,...additions],added:additions.length,replaced:removable.size};
 }

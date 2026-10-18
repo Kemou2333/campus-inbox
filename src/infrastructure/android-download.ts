@@ -1,6 +1,6 @@
 import {version} from '../../package.json';
 
-export interface AndroidDownload {version:string; github:string; lanzou:string|null; sizeBytes?:number}
+export interface AndroidDownload {version:string; github:string; lanzou:string|null; extractionCode?:string; sizeBytes?:number}
 export const fallbackAndroidDownload:AndroidDownload={version,github:`https://github.com/Kemou2333/campus-inbox/releases/download/android-v${version}/campus-inbox-${version}.apk`,lanzou:null};
 export function parseAndroidDownload(value:unknown):AndroidDownload|null{
  if(!value||typeof value!=='object')return null;
@@ -15,7 +15,8 @@ export function parseAndroidDownload(value:unknown):AndroidDownload|null{
   if(typeof v.lanzou!=='string')return null;
   try{const url=new URL(v.lanzou);if(url.protocol!=='https:'||url.hostname!=='kemou.lanzouv.com'||url.port||url.username||url.password||!/^\/i[a-zA-Z0-9]+$/.test(url.pathname)||url.search||url.hash)return null;lanzou=url.href;}catch{return null;}
  }
- return {version:v.version,github,lanzou,...(Number.isInteger(v.sizeBytes)&&Number(v.sizeBytes)>0?{sizeBytes:Number(v.sizeBytes)}:{})};
+ if(v.extractionCode!==undefined&&(typeof v.extractionCode!=='string'||!/^[a-zA-Z0-9]{4}$/.test(v.extractionCode)||!lanzou))return null;
+ return {version:v.version,github,lanzou,...(v.extractionCode?{extractionCode:v.extractionCode as string}:{}),...(Number.isInteger(v.sizeBytes)&&Number(v.sizeBytes)>0?{sizeBytes:Number(v.sizeBytes)}:{})};
 }
 
 /** Small public manifest only; no account, session, original text or device identity. */

@@ -49,6 +49,31 @@ describe('safe built-in example upgrades',()=>{
     expect(result).toEqual({notices:pack,added:2,replaced:0});
     expect(await mergeExamples(pack,pack,null)).toEqual({notices:pack,added:0,replaced:0});
   });
+  test('a partial reviewed catalog still loads all distinct cards that share one original',async()=>{
+    const incoming=parseBackup(JSON.parse(await readFile(new URL('../public/examples.json',import.meta.url),'utf8')));
+    const legacy=JSON.parse(await readFile(new URL('../public/examples-legacy.json',import.meta.url),'utf8'));
+    const families=[['example-reading-v26-12','example-reading-v213-1'],['example-reading-v211-0','example-reading-v212-1','example-reading-v213-0'],['example-reading-v211-2','example-reading-v212-2'],['example-reading-v25-8','example-reading-v25-9','example-reading-v25-10']];
+    expect((await mergeExamples([],incoming,legacy)).notices).toHaveLength(24);
+    for(const family of families){
+      const siblings=family.map(id=>incoming.find(n=>n.id===id)!);
+      expect(new Set(siblings.map(n=>n.originalText)).size).toBe(1);
+      for(const current of siblings){
+        const result=await mergeExamples([current],incoming,legacy);
+        expect(result.notices.map(n=>n.id).sort()).toEqual(incoming.map(n=>n.id).sort());
+        expect(result.notices).toHaveLength(24);
+        expect(await mergeExamples(result.notices,incoming,legacy)).toEqual({notices:result.notices,added:0,replaced:0});
+      }
+    }
+  });
+  test('an edited or personal owner of a shared source still protects it from catalog duplicates',async()=>{
+    const incoming=parseBackup(JSON.parse(await readFile(new URL('../public/examples.json',import.meta.url),'utf8')));
+    const siblings=incoming.filter(n=>['example-reading-v211-0','example-reading-v212-1','example-reading-v213-0'].includes(n.id));
+    for(const change of [(n:Notice)=>{n.note='个人笔记';},(n:Notice)=>{n.tasks[0].completed=true;},(n:Notice)=>{n.favorite=true;},(n:Notice)=>{n.attachments=['my-file'];},(n:Notice)=>{n.corrections={updatedAt:'2026-10-18T00:00:00Z',values:[{path:'summary',value:'我的修正'}]};},(n:Notice)=>{n.id='my-personal-source';}]){
+      const protectedOwner=structuredClone(siblings[1]);change(protectedOwner);
+      expect(await mergeExamples([protectedOwner],siblings,null)).toEqual({notices:[protectedOwner],added:0,replaced:0});
+      expect(await mergeExamples([siblings[0],protectedOwner],siblings,null)).toEqual({notices:[siblings[0],protectedOwner],added:0,replaced:0});
+    }
+  });
   test('missing or malformed registries retain all existing records while unrelated new examples can load',async()=>{
     const original=old(),catalog=await registry(original),extra=fresh('其他原文','example-reading-v25-1');
     for(const invalid of [null,{},[...catalog,{id:'bad',fingerprint:'invalid'}],[{...catalog[0],originalText:'unexpected'}]]){
@@ -63,7 +88,7 @@ describe('safe built-in example upgrades',()=>{
   test('the catalog retains earlier fingerprints and adds the 13 unredacted 2.10 built-ins without publishing their content',async()=>{
     const previous=JSON.parse(await readFile(new URL('../public/examples-legacy-2.4.json',import.meta.url),'utf8'));
     const current=JSON.parse(await readFile(new URL('../public/examples-legacy.json',import.meta.url),'utf8'));
-    expect(current.slice(0,13)).toEqual(previous);expect(current).toHaveLength(28);
+    expect(current.slice(0,13)).toEqual(previous);expect(current).toHaveLength(52);
     expect(current[13].id).toBe('example-reading-v25-12');
     expect(current[13].fingerprint).toMatch(/^[a-f0-9]{64}$/);
     for(const item of current){expect(Object.keys(item).sort()).toEqual(['fingerprint','id']);expect(item.fingerprint).toMatch(/^[a-f0-9]{64}$/);}
@@ -121,8 +146,8 @@ describe('safe built-in example upgrades',()=>{
     expect(origin.firstResponseValidation).toContain('same first response');
     expect(origin.knownLimitations.join(' ')).toContain('omits audio');
     const conflict=math.warnings.find(warning=>warning.includes('不一致'))!;
-    expect(conflict).toContain('平台链接A已脱敏');expect(conflict).toContain('平台链接B已脱敏');
-    for(const notice of fresh)expect(notice.originalText.startsWith('【脱敏示例】')).toBe(true);
+    expect(conflict).toContain('[平台入口 A]');expect(conflict).toContain('[平台入口 B]');
+    for(const notice of fresh){expect(notice.originalText.startsWith('【脱敏示例】')).toBe(false);expect(notice.originalText).not.toContain('（化名）');}
   });
   test('privacy replacement retains edited old records without duplicating a differently redacted original',async()=>{
     const raw=old(),catalog=await registry(raw),redacted={...fresh('【脱敏示例】公开演示原文',raw.id),title:'脱敏示例'};

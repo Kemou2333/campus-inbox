@@ -13,4 +13,10 @@ describe('public Android download choices',()=>{
  it('keeps a direct GitHub fallback when no mirror is published yet',()=>{
   expect(parseAndroidDownload(fallbackAndroidDownload)).toEqual(fallbackAndroidDownload);
  });
+ it('keeps a visible public extraction code only with a validated mirror',()=>{
+  const value={...fallbackAndroidDownload,lanzou:'https://kemou.lanzouv.com/i6sUw4cfl11a',extractionCode:'1234'};
+  expect(parseAndroidDownload(value)).toEqual(value);
+  for(const extractionCode of ['123','12345','<img>',' 1234'])expect(parseAndroidDownload({...value,extractionCode})).toBeNull();
+  expect(parseAndroidDownload({...value,lanzou:null})).toBeNull();
+ });
 });
