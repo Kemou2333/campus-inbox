@@ -1,6 +1,8 @@
 import {useEffect, useRef, useState} from 'react';
-import {Accordion, AccordionDetails, AccordionSummary, Alert, Button, Chip, Stack, TextField, Typography} from '@mui/material';
+import {Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Chip, Stack, TextField, Typography, useMediaQuery} from '@mui/material';
+import {alpha} from '@mui/material/styles';
 import ExpandMore from '@mui/icons-material/ExpandMore';
+import PersonOutline from '@mui/icons-material/PersonOutlined';
 import {CAMPUS_ROLES, parseCampusPreferences, type CampusPreferences, type CampusRole} from '../../domain/campus-preferences';
 
 interface Props {value: CampusPreferences; onSave: (value: CampusPreferences) => void; disabled?: boolean; initiallyExpanded?: boolean}
@@ -12,16 +14,19 @@ export function CampusPreferencesPanel({value, onSave, disabled = false, initial
   const [weekOneMonday, setWeekOneMonday] = useState(value.weekOneMonday);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  const [expanded,setExpanded]=useState(initiallyExpanded);
+  const reducedMotion=useMediaQuery('(prefers-reduced-motion: reduce)');
   const panel = useRef<HTMLDivElement>(null);
-  const summary = [value.profile.entryYear ? `${value.profile.entryYear}级` : '', value.profile.major,
-    ...CAMPUS_ROLES.filter(role => value.profile.roles.includes(role.value)).map(role => role.label),
-    value.weekOneMonday ? '教学周已设置' : ''].filter(Boolean).join(' · ');
+  const summary = [value.profile.entryYear ? `${value.profile.entryYear}级` : '', value.profile.major].filter(Boolean).join(' · ')
+    || CAMPUS_ROLES.filter(role => value.profile.roles.includes(role.value)).map(role => role.label).join(' · ')
+    || (value.weekOneMonday?'教学周已设置':'未设置');
   useEffect(() => {
     setEntryYear(value.profile.entryYear?.toString() ?? ''); setMajor(value.profile.major);
     setRoles(value.profile.roles); setWeekOneMonday(value.weekOneMonday);
   }, [value]);
   useEffect(() => {
     if (!initiallyExpanded) return;
+    setExpanded(true);
     const frame = requestAnimationFrame(() => panel.current?.scrollIntoView({block: 'start', behavior: 'instant'}));
     return () => cancelAnimationFrame(frame);
   }, [initiallyExpanded]);
@@ -38,38 +43,41 @@ export function CampusPreferencesPanel({value, onSave, disabled = false, initial
       onSave(next); setSaved(true); setError('');
     } catch (issue) {setError(issue instanceof Error ? issue.message : '暂未保存，请重试。');}
   }
-  return <Accordion ref={panel} variant="outlined" disableGutters defaultExpanded={initiallyExpanded} sx={{scrollMarginTop: '80px', '&:before': {display: 'none'}, borderRadius: '16px!important'}}>
-    <AccordionSummary expandIcon={<ExpandMore/>} aria-controls="campus-preferences-content" id="campus-preferences-heading" sx={{px: {xs: 2, sm: 3}, py: 1}}>
-      <Stack spacing={.5} sx={{minWidth: 0}}>
-        <Stack direction="row" spacing={1} sx={{alignItems: 'center'}}><Typography component="h2" variant="h6">校园设置</Typography><Typography variant="body2" color="text.secondary">可选</Typography></Stack>
-        <Typography variant="body2" color="text.secondary" sx={{overflowWrap: 'anywhere'}}>{summary || '年级、专业、身份与教学周'}</Typography>
-      </Stack>
+  return <Accordion ref={panel} disableGutters elevation={0} expanded={expanded} onChange={(_event,open)=>setExpanded(open)}
+    slotProps={{transition:{timeout:reducedMotion?0:340}}}
+    sx={{scrollMarginTop:'80px',bgcolor:'transparent','&:before':{display:'none'},borderTop:'1px solid',borderColor:'divider',borderRadius:'0!important'}}>
+    <AccordionSummary expandIcon={<ExpandMore sx={{fontSize:20}}/>} aria-controls="campus-preferences-content" id="campus-preferences-heading"
+      sx={{px:{xs:2,sm:2.5},minHeight:66,'& .MuiAccordionSummary-content':{alignItems:'center',gap:1.25,my:1.5}}}>
+      <Box sx={{width:30,height:30,borderRadius:'9px',display:'grid',placeItems:'center',flexShrink:0,color:'primary.main',bgcolor:theme=>alpha(theme.palette.primary.main,.09)}}><PersonOutline sx={{fontSize:18}}/></Box>
+      <Typography component="span" sx={{fontSize:17,fontWeight:650,flex:1,minWidth:0}}>校园信息</Typography>
+      <Typography sx={{fontSize:14,color:'text.secondary',maxWidth:{xs:135,sm:260},textAlign:'right',overflowWrap:'anywhere',lineHeight:1.6,pr:.5}}>{summary}</Typography>
     </AccordionSummary>
-    <AccordionDetails sx={{px: {xs: 2, sm: 3}, pb: {xs: 2, sm: 3}}}>
-    <Typography variant="body2" color="text.secondary" sx={{mt: .5, mb: 2}}>可选，仅存此设备，不发送给 AI。</Typography>
-    <Stack spacing={2}>
-      <Stack direction={{xs: 'column', sm: 'row'}} spacing={2}>
-        <TextField label="入学年份" placeholder="如 2026" value={entryYear} disabled={disabled}
+    <AccordionDetails sx={{px:{xs:2,sm:2.5},pt:0,pb:2.5}}>
+    <Stack spacing={1.5}>
+      <Typography sx={{fontSize:14,fontWeight:650,color:'text.secondary'}}>我的身份</Typography>
+      <Stack direction="row" spacing={1.25}>
+        <TextField label="入学年份" placeholder="如 2026" value={entryYear} disabled={disabled} size="small"
           slotProps={{htmlInput: {inputMode: 'numeric', maxLength: 4}}}
-          onChange={event => {edited(); setEntryYear(event.target.value);}} sx={{flex: 1}}/>
-        <TextField label="专业" placeholder="如 计算机科学与技术" value={major} disabled={disabled}
-          slotProps={{htmlInput: {maxLength: 24}}} onChange={event => {edited(); setMajor(event.target.value);}} sx={{flex: 2}}/>
+          onChange={event => {edited(); setEntryYear(event.target.value);}} sx={{flex:1,minWidth:0}}/>
+        <TextField label="专业" placeholder="如 计算机" value={major} disabled={disabled} size="small"
+          slotProps={{htmlInput: {maxLength: 24}}} onChange={event => {edited(); setMajor(event.target.value);}} sx={{flex:1.7,minWidth:0}}/>
       </Stack>
       <Stack direction="row" sx={{gap: 1, flexWrap: 'wrap'}} aria-label="身份">
-        {CAMPUS_ROLES.map(role => <Chip key={role.value} label={role.label} disabled={disabled}
+        {CAMPUS_ROLES.map(role => <Chip key={role.value} label={role.label} disabled={disabled} size="small" sx={{fontSize:14}}
           color={roles.includes(role.value) ? 'primary' : 'default'} variant={roles.includes(role.value) ? 'filled' : 'outlined'}
           onClick={() => toggleRole(role.value)} aria-pressed={roles.includes(role.value)}/>)}
       </Stack>
-      <Typography variant="body2" color="text.secondary">条件不明的通知仍保留，可在列表筛选。</Typography>
-      <TextField label="学期第一周周一" type="date" value={weekOneMonday} disabled={disabled}
+      <Typography sx={{fontSize:14,fontWeight:650,color:'text.secondary',pt:1}}>教学周</Typography>
+      <TextField label="第一周周一" type="date" value={weekOneMonday} disabled={disabled} size="small"
         slotProps={{inputLabel: {shrink: true}, htmlInput: {min: '2000-01-01', max: '2100-12-31'}}}
         onChange={event => {edited(); setWeekOneMonday(event.target.value);}}
-        helperText="用于换算教学周日期，请按校历填写。"/>
+        helperText="按校历填写"/>
       {error && <Alert severity="error">{error}</Alert>}
       {saved && <Typography role="status" variant="body2" color="success.main">已保存</Typography>}
-      <Stack direction="row" spacing={1}>
-        <Button variant="contained" disabled={disabled} onClick={save}>保存</Button>
+      <Stack direction="row" spacing={1} sx={{alignItems:'center',flexWrap:'wrap',rowGap:1}}>
+        <Button variant="contained" size="small" disabled={disabled} onClick={save}>保存</Button>
         <Button disabled={disabled} onClick={() => {edited(); setEntryYear(''); setMajor(''); setRoles([]); setWeekOneMonday('');}}>清空</Button>
+        <Typography variant="caption" color="text.secondary" sx={{ml:'auto!important',fontSize:14}}>仅保存在此设备</Typography>
       </Stack>
     </Stack>
     </AccordionDetails>

@@ -23,6 +23,8 @@ import {SearchQueryContext,HighlightedText} from '../../shared/ui/SearchHighligh
 import {noticeSearchMatches} from './search-matches';
 import {useSearchNavigation} from './useSearchNavigation';
 import {groupExampleNotices,isExampleNotice,readExamplesHidden,writeExamplesHidden} from '../../domain/examples';
+import {InboxCharm} from '../../shared/ui/InboxCharm';
+import {BackToTop} from '../../shared/ui/BackToTop';
 
 export interface FeedViewState {tab:0|1|2;query:string;sort:SortOrder;expandedIDs:Set<string>;expandedTaskIDs:Set<string>;favoritesOnly?:boolean;relevantOnly?:boolean}
 export const createFeedViewState=():FeedViewState=>({tab:0,query:'',sort:'priority',expandedIDs:new Set(),expandedTaskIDs:new Set(),favoritesOnly:false,relevantOnly:false});
@@ -125,11 +127,13 @@ export function FeedPage({app,actions,onCompose,onSettings,focusID,onFocusHandle
   </Stack>}
   </Box>
   <Box ref={searchResults} className="search-result-list" sx={{'& mark[data-search-current="true"]':{bgcolor:'primary.main',color:'primary.contrastText',outline:'2px solid',outlineColor:'primary.main',outlineOffset:2,borderRadius:.5}}}><AnimatedNotices query={query} editingID={editingID} onEditingClose={onEditingClose} key={tab} records={records} exampleDivider={!!allGroups.personal.length} app={app} actions={feedActions} now={now} expandedIDs={expandedIDs} onExpandedChange={toggleExpanded} expandedTaskIDs={expandedTaskIDs} onTaskExpandedChange={toggleTaskExpanded} onEmpty={setAnimationEmpty}/></Box>
-  {!records.length&&animationEmpty&&<Paper variant="outlined" sx={{p:4,textAlign:'center'}}><Typography variant="h6">{query?'没有找到匹配的通知':favoritesOnly?'此分类还没有收藏':tab===0?'暂时没有待办':tab===1?'暂时没有提醒':'还没有完成的通知'}</Typography><Typography color="text.secondary" sx={{mt:1,mb:2}}>{query?'换一个关键词试试。':favoritesOnly?'点通知右上角的星星即可收藏。':'添加通知，或者看看示例。'}</Typography>{favoritesOnly&&<Button onClick={()=>setView(previous=>({...previous,favoritesOnly:false}))}>显示全部通知</Button>}{!query&&!favoritesOnly&&<Stack direction="row" sx={{justifyContent:"center",flexWrap:'wrap',gap:1}}><Button variant="contained" onClick={onCompose}>新增通知</Button><Button variant="contained" color="secondary" onClick={()=>void showCatalogExamples()}>显示示例</Button></Stack>}</Paper>}
+  {!records.length&&animationEmpty&&<Paper variant="outlined" sx={{p:4,textAlign:'center'}}><Box sx={{mb:1}}><InboxCharm size={64}/></Box><Typography variant="h6">{query?'没有找到匹配的通知':favoritesOnly?'此分类还没有收藏':tab===0?'暂时没有待办':tab===1?'暂时没有提醒':'还没有完成的通知'}</Typography><Typography color="text.secondary" sx={{mt:1,mb:2}}>{query?'换一个关键词试试。':favoritesOnly?'点通知右上角的星星即可收藏。':'添加通知，或者看看示例。'}</Typography>{favoritesOnly&&<Button onClick={()=>setView(previous=>({...previous,favoritesOnly:false}))}>显示全部通知</Button>}{!query&&!favoritesOnly&&<Stack direction="row" sx={{justifyContent:"center",flexWrap:'wrap',gap:1}}><Button variant="contained" onClick={onCompose}>新增通知</Button><Button variant="contained" color="secondary" onClick={()=>void showCatalogExamples()}>显示示例</Button></Stack>}</Paper>}
   {!!records.length&&(examplesHidden||!catalogExamples.length)&&<Box sx={{display:'flex',justifyContent:'center',py:1}}><Button variant="contained" color="secondary" onClick={()=>void showCatalogExamples()}>显示示例</Button></Box>}
+  {!!records.length&&<Stack className="feed-end" direction="row" sx={{alignItems:'center',justifyContent:'center',gap:1,py:1,color:'text.secondary'}}><InboxCharm size={46}/><Typography sx={{fontSize:13}}>看到这里啦</Typography></Stack>}
   <Box component="footer" className="product-footer" sx={{py:2,borderTop:'1px solid',borderColor:'divider'}}>
    <Typography variant="body2" color="text.secondary">内容由 AI 生成，请注意甄别。</Typography>
    <Typography variant="body2" color="text.secondary" sx={{mt:.5}}>Kemou 制作</Typography>
   </Box>
+  <BackToTop anchorRef={searchResults} focusRef={controls} embedded={embedded} scopeKey={scopeKey}/>
  </Stack></SearchQueryContext.Provider>;
 }

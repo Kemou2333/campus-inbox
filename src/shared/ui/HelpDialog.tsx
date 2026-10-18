@@ -10,6 +10,7 @@ import {updateNote} from '../../domain/notice';
 import {GuideFocus} from '../../features/onboarding/GuideFocus';
 import {canAdvanceGuide} from '../../features/onboarding/guide-progress';
 import {AndroidDownloads} from './AndroidDownloads';
+import {InboxCharm} from './InboxCharm';
 const guideSteps=[
  {title:'粘贴通知',description:'先用这条通知试试看。'},
  {title:'生成待办',description:'点「模拟整理」，看看结果。'},
@@ -40,8 +41,8 @@ export function HelpDialog({open,onClose,onExamples,onCompose}:{open:boolean;onC
   <DialogContent ref={scroll} sx={{pt:'4px!important','& .notice-actions':{flexWrap:'wrap'},'& .notice-card':{p:{xs:1.5,sm:2}}}}>
    {!intro&&<LinearProgress aria-label="引导进度" aria-valuetext={`第${step+1}步，共${guideSteps.length}步`} variant="determinate" value={(step+1)/guideSteps.length*100} sx={{height:4,borderRadius:2,mb:2.5}}/>}
    {intro&&<Box component="img" src={`${import.meta.env.BASE_URL}onboarding/cover.png`} alt="校园 Inbox：群通知，变成待办" width="380" height="216" sx={{display:'block',width:'100%',height:'auto',maxWidth:380,maxHeight:compact?140:216,objectFit:'contain',mx:'auto',mb:2,borderRadius:2}}/>}
-   <Box ref={caption} data-guide-caption sx={{position:intro||compact?'static':'sticky',top:0,zIndex:2,bgcolor:'background.paper',pb:1}}><Typography component="h3" ref={title} tabIndex={-1} sx={{fontSize:{xs:26,sm:28},fontWeight:700,lineHeight:1.4,outline:'none'}}>{intro?'你好，我是校园 Inbox':current.title}</Typography>
-   <Typography id="guide-description" sx={{mt:1,mb:1,fontSize:{xs:19,sm:20},fontWeight:500,lineHeight:1.6,whiteSpace:'pre-line'}}>{intro?'帮你把群通知变成清楚的待办。\n一起试试：粘贴、生成、展开、打勾。':description}</Typography>
+   <Box ref={caption} data-guide-caption sx={{position:intro||compact?'static':'sticky',top:0,zIndex:2,bgcolor:'background.paper',pb:1}}><Typography component="h3" ref={title} tabIndex={-1} sx={{fontSize:{xs:26,sm:28},fontWeight:700,lineHeight:1.4,outline:'none'}}>{intro?'从一条通知开始':current.title}</Typography>
+   <Typography id="guide-description" sx={{mt:1,mb:1,fontSize:intro?18:{xs:19,sm:20},fontWeight:intro?400:500,lineHeight:1.65,whiteSpace:'pre-line'}}>{intro?'粘贴通知，看清要做什么。\n完成一项，打一个勾。':description}</Typography>
    </Box>
    {intro&&!window.CampusNative?.postMessage&&<AndroidDownloads compact/>}
    {!intro&&step===0&&<Stack spacing={1.5}><TextField data-guide-original multiline minRows={3} maxRows={6} value={pasted?demoReadingText:''} placeholder="演示通知会粘贴到这里" slotProps={{input:{readOnly:true},htmlInput:{'aria-label':'演示通知原文'}}}/><Button data-guide-paste variant="outlined" onClick={()=>setPasted(true)}>{pasted?'重新粘贴':'粘贴演示通知'}</Button></Stack>}
@@ -59,5 +60,5 @@ export function HelpDialog({open,onClose,onExamples,onCompose}:{open:boolean;onC
  <Dialog open={!!note&&open} onClose={()=>setNote(null)}><DialogTitle>{note?.title}</DialogTitle><DialogContent><TextField multiline minRows={3} value={note?.text??''} label="演示笔记" onChange={event=>setNote(value=>value?{...value,text:event.target.value}:null)}/></DialogContent><DialogActions><Button onClick={()=>setNote(null)}>取消</Button><Button onClick={()=>{if(note)setDemo(value=>value?updateNote(value,note.target,note.text):value);setNote(null);}}>保存演示笔记</Button></DialogActions></Dialog></>;
 }
 export function AboutDialog({open,onClose}:{open:boolean;onClose:()=>void}){
- return <Dialog open={open} onClose={onClose}><DialogTitle>校园 Inbox</DialogTitle><DialogContent><Box component="img" src={`${import.meta.env.BASE_URL}onboarding/cover.png`} alt="校园 Inbox：群通知，变成待办" width="380" height="216" sx={{display:'block',width:'100%',maxWidth:380,height:'auto',borderRadius:2,mb:2,mx:'auto'}}/><Typography sx={{fontSize:18,lineHeight:1.7}}>把群通知变成清楚的待办。<br/>看步骤、记进度，也能随时查原文。</Typography><AndroidDownloads compact/><Typography color="text.secondary" sx={{mt:2}}>Kemou 制作 · 支持网页与安卓</Typography><Typography variant="caption" color="text.secondary" sx={{display:'block',mt:2}}>版本 {appVersion}</Typography></DialogContent><DialogActions><Button variant="contained" onClick={onClose}>关闭</Button></DialogActions></Dialog>;
+ return <Dialog open={open} onClose={onClose}><DialogTitle>校园 Inbox</DialogTitle><DialogContent><Box component="img" src={`${import.meta.env.BASE_URL}onboarding/cover.png`} alt="校园 Inbox：群通知，变成待办" width="380" height="216" sx={{display:'block',width:'100%',maxWidth:380,height:'auto',borderRadius:2,mb:2,mx:'auto'}}/><Typography sx={{fontSize:18,lineHeight:1.7}}>把群通知变成清楚的待办。<br/>看步骤，记进度。</Typography><AndroidDownloads compact/><Box sx={{mt:2,display:'flex',alignItems:'center',gap:1.5}}><InboxCharm size={44}/><Box><Typography color="text.secondary" sx={{fontSize:14}}>Kemou 制作</Typography><Typography variant="caption" color="text.secondary">版本 {appVersion} · 网页 / 安卓</Typography></Box></Box></DialogContent><DialogActions><Button variant="contained" onClick={onClose}>关闭</Button></DialogActions></Dialog>;
 }
