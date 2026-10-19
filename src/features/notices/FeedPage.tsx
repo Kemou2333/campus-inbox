@@ -120,14 +120,14 @@ export function FeedPage({app,actions,onCompose,onSettings,focusID,onFocusHandle
    <Typography variant="h4" component="h1">通知</Typography>
    <Button variant="contained" onClick={onCompose} sx={{flexShrink:0}}>添加</Button>
   </Stack>}
-  <Tabs value={tab} onChange={(_,value)=>setTab(value)} variant="fullWidth" aria-label="通知分类" sx={{borderBottom:'1px solid',borderColor:'divider',mt:embedded?0:1.5,'& .MuiTabs-indicator':{bgcolor:tab===1?'secondary.main':tab===2?'success.main':'primary.main'}}}>
+  <Tabs value={tab} onChange={(_,value)=>setTab(value)} variant="fullWidth" aria-label="通知分类" sx={{borderBottom:'1px solid',borderColor:'divider',mt:embedded?0:1.5,'& .MuiTab-root':{fontSize:16,fontWeight:700},'& .MuiTabs-indicator':{bgcolor:tab===1?'secondary.main':tab===2?'success.main':'primary.main'}}}>
    <Tab label={`待办 ${pending.length}`}/><Tab label={`提醒 ${reminders.length}`} sx={{'&.Mui-selected':{color:'secondary.main'}}}/><Tab label={`已完成 ${complete.length}`} sx={{'&.Mui-selected':{color:'success.main'}}}/>
   </Tabs>
   </Box>
   <Box className="feed-filters">
   <Stack direction="row" sx={{gap:1,mt:1.5,alignItems:'center'}}>
-   <TextField placeholder="搜索通知" value={query} onChange={e=>setQuery(e.target.value)} size="small" sx={{flex:1,minWidth:0}} slotProps={{htmlInput:{'aria-label':'搜索通知'},input:{endAdornment:query?<InputAdornment position="end"><IconButton aria-label="清除搜索" onClick={()=>setQuery('')}><Close fontSize="small"/></IconButton></InputAdornment>:undefined}}}/>
-   <Tooltip title="筛选"><IconButton aria-label="筛选通知" onClick={()=>setFiltersOpen(true)} sx={{width:44,height:44,border:'1px solid',borderColor:'divider',borderRadius:'12px',color:favoritesOnly||relevant||sort!=='priority'?'primary.main':'text.secondary',bgcolor:favoritesOnly||relevant||sort!=='priority'?'action.selected':undefined}}><FilterAltOutlined/></IconButton></Tooltip>
+   <TextField placeholder="搜索通知" value={query} onChange={e=>setQuery(e.target.value)} size="small" sx={{flex:1,minWidth:0,'& .MuiOutlinedInput-root':{borderRadius:'11px',minHeight:44,fontSize:14}}} slotProps={{htmlInput:{'aria-label':'搜索通知'},input:{endAdornment:query?<InputAdornment position="end"><IconButton aria-label="清除搜索" onClick={()=>setQuery('')}><Close fontSize="small"/></IconButton></InputAdornment>:undefined}}}/>
+   <Tooltip title="筛选"><IconButton aria-label="筛选通知" onClick={()=>setFiltersOpen(true)} sx={{width:44,height:44,border:'1px solid',borderColor:'divider',borderRadius:'11px',color:favoritesOnly||relevant||sort!=='priority'?'primary.main':'text.secondary',bgcolor:favoritesOnly||relevant||sort!=='priority'?'action.selected':undefined}}><FilterAltOutlined/></IconButton></Tooltip>
   </Stack>
   {(favoritesOnly||relevant||sort!=='priority')&&<Stack className="active-feed-filters" direction="row" sx={{gap:.75,mt:1,flexWrap:'wrap'}}>
    {favoritesOnly&&<Chip label="收藏" size="small" onDelete={()=>setView(previous=>({...previous,favoritesOnly:false}))}/>}

@@ -85,8 +85,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
   });
  }
  return <Stack spacing={2} className="page-enter">
-  <Typography variant={embedded?"h5":"h4"} component={embedded?"h2":"h1"}>添加</Typography>
-  <Stack direction="row" sx={{alignItems:'center',gap:1,flexWrap:'wrap'}}><Button variant="contained" color="secondary" startIcon={<AutoAwesomeOutlined/>} disabled={app.busy||adding} onClick={fillDemo}>一键填入示例</Button></Stack>
+  <Typography component={embedded?"h2":"h1"} sx={{fontSize:{xs:29,sm:32},fontWeight:800,lineHeight:1.3,letterSpacing:'-.6px'}}>添加</Typography>
   {app.pending&&<Alert severity="info" action={<Button onClick={app.recoverResult}>保存结果</Button>}>上次整理的结果还没保存，无需再次调用 AI。</Alert>}
   {!!app.legacyRecords.length&&<Alert severity="info" action={<Button onClick={app.recoverLegacyResult}>保存结果</Button>}>旧版有 {app.legacyRecords.length} 条整理结果未保存，无需重新调用 AI。</Alert>}
   {app.legacyMissingFiles&&<Alert severity="info" onClose={()=>app.setLegacyMissingFiles(false)}>旧版草稿文字已保留，草稿附件需要重新添加。</Alert>}
@@ -95,20 +94,18 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
    onDragOver={event=>{event.preventDefault();if(app.busy||adding){event.dataTransfer.dropEffect='none';return;}event.dataTransfer.dropEffect='copy';setDragTarget(draft.id);}}
    onDragLeave={event=>{if(!(event.relatedTarget instanceof Node)||!event.currentTarget.contains(event.relatedTarget))setDragTarget(null);}}
    onDrop={event=>{event.preventDefault();setDragTarget(null);if(app.busy||importLock.current)return;const content=readTransfer(event.dataTransfer);void importContent(draft.id,()=>content);}}
-   sx={{p:{xs:1.5,sm:2},opacity:leaving?0:1,transition:reducedMotion?'none':'opacity 420ms cubic-bezier(.4,0,.2,1)',borderColor:dragTarget===draft.id?'primary.main':undefined,bgcolor:dragTarget===draft.id?'action.hover':undefined}}>
-   <Stack direction="row" sx={{alignItems:"center",justifyContent:"space-between",mb:1.5}}>
-    <Typography variant="h6">通知 {index+1}</Typography>
+   sx={{position:'relative',p:{xs:'17px',sm:'20px'},borderRadius:'16px',opacity:leaving?0:1,transition:reducedMotion?'none':'opacity 420ms cubic-bezier(.4,0,.2,1)',borderColor:dragTarget===draft.id?'primary.main':undefined,bgcolor:dragTarget===draft.id?'action.hover':undefined}}>
+   <Stack direction="row" sx={app.drafts.length>1?{alignItems:"center",justifyContent:"space-between",mb:1}:{position:"absolute",right:8,top:8,zIndex:1}}>
+    {app.drafts.length>1&&<Typography variant="h6">通知 {index+1}</Typography>}
     <Stack direction="row" sx={{gap:.5,alignItems:'center'}}>
-     {!draft.text&&<Tooltip title="粘贴文字与图片"><span><IconButton sx={{border:'1px solid',borderColor:'divider'}} aria-label={`给通知${index+1}粘贴原文`} disabled={app.busy||adding} onClick={()=>void importContent(draft.id,readClipboard,{start:0,end:0,expectedText:draft.text})}><ContentPaste fontSize="small"/></IconButton></span></Tooltip>}
      {(app.drafts.length>1||draft.text||draft.attachments.length>0)&&<IconButton aria-label={`移除通知${index+1}`} disabled={app.busy||adding||leaving} onClick={()=>removeDraft(draft,index)}><Close/></IconButton>}
     </Stack>
    </Stack>
-   {draft.id===app.demoDraftID&&<Typography variant="body2" color="secondary.main" sx={{mb:1,fontWeight:600}}>示例体验</Typography>}
-   <TextField className="composer-text" placeholder="粘贴通知，图片和文件会作为附件…" multiline minRows={5} maxRows={embedded?9:13} value={draft.text} disabled={app.busy||adding} onChange={e=>app.changeDraft(draft.id,e.target.value)} onPaste={event=>pasteEvent(draft.id,event)} slotProps={{htmlInput:{'aria-label':`通知${index+1}原文`}}} error={total>4000} helperText={!draft.text.trim()&&draft.attachments.length?'补充通知文字后可整理。':undefined}/>
+   <TextField className="composer-text" placeholder="把群通知粘贴到这里…" multiline minRows={9} maxRows={embedded?13:16} sx={{'& .MuiOutlinedInput-root':{p:0,bgcolor:'transparent',borderRadius:0},'& .MuiOutlinedInput-notchedOutline':{border:0},'& .MuiInputBase-inputMultiline':{fontSize:{xs:16,sm:17},lineHeight:1.9,minHeight:{xs:310,sm:290},pr:draft.text&&app.drafts.length===1?'28px':0}}} value={draft.text} disabled={app.busy||adding} onChange={e=>app.changeDraft(draft.id,e.target.value)} onPaste={event=>pasteEvent(draft.id,event)} slotProps={{htmlInput:{'aria-label':`通知${index+1}原文`}}} error={total>4000} helperText={!draft.text.trim()&&draft.attachments.length?'补充通知文字后可整理。':undefined}/>
    {importWarnings[draft.id]&&<Alert severity="warning" sx={{mt:1}} onClose={()=>setImportWarnings(old=>({...old,[draft.id]:''}))}>{importWarnings[draft.id]}</Alert>}
    <Stack direction="row" spacing={1} sx={{alignItems:"center",justifyContent:'space-between',mt:1}}>
-    <Tooltip title="添加附件 · 仅存本机"><span><IconButton sx={{border:'1px solid',borderColor:'divider'}} aria-label={`给通知${index+1}添加附件`} disabled={app.busy||adding} onClick={()=>{setTarget(draft.id);input.current?.click();}}><AttachFile/></IconButton></span></Tooltip>
-    {index===app.drafts.length-1&&<Typography className="composer-count" aria-label={`本次通知总字数 ${total}，上限4000`} color={total>4000?'error.main':'text.secondary'} variant="body2" sx={{whiteSpace:'nowrap',fontVariantNumeric:'tabular-nums'}}>{total}/4000</Typography>}
+    <Stack direction="row" sx={{alignItems:'center',gap:.5,minWidth:0}}><Tooltip title="添加附件 · 仅存本机"><span><IconButton sx={{width:40,height:40,borderRadius:'10px'}} aria-label={`给通知${index+1}添加附件`} disabled={app.busy||adding} onClick={()=>{setTarget(draft.id);input.current?.click();}}><AttachFile/></IconButton></span></Tooltip><Tooltip title="粘贴"><span><IconButton sx={{width:40,height:40,borderRadius:'10px'}} aria-label={`给通知${index+1}粘贴原文`} disabled={app.busy||adding} onClick={()=>void importContent(draft.id,readClipboard,{start:0,end:0,expectedText:draft.text})}><ContentPaste sx={{fontSize:21}}/></IconButton></span></Tooltip>{index===0&&<Button size="small" variant="text" disabled={app.busy||adding} onClick={fillDemo} sx={{px:.5,minWidth:0,fontSize:13,fontWeight:500,color:'text.secondary',whiteSpace:'nowrap'}}>填入示例</Button>}</Stack>
+    {index===app.drafts.length-1&&total>=3600&&<Typography className="composer-count" aria-label={`本次通知总字数 ${total}，上限4000`} color={total>4000?'error.main':'text.secondary'} variant="body2" sx={{whiteSpace:'nowrap',fontVariantNumeric:'tabular-nums'}}>{total}/4000</Typography>}
    </Stack>
    <AttachmentList ids={draft.attachments} platform={app.platform} onRemove={app.busy||adding?undefined:id=>void app.detach(draft.id,id).catch(app.report)}/>
   </Paper></Collapse>)}
@@ -118,7 +115,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
    {app.busy&&<LinearProgress sx={{mb:1,borderRadius:1}}/>}
    {app.busy&&showWaitHint&&<Typography variant="body2" color="text.secondary" role="status" sx={{mb:1}}>正在确认提交，确认后可离开。</Typography>}
    <Stack direction="row" sx={{alignItems:'center',gap:1}}>
-     <Button fullWidth variant="contained" startIcon={!app.busy&&(app.demoDraftID||!retrySeconds)?<AutoAwesomeOutlined/>:undefined} sx={{whiteSpace:'nowrap',minHeight:56,fontSize:17,fontWeight:700}} disabled={app.busy||adding||!hasContent||!app.demoDraftID&&(!!retrySeconds||total>4000||app.pending||!!app.legacyRecords.length||!!app.unconfirmedSubmissions.length||!app.config)} onClick={()=>void submit()}>{app.busy?app.stage:!app.demoDraftID&&retrySeconds?retryText:'整理'}</Button>
+     <Button fullWidth variant="contained" startIcon={!app.busy&&(app.demoDraftID||!retrySeconds)?<AutoAwesomeOutlined/>:undefined} sx={{whiteSpace:'nowrap',minHeight:52,borderRadius:'12px',fontSize:17,fontWeight:700}} disabled={app.busy||adding||!hasContent||!app.demoDraftID&&(!!retrySeconds||total>4000||app.pending||!!app.legacyRecords.length||!!app.unconfirmedSubmissions.length||!app.config)} onClick={()=>void submit()}>{app.busy?app.stage:!app.demoDraftID&&retrySeconds?retryText:'整理'}</Button>
      {app.busy&&<Button sx={{flexShrink:0,whiteSpace:'nowrap'}} onClick={app.cancel}>停止等待</Button>}
    </Stack>
   </Box>
