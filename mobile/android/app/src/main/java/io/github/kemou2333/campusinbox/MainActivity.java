@@ -15,6 +15,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.provider.CalendarContract;
+import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
@@ -75,6 +76,7 @@ public final class MainActivity extends Activity {
     private String reminderPermissionRequest;
     private NativeUpdates updates;
     private boolean foreground;
+    private long lastHaptic = -900;
     private boolean updateDialogShowing;
     private final Runnable updateCheck = () -> {
         if (foreground && updates != null) updates.checkWhenDue(this::offerUpdate);
@@ -280,7 +282,10 @@ public final class MainActivity extends Activity {
             switch (action) {
                 case "capabilities":
                     respond(reply, id, new JSONObject().put("calendar", calendarIntent().resolveActivity(getPackageManager()) != null)
-                            .put("fileSave", exports != null).put("shareText", true).put("localReminders", true).put("appearance", true).put("theme", theme()));
+                            .put("fileSave", exports != null).put("shareText", true).put("localReminders", true).put("appearance", true).put("haptics", true).put("theme", theme()));
+                    break;
+                case "haptic":
+                    respond(reply, id, new JSONObject().put("performed", performOperationHaptic(payload)));
                     break;
                 case "appearance":
                     if (!(payload.opt("dark") instanceof Boolean)) throw new IllegalArgumentException("主题模式不正确");
@@ -313,6 +318,22 @@ public final class MainActivity extends Activity {
     }
 
     private Intent calendarIntent() { return new Intent(Intent.ACTION_INSERT).setData(CalendarContract.Events.CONTENT_URI); }
+
+    private boolean performOperationHaptic(JSONObject payload) throws JSONException {
+        String kind = payload.getString("kind");
+        if (!"complete".equals(kind) && !"organized".equals(kind) && !"remove".equals(kind)) {
+            throw new IllegalArgumentException("不支持这项触感操作");
+        }
+        long now = SystemClock.uptimeMillis();
+        if (!foreground || web == null || !web.isShown() || !web.hasWindowFocus() || now - lastHaptic < 900) return false;
+        lastHaptic = now;
+        int effect = "remove".equals(kind) ? HapticFeedbackConstants.CONTEXT_CLICK
+                : Build.VERSION.SDK_INT >= 30 ? HapticFeedbackConstants.CONFIRM : HapticFeedbackConstants.VIRTUAL_KEY;
+        try {
+            // No override flags: Android's system touch-feedback setting stays in control.
+            return web.performHapticFeedback(effect);
+        } catch (RuntimeException ignored) { return false; }
+    }
 
     private void scheduleReminder(JSONObject payload, JavaScriptReplyProxy reply, String requestId) throws JSONException {
         String id = checkedText(payload, "id", 320, true);

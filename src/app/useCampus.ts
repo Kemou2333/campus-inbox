@@ -6,6 +6,9 @@ import {NoticeReading,NOTICE_READING_KEY_PREFIX} from '../infrastructure/notice-
 import {accountLocalScope,initialAccountLocalScope} from '../infrastructure/local-account-scope';
 import {restoredTrashNotice,type TrashEntry} from '../domain/notice-trash';
 import {friendlyErrorMessage} from '../shared/error-message';
+import {playOperationSound} from '../shared/operation-sounds';
+import {triggerOperationHaptic} from '../shared/operation-haptics';
+import {isNewCompletion} from '../features/notices/completion-feedback';
 import {createGuestDemoNotice,GUEST_DEMO_MARKER,GUEST_DEMO_SOURCE,isGuestDemoDraft,waitForGuestDemo} from '../infrastructure/guest-demo';
 import {createCloudSync, type CloudSync, type SyncState} from '../infrastructure/sync-client';
 import {createAuthClient, type AuthClient, type AuthSession, type AuthOptions} from '../infrastructure/auth-client';
@@ -126,6 +129,8 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
    try{save(current.filter(n=>n.id!==id));}catch(error){trashStore.forget(scope,entry.id);throw error;}
    refreshLocalNoticeState();void platform.cancelReminder(id).catch(report);for(const task of before.tasks)void platform.cancelReminder(localReminderID(id,task.id)).catch(report);
    tell('已移到回收站',()=>void restoreTrash(entry.id,scope).catch(report));
+   playOperationSound('remove');
+   triggerOperationHaptic(platform,'remove');
   }catch(e){report(e);}
  }
  async function restoreTrash(id:string,expectedScope=localDataScopeRef.current):Promise<string>{
@@ -146,6 +151,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   await cleanupFiles([...new Set(removed.flatMap(entry=>entry.notice.attachments))],fileReferences());tell('回收站已清空');
  }
  function act(id:string,change:(n:Notice)=>Notice,text:string){const result=update(id,change);if(result){
+  if(isNewCompletion(result)){playOperationSound('complete');triggerOperationHaptic(platform,'complete');}
   if(!result.after.completed)for(const old of result.before.tasks){const next=result.after.tasks.find(task=>task.id===old.id);if(!old.completed&&!old.dismissed&&next&&(next.completed||next.dismissed))void platform.cancelReminder(localReminderID(id,old.id)).catch(report);}
   tell(text,()=>undoChange(result.before,result.after));return result;
  }}
@@ -308,6 +314,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
        if(JSON.stringify(next)!==JSON.stringify(current))save(next);
        const first=detail.noticeIds.find(id=>next.some(n=>n.id===id));if(first)setLatestAddedID(first);
        context.journal.remove(submission.requestId);
+       if(first&&Date.now()-Date.parse(submission.createdAt)<120_000){playOperationSound('organized');triggerOperationHaptic(platform,'organized');}
       }
       for(const job of completed)jobSeenCompleted.current.add(job.id);
      }
@@ -418,7 +425,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
    const notice=createGuestDemoNotice(source.id),current=repository.load();
    if(!current.some(n=>n.id===notice.id))save([...current,notice]);
    // Only this explicit sample is consumed. Personal drafts and attachments remain intact.
-   consumeJobDrafts([source]);setLatestAddedID(notice.id);tell('示例已整理');return true;
+   consumeJobDrafts([source]);setLatestAddedID(notice.id);tell('示例已整理');playOperationSound('organized');triggerOperationHaptic(platform,'organized');return true;
   }catch(error){if(controller.signal.aborted){tell('已停止，示例原文仍在。');return false;}throw error;}
   finally{analyzing.current=false;setBusy(false);setStage('');if(abort.current===controller)abort.current=null;}
  }

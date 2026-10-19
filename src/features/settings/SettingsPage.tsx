@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Alert, Box, Button, ButtonBase, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
-  DialogTitle, Divider, Paper, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography,
+  DialogTitle, Divider, Paper, Stack, Switch, TextField, ToggleButton, ToggleButtonGroup, Typography,
 } from '@mui/material';
 import MailOutline from '@mui/icons-material/MailOutlined';
 import PaletteOutlined from '@mui/icons-material/PaletteOutlined';
+import VolumeUpOutlined from '@mui/icons-material/VolumeUpOutlined';
+import {operationSoundsEnabled,setOperationSoundsEnabled} from '../../shared/operation-sounds';
+import VibrationOutlined from '@mui/icons-material/VibrationOutlined';
+import {operationHapticsEnabled,setOperationHapticsEnabled} from '../../shared/operation-haptics';
 import DownloadOutlined from '@mui/icons-material/DownloadOutlined';
 import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined';
 import DeleteOutline from '@mui/icons-material/DeleteOutlined';
@@ -67,6 +71,8 @@ function ToolRow({icon,title,detail,onClick,disabled=false}:{icon:ReactNode;titl
 
 export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, onFilterNotices, expandCampus = false }: Props) {
   const [running, setRunning] = useState<string | null>(null);
+  const [sounds,setSounds]=useState(operationSoundsEnabled);
+  const [haptics,setHaptics]=useState(operationHapticsEnabled);
   const [error, setError] = useState('');
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [conflict, setConflict] = useState<SyncConflict | null>(null);
@@ -153,13 +159,23 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
           <ToggleButton value="system">系统</ToggleButton><ToggleButton value="light">浅色</ToggleButton><ToggleButton value="dark">深色</ToggleButton>
         </ToggleButtonGroup>
       </Stack>
+      <Stack direction="row" sx={{alignItems:'center',gap:1.25,px:{xs:2,sm:2.5},py:1.75,borderTop:'1px solid',borderColor:'divider'}}>
+        <SettingIcon><VolumeUpOutlined/></SettingIcon>
+        <Box sx={{flex:1}}><Typography component="h3" sx={{fontSize:16,fontWeight:650}}>操作音效</Typography><Typography sx={{fontSize:13,color:'text.secondary',mt:.3}}>完成、整理、删除时轻响</Typography></Box>
+        <Switch checked={sounds} slotProps={{input:{'aria-label':'操作音效'}}} onChange={(_event,enabled)=>{try{setOperationSoundsEnabled(enabled);setSounds(enabled);}catch(issue){app.report(issue);}}}/>
+      </Stack>
+      {app.platform.kind==='android'&&<Stack direction="row" sx={{alignItems:'center',gap:1.25,px:{xs:2,sm:2.5},py:1.75,borderTop:'1px solid',borderColor:'divider'}}>
+        <SettingIcon><VibrationOutlined/></SettingIcon>
+        <Box sx={{flex:1}}><Typography component="h3" sx={{fontSize:16,fontWeight:650}}>操作震动</Typography><Typography sx={{fontSize:13,color:'text.secondary',mt:.3}}>跟随系统触感设置</Typography></Box>
+        <Switch checked={haptics} slotProps={{input:{'aria-label':'操作震动'}}} onChange={(_event,enabled)=>{try{setOperationHapticsEnabled(enabled);setHaptics(enabled);}catch(issue){app.report(issue);}}}/>
+      </Stack>}
       <CampusPreferencesPanel value={app.preferences} onSave={app.setPreferences} disabled={busy} initiallyExpanded={expandCampus} onApplyFilter={onFilterNotices}/>
       <TeachingWeekPanel value={app.preferences} onSave={app.setPreferences} disabled={busy}/>
     </Paper>
 
     <Paper variant="outlined" sx={{borderRadius:'16px',overflow:'hidden'}}>
       <Typography component="h2" sx={{fontSize:20,fontWeight:750,px:{xs:2,sm:2.5},py:2}}>工具</Typography>
-      <ToolRow icon={<DownloadOutlined/>} title="安卓下载" detail="蓝奏 / GitHub" onClick={()=>setDownloadsOpen(true)}/>
+      {app.platform.kind!=='android'&&<ToolRow icon={<DownloadOutlined/>} title="安卓下载" detail="蓝奏 / GitHub" onClick={()=>setDownloadsOpen(true)}/>}
       <ToolRow icon={<Inventory2Outlined/>} title="导入与导出" disabled={busy} onClick={()=>setTransferOpen(true)}/>
       <ToolRow icon={<DeleteOutline/>} title="回收站" detail={app.trashItems.length?String(app.trashItems.length):undefined} disabled={busy} onClick={()=>setTrashOpen(true)}/>
       <input ref={picker} type="file" accept="application/json,.json" hidden aria-label="选择通知备份" onChange={event=>{

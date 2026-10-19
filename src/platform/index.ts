@@ -45,12 +45,15 @@ export interface LocalReminder {
   triggerMillis: number;
 }
 export type ReminderResult = { status: 'scheduled' | 'permission-denied' | 'unsupported'; approximate: true };
+export type OperationHaptic = 'complete' | 'organized' | 'remove';
 
 export interface PlatformAPI {
   readonly kind: 'browser' | 'android';
   readonly ready: Promise<PlatformCapabilities>;
   /** Keep native system bars in the same light/dark mode as the web surface. */
   setAppearance?(dark:boolean):Promise<void>;
+  /** Best-effort confirmation after saving an important action; follows system touch feedback. */
+  hapticFeedback?(kind:OperationHaptic):Promise<void>;
   /** Takes one item from the native queue. Never triggers AI or alters a draft. */
   getSharedText(): Promise<string | null>;
   onShare(listener: () => void): () => void;

@@ -1,5 +1,5 @@
 import {lazy,Suspense,useCallback,useEffect,useRef,useState} from 'react';
-import {Alert,AppBar,BottomNavigation,BottomNavigationAction,Box,Button,CircularProgress,Container,CssBaseline,Divider,IconButton,Paper,Snackbar,Stack,Toolbar,Tooltip,Typography,useMediaQuery} from '@mui/material';
+import {Alert,AppBar,BottomNavigation,BottomNavigationAction,Box,Button,CircularProgress,Container,CssBaseline,Dialog,DialogActions,DialogContent,DialogTitle,Divider,IconButton,Paper,Snackbar,Stack,Toolbar,Tooltip,Typography,useMediaQuery} from '@mui/material';
 import {ThemeProvider} from '@mui/material/styles';
 import Inbox from '@mui/icons-material/Inbox';
 import AddCircleOutline from '@mui/icons-material/AddCircleOutlineOutlined';
@@ -24,15 +24,23 @@ import {useHumanVerification} from '../features/security/useHumanVerification';
 import {HumanVerificationDialog} from '../features/security/HumanVerificationDialog';
 import type {Notice} from '../domain/types';
 import {SearchQueryContext} from '../shared/ui/SearchHighlight';
+import {AndroidDownloads} from '../shared/ui/AndroidDownloads';
+import {installOperationSounds} from '../shared/operation-sounds';
+import {createFirstEntryMotion} from '../shared/first-entry-motion';
 
 const ShareImageDialog=lazy(()=>import('../features/sharing/ShareImageDialog'));
 const NoticeQuestionDialog=lazy(()=>import('../features/questions/NoticeQuestionDialog'));
 
 const nav=[{label:'通知',icon:<Inbox/>},{label:'添加',icon:<AddCircleOutline/>},{label:'设置',icon:<SettingsOutlined/>}];
 export default function App(){
+ useEffect(installOperationSounds,[]);
  const verification=useHumanVerification();const app=useCampus({onHumanVerification:verification.verify});const wide=useMediaQuery('(min-width:960px), (min-width:600px) and (max-height:500px)');const split=useMediaQuery('(min-width:960px)');const systemDark=useMediaQuery('(prefers-color-scheme:dark)');
  const exampleRequest=useRef(new URLSearchParams(location.search).get('examples')==='1'),exampleStarted=useRef(false);
- const [page,setPage]=useState(0);const [login,setLogin]=useState(false);const [help,setHelp]=useState(()=>localStorage.getItem('campus-inbox:tutorial:v2')!=='seen');
+ const [page,setPage]=useState(0);const [login,setLogin]=useState(false);const [help,setHelp]=useState(()=>{try{return localStorage.getItem('campus-inbox:tutorial:v2')!=='seen';}catch{return true;}});
+ const [downloadsOpen,setDownloadsOpen]=useState(false),[downloadHint,setDownloadHint]=useState(false);
+ const [firstEntry]=useState(()=>{try{return createFirstEntryMotion(localStorage);}catch{return createFirstEntryMotion(null);}});
+ const reducedMotion=useMediaQuery('(prefers-reduced-motion: reduce)');
+ useEffect(()=>{if(help||app.bootError)return;let stop=()=>{};const timer=setTimeout(()=>{stop=firstEntry.play(document,reducedMotion);},360);return()=>{clearTimeout(timer);stop();};},[firstEntry,help,page,split,reducedMotion,app.bootError]);
  const [about,setAbout]=useState(false);const [note,setNote]=useState<NoteEditor|null>(null);const [details,setDetails]=useState<string|null>(null);const [calendar,setCalendar]=useState<CalendarSelection|null>(null);const [focusID,setFocusID]=useState<string|null>(null);
  const [settingsDialog,setSettingsDialog]=useState(false);
  const [expandCampus,setExpandCampus]=useState(false);
@@ -47,12 +55,12 @@ export default function App(){
  useEffect(()=>{if(app.latestAddedID){setPage(0);setFocusID(app.latestAddedID);}},[app.latestAddedID]);
  const dark=app.theme==='system'?(app.capabilities?.theme?.dark??systemDark):app.theme==='dark';const theme=makeTheme(dark,app.capabilities?.theme??null);
  useEffect(()=>{document.documentElement.dataset.platform=app.platform.kind;document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.style.colorScheme=dark?'dark':'light';document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme.palette.background.default);if(app.platform.setAppearance)void app.platform.setAppearance(dark).catch(app.report);},[app.platform,dark]);
- const modalRef=useRef(false);modalRef.current=login||help||about||!!note||!!details||!!calendar||!!correction||!!share||!!questionID||settingsDialog||!!verification.request;
+ const modalRef=useRef(false);modalRef.current=login||help||about||downloadsOpen||!!note||!!details||!!calendar||!!correction||!!share||!!questionID||settingsDialog||!!verification.request;
  const lastNotices=useRef(app.notices);
  const unreadReminders=app.notices.filter(n=>app.unreadNoticeIDs.includes(n.id)&&!dismissedUnreadPrompts.includes(n.id)&&getNoticeStatus(n)==='reminder');
  function clearNewReminders(){setDismissedUnreadPrompts(ids=>[...new Set([...ids,...unreadReminders.map(n=>n.id)])]);}
  function viewNewReminders(){const first=unreadReminders[0];if(!first)return;setPage(0);setFocusID(first.id);app.markNoticeRead(first.id);}
- function closeHelp(){setHelp(false);localStorage.setItem('campus-inbox:tutorial:v2','seen');}
+ function closeHelp(){setHelp(false);try{localStorage.setItem('campus-inbox:tutorial:v2','seen');}catch{/* Closing the guide stays available when storage is restricted. */}}
  function navigate(next:number){if(next===2)setExpandCampus(false);setPage(next);if(split&&next===1){setTimeout(()=>{document.getElementById('compose-pane')?.scrollIntoView({block:'start',behavior:'smooth'});document.querySelector<HTMLTextAreaElement>('#compose-pane textarea')?.focus({preventScroll:true});},0);}else window.scrollTo({top:0,behavior:'instant'});}
  function openCampusSettings(){navigate(2);setExpandCampus(true);}
  const actions:NoticeActions={note:(notice,target,title,text)=>setNote({noticeID:notice.id,target,title,text}),details:n=>{setSourcePath(undefined);setDetails(n.id);},calendar:(notice,task)=>setCalendar({notice,task}),evidence:(notice,path)=>{setSourcePath(path);setDetails(notice.id);},correct:(notice,path)=>{setDetails(null);setCorrection({noticeID:notice.id,path});},share:notice=>setShare({...notice,corrections:undefined}),question:notice=>setQuestionID(notice.id)};
@@ -76,7 +84,7 @@ export default function App(){
  },[app.notices,app.platform]);
  async function rescue(){const raw:Object=Object.fromEntries(Object.keys(localStorage).filter(k=>k.startsWith('campus-inbox:notices')).map(k=>[k,localStorage.getItem(k)]));await app.platform.saveFile(new Blob([JSON.stringify(raw,null,2)],{type:'application/json'}),'campus-inbox-original-data.json');}
  return <ThemeProvider theme={theme}><CssBaseline/>
-  <AppBar position="sticky" color="inherit" elevation={0} sx={{borderBottom:'1px solid',borderColor:'divider',pt:'var(--safe-top)',bgcolor:'background.default'}}>
+  <AppBar data-first-entry="masthead" position="sticky" color="inherit" elevation={0} sx={{borderBottom:'1px solid',borderColor:'divider',pt:'var(--safe-top)',bgcolor:'background.default'}}>
    <Toolbar sx={{maxWidth:1240,width:'100%',mx:'auto',gap:{xs:.5,sm:1},minHeight:{xs:56,sm:64},px:{xs:1.5,sm:3}}}>
     <Button onClick={()=>setAbout(true)} sx={{px:0,minWidth:0,color:'text.primary',gap:1.25}}><Box component="img" src="./icon.svg" width={32} height={32} alt=""/><Typography sx={{fontWeight:700,fontSize:'1.125rem',lineHeight:1.4}}>校园 Inbox</Typography></Button>
     <Box sx={{flex:1}}/>
@@ -91,13 +99,13 @@ export default function App(){
    {app.bootError?<Alert severity="error" action={<Button onClick={()=>void rescue().catch(app.report)}>保存原始数据</Button>}>原来的通知无法读取：{app.bootError}。数据仍在本机，暂未覆盖。</Alert>:
     split&&page!==2?<Box className="workspace" sx={{display:'grid',gridTemplateColumns:'minmax(280px, 320px) minmax(0, 1fr)',gap:3,flex:1,minHeight:160}}>
      <ScrollPane id="compose-pane" label="添加" onFocus={()=>setPage(1)}><ComposerPage app={app} embedded onDone={()=>setPage(0)} onLogin={()=>setLogin(true)}/></ScrollPane>
-     <ScrollPane id="feed-pane" label="已保存通知" onFocus={()=>setPage(0)}><FeedPage app={app} embedded actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} focusID={focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView} editingID={correction?.noticeID} onEditingClose={()=>setCorrection(null)}/></ScrollPane>
+     <ScrollPane id="feed-pane" label="已保存通知" onFocus={()=>setPage(0)}><FeedPage app={app} embedded actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} onAndroidDownload={app.platform.kind==='android'?undefined:()=>setDownloadsOpen(true)} focusID={focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView} editingID={correction?.noticeID} onEditingClose={()=>setCorrection(null)}/></ScrollPane>
     </Box>:
-    page===0?<FeedPage app={app} actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} focusID={focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView} editingID={correction?.noticeID} onEditingClose={()=>setCorrection(null)}/>:
+    page===0?<FeedPage app={app} actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} onAndroidDownload={app.platform.kind==='android'?undefined:()=>setDownloadsOpen(true)} focusID={focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView} editingID={correction?.noticeID} onEditingClose={()=>setCorrection(null)}/>:
     page===1?<ComposerPage app={app} onDone={()=>navigate(0)} onLogin={()=>setLogin(true)}/>:
     <SettingsPage app={app} onLogin={()=>setLogin(true)} onHelp={()=>setHelp(true)} onAbout={()=>setAbout(true)} onDialogChange={setSettingsDialog} expandCampus={expandCampus} onFilterNotices={enabled=>{setFeedView(previous=>({...previous,tab:0,query:'',favoritesOnly:false,relevantOnly:enabled}));navigate(0);}} onShowNotices={()=>{setFeedView(previous=>({...previous,tab:0,query:'',favoritesOnly:false,relevantOnly:false}));navigate(0);}}/>}
   </Container>
-  {!wide&&<Paper sx={{position:'fixed',bottom:0,left:0,right:0,borderTop:'1px solid',borderColor:'divider',pb:'var(--safe-bottom)',zIndex:10}}>
+  {!wide&&<Paper data-first-entry="home-nav" sx={{position:'fixed',bottom:0,left:0,right:0,borderTop:'1px solid',borderColor:'divider',pb:'var(--safe-bottom)',zIndex:10}}>
    <BottomNavigation value={page} onChange={(_,value)=>navigate(value)} showLabels sx={{bgcolor:'background.paper',height:64,alignItems:'center',px:1,gap:1,'& .MuiBottomNavigationAction-root':{minWidth:0,maxWidth:180,height:48,borderRadius:6,color:'text.secondary'},'& .MuiBottomNavigationAction-root.Mui-selected':{color:'primary.main',bgcolor:'action.selected'},'& .MuiBottomNavigationAction-label':{fontSize:'1rem',fontWeight:600},'& .MuiBottomNavigationAction-label.Mui-selected':{fontSize:'1rem'}}}>{nav.map(item=><BottomNavigationAction key={item.label} label={item.label}/>)}</BottomNavigation>
   </Paper>}
   <NoteDialog editor={note} app={app} onClose={()=>setNote(null)}/>
@@ -108,7 +116,9 @@ export default function App(){
   {questionID&&<Suspense fallback={null}><NoticeQuestionDialog notice={app.notices.find(n=>n.id===questionID)??null} app={app} onClose={()=>setQuestionID(null)} onLogin={()=>setLogin(true)}/></Suspense>}
   <LoginDialog open={login} app={app} onClose={()=>setLogin(false)}/>
   <HumanVerificationDialog request={verification.request} onComplete={verification.complete} onCancel={()=>{app.cancel();verification.cancel();}}/>
-  <HelpDialog open={help} onClose={closeHelp} onCompose={()=>{closeHelp();navigate(1);}} onExamples={()=>app.loadExamples().then(()=>{closeHelp();navigate(0);}).catch(app.report)}/><AboutDialog open={about} onClose={()=>setAbout(false)}/>
+  <HelpDialog open={help} onClose={closeHelp} onFinished={()=>{if(app.platform.kind!=='android')setDownloadHint(true);}} onCompose={()=>{closeHelp();navigate(1);}} onExamples={()=>app.loadExamples().then(()=>{closeHelp();navigate(0);}).catch(app.report)}/><AboutDialog open={about} onClose={()=>setAbout(false)}/>
+  <Dialog open={downloadsOpen} onClose={()=>setDownloadsOpen(false)} maxWidth="xs" fullWidth><DialogTitle>安卓手机版</DialogTitle><DialogContent><AndroidDownloads compact/></DialogContent><DialogActions><Button onClick={()=>setDownloadsOpen(false)}>关闭</Button></DialogActions></Dialog>
+  <Snackbar open={downloadHint&&!help} autoHideDuration={12000} onClose={()=>setDownloadHint(false)} message="手机上也能用" action={<Button color="inherit" onClick={()=>{setDownloadHint(false);setDownloadsOpen(true);}}>安卓下载</Button>} anchorOrigin={{vertical:'bottom',horizontal:'center'}} sx={{bottom:wide?24:84}}/>
   <Snackbar open={!!app.toast} key={app.toast?.id} autoHideDuration={6500} onClose={(_,reason)=>{if(reason!=='clickaway')app.setToast(null);}} message={app.toast?.text} action={app.toast?.undo?<Button color="inherit" onClick={()=>{const undo=app.toast?.undo;app.setToast(null);undo?.();}}>撤销</Button>:undefined} anchorOrigin={{vertical:'bottom',horizontal:'center'}} sx={{bottom:wide?24:84}}/>
   <Snackbar open={!!app.error} onClose={()=>app.setError('')} anchorOrigin={{vertical:'top',horizontal:'center'}}><Alert severity="error" onClose={()=>app.setError('')} variant="filled" sx={{maxWidth:560}}>{app.error}</Alert></Snackbar>
  </ThemeProvider>;

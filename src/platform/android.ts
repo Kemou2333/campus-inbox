@@ -42,6 +42,7 @@ export function createAndroidPlatform(bridge: NativeBridge): PlatformAPI {
   let disposed = false;
   let saving = false;
   let appearanceSupported = false;
+  let hapticsSupported = false;
 
   const receive = (event: { data: string }) => {
     let reply: NativeReply;
@@ -74,7 +75,7 @@ export function createAndroidPlatform(bridge: NativeBridge): PlatformAPI {
   };
 
   const ready: Promise<PlatformCapabilities> = call<Record<string, unknown>>('capabilities', {}, 10_000)
-    .then(value => { appearanceSupported=value.appearance===true;return {
+    .then(value => { appearanceSupported=value.appearance===true;hapticsSupported=value.haptics===true;return {
       calendar: value.calendar === true,
       fileSave: value.fileSave === true,
       shareText: value.shareText === true,
@@ -98,6 +99,11 @@ export function createAndroidPlatform(bridge: NativeBridge): PlatformAPI {
     async setAppearance(dark) {
       await ready;
       if(appearanceSupported)await call('appearance',{dark});
+    },
+    async hapticFeedback(kind) {
+      // Older hosts do not advertise this capability and receive no new action.
+      await ready;
+      if(hapticsSupported&&document.visibilityState==='visible')await call('haptic',{kind},1_500);
     },
     async getSharedText() {
       if (!(await ready).shareText) return null;
