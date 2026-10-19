@@ -85,17 +85,17 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
   });
  }
  return <Stack spacing={2} className="page-enter">
-  <Typography variant={embedded?"h5":"h4"} component={embedded?"h2":"h1"}>新增通知</Typography>
+  <Typography variant={embedded?"h5":"h4"} component={embedded?"h2":"h1"}>添加</Typography>
   <Stack direction="row" sx={{alignItems:'center',gap:1,flexWrap:'wrap'}}><Button variant="contained" color="secondary" startIcon={<AutoAwesomeOutlined/>} disabled={app.busy||adding} onClick={fillDemo}>一键填入示例</Button></Stack>
   {app.pending&&<Alert severity="info" action={<Button onClick={app.recoverResult}>保存结果</Button>}>上次整理的结果还没保存，无需再次调用 AI。</Alert>}
   {!!app.legacyRecords.length&&<Alert severity="info" action={<Button onClick={app.recoverLegacyResult}>保存结果</Button>}>旧版有 {app.legacyRecords.length} 条整理结果未保存，无需重新调用 AI。</Alert>}
   {app.legacyMissingFiles&&<Alert severity="info" onClose={()=>app.setLegacyMissingFiles(false)}>旧版草稿文字已保留，草稿附件需要重新添加。</Alert>}
-  {draftRows.map(({draft,index,leaving})=><Collapse key={draft.id} in={!leaving} appear timeout={reducedMotion?0:320} unmountOnExit onExited={()=>setLeavingDrafts(old=>old.filter(row=>row.draft.id!==draft.id))}>
+  {draftRows.map(({draft,index,leaving})=><Collapse key={draft.id} in={!leaving} appear timeout={reducedMotion?0:{enter:560,exit:420}} easing={{enter:'cubic-bezier(.22,1,.36,1)',exit:'cubic-bezier(.4,0,.2,1)'}} unmountOnExit onExited={()=>setLeavingDrafts(old=>old.filter(row=>row.draft.id!==draft.id))}>
    <Paper ref={element=>{if(element)draftElements.current.set(draft.id,element);else draftElements.current.delete(draft.id);}} className="composer-draft" variant="outlined" inert={leaving?true:undefined} aria-hidden={leaving?true:undefined}
    onDragOver={event=>{event.preventDefault();if(app.busy||adding){event.dataTransfer.dropEffect='none';return;}event.dataTransfer.dropEffect='copy';setDragTarget(draft.id);}}
    onDragLeave={event=>{if(!(event.relatedTarget instanceof Node)||!event.currentTarget.contains(event.relatedTarget))setDragTarget(null);}}
    onDrop={event=>{event.preventDefault();setDragTarget(null);if(app.busy||importLock.current)return;const content=readTransfer(event.dataTransfer);void importContent(draft.id,()=>content);}}
-   sx={{p:{xs:1.5,sm:2},opacity:leaving?0:1,transition:reducedMotion?'none':'opacity 280ms ease-in-out',borderColor:dragTarget===draft.id?'primary.main':undefined,bgcolor:dragTarget===draft.id?'action.hover':undefined}}>
+   sx={{p:{xs:1.5,sm:2},opacity:leaving?0:1,transition:reducedMotion?'none':'opacity 420ms cubic-bezier(.4,0,.2,1)',borderColor:dragTarget===draft.id?'primary.main':undefined,bgcolor:dragTarget===draft.id?'action.hover':undefined}}>
    <Stack direction="row" sx={{alignItems:"center",justifyContent:"space-between",mb:1.5}}>
     <Typography variant="h6">通知 {index+1}</Typography>
     <Stack direction="row" sx={{gap:.5,alignItems:'center'}}>
@@ -118,7 +118,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
    {app.busy&&<LinearProgress sx={{mb:1,borderRadius:1}}/>}
    {app.busy&&showWaitHint&&<Typography variant="body2" color="text.secondary" role="status" sx={{mb:1}}>正在确认提交，确认后可离开。</Typography>}
    <Stack direction="row" sx={{alignItems:'center',gap:1}}>
-     <Button fullWidth variant="contained" sx={{whiteSpace:'nowrap',minHeight:56,fontSize:16}} disabled={app.busy||adding||!hasContent||!app.demoDraftID&&(!!retrySeconds||total>4000||app.pending||!!app.legacyRecords.length||!!app.unconfirmedSubmissions.length||!app.config)} onClick={()=>void submit()}>{app.busy?app.stage:app.demoDraftID?'整理示例':retrySeconds?retryText:app.cloud?.getKey()?'整理通知':'登录后整理'}</Button>
+     <Button fullWidth variant="contained" startIcon={!app.busy&&(app.demoDraftID||!retrySeconds)?<AutoAwesomeOutlined/>:undefined} sx={{whiteSpace:'nowrap',minHeight:56,fontSize:17,fontWeight:700}} disabled={app.busy||adding||!hasContent||!app.demoDraftID&&(!!retrySeconds||total>4000||app.pending||!!app.legacyRecords.length||!!app.unconfirmedSubmissions.length||!app.config)} onClick={()=>void submit()}>{app.busy?app.stage:!app.demoDraftID&&retrySeconds?retryText:'整理'}</Button>
      {app.busy&&<Button sx={{flexShrink:0,whiteSpace:'nowrap'}} onClick={app.cancel}>停止等待</Button>}
    </Stack>
   </Box>

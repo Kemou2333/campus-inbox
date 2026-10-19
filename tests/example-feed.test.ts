@@ -64,7 +64,7 @@ describe('feed keeps examples behind personal records',()=>{
   test('hidden samples do not contribute to cards, category counts or favorite badges',()=>{
     writeExamplesHidden(local,true);
     const result=feed([notice('mine'),notice('example-reading-v25-0',undefined,{favorite:true})]);
-    expect(result.ids).toEqual(['mine']);expect(result.text).toContain('待办 1');expect(result.text).toContain('已隐藏 1 条示例');expect(result.html).not.toContain('example-group-divider');
+    expect(result.ids).toEqual(['mine']);expect(result.text).toContain('待办 1');expect(result.text).toContain('显示示例');expect(result.text).not.toContain('已隐藏 1 条示例');expect(result.html).not.toContain('example-group-divider');
     expect(result.html).toContain('显示全部示例');
   });
   test('search matching only samples never changes real counts into example counts',()=>{

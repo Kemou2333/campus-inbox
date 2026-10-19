@@ -9,7 +9,7 @@ button:focus-visible,a:focus-visible{outline:3px solid #629e96;outline-offset:3p
 @media(max-width:359px){.notice-actions{gap:4px}.notice-actions .MuiButton-root{padding-left:10px;padding-right:10px}.notice-actions .MuiButton-root:not(.notice-dismiss) .MuiButton-startIcon{display:none}.notice-actions .MuiIconButton-root:not(.notice-complete){width:48px}}
 @media(max-height:500px) and (min-width:600px){.MuiToolbar-root{min-height:48px!important}.notice-card{scroll-margin-top:60px}}
 
-html[data-theme="dark"]{--scroll-thumb:#7F9CA6;--scroll-track:#24343D}
+html[data-theme="dark"]{--scroll-thumb:#8491A2;--scroll-track:#252D38}
 .notice-card{scroll-margin-top:8px}
 @supports not selector(::-webkit-scrollbar){.workspace-pane{scrollbar-width:thin;scrollbar-color:#89939c transparent}}
 
@@ -21,3 +21,10 @@ html[data-theme="dark"]{--scroll-thumb:#7F9CA6;--scroll-track:#24343D}
 
 html[data-platform="android"],html[data-platform="android"] body,html[data-platform="android"] .workspace-pane{overscroll-behavior:none}
 .notice-expand .MuiButton-startIcon svg,.task-expand svg{transition:transform .32s cubic-bezier(.4,0,.2,1)}
+
+/* The control reacts on press; the release and surrounding surface settle gently. */
+button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+@media(prefers-reduced-motion:no-preference){
+ .MuiDialog-paper:not(.MuiDialog-paperFullScreen){animation:dialog-arrive 520ms cubic-bezier(.22,1,.36,1)}
+}
+@keyframes dialog-arrive{from{opacity:.65;transform:translateY(8px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}

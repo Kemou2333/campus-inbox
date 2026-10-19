@@ -17,4 +17,15 @@ describe('notice exit positions',()=>{
   const restored=transitionRows(exiting,records);
   expect(restored).toEqual(visible);
  });
+ it('a completed card remains visible for its local feedback, then exits in place',()=>{
+  const remaining=[records[0],records[2],records[3]];
+  const celebrating=transitionRows(visible,remaining,new Set(['b']));
+  expect(celebrating.map(r=>r.record.id)).toEqual(['a','b','c','d']);
+  expect(celebrating[1].visible).toBe(true);
+  expect(transitionRows(celebrating,remaining)[1].visible).toBe(false);
+ });
+ it('restoring a held completion keeps exactly one live card',()=>{
+  const held=transitionRows(visible,records.filter(n=>n.id!=='b'),new Set(['b']));
+  expect(transitionRows(held,records)).toEqual(visible);
+ });
 });

@@ -3,21 +3,18 @@ import {
   Alert, Box, Button, ButtonBase, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
   DialogTitle, Divider, Paper, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography,
 } from '@mui/material';
-import {alpha} from '@mui/material/styles';
 import MailOutline from '@mui/icons-material/MailOutlined';
 import PaletteOutlined from '@mui/icons-material/PaletteOutlined';
 import DownloadOutlined from '@mui/icons-material/DownloadOutlined';
 import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined';
 import DeleteOutline from '@mui/icons-material/DeleteOutlined';
-import ArticleOutlined from '@mui/icons-material/ArticleOutlined';
 import ChevronRight from '@mui/icons-material/ChevronRight';
 import Sync from '@mui/icons-material/Sync';
 import type { CampusController } from '../../app/useCampus';
 import type { SyncConflict } from '../../infrastructure/sync-client';
 import type { ThemePreference } from '../../app/theme';
 import {BackupDialog} from './BackupDialog';
-import {CampusPreferencesPanel} from './CampusPreferencesPanel';
-import {isExampleNotice} from '../../domain/examples';
+import {CampusPreferencesPanel,TeachingWeekPanel} from './CampusPreferencesPanel';
 import {TrashDialog} from './TrashDialog';
 import {SettingsFAQ} from './SettingsFAQ';
 import {AndroidDownloads} from '../../shared/ui/AndroidDownloads';
@@ -30,6 +27,7 @@ interface Props {
   onAbout: () => void;
   onDialogChange: (open:boolean) => void;
   onShowNotices?: () => void;
+  onFilterNotices?: (enabled:boolean) => void;
   expandCampus?: boolean;
 }
 
@@ -51,9 +49,9 @@ function Version({ label, record }: { label: string; record: SyncConflict['local
   </Box>;
 }
 
-function SettingIcon({children,warm=false}:{children:ReactNode;warm?:boolean}) {
+function SettingIcon({children}:{children:ReactNode}) {
   return <Box sx={{width:30,height:30,borderRadius:'9px',display:'grid',placeItems:'center',flexShrink:0,
-    color:warm?'warning.main':'primary.main',bgcolor:theme=>alpha(warm?theme.palette.warning.main:theme.palette.primary.main,.10),
+    color:'text.secondary',bgcolor:'action.hover',
     '& .MuiSvgIcon-root':{fontSize:18}}}>{children}</Box>;
 }
 
@@ -61,13 +59,13 @@ function ToolRow({icon,title,detail,onClick,disabled=false}:{icon:ReactNode;titl
   return <ButtonBase onClick={onClick} disabled={disabled} sx={{width:'100%',display:'flex',gap:1.25,alignItems:'center',
     textAlign:'left',px:{xs:2,sm:2.5},py:1.75,minHeight:66,borderTop:'1px solid',borderColor:'divider',
     '&.Mui-disabled':{opacity:.5},'&:hover':{bgcolor:'action.hover'},'&.Mui-focusVisible':{outline:'2px solid',outlineColor:'primary.main',outlineOffset:-3}}}>
-    <SettingIcon>{icon}</SettingIcon><Typography component="span" sx={{flex:1,fontSize:17,fontWeight:650}}>{title}</Typography>
-    {detail&&<Typography component="span" sx={{fontSize:14,color:'text.secondary',textAlign:'right'}}>{detail}</Typography>}
+    <SettingIcon>{icon}</SettingIcon><Typography component="span" sx={{flex:1,fontSize:16,fontWeight:650}}>{title}</Typography>
+    {detail&&<Typography component="span" sx={{fontSize:13,color:'text.secondary',textAlign:'right'}}>{detail}</Typography>}
     <ChevronRight sx={{fontSize:19,color:'text.secondary',flexShrink:0}}/>
   </ButtonBase>;
 }
 
-export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, onShowNotices, expandCampus = false }: Props) {
+export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, onFilterNotices, expandCampus = false }: Props) {
   const [running, setRunning] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [logoutOpen, setLogoutOpen] = useState(false);
@@ -78,7 +76,6 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
   useEffect(()=>{onDialogChange(logoutOpen||!!conflict||legacyOpen||backupOpen||trashOpen||downloadsOpen||transferOpen);return()=>onDialogChange(false);},[logoutOpen,conflict,legacyOpen,backupOpen,trashOpen,downloadsOpen,transferOpen,onDialogChange]);
   const picker = useRef<HTMLInputElement>(null);
   const busy = !!running || app.busy;
-  const hasExamples = app.notices.some(isExampleNotice);
 
   async function run(name: string, operation: () => Promise<unknown>) {
     if (busy) return;
@@ -103,29 +100,29 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
     ? 'warning' : app.sync.status === 'syncing' || app.sync.pendingChanges ? 'primary' : 'success';
 
   return <Stack spacing={2.25} sx={{maxWidth:720,mx:'auto',pb:4}}>
-    <Typography component="h1" variant="h4" sx={{fontWeight:750}}>设置</Typography>
+    <Typography component="h1" sx={{fontSize:30,lineHeight:1.3,fontWeight:780,mb:.75}}>设置</Typography>
     {error && !logoutOpen && !conflict && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
 
     <Paper variant="outlined" sx={{p:{xs:2,sm:2.5},borderRadius:'16px'}}>
       <Stack direction="row" sx={{alignItems:'center',gap:1.25}}>
         <Box sx={{width:44,height:44,borderRadius:'13px',display:'grid',placeItems:'center',flexShrink:0,
-          bgcolor:theme=>alpha(theme.palette.warning.main,.11),color:'warning.main'}}><MailOutline sx={{fontSize:23}}/></Box>
+          bgcolor:'action.hover',color:'text.secondary'}}><MailOutline sx={{fontSize:23}}/></Box>
         <Box sx={{flex:1,minWidth:0}}>
           <Typography component="h2" sx={{fontSize:20,fontWeight:750,overflowWrap:'anywhere'}}>{app.sync.connected?app.username:'账号与同步'}</Typography>
-          <Typography sx={{fontSize:14,color:'text.secondary',mt:.25}}>{app.sync.connected?'账号与同步':'登录后同步通知与进度'}</Typography>
+          <Typography sx={{fontSize:13,color:'text.secondary',mt:.25}}>{app.sync.connected?'账号与同步':'登录后同步通知与进度'}</Typography>
         </Box>
-        <Chip label={status} color={statusColor} size="small" sx={{fontSize:14,flexShrink:0,'& .MuiChip-label':{fontSize:14}}}/>
+        <Chip label={status} color={statusColor} size="small" sx={{fontSize:13,flexShrink:0,'& .MuiChip-label':{fontSize:13}}}/>
       </Stack>
       {app.sync.connected ? <>
-        {!!app.email&&<Typography sx={{fontSize:14,color:'text.secondary',mt:1.5,overflowWrap:'anywhere'}}>{app.email}</Typography>}
-        {!!app.sync.lastSyncedAt&&<Typography sx={{fontSize:14,color:'text.secondary',mt:1}}>
+        {!!app.email&&<Typography sx={{fontSize:13,color:'text.secondary',mt:1.5,overflowWrap:'anywhere'}}>{app.email}</Typography>}
+        {!!app.sync.lastSyncedAt&&<Typography sx={{fontSize:13,color:'text.secondary',mt:1}}>
           上次同步 {date(app.sync.lastSyncedAt)}
         </Typography>}
         {app.sync.error && <Alert severity="warning" sx={{mt:2}}>{friendlyErrorMessage(app.sync.error)}</Alert>}
         <Stack direction="row" sx={{gap:1,flexWrap:'wrap',mt:2}}>
           <Button size="small" disabled={busy || app.sync.status === 'syncing'}
             startIcon={running === 'sync' || app.sync.status === 'syncing' ? <CircularProgress size={17} color="inherit" /> : <Sync sx={{fontSize:18}}/>}
-            sx={{bgcolor:theme=>alpha(theme.palette.primary.main,.09),px:1.5,'&:hover':{bgcolor:theme=>alpha(theme.palette.primary.main,.15)}}}
+            sx={{bgcolor:'action.hover',color:'text.primary',px:1.5,'&:hover':{bgcolor:'action.selected'}}}
             onClick={() => void run('sync', syncNow)}>立即同步</Button>
           <Button size="small" color="inherit" disabled={busy} sx={{color:'text.secondary'}} onClick={() => {setError('');setLogoutOpen(true);}}>退出登录</Button>
           {app.authOptions?.emailEnabled&&!app.email&&<Button size="small" disabled={busy} onClick={onLogin}>绑定邮箱</Button>}
@@ -134,7 +131,7 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
       </> : <Button variant="contained" size="small" disabled={busy || !app.auth} onClick={onLogin} sx={{mt:2}}>登录</Button>}
       {!!app.sync.conflicts.length && <Box sx={{mt:2.5}}>
         <Divider sx={{mb:2}}/>
-        <Typography sx={{fontSize:17,fontWeight:650}}>有 {app.sync.conflicts.length} 条通知需要选择版本</Typography>
+        <Typography sx={{fontSize:16,fontWeight:650}}>有 {app.sync.conflicts.length} 条通知需要选择版本</Typography>
         <Stack spacing={1} sx={{mt:1}}>
           {app.sync.conflicts.map(item => <Button key={item.id} variant="outlined" disabled={busy}
             sx={{justifyContent:'space-between',textAlign:'left',gap:1}} onClick={() => {setError('');setConflict(item);}}>
@@ -148,15 +145,16 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
       <Typography component="h2" sx={{fontSize:20,fontWeight:750,px:{xs:2,sm:2.5},pt:2,pb:1}}>偏好</Typography>
       <Stack direction="row" sx={{alignItems:'center',gap:1.25,px:{xs:2,sm:2.5},py:1.75,flexWrap:'wrap'}}>
         <SettingIcon><PaletteOutlined/></SettingIcon>
-        <Typography component="h3" sx={{flex:1,fontSize:17,fontWeight:650}}>外观</Typography>
+        <Typography component="h3" sx={{flex:1,fontSize:16,fontWeight:650}}>外观</Typography>
         <ToggleButtonGroup value={app.theme} exclusive size="small" disabled={busy} aria-label="颜色主题"
-          sx={{bgcolor:'action.hover',p:.35,borderRadius:2,'& .MuiToggleButton-root':{fontSize:14,px:{xs:1,sm:1.5},py:.6,border:0,borderRadius:'7px!important'},
-            '& .MuiToggleButton-root.Mui-selected':{bgcolor:'background.paper',color:'primary.main',fontWeight:700,boxShadow:'0 1px 4px #00000012'}}}
+          sx={{bgcolor:'action.hover',p:.35,borderRadius:'9px','& .MuiToggleButton-root':{fontSize:13,px:{xs:1,sm:1.5},py:.6,border:0,borderRadius:'7px!important'},
+            '& .MuiToggleButton-root.Mui-selected':{bgcolor:'background.paper',color:'info.main',fontWeight:700,boxShadow:'0 1px 4px #00000012'}}}
           onChange={(_event,value:ThemePreference|null)=>{if(value){try{app.setTheme(value);}catch(issue){app.report(issue);}}}}>
           <ToggleButton value="system">系统</ToggleButton><ToggleButton value="light">浅色</ToggleButton><ToggleButton value="dark">深色</ToggleButton>
         </ToggleButtonGroup>
       </Stack>
-      <CampusPreferencesPanel value={app.preferences} onSave={app.setPreferences} disabled={busy} initiallyExpanded={expandCampus}/>
+      <CampusPreferencesPanel value={app.preferences} onSave={app.setPreferences} disabled={busy} initiallyExpanded={expandCampus} onApplyFilter={onFilterNotices}/>
+      <TeachingWeekPanel value={app.preferences} onSave={app.setPreferences} disabled={busy}/>
     </Paper>
 
     <Paper variant="outlined" sx={{borderRadius:'16px',overflow:'hidden'}}>
@@ -164,8 +162,6 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
       <ToolRow icon={<DownloadOutlined/>} title="安卓下载" detail="蓝奏 / GitHub" onClick={()=>setDownloadsOpen(true)}/>
       <ToolRow icon={<Inventory2Outlined/>} title="导入与导出" disabled={busy} onClick={()=>setTransferOpen(true)}/>
       <ToolRow icon={<DeleteOutline/>} title="回收站" detail={app.trashItems.length?String(app.trashItems.length):undefined} disabled={busy} onClick={()=>setTrashOpen(true)}/>
-      <ToolRow icon={<ArticleOutlined/>} title="示例通知" detail={running==='examples'?'载入中…':hasExamples?'更新':'载入'} disabled={busy}
-        onClick={()=>void run('examples',async()=>{await app.loadExamples();onShowNotices?.();})}/>
       <input ref={picker} type="file" accept="application/json,.json" hidden aria-label="选择通知备份" onChange={event=>{
         const file=event.target.files?.[0];event.target.value='';
         if(file){setTransferOpen(false);void run('import',()=>app.importBackup(file));}
@@ -177,8 +173,8 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
       <SettingsFAQ app={app}/>
     </Paper>
     <Stack direction="row" sx={{gap:2,justifyContent:'center',flexWrap:'wrap',pt:.5}}>
-      <Button size="small" color="inherit" sx={{color:'text.secondary',fontSize:14}} onClick={onHelp}>重新看引导</Button>
-      <Button size="small" color="inherit" sx={{color:'text.secondary',fontSize:14}} onClick={onAbout}>关于校园 Inbox</Button>
+      <Button size="small" color="inherit" sx={{color:'text.secondary',fontSize:13}} onClick={onHelp}>重新看引导</Button>
+      <Button size="small" color="inherit" sx={{color:'text.secondary',fontSize:13}} onClick={onAbout}>关于校园 Inbox</Button>
     </Stack>
 
     <TrashDialog open={trashOpen} app={app} onClose={()=>setTrashOpen(false)}/>
