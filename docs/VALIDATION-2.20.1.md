@@ -2,7 +2,7 @@
 
 The notice card and task rows follow the approved second review: blue question and purple edit buttons, larger 44px controls, 11px corner radius, and the same light/dark color pairs. A note icon sits immediately before share in the right-hand group. Original text is only in the expanded lower footer.
 
-- Production TypeScript and Vite build passed. The existing six field-correction/tool-boundary checks and two theme-contrast checks passed; after correcting a small semantic-label contrast issue, only the two affected theme checks were rerun.
+- Production TypeScript and Vite build passed. The existing six field-correction/tool-boundary checks and two theme-contrast checks passed; contrast checks identified small semantic-label and muted-text issues; the muted light text was adjusted from #657875 to #627572 without changing the reviewed blue/purple tool colors. Only the affected contrast checks were rerun locally.
 - Actual local production browser UI was inspected at desktop width and 390 CSS px, in both light and dark modes. Both named tools measure 76 by 44px, with 13px type and 11px corners. Their computed foreground/background colors match the review. The note button opens the existing note editor.
 - Task row styling and the composer match the review while retaining multiple drafts, attachments, paste, cloud submission, error and quota protections. No backend/model changes or paid calls.
 - Question/share dialogs now have one primary action and a top close icon; counters are only shown near the limit.

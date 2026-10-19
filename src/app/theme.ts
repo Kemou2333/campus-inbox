@@ -16,7 +16,7 @@ export function makeTheme(dark:boolean,native:NativeTheme|null){
  return createTheme({
   palette:{mode:dark?'dark':'light',primary:{main:primary,contrastText:onPrimary},secondary:{main:system?.secondary||(dark?'#CBBBEF':'#7663A0')},
    background:{default:dark?'#131821':'#F6F8F7',paper:surface},
-   text:{primary:text,secondary:dark?'#AAB6C8':'#657875'},divider,
+   text:{primary:text,secondary:dark?'#AAB6C8':'#627572'},divider,
    action:{hover:alpha(text,dark?.055:.04),selected:alpha(primary,dark?.14:.10)},
    error:{main:dark?'#F2B0A5':'#B45645'},warning:{main:dark?'#EFC982':'#98600B'},success:{main:dark?'#7ACABA':'#087E70'},info:{main:dark?'#ADCBF4':'#376B9C'}},
   typography:{fontFamily:'system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif',fontSize:14,
