@@ -1,9 +1,9 @@
 import {keyframes} from '@emotion/react';
 
 export const noticeMotion={
- duration:{enter:440,exit:360},
- easing:{enter:'cubic-bezier(.22,.75,.25,1)',exit:'cubic-bezier(.4,0,.2,1)'},
- transition:'320ms cubic-bezier(.22,.75,.25,1)',
+ duration:{enter:620,exit:500},
+ easing:{enter:'cubic-bezier(.22,1,.36,1)',exit:'cubic-bezier(.65,0,.35,1)'},
+ transition:'440ms cubic-bezier(.22,1,.36,1)',
 };
 
 export const favoriteFeedback=keyframes`
@@ -15,7 +15,8 @@ export const favoriteFeedback=keyframes`
 
 export const completeFeedback=keyframes`
  0%{transform:scale(1)}
- 35%{transform:scale(.91)}
- 70%{transform:scale(1.06)}
+ 18%{transform:scale(.86)}
+ 48%{transform:scale(1.19)}
+ 78%{transform:scale(.98)}
  100%{transform:scale(1)}
 `;

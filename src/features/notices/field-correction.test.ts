@@ -40,4 +40,22 @@ describe('在通知原位置逐处修正',()=>{
   expect(editing).toContain('data-correction-path="tasks.0.details.0"');expect(editing).not.toContain('修改位置');
   expect(renderToStaticMarkup(createElement(NoticeCard,props))).not.toContain('data-correction-path');
  });
+ it('常用工具仅在展开区直接出现，原文与删除只在展开底部',()=>{
+  const actions:NoticeActions={note:()=>{},details:()=>{},calendar:()=>{},evidence:()=>{},correct:()=>{},question:()=>{},share:()=>{}};
+  const props={notice:base,app:{act:()=>{},remove:()=>{}},actions,now:Date.now(),expanded:false,onExpandedChange:()=>{},expandedTaskIDs:new Set<string>(),onTaskExpandedChange:()=>{}};
+  const collapsed=renderToStaticMarkup(createElement(NoticeCard,props));
+  expect(collapsed).not.toContain('aria-label="原文与附件：');expect(collapsed).not.toContain('aria-label="删除通知：');expect(collapsed).not.toContain('更多操作');
+  const open=renderToStaticMarkup(createElement(NoticeCard,{...props,expanded:true}));
+  expect(open.match(/aria-label="提问：/g)).toHaveLength(1);expect(open.match(/aria-label="修正：/g)).toHaveLength(1);
+  expect(open.match(/aria-label="分享图：/g)).toHaveLength(1);expect(open.match(/aria-label="原文与附件：/g)).toHaveLength(1);
+  expect(open.indexOf('notice-bottom-actions')).toBeLessThan(open.indexOf('aria-label="原文与附件：'));
+  expect(open.indexOf('aria-label="原文与附件：')).toBeLessThan(open.indexOf('aria-label="删除通知：'));
+ });
+ it('后台只读仍可看原文、出处与内容，不能编辑或删除',()=>{
+  const actions:NoticeActions={note:()=>{},details:()=>{},calendar:()=>{},evidence:()=>{},correct:()=>{},question:()=>{},share:()=>{}};
+  const html=renderToStaticMarkup(createElement(NoticeCard,{notice:base,app:{act:()=>{},remove:()=>{}},actions,now:Date.now(),expanded:true,onExpandedChange:()=>{},expandedTaskIDs:new Set(base.tasks.map(task=>task.id)),onTaskExpandedChange:()=>{},readOnly:true}));
+  expect(html).toContain('aria-label="原文与附件：');expect(html).toContain(base.tasks[0].text);
+  for(const label of ['提问：','修正：','分享图：','删除通知：'])expect(html).not.toContain(`aria-label="${label}`);
+  expect(html).not.toContain('class="notice-tools"');expect(html).not.toContain('data-correction-path');
+ });
 });
