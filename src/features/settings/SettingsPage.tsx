@@ -115,13 +115,12 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
         <Box sx={{width:44,height:44,borderRadius:'13px',display:'grid',placeItems:'center',flexShrink:0,
           bgcolor:'action.hover',color:'text.secondary'}}><MailOutline sx={{fontSize:23}}/></Box>
         <Box sx={{flex:1,minWidth:0}}>
-          <Typography component="h2" sx={{fontSize:24,fontWeight:750,overflowWrap:'anywhere'}}>{app.sync.connected?app.username:'账号与同步'}</Typography>
-          <Typography sx={{fontSize:15,color:'text.secondary',mt:.25}}>{app.sync.connected?'账号与同步':'登录后同步通知与进度'}</Typography>
+          <Typography component="h2" sx={{fontSize:24,fontWeight:750,overflowWrap:'anywhere'}}>账号与同步</Typography>
+          <Typography sx={{fontSize:15,color:'text.secondary',mt:.25}}>{app.sync.connected?(app.email||'尚未绑定邮箱'):'登录后同步通知与进度'}</Typography>
         </Box>
         <Chip label={status} color={statusColor} size="small" sx={{fontSize:14,flexShrink:0,'& .MuiChip-label':{fontSize:14}}}/>
       </Stack>
       {app.sync.connected ? <>
-        {!!app.email&&<Typography sx={{fontSize:14,color:'text.secondary',mt:1.5,overflowWrap:'anywhere'}}>{app.email}</Typography>}
         {!!app.sync.lastSyncedAt&&<Typography sx={{fontSize:14,color:'text.secondary',mt:1}}>
           上次同步 {date(app.sync.lastSyncedAt)}
         </Typography>}

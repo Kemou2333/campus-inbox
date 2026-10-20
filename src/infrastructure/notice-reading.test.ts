@@ -22,6 +22,15 @@ describe('account-separated local unread state',()=>{
   const ledger=new NoticeReading(memory()),old=notice('old'),fresh=notice('new');ledger.reconcile('device',[old]);expect(ledger.reconcile('device',[old,fresh])).toEqual(['new']);
   expect(ledger.reconcile('device',[old])).toEqual([]);ledger.markRead('device','restored-copy');expect(ledger.reconcile('device',[old,notice('restored-copy')])).toEqual([]);
  });
+ test('clearing an unread prompt persists only those IDs and preserves notices and other accounts',()=>{
+  const storage=memory(),ledger=new NoticeReading(storage),records=[notice('first'),notice('second')];
+  ledger.reconcile('account:one',[]);ledger.reconcile('account:two',[]);
+  expect(ledger.reconcile('account:one',records)).toEqual(['first','second']);ledger.reconcile('account:two',records);
+  ledger.markManyRead('account:one',['first']);
+  expect(new NoticeReading(storage).reconcile('account:one',records)).toEqual(['second']);
+  expect(ledger.reconcile('account:two',records)).toEqual(['first','second']);expect(records).toHaveLength(2);
+  ledger.markManyRead('account:one',['second']);expect(ledger.reconcile('account:one',records)).toEqual([]);
+ });
  test('the last username alone is not a logged-in scope; a retained valid session scopes offline local data',()=>{
   const storage=memory();storage.setItem('campus-inbox:account-username:v1','One');expect(initialAccountLocalScope(storage)).toBe('device');
   storage.setItem('campus-inbox:sync:v1:https://example.test/sync',JSON.stringify({version:1,key:'a'.repeat(43)}));expect(initialAccountLocalScope(storage)).toBe(accountLocalScope('one'));expect(accountLocalScope(' TWO ')).toBe('account:two');expect(accountLocalScope(null)).toBe('device');

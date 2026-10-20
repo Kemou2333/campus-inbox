@@ -1,5 +1,5 @@
 import {afterEach,describe,expect,test,vi} from 'vitest';
-import {createGuestDemoNotice,GUEST_DEMO_MARKER,GUEST_DEMO_SOURCE,isGuestDemoDraft,waitForGuestDemo} from './guest-demo';
+import {createGuestDemoNotice,GUEST_DEMO_MARKER,GUEST_DEMO_SOURCE,GUEST_DEMO_SOURCES,isGuestDemoDraft,nextGuestDemoSource,waitForGuestDemo} from './guest-demo';
 import {LocalDemoRepository,LOCAL_DEMOS_KEY} from './local-demo-repository';
 import {LocalRepository} from './local-repository';
 import {CloudSync} from './sync-client';
@@ -14,6 +14,18 @@ describe('explicit guest sample',()=>{
   expect(isGuestDemoDraft({...draft,text:`${draft.text}新增条件`})).toBe(false);
   expect(isGuestDemoDraft({...draft,attachments:['local-file']})).toBe(false);
   expect(isGuestDemoDraft({text:GUEST_DEMO_SOURCE,attachments:[]})).toBe(false);
+ });
+ test('rotates three reviewed originals in order and each one returns its corresponding isolated result',()=>{
+  const storage=memory(),sources=Array.from({length:4},()=>nextGuestDemoSource(storage));
+  expect(sources).toEqual([...GUEST_DEMO_SOURCES,GUEST_DEMO_SOURCE]);
+  expect(GUEST_DEMO_SOURCES).toHaveLength(3);
+  expect(nextGuestDemoSource(storage)).toBe(GUEST_DEMO_SOURCES[1]);
+  expect(GUEST_DEMO_SOURCES.map((text,index)=>{
+   expect(isGuestDemoDraft({text,attachments:[],demo:GUEST_DEMO_MARKER})).toBe(true);
+   expect(isGuestDemoDraft({text,attachments:[]})).toBe(false);
+   const result=createGuestDemoNotice(String(index),text);expect(result.originalText).toBe(text);return result.title;
+  })).toEqual(['本科生评教','报名本科生院篮球队','2026级SRTP项目申报']);
+  expect(()=>createGuestDemoNotice('edited','已修改的示例')).toThrow('示例已修改');
  });
  test('waits three seconds with no request and supports cancellation',async()=>{
   vi.useFakeTimers();let complete=false;const pending=waitForGuestDemo(new AbortController().signal).then(()=>{complete=true;});
@@ -59,5 +71,12 @@ describe('device-only sample storage',()=>{
   sample.note='keep';repository.save([sample]);let visible=repository.load();const unsubscribe=repository.subscribe(notices=>{visible=notices;});
   const remote={...createGuestDemoNotice('remote'),id:'remote-personal'};personal.save([remote]);
   expect(visible.map(n=>n.id)).toEqual([remote.id,sample.id]);expect(visible.find(n=>n.id===sample.id)?.note).toBe('keep');unsubscribe();
+ });
+ test('a saved snapshot emits once without reloading and parsing the entire notice list again',()=>{
+  const storage=memory(),personal=new LocalRepository(storage),repository=new LocalDemoRepository(personal,storage);
+  repository.load();const load=vi.spyOn(personal,'load'),listener=vi.fn(),unsubscribe=repository.subscribe(listener),sample=createGuestDemoNotice('one');
+  repository.save([sample]);
+  expect(load).toHaveBeenCalledTimes(1);expect(listener).toHaveBeenCalledTimes(1);expect(listener.mock.calls[0][0]).toEqual([sample]);
+  sample.note='changed after save';expect(listener.mock.calls[0][0][0].note).toBe('');unsubscribe();
  });
 });

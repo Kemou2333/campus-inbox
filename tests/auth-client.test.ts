@@ -59,7 +59,7 @@ test('expired email codes preserve their API error and status 401 remains null e
 
 test('malformed mailbox, code, challenge and session are rejected before requesting', async () => {
   const { client, calls } = clientWith(() => Response.json(session));
-  await expect(client.requestEmail('user@unsupported.test')).rejects.toBeInstanceOf(AuthError);
+  await expect(client.requestEmail('user@unsupported.test','register')).rejects.toBeInstanceOf(AuthError);
   await expect(client.verifyEmail('not-a-challenge', '123456')).rejects.toMatchObject({ code: 'EMAIL_CODE_INVALID' });
   await expect(client.verifyEmail(challengeId, '12345x')).rejects.toMatchObject({ code: 'EMAIL_CODE_INVALID' });
   await expect(client.requestEmail('review@163.com', 'bind')).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
@@ -108,12 +108,12 @@ test('legacy status may omit email and nullable email is retained without leakin
 test('verified email registration sends credentials only on redemption, then ordinary login needs no new email', async () => {
  const {client,calls}=clientWith(url=>Response.json(url.endsWith('/request')?{challengeId,retryAfterSeconds:60,expiresAt}:session));
  await client.requestEmail('review@gmail.com','register');
- expect(await client.registerEmail(challengeId,'123456','student-one','a simple password')).toEqual(session);
+ expect(await client.registerEmail(challengeId,'123456','a simple password')).toEqual(session);
  await client.login('review@gmail.com','a simple password');
  expect(calls.map(call=>call.body)).toEqual([
   {email:'review@gmail.com',purpose:'register'},
-  {challengeId,code:'123456',username:'student-one',password:'a simple password'},
-  {username:'review@gmail.com',password:'a simple password'},
+  {challengeId,code:'123456',password:'a simple password'},
+  {email:'review@gmail.com',password:'a simple password'},
  ]);
  expect(calls[2].url).toBe('https://example.test/auth/login');expect(calls.every(call=>call.authorization===null)).toBe(true);
 });
@@ -124,4 +124,15 @@ test('legacy email password setup redeems a code once and rejects short password
  await client.requestEmail('review@gmail.com','password');
  expect(await client.setEmailPassword(challengeId,'123456','new secure password')).toEqual(session);
  expect(calls[1].body).toEqual({challengeId,code:'123456',password:'new secure password'});
+});
+
+
+test('verified legacy email identities remain readable and password login does not apply new-registration domains',async()=>{
+ const old={...session,email:'student@previous-provider.example'};
+ const {client,calls}=clientWith(()=>Response.json(old));
+ expect(await client.login(old.email,'a simple password')).toEqual(old);
+ expect(calls[0].body).toEqual({email:old.email,password:'a simple password'});
+ await expect(client.requestEmail(old.email,'register')).rejects.toBeInstanceOf(AuthError);
+ await expect(client.requestEmail(old.email,'bind',key)).rejects.toBeInstanceOf(AuthError);
+ expect(calls).toHaveLength(1);
 });
