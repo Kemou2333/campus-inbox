@@ -1,0 +1,13 @@
+{
+  "platform": "harmonyos-native",
+  "implementation": "ArkTS/ArkUI Stage model",
+  "implementationVersion": "0.1.0",
+  "available": false,
+  "buildVerified": false,
+  "signatureVerified": false,
+  "deviceVerified": false,
+  "downloadUrl": null,
+  "status": "toolchain-required",
+  "label": "鸿蒙原生版开发中",
+  "reason": "尚未配置官方 SDK 与签名，暂无可安装版本。"
+}

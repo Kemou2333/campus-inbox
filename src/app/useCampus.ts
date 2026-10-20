@@ -17,7 +17,7 @@ import {askNoticeQuestion} from '../infrastructure/notice-question-client';
 import {AnalysisJobsClient,AnalysisJobJournal,submitAnalysisJob,withoutSubmittedDrafts,attachJobFiles,pendingAnalysisFiles,type AnalysisJob,type LocalAnalysisSubmission} from '../infrastructure/analysis-jobs';
 import {addFiles, cleanupFiles, exportFiles, getFile, restoreFiles, MAX_NOTICE_FILES, MAX_NOTICE_FILE_BYTES} from '../infrastructure/attachment-store';
 import {createNotice, exportBackup, exportTextBackup, newID, parseAnalysisBatch, parseBackup, parseNotices} from '../domain/notice';
-import {mergeExamples} from '../domain/examples';
+import {mergeExamples,selectExampleBatch} from '../domain/examples';
 import type {Notice} from '../domain/types';
 import {createPlatform, type PlatformCapabilities} from '../platform';
 import {loadConfig, type RuntimeConfig} from './config';
@@ -77,6 +77,8 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  const [retryAt,setRetryAt]=useState(0);
  const [toast,setToast]=useState<Toast|null>(null);
  const [pending,setPending]=useState(()=>!!localStorage.getItem(RESULT_KEY));
+ const [remainingExamples,setRemainingExamples]=useState<number|null>(null);
+ const examplesRefreshing=useRef(new Set<string>());
  const [latestAddedID,setLatestAddedID]=useState<string|null>(null);
  const [analysisJobs,setAnalysisJobs]=useState<AnalysisJob[]>([]);
  const [unconfirmedSubmissions,setUnconfirmedSubmissions]=useState<LocalAnalysisSubmission[]>([]);
@@ -441,16 +443,19 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  function recoverResult(){try{const raw=localStorage.getItem(RESULT_KEY);const value=resultRef.current||(raw?JSON.parse(raw):null);if(value)commitResult(value);}catch(e){report(e);}}
  function recoverLegacyResult(){try{const current=repository.load();save([...current,...legacyRecords.filter(n=>!current.some(old=>old.id===n.id))]);finishLegacyResult(localStorage,sessionStorage);setLegacyRecords([]);tell('旧版整理结果已保存');}catch(e){report(e);}}
  async function exportLegacyWork(){const result=await platform.saveFile(new Blob([legacyWork.text],{type:'text/plain;charset=utf-8'}),'campus-inbox-old-drafts.txt');if(result.status!=='cancelled')tell('旧版草稿已导出');}
- async function loadExamples(){
+ async function loadExamples(limit=5,quiet=false){
+  const scope=localDataScopeRef.current;
   const response=await fetch('./examples.json',{cache:'no-store'});if(!response.ok)throw new Error('示例暂时无法载入。');
   const records=parseBackup(await response.json());let registry:unknown=null;
   try{const response=await fetch('./examples-legacy.json',{cache:'no-store',signal:AbortSignal.timeout(5000)});if(response.ok)registry=await response.json();}catch{/* Existing records stay intact when legacy fingerprints are unavailable. */}
-  const current=repository.load(),merged=await mergeExamples(current,records,registry);
+  const current=repository.load(),batch=selectExampleBatch(current,records,limit),merged=await mergeExamples(current,batch.records,registry);
   // Hashing yields to other edits. Do not overwrite changes made while it ran.
-  if(JSON.stringify(repository.load())!==JSON.stringify(current))throw new Error('通知正在更新，请稍后再载入示例。');
+  if(scope!==localDataScopeRef.current||JSON.stringify(repository.load())!==JSON.stringify(current))throw new Error('通知正在更新，请稍后再载入示例。');
   if(merged.added||merged.replaced)save(merged.notices);
-  tell(merged.replaced?'示例已更新':merged.added?`已载入 ${merged.added} 条示例`:'示例已载入');
+  setRemainingExamples(batch.remaining);
+  if(!quiet)tell(merged.replaced?'示例已更新':merged.added?`已载入 ${merged.added} 条示例`:'示例已载入');
  }
+ useEffect(()=>{const scope=localDataScope;if(examplesRefreshing.current.has(scope))return;examplesRefreshing.current.add(scope);void loadExamples(0,true).catch(()=>{/* A later explicit load can retry; user edits remain untouched. */});},[localDataScope]);
  async function backup(includeAttachments=true){
   const records=repository.load();const data=includeAttachments?exportBackup(records,await exportFiles(records)):exportTextBackup(records);
   const result=await platform.saveFile(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),`campus-inbox-${includeAttachments?'':'text-'}${new Date().toISOString().slice(0,10)}.json`);
@@ -484,7 +489,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   if(cloud?.getKey()!==key)throw new Error('账号已切换，请重新打开通知。');
   return result;
  }
- return {notices,drafts,localDataScope,trashItems,restoreTrash,deleteTrashEntry,emptyTrash,unreadNoticeIDs,markNoticeRead,clearUnreadNotices,demoDraftID:drafts.find(isGuestDemoDraft)?.id??null,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,preferences,setPreferences,bootError:boot.error,
+ return {notices,drafts,remainingExamples,localDataScope,trashItems,restoreTrash,deleteTrashEntry,emptyTrash,unreadNoticeIDs,markNoticeRead,clearUnreadNotices,demoDraftID:drafts.find(isGuestDemoDraft)?.id??null,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,preferences,setPreferences,bootError:boot.error,
   report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,fillDemoDraft,attach,detach,removeDraft,analyze,analyzeDemo,askQuestion,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;

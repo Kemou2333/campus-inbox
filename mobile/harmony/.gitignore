@@ -1,0 +1,15 @@
+.hvigor/
+.idea/
+oh_modules/
+build/
+entry/build/
+local.properties
+local-signing.json5
+*.p12
+*.cer
+*.p7b
+*.hap
+*.app
+*.jks
+*.keystore
+build-evidence.json

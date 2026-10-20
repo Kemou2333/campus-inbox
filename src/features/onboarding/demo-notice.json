@@ -3,7 +3,7 @@
     "schemaVersion": 5,
     "kind": "task",
     "title": "本科生评教",
-    "summary": "本科生评教系统已开放，请在课程结束前及时完成评教。",
+    "summary": "评教系统已开放，匿名填写课程评价即可。",
     "deadline": null,
     "deadlineText": "",
     "timeline": [],
@@ -14,15 +14,14 @@
         "scope": "conditional",
         "condition": "本科生",
         "details": [
-          "在课程结束前及时评教",
-          "学生评教以匿名方式反映，评教时不要有所顾虑"
+          "请在**课程结束前**完成；评价以**匿名**方式反映。"
         ],
         "steps": [
           {
             "text": "进入评教系统",
             "details": [
-              "使用微信搜索并关注“重庆大学服务号”，点击菜单“功能”->“评教”，输入统一认证号和密码（或者扫描二维码）即可进入系统",
-              "若忘记密码，在统一认证界面点击“忘记密码”按照指引操作即可"
+              "微信关注“重庆大学服务号” → 功能 → 评教，用统一认证号和密码登录；也可扫码进入。",
+              "忘记密码时，在统一认证页点“忘记密码”找回。"
             ],
             "id": "4d4eb3c9-9d25-43d7-b938-510cf793d5bc",
             "completed": false,
@@ -45,7 +44,7 @@
     "id": "example-reading-v25-5",
     "originalText": "本科生评教系统已经开放了，请提醒学生（在课程结束前）及时评教。《关于开展2026—2027学年第一学期学生评教的通知》见QQ群文件[表情][表情]\n\n学生评教方式：\n使用微信搜索并关注“重庆大学服务号”，点击菜单“功能”->“评教”，输入统一认证号和密码（或者扫描二维码）即可进入系统。若忘记密码，在统一认证界面点击“忘记密码”按照指引操作即可。\n\n温馨提示：学生评教都将以【匿名】的方式反映，请同学们在评教时不要有所顾虑。",
     "createdAt": "2026-10-08T16:16:59.589Z",
-    "updatedAt": "2026-10-08T16:16:59.589Z",
+    "updatedAt": "2026-10-20T00:00:00.000Z",
     "completed": false,
     "dismissed": false,
     "note": "",
@@ -69,7 +68,10 @@
     "manualPrivacyEdits": true,
     "manualContentCorrections": false,
     "publishedOriginalSha256": "2427577d4c6eec8bd1595742ff0518b4ccfcf85cff6d66d4b334a9db1364817b",
-    "publishedRecordSha256": "4fa22c6c9cd902c39d5dca5b7354a400ab0eb89ba6d38ecf9e8f37c5e48cb343",
-    "manualIdentityReview": true
+    "publishedRecordSha256": "7acd9aed56fbddafcfff5b5bc4faa9c3ac401e7efa9e3d420aa6632dfe01fe54",
+    "manualIdentityReview": true,
+    "manualPresentationEdits": true,
+    "presentationRevision": "2026-10-20-short-cards",
+    "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
   }
 }

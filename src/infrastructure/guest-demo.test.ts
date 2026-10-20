@@ -24,7 +24,7 @@ describe('explicit guest sample',()=>{
    expect(isGuestDemoDraft({text,attachments:[],demo:GUEST_DEMO_MARKER})).toBe(true);
    expect(isGuestDemoDraft({text,attachments:[]})).toBe(false);
    const result=createGuestDemoNotice(String(index),text);expect(result.originalText).toBe(text);return result.title;
-  })).toEqual(['本科生评教','报名本科生院篮球队','2026级SRTP项目申报']);
+  })).toEqual(['本科生评教','篮球队招新','SRTP项目申报']);
   expect(()=>createGuestDemoNotice('edited','已修改的示例')).toThrow('示例已修改');
  });
  test('waits three seconds with no request and supports cancellation',async()=>{

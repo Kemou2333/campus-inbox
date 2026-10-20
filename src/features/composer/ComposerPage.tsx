@@ -98,7 +98,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
    <Stack direction="row" sx={{alignItems:"center",justifyContent:"space-between",gap:1,mb:1.5}}>
     <Typography variant="h6">通知 {index+1}</Typography>
     <Stack direction="row" sx={{gap:.5,alignItems:'center'}}>
-     {index===0&&<Button size="small" variant="contained" startIcon={<AutoAwesomeOutlined sx={{fontSize:17}}/>} disabled={app.busy||adding} onClick={fillDemo} sx={{minHeight:36,px:1.25,borderRadius:"10px",fontSize:14,fontWeight:700,whiteSpace:"nowrap",boxShadow:"none"}}>填入示例</Button>}
+     {index===0&&<Button data-guide="fill" size="small" variant="contained" startIcon={<AutoAwesomeOutlined sx={{fontSize:17}}/>} disabled={app.busy||adding} onClick={fillDemo} sx={{minHeight:36,px:1.25,borderRadius:"10px",fontSize:14,fontWeight:700,whiteSpace:"nowrap",boxShadow:"none"}}>填入示例</Button>}
      {(app.drafts.length>1||draft.text||draft.attachments.length>0)&&<IconButton aria-label={`移除通知${index+1}`} disabled={app.busy||adding||leaving} onClick={()=>removeDraft(draft,index)}><Close/></IconButton>}
     </Stack>
    </Stack>
@@ -116,7 +116,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
    {app.busy&&<LinearProgress sx={{mb:1,borderRadius:1}}/>}
    {app.busy&&showWaitHint&&<Typography variant="body2" color="text.secondary" role="status" sx={{mb:1}}>正在确认提交，确认后可离开。</Typography>}
    <Stack direction="row" sx={{alignItems:'center',gap:1}}>
-     <Button fullWidth variant="contained" startIcon={!app.busy&&(app.demoDraftID||!retrySeconds)?<AutoAwesomeOutlined/>:undefined} sx={{whiteSpace:'nowrap',minHeight:52,borderRadius:'12px',fontSize:17,fontWeight:700}} disabled={app.busy||adding||!hasContent||!app.demoDraftID&&(!!retrySeconds||total>4000||app.pending||!!app.legacyRecords.length||!!app.unconfirmedSubmissions.length||!app.config)} onClick={()=>void submit()}>{app.busy?app.stage:!app.demoDraftID&&retrySeconds?retryText:'整理'}</Button>
+     <Button data-guide="organize" fullWidth variant="contained" startIcon={!app.busy&&(app.demoDraftID||!retrySeconds)?<AutoAwesomeOutlined/>:undefined} sx={{whiteSpace:'nowrap',minHeight:52,borderRadius:'12px',fontSize:17,fontWeight:700}} disabled={app.busy||adding||!hasContent||!app.demoDraftID&&(!!retrySeconds||total>4000||app.pending||!!app.legacyRecords.length||!!app.unconfirmedSubmissions.length||!app.config)} onClick={()=>void submit()}>{app.busy?app.stage:!app.demoDraftID&&retrySeconds?retryText:'整理'}</Button>
      {app.busy&&<Button sx={{flexShrink:0,whiteSpace:'nowrap'}} onClick={app.cancel}>停止等待</Button>}
    </Stack>
   </Box>

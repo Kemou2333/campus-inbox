@@ -1,0 +1,197 @@
+[
+  {
+    "notice": {
+      "schemaVersion": 5,
+      "kind": "task",
+      "title": "本科生评教",
+      "summary": "评教系统已开放，匿名填写课程评价即可。",
+      "deadline": null,
+      "deadlineText": "",
+      "timeline": [],
+      "tasks": [
+        {
+          "text": "完成评教",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "本科生",
+          "details": [
+            "请在**课程结束前**完成；评价以**匿名**方式反映。"
+          ],
+          "steps": [
+            {
+              "text": "进入评教系统",
+              "details": [
+                "微信关注“重庆大学服务号” → 功能 → 评教，用统一认证号和密码登录；也可扫码进入。",
+                "忘记密码时，在统一认证页点“忘记密码”找回。"
+              ],
+              "id": "4d4eb3c9-9d25-43d7-b938-510cf793d5bc",
+              "completed": false,
+              "note": ""
+            }
+          ],
+          "time": null,
+          "timeText": "",
+          "location": null,
+          "id": "8fbfa0a7-c0e1-475c-af83-d9eeeeaf5a44",
+          "completed": false,
+          "dismissed": false,
+          "note": "",
+          "localDeadline": null
+        }
+      ],
+      "materials": [],
+      "warnings": [],
+      "reminders": [],
+      "id": "example-reading-v25-5",
+      "originalText": "本科生评教系统已经开放了，请提醒学生（在课程结束前）及时评教。《关于开展2026—2027学年第一学期学生评教的通知》见QQ群文件[表情][表情]\n\n学生评教方式：\n使用微信搜索并关注“重庆大学服务号”，点击菜单“功能”->“评教”，输入统一认证号和密码（或者扫描二维码）即可进入系统。若忘记密码，在统一认证界面点击“忘记密码”按照指引操作即可。\n\n温馨提示：学生评教都将以【匿名】的方式反映，请同学们在评教时不要有所顾虑。",
+      "createdAt": "2026-10-08T16:16:59.589Z",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "completed": false,
+      "dismissed": false,
+      "note": "",
+      "localDeadline": null,
+      "audienceOverride": "",
+      "attachments": []
+    }
+  },
+  {
+    "notice": {
+      "schemaVersion": 5,
+      "kind": "task",
+      "title": "篮球队招新",
+      "summary": "先加入纳新群，再填写篮球队预选报名表。",
+      "deadline": null,
+      "deadlineText": "10 月14日23:59",
+      "timeline": [],
+      "tasks": [
+        {
+          "text": "完成篮球队报名",
+          "assignee": "2026级新同学（男女均可）",
+          "scope": "conditional",
+          "condition": "2026级新同学，男女均可，有篮球爱好",
+          "details": [
+            "男女同学均可参加，赛制不同。"
+          ],
+          "steps": [
+            {
+              "text": "加入纳新群",
+              "details": [
+                "QQ群：[群号]。"
+              ],
+              "id": "example-reading-v211-1-task-0-step-0",
+              "completed": false,
+              "note": ""
+            },
+            {
+              "text": "填写预选报名表",
+              "details": [
+                "腾讯文档“重大杯本科生院篮球队预选信息收集表”：[报名入口]。"
+              ],
+              "id": "example-reading-v211-1-task-0-step-1",
+              "completed": false,
+              "note": ""
+            }
+          ],
+          "time": null,
+          "timeText": "",
+          "location": null,
+          "id": "example-reading-v211-1-task-0",
+          "completed": false,
+          "dismissed": false,
+          "note": "",
+          "localDeadline": null
+        }
+      ],
+      "materials": [],
+      "warnings": [],
+      "reminders": [],
+      "deadlineSpec": {
+        "type": "partial",
+        "year": null,
+        "month": 10,
+        "day": 14,
+        "hour": 23,
+        "minute": 59,
+        "rawText": "10 月14日23:59"
+      },
+      "reminderTitles": [],
+      "id": "example-reading-v211-1",
+      "originalText": "【本科生院团委文体部】\n2026重大杯本科生院篮球队招募令\n\n🏀2026级新同学，大学新篇伊始，想找一支一起出汗、一起进步的队伍吗？本科生院篮球队诚挚邀请你的加入。这里有球友，有赛场，也有你的舞台。别被\"院队\"二字吓退，我们欢迎每颗热爱篮球的心。一起训练，一起上场，一起把胜利攥在手里，等你加入！[表情]\n报名流程\n1. 首先加入纳新QQ群：[群号]\n2. 再填写【腾讯文档】重大杯本科生院篮球队预选信息收集表\n[通知入口]\n\n‼重要提醒\n报名截止时间10 月14日23:59，请各位同学抓紧时间，在截止时间前完成报名操作。\n男女同学赛制不同，均可参与。\n加入本科生院篮球队吧，让我们一起在球场上绽放青春光彩✨，共同书写属于2026级的篮球传奇🏀！期待你的参与！\n@全体成员 有这方面爱好的男女同学可以入群询问！，注意时间⚠️⚠️⚠️。",
+      "createdAt": "2026-10-12T06:08:05.588Z",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "completed": false,
+      "dismissed": false,
+      "note": "",
+      "localDeadline": null,
+      "audienceOverride": "",
+      "attachments": []
+    }
+  },
+  {
+    "notice": {
+      "schemaVersion": 5,
+      "kind": "task",
+      "title": "SRTP项目申报",
+      "summary": "选现有项目或自行组队，完成科研训练申报。",
+      "deadline": "2026-10-21T00:00:00",
+      "deadlineText": "2026年10月20日24:00",
+      "timeline": [],
+      "tasks": [
+        {
+          "text": "申报SRTP项目",
+          "assignee": null,
+          "scope": "conditional",
+          "condition": "2026级申报SRTP项目的同学",
+          "details": [
+            "平台：新版重庆大学大学生创新创业项目管理平台 [通知入口]。",
+            "**二选一**：选老师已有项目，自行找队友；或自己拟题，联系指导老师并招募队友。"
+          ],
+          "steps": [],
+          "time": null,
+          "timeText": "",
+          "location": null,
+          "id": "608ea269-2210-42df-89e6-777dff0a2a69",
+          "completed": false,
+          "dismissed": false,
+          "note": "",
+          "localDeadline": null
+        }
+      ],
+      "materials": [],
+      "warnings": [
+        "通知入口需使用**校园网**。",
+        "结题可获**2个创新学分**，满足毕业创新学分要求。",
+        "原则上完成校级SRTP后，大二才可申报国家级、市级大创。"
+      ],
+      "reminders": [
+        {
+          "id": "54b2533d-add3-4468-b4c3-323990e89d00",
+          "text": "可获得基础科研训练经历，为后续竞赛、保研、进课题组打基础。",
+          "note": ""
+        }
+      ],
+      "deadlineSpec": {
+        "type": "date_time",
+        "year": 2026,
+        "month": 10,
+        "day": 20,
+        "hour": 24,
+        "minute": 0,
+        "rawText": "2026年10月20日24:00"
+      },
+      "id": "example-reading-v25-2",
+      "originalText": "各位同学好，2026级大学生科研训练计划（SRTP）项目申报已经正式启动！@全体成员\n\n《关于组织申报2026级“大学生科研训练计划”（SRTP）项目的通知》\n[通知入口]\n（需使用校园网访问）\n\n📌 参与SRTP的作用\n1. 项目结题后可获得 2个创新学分，直接满足毕业要求的创新学分；\n2. 获得基础的科研训练经历，为后续竞赛、保研、进课题组打基础；\n3. 原则上完成校级SRTP后，大二才有资格申报国家级、市级大创项目。\n\n📌 申报方式\n两种方式二选一即可：\n- 选择老师发布的现有项目，自行找队友组队参加；\n- 自己拟定题目，联系心仪的老师担任指导老师，招募队友组队。\n\n⚠️ 关键时间与平台\n1. 申报平台：新版重庆大学大学生创新创业项目管理平台\n[通知入口]\n2. 截止时间：2026年10月20日24:00",
+      "createdAt": "2026-10-08T16:16:56.211Z",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "completed": false,
+      "dismissed": false,
+      "note": "",
+      "localDeadline": null,
+      "audienceOverride": "",
+      "attachments": [],
+      "reminderTitles": [
+        "科研训练"
+      ]
+    }
+  }
+]

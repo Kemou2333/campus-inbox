@@ -108,7 +108,7 @@ export function summaryPreview(n:Notice):{text:string;full:string;more:boolean}{
  const full=readingSummary(n);
  const clauses=full.match(/[^，；。！？]+[，；。！？]?/g)??[];
  let text='';
- for(const clause of clauses){if(text&&Array.from(text+clause).length>72)break;text+=clause;}
+ for(const clause of clauses){if(text&&Array.from(text+clause).length>44)break;text+=clause;}
  return {text:text||full,full,more:text!==full};
 }
 /** Short reading labels only. The expanded reminder still renders its original text. */

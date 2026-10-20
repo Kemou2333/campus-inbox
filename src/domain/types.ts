@@ -1,4 +1,5 @@
 /** Local v5 records. The server's AI contract remains v4 and never contains progress or notes. */
+export type ManualPriority = 'important-urgent' | 'important' | 'urgent' | 'later';
 export type NoticeKind = 'task' | 'reminder' | 'information';
 export type NoticeStatus = 'pending' | 'completed' | 'dismissed' | 'reminder';
 export type TaskScope = 'all' | 'conditional' | 'role' | 'unspecified';
@@ -83,6 +84,7 @@ export interface Notice extends Omit<NoticeAnalysis, 'schemaVersion' | 'tasks' |
   attachments: string[];
   /** Optional for backwards-compatible records; never supplied by the AI. */
   favorite?: boolean;
+  manualPriority?: ManualPriority | null;
   tasks: Task[];
   /** User wording stays separate from the immutable original AI fields. */
   corrections?: {updatedAt: string; values: {path: string; value: string}[]};

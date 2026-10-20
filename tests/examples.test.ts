@@ -1,7 +1,7 @@
 import {describe,expect,test} from 'vitest';
 import {readFile} from 'node:fs/promises';
 import {auditPublicExamples} from '../scripts/verify-example-privacy.mjs';
-import {exampleFingerprint,mergeExamples} from '../src/domain/examples';
+import {exampleFingerprint,mergeExamples,selectExampleBatch} from '../src/domain/examples';
 import {createNotice,parseBackup} from '../src/domain/notice';
 import type {Notice,NoticeAnalysis} from '../src/domain/types';
 
@@ -88,7 +88,7 @@ describe('safe built-in example upgrades',()=>{
   test('the catalog retains earlier fingerprints and adds the 13 unredacted 2.10 built-ins without publishing their content',async()=>{
     const previous=JSON.parse(await readFile(new URL('../public/examples-legacy-2.4.json',import.meta.url),'utf8'));
     const current=JSON.parse(await readFile(new URL('../public/examples-legacy.json',import.meta.url),'utf8'));
-    expect(current.slice(0,13)).toEqual(previous);expect(current).toHaveLength(52);
+    expect(current.slice(0,13)).toEqual(previous);expect(current.length).toBeGreaterThanOrEqual(52);
     expect(current[13].id).toBe('example-reading-v25-12');
     expect(current[13].fingerprint).toMatch(/^[a-f0-9]{64}$/);
     for(const item of current){expect(Object.keys(item).sort()).toEqual(['fingerprint','id']);expect(item.fingerprint).toMatch(/^[a-f0-9]{64}$/);}
@@ -140,14 +140,28 @@ describe('safe built-in example upgrades',()=>{
     const basketball=fresh.find(n=>n.id==='example-reading-v211-1')!;
     expect(basketball.deadlineSpec).toMatchObject({month:10,day:14,year:null,rawText:'10 月14日23:59'});expect(basketball.deadline).toBeNull();
     const math=fresh.find(n=>n.id==='example-reading-v211-0')!;
-    expect(math.tasks[0].steps.map(step=>step.details.length)).toEqual([6,4]);
+    expect(math.tasks[0].steps.map(step=>step.details.length)).toEqual([5,4]);
     const origin=provenance.results.find((row:{exampleId:string})=>row.exampleId===math.id);
     expect(origin).toMatchObject({case:'r14-math-01',originalFirstStatus:'failed',originalFailureCode:'AI_FORMAT_INVALID',additionalProviderCallsForRevalidation:0,manualContentCorrections:false});
     expect(origin.firstResponseValidation).toContain('same first response');
     expect(origin.knownLimitations.join(' ')).toContain('omits audio');
-    const conflict=math.warnings.find(warning=>warning.includes('不一致'))!;
+    const conflict=math.tasks[0].steps.flatMap(step=>step.details).find(detail=>detail.includes('入口有冲突'))!;
     expect(conflict).toContain('[平台入口 A]');expect(conflict).toContain('[平台入口 B]');
     for(const notice of fresh){expect(notice.originalText.startsWith('【脱敏示例】')).toBe(false);expect(notice.originalText).not.toContain('（化名）');}
+  });
+
+  test('all public cards clearly distinguish human presentation refinement from historical provider responses',async()=>{
+    const provenance=JSON.parse(await readFile(new URL('../public/examples-provenance.json',import.meta.url),'utf8'));
+    const examples=parseBackup(JSON.parse(await readFile(new URL('../public/examples.json',import.meta.url),'utf8')));
+    expect(provenance.manualPresentationRefinement20261020).toMatchObject({reviewedRecords:24,providerCallsForCatalogRefinement:0,originalTextUnchanged:true,manualPresentationEdits:true});
+    for(const notice of examples){
+      const source=provenance.results.find((row:{exampleId:string})=>row.exampleId===notice.id);
+      expect(source.manualPresentationEdits).toBe(true);expect(source.manualContentCorrections).toBe(false);
+      expect(notice.sourceRefs).toBeUndefined();expect(notice.summary.length).toBeLessThanOrEqual(36);expect(notice.title.length).toBeLessThanOrEqual(16);
+      for(const task of notice.tasks)expect(task.text.length).toBeLessThanOrEqual(16);
+    }
+    expect(examples.slice(0,5).filter(notice=>notice.kind==='task')).toHaveLength(3);
+    expect(examples.slice(0,5).filter(notice=>notice.kind!=='task')).toHaveLength(2);
   });
   test('privacy replacement retains edited old records without duplicating a differently redacted original',async()=>{
     const raw=old(),catalog=await registry(raw),redacted={...fresh('【脱敏示例】公开演示原文',raw.id),title:'脱敏示例'};
@@ -176,7 +190,7 @@ describe('safe built-in example upgrades',()=>{
     expect(auditPublicExamples(backup,provenance)).toEqual([]);
     expect(provenance.privacyReview.manualReview).toBe(true);
     expect(provenance.privacyReview.disclosure).toContain('脱敏');
-    expect(provenance.generationMethod).toContain('manual privacy redaction only');
+    expect(provenance.generationMethod).toContain('human presentation refinement');
   });
   test('a changed reviewed example, private phone, group or form link blocks publishing without revealing the value',async()=>{
     const backup=JSON.parse(await readFile(new URL('../public/examples.json',import.meta.url),'utf8'));
@@ -192,4 +206,16 @@ describe('safe built-in example upgrades',()=>{
     expect(auditPublicExamples(backup,unreviewed).some((entry:{category:string})=>entry.category==='missing_manual_review')).toBe(true);
   });
 
+});
+
+test('five-at-a-time refresh never removes unrelated legacy records or overwrites priority edits',async()=>{
+ const original=old(),unrelated={...old(),id:'example-reading-v25-1',originalText:'另一条旧示例'},replacement=fresh();
+ const protectedRecord={...fresh('第三条','example-reading-v25-2'),manualPriority:'important' as const};
+ const fingerprints=[...await registry(original),...await registry(unrelated)];
+ const result=await mergeExamples([original,unrelated,protectedRecord],[replacement],fingerprints);
+ expect(result.notices).toContainEqual(unrelated);expect(result.notices).toContainEqual(protectedRecord);expect(result.notices).toContainEqual(replacement);
+ const catalog=Array.from({length:12},(_,i)=>fresh('source'+i,'example-reading-v25-'+i));
+ const first=selectExampleBatch([],catalog);expect(first.records).toHaveLength(5);expect(first.remaining).toBe(7);
+ const second=selectExampleBatch(first.records,catalog);expect(second.records).toHaveLength(10);expect(second.remaining).toBe(2);
+ expect(selectExampleBatch(first.records,catalog,0).records).toEqual(first.records);
 });

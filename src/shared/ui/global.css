@@ -30,3 +30,6 @@ button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 @keyframes dialog-arrive{from{opacity:.65;transform:translateY(8px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
 
 @keyframes guide-focus-arrive{from{opacity:0}to{opacity:1}}
+
+@media(prefers-reduced-motion:no-preference){.sample-hint-once .sample-entry{animation:sample-greeting 2200ms cubic-bezier(.22,1,.36,1) 1200ms 1}}
+@keyframes sample-greeting{0%,100%{transform:scale(1);box-shadow:none}38%{transform:scale(1.055);box-shadow:0 0 0 7px color-mix(in srgb,currentColor 9%,transparent)}65%{transform:scale(.99)}}
