@@ -182,6 +182,7 @@ export function parseNotice(value: unknown): Notice {
   };
   if(a.sourceRefs!==undefined)result.sourceRefs=parseSourceRefs(a.sourceRefs,result,result.originalText);
   if(o.favorite!==undefined)result.favorite=bool(o.favorite);
+  if(Object.hasOwn(o,'manualPriority')){if(o.manualPriority!==null&&(typeof o.manualPriority!=='string'||!['important-urgent','important','urgent','later'].includes(o.manualPriority)))throw new Error('优先级格式不正确');result.manualPriority=o.manualPriority as Notice['manualPriority'];}
   const corrections=parseCorrections(o.corrections,result);if(corrections!==undefined)result.corrections=corrections;
   return result;
 }

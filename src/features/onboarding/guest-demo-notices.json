@@ -3,34 +3,34 @@
     "notice": {
       "schemaVersion": 5,
       "kind": "task",
-      "title": "报名本科生院篮球队",
-      "summary": "本科生院篮球队招募2026级男女新同学，报名需加纳新群并填写预选信息收集表。",
+      "title": "篮球队招新",
+      "summary": "先加入纳新群，再填写篮球队预选报名表。",
       "deadline": null,
       "deadlineText": "10 月14日23:59",
       "timeline": [],
       "tasks": [
         {
-          "text": "加入纳新群并填写预选信息收集表",
+          "text": "完成篮球队报名",
           "assignee": "2026级新同学（男女均可）",
           "scope": "conditional",
           "condition": "2026级新同学，男女均可，有篮球爱好",
           "details": [
-            "男女同学赛制不同，均可参与；欢迎热爱篮球的同学，别被“院队”二字吓退。"
+            "男女同学均可参加，赛制不同。"
           ],
           "steps": [
             {
-              "text": "加入纳新QQ群",
+              "text": "加入纳新群",
               "details": [
-                "纳新QQ群：[群号]。"
+                "QQ群：[群号]。"
               ],
               "id": "example-reading-v211-1-task-0-step-0",
               "completed": false,
               "note": ""
             },
             {
-              "text": "填写重大杯本科生院篮球队预选信息收集表",
+              "text": "填写预选报名表",
               "details": [
-                "使用【腾讯文档】报名表：[报名入口]。"
+                "腾讯文档“重大杯本科生院篮球队预选信息收集表”：[报名入口]。"
               ],
               "id": "example-reading-v211-1-task-0-step-1",
               "completed": false,
@@ -60,17 +60,10 @@
         "rawText": "10 月14日23:59"
       },
       "reminderTitles": [],
-      "sourceRefs": {
-        "tasks.0.text": [
-          9,
-          10,
-          11
-        ]
-      },
       "id": "example-reading-v211-1",
       "originalText": "【本科生院团委文体部】\n2026重大杯本科生院篮球队招募令\n\n🏀2026级新同学，大学新篇伊始，想找一支一起出汗、一起进步的队伍吗？本科生院篮球队诚挚邀请你的加入。这里有球友，有赛场，也有你的舞台。别被\"院队\"二字吓退，我们欢迎每颗热爱篮球的心。一起训练，一起上场，一起把胜利攥在手里，等你加入！[表情]\n报名流程\n1. 首先加入纳新QQ群：[群号]\n2. 再填写【腾讯文档】重大杯本科生院篮球队预选信息收集表\n[通知入口]\n\n‼重要提醒\n报名截止时间10 月14日23:59，请各位同学抓紧时间，在截止时间前完成报名操作。\n男女同学赛制不同，均可参与。\n加入本科生院篮球队吧，让我们一起在球场上绽放青春光彩✨，共同书写属于2026级的篮球传奇🏀！期待你的参与！\n@全体成员 有这方面爱好的男女同学可以入群询问！，注意时间⚠️⚠️⚠️。",
       "createdAt": "2026-10-12T06:08:05.588Z",
-      "updatedAt": "2026-10-17T00:00:00.000Z",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
       "completed": false,
       "dismissed": false,
       "note": "",
@@ -80,7 +73,7 @@
     },
     "provenance": {
       "exampleId": "example-reading-v211-1",
-      "title": "报名本科生院篮球队",
+      "title": "篮球队招新",
       "case": "r21-real-account-basketball-20261017",
       "sourceIndex": 0,
       "testedAt": "2026-10-17T15:27:36.544Z",
@@ -97,7 +90,7 @@
       "manualContentCorrections": false,
       "privacyPreparation": "The browser submitted the existing manually-redacted public original. Every returned field was manually checked; no additional semantic or privacy wording edits were needed.",
       "publishedOriginalSha256": "376a65f8be5871c60bf8e079db39265820ddf76f5280c31df9e1b0a543b2a35b",
-      "publishedRecordSha256": "2528579974c6d393ecf357392e5306bd022ff3983ab8be8af6a9d02351d0d4ba",
+      "publishedRecordSha256": "2e089b1599e5fa04cb3ec43523c33c89cf1910aa7c146c4a64d765a9291483c1",
       "providerCalled": true,
       "cacheReuse": false,
       "realProviderCalls": 1,
@@ -120,34 +113,21 @@
       "knownLimitations": [
         "A short promotional phrase remains in task details. No wording was manually corrected for this public example.",
         "Browser completion includes polling and sync delay; it differs from server/provider elapsed time."
-      ]
+      ],
+      "manualPresentationEdits": true,
+      "presentationRevision": "2026-10-20-short-cards",
+      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
     }
   },
   {
     "notice": {
       "schemaVersion": 5,
       "kind": "task",
-      "title": "2026级SRTP项目申报",
-      "summary": "2026级大学生科研训练计划（SRTP）项目申报已启动，可在指定平台选择两种方式之一申报，截止2026年10月20日24:00。",
+      "title": "SRTP项目申报",
+      "summary": "选现有项目或自行组队，完成科研训练申报。",
       "deadline": "2026-10-21T00:00:00",
       "deadlineText": "2026年10月20日24:00",
-      "timeline": [
-        {
-          "label": "申报截止",
-          "time": null,
-          "timeText": "2026年10月20日24:00",
-          "location": null,
-          "timeSpec": {
-            "type": "date_time",
-            "year": 2026,
-            "month": 10,
-            "day": 20,
-            "hour": 24,
-            "minute": 0,
-            "rawText": "2026年10月20日24:00"
-          }
-        }
-      ],
+      "timeline": [],
       "tasks": [
         {
           "text": "申报SRTP项目",
@@ -155,8 +135,8 @@
           "scope": "conditional",
           "condition": "2026级申报SRTP项目的同学",
           "details": [
-            "申报平台：新版重庆大学大学生创新创业项目管理平台 [通知入口]",
-            "两种方式二选一：选择老师发布的现有项目，自行找队友组队参加；或自己拟定题目，联系心仪的老师担任指导老师，招募队友组队"
+            "平台：新版重庆大学大学生创新创业项目管理平台 [通知入口]。",
+            "**二选一**：选老师已有项目，自行找队友；或自己拟题，联系指导老师并招募队友。"
           ],
           "steps": [],
           "time": null,
@@ -171,19 +151,14 @@
       ],
       "materials": [],
       "warnings": [
-        "需使用校园网访问通知链接",
-        "项目结题后可获得2个创新学分，直接满足毕业要求的创新学分",
-        "原则上完成校级SRTP后，大二才有资格申报国家级、市级大创项目"
+        "通知入口需使用**校园网**。",
+        "结题可获**2个创新学分**，满足毕业创新学分要求。",
+        "原则上完成校级SRTP后，大二才可申报国家级、市级大创。"
       ],
       "reminders": [
         {
           "id": "54b2533d-add3-4468-b4c3-323990e89d00",
-          "text": "获得基础的科研训练经历，为后续竞赛、保研、进课题组打基础",
-          "note": ""
-        },
-        {
-          "id": "62a69ed3-39a9-4fad-9915-dd69aac7946f",
-          "text": "通知链接：[通知入口]",
+          "text": "可获得基础科研训练经历，为后续竞赛、保研、进课题组打基础。",
           "note": ""
         }
       ],
@@ -199,17 +174,20 @@
       "id": "example-reading-v25-2",
       "originalText": "各位同学好，2026级大学生科研训练计划（SRTP）项目申报已经正式启动！@全体成员\n\n《关于组织申报2026级“大学生科研训练计划”（SRTP）项目的通知》\n[通知入口]\n（需使用校园网访问）\n\n📌 参与SRTP的作用\n1. 项目结题后可获得 2个创新学分，直接满足毕业要求的创新学分；\n2. 获得基础的科研训练经历，为后续竞赛、保研、进课题组打基础；\n3. 原则上完成校级SRTP后，大二才有资格申报国家级、市级大创项目。\n\n📌 申报方式\n两种方式二选一即可：\n- 选择老师发布的现有项目，自行找队友组队参加；\n- 自己拟定题目，联系心仪的老师担任指导老师，招募队友组队。\n\n⚠️ 关键时间与平台\n1. 申报平台：新版重庆大学大学生创新创业项目管理平台\n[通知入口]\n2. 截止时间：2026年10月20日24:00",
       "createdAt": "2026-10-08T16:16:56.211Z",
-      "updatedAt": "2026-10-08T16:16:56.211Z",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
       "completed": false,
       "dismissed": false,
       "note": "",
       "localDeadline": null,
       "audienceOverride": "",
-      "attachments": []
+      "attachments": [],
+      "reminderTitles": [
+        "科研训练"
+      ]
     },
     "provenance": {
       "exampleId": "example-reading-v25-2",
-      "title": "2026级SRTP项目申报",
+      "title": "SRTP项目申报",
       "case": "user-three",
       "sourceIndex": 2,
       "testedAt": "2026-10-08T16:16:56.211Z",
@@ -223,8 +201,11 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "599989e87cd30dc5f07672914e7afc1a3683a6eb8be76470bb24bf0c27d51f35",
-      "publishedRecordSha256": "76d04bdc87edbaafc9c148dab953dac56d81cf460a8c217b6c0faaed324e37b2",
-      "manualIdentityReview": true
+      "publishedRecordSha256": "eac2f155e53be4761a9a4bef2d2ab647628021bf1cb622042a9212f7a2ef6d14",
+      "manualIdentityReview": true,
+      "manualPresentationEdits": true,
+      "presentationRevision": "2026-10-20-short-cards",
+      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
     }
   }
 ]

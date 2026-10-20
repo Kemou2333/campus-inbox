@@ -55,7 +55,8 @@ export async function mergeExamples(current:Notice[],incoming:Notice[],legacyReg
   const latest=new Map<string,string>(),currentFingerprints=new Map<string,string>();
   try{
     for(const [id,fingerprint] of await Promise.all(incoming.map(async n=>[n.id,await exampleFingerprint(n)] as const)))latest.set(id,fingerprint);
-    const checked=await Promise.all(current.filter(n=>expected.has(n.id)||latest.has(n.id)&&isExampleNotice(n)).map(async n=>{
+    const incomingOriginals=new Set(incoming.map(n=>n.originalText));
+    const checked=await Promise.all(current.filter(n=>(latest.has(n.id)||incomingOriginals.has(n.originalText))&&(expected.has(n.id)||latest.has(n.id)&&isExampleNotice(n))).map(async n=>{
       const fingerprint=await exampleFingerprint(n);
       currentFingerprints.set(n.id,fingerprint);
       return {id:n.id,unchanged:expected.get(n.id)?.has(fingerprint)===true&&latest.get(n.id)!==fingerprint};
@@ -75,4 +76,16 @@ export async function mergeExamples(current:Notice[],incoming:Notice[],legacyReg
   // belong to the same original, just like one AI analysis of a combined input.
   const additions=incoming.filter(n=>!ids.has(n.id)&&(!originals.has(n.originalText)||isExampleNotice(n)&&sharedCatalogSources.has(n.originalText)));
   return {notices:[...retained,...additions],added:additions.length,replaced:removable.size};
+}
+
+/** Refresh only loaded built-ins and add a small batch; a partial catalog must never remove unrelated examples. */
+export function selectExampleBatch(current:Notice[],catalog:Notice[],limit=5){
+ const catalogIDs=new Set(catalog.map(n=>n.id));
+ const existing=current.filter(isExampleNotice);
+ const ids=new Set(existing.map(n=>n.id));
+ const legacySources=new Set(existing.filter(n=>!catalogIDs.has(n.id)).map(n=>n.originalText));
+ const loaded=(n:Notice)=>ids.has(n.id)||legacySources.has(n.originalText);
+ const unseen=catalog.filter(n=>!loaded(n));
+ const additions=new Set(unseen.slice(0,Math.max(0,limit)).map(n=>n.id));
+ return {records:catalog.filter(n=>loaded(n)||additions.has(n.id)),remaining:Math.max(0,unseen.length-additions.size)};
 }
