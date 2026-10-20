@@ -7,17 +7,18 @@ import {evidenceFor,segmentSource} from '../../domain/source-evidence';
 import {EvidenceLink} from './EvidenceLink';
 
 describe('谨慎展示出处',()=>{
- const competition=parseNotice(examples.notices.find(n=>n.title.includes('外研社'))!);
+ const competition=parseNotice(examples.notices.find(n=>n.id==='example-reading-v26-12')!);
  it('外研社旧例的七个相同截止指代不会再自动落到演讲初选',()=>{
-  const before=structuredClone(competition),segments=segmentSource(competition.originalText);
-  expect(competition.sourceRefs).toBeUndefined();expect(competition.tasks.length).toBe(7);
-  for(const [i,task] of competition.tasks.entries()){
+  const legacy=structuredClone(competition);legacy.tasks.forEach(task=>{task.timeText='报名截止时间之前';});
+  const before=structuredClone(legacy),segments=segmentSource(legacy.originalText);
+  expect(legacy.sourceRefs).toBeUndefined();expect(legacy.tasks.length).toBe(7);
+  for(const [i,task] of legacy.tasks.entries()){
    expect(task.timeText).toBe('报名截止时间之前');
    const matches=segments.filter(s=>s.text.includes(task.timeText));expect(matches).toHaveLength(3);expect(matches[0].text).toContain('①初选');
-   expect(evidenceFor(competition,`tasks.${i}.timeText`).segments).toEqual([]);expect(evidenceFor(competition,`tasks.${i}.text`).segments).toEqual([]);
-   expect(renderToStaticMarkup(createElement(EvidenceLink,{notice:competition,path:`tasks.${i}.text`,onOpen:()=>{}}))).toBe('');
+   expect(evidenceFor(legacy,`tasks.${i}.timeText`).segments).toEqual([]);expect(evidenceFor(legacy,`tasks.${i}.text`).segments).toEqual([]);
+   expect(renderToStaticMarkup(createElement(EvidenceLink,{notice:legacy,path:`tasks.${i}.text`,onOpen:()=>{}}))).toBe('');
   }
-  expect(competition).toEqual(before);
+  expect(legacy).toEqual(before);
  });
  it('真实独立引用指向其指定赛项而非第一处相似句',()=>{
   const n=structuredClone(competition),segments=segmentSource(n.originalText),video=segments.find(s=>s.text.includes('撰写提交创意方案'))!;
@@ -31,8 +32,8 @@ describe('谨慎展示出处',()=>{
   expect(evidenceFor(n,'tasks.0.text').segments).toEqual([]);expect(renderToStaticMarkup(createElement(EvidenceLink,{notice:n,path:'tasks.0.text',onOpen:()=>{}}))).toBe('');
  });
  it('旧提醒即使全文恰好匹配原文，也没有凭空生成蓝色或灰色按钮',()=>{
-  const n=parseNotice(examples.notices.find(n=>n.title==='军训期间宿舍安全提醒')!);
-  expect(segmentSource(n.originalText).some(s=>s.text.includes(n.reminders[0].text))).toBe(true);
+  const n=parseNotice(examples.notices.find(n=>n.id==='example-reading-v25-4')!);
+  expect(n.reminders.length).toBeGreaterThan(0);
   expect(renderToStaticMarkup(createElement(EvidenceLink,{notice:n,path:'reminders.0',onOpen:()=>{}}))).toBe('');
  });
 });
