@@ -8,7 +8,7 @@ import {applyFieldCorrection} from './field-correction';
 import {NoticeCard,type NoticeActions} from './NoticeCard';
 
 describe('在通知原位置逐处修正',()=>{
- const base=parseNotice(examples.notices.find(n=>n.title.includes('外研社'))!);
+ const base=parseNotice(examples.notices.find(n=>n.id==='example-reading-v26-12')!);
  it('只更新点击字段，初稿、原文和其他修正及进度不变',()=>{
   const n=setCorrections({...structuredClone(base),note:'个人笔记',favorite:true},[{path:'summary',value:'已修正简介'}]);
   n.tasks[0].completed=true;n.tasks[0].note='待办笔记';
@@ -40,16 +40,17 @@ describe('在通知原位置逐处修正',()=>{
   expect(editing).toContain('data-correction-path="tasks.0.details.0"');expect(editing).not.toContain('修改位置');
   expect(renderToStaticMarkup(createElement(NoticeCard,props))).not.toContain('data-correction-path');
  });
- it('常用工具仅在展开区直接出现，原文与删除只在展开底部',()=>{
+ it('提问导出和加号在展开区，原文在底部，删除在卡片主操作区',()=>{
   const actions:NoticeActions={note:()=>{},details:()=>{},calendar:()=>{},evidence:()=>{},correct:()=>{},question:()=>{},share:()=>{}};
   const props={notice:base,app:{act:()=>{},remove:()=>{}},actions,now:Date.now(),expanded:false,onExpandedChange:()=>{},expandedTaskIDs:new Set<string>(),onTaskExpandedChange:()=>{}};
   const collapsed=renderToStaticMarkup(createElement(NoticeCard,props));
-  expect(collapsed).not.toContain('aria-label="原文与附件：');expect(collapsed).not.toContain('aria-label="删除通知：');expect(collapsed).not.toContain('更多操作');
+  expect(collapsed).not.toContain('aria-label="原文与附件：');expect(collapsed.match(/aria-label="删除通知：/g)).toHaveLength(1);expect(collapsed).not.toContain('更多操作');
   const open=renderToStaticMarkup(createElement(NoticeCard,{...props,expanded:true}));
-  expect(open.match(/aria-label="提问：/g)).toHaveLength(1);expect(open.match(/aria-label="修正：/g)).toHaveLength(1);
+  expect(open.match(/aria-label="提问：/g)).toHaveLength(1);expect(open).not.toContain('aria-label="修正：');expect(open.match(/aria-label="更多操作：/g)).toHaveLength(1);
   expect(open.match(/aria-label="分享图：/g)).toHaveLength(1);expect(open.match(/aria-label="原文与附件：/g)).toHaveLength(1);
   expect(open.indexOf('notice-bottom-actions')).toBeLessThan(open.indexOf('aria-label="原文与附件：'));
-  expect(open.indexOf('aria-label="原文与附件：')).toBeLessThan(open.indexOf('aria-label="删除通知：'));
+  expect(open.indexOf('aria-label="删除通知：')).toBeLessThan(open.indexOf('notice-bottom-actions'));
+  expect(open).not.toContain('与我无关');expect(open).not.toContain('evidence-link');
  });
  it('后台只读仍可看原文、出处与内容，不能编辑或删除',()=>{
   const actions:NoticeActions={note:()=>{},details:()=>{},calendar:()=>{},evidence:()=>{},correct:()=>{},question:()=>{},share:()=>{}};
