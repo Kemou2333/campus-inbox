@@ -53,6 +53,11 @@ export function headlineTime(value:string):string{
  if(teaching)return `${displayTime(teaching[1])} · 按学期`;
  return displayTime(value.replace(/^(?:报名)?截止(?:时间)?[：:]?\s*(?=\d)/,''));
 }
+/** Keep verbose scheduling explanations inside details, never a multi-line badge. */
+export function compactHeadlineTime(value:string):string{
+ const text=headlineTime(value).replace(/^[^\d:：]{1,80}[:：]\s*/,'');
+ return [...text].length<=28?text:'';
+}
 export function timeKey(value:string):string{
  return plainReadingText(value).replace(/\b(\d{4})[/-](\d{1,2})[/-](\d{1,2})(?=$|\s)/g,(_,year,month,day)=>`${year}年${Number(month)}月${Number(day)}日`).replace(/[\s：:]/g,'').replace(/(\d{1,2})月(\d{1,2})(?:日|号)?/g,'$1月$2日').replace(/以前|之前/g,'前').replace(/[—–]/g,'-').replace(/^截止/,'');
 }

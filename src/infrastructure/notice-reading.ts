@@ -22,7 +22,12 @@ export class NoticeReading {
   if(JSON.stringify(next)!==JSON.stringify(state))this.write(scope,next);return next.unread;
  }
  markRead(scope:string,id:string):void{
+  this.markManyRead(scope,[id]);
+ }
+ markManyRead(scope:string,ids:readonly string[]):void{
+  if(!ids.length)return;
   const state=this.read(scope)??{version:1 as const,known:[],unread:[]};
-  this.write(scope,{version:1,known:[...new Set([...state.known,id])].slice(-MAX_KNOWN),unread:state.unread.filter(value=>value!==id)});
+  const read=new Set(ids),next={version:1 as const,known:[...new Set([...state.known,...ids])].slice(-MAX_KNOWN),unread:state.unread.filter(value=>!read.has(value))};
+  if(JSON.stringify(next)!==JSON.stringify(state))this.write(scope,next);
  }
 }

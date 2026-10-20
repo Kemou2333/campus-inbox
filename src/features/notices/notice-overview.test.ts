@@ -1,7 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {createNotice,setTaskApplicable,toggleStep} from '../../domain/notice';
 import type {NoticeAnalysis} from '../../domain/types';
-import {displayTime,headlineTime,extraTimeline,matchesHiddenDetail,noticeOverview,readingSummary,reminderHeading,sameHeadlineTime,summaryPreview,taskTime} from './notice-overview';
+import {compactHeadlineTime,displayTime,headlineTime,extraTimeline,matchesHiddenDetail,noticeOverview,readingSummary,reminderHeading,sameHeadlineTime,summaryPreview,taskTime} from './notice-overview';
 
 const base:NoticeAnalysis={schemaVersion:4,kind:'task',title:'请假办理',summary:'按通知要求办理。',deadline:null,deadlineText:'10月7号17:00前',timeline:[],materials:[],warnings:[],reminders:[],tasks:[
  {text:'提交请假',assignee:null,scope:'conditional',condition:'需要8号请假的同学',details:[],steps:[{text:'提交截图',details:[]},{text:'填写办事簿',details:[]}],time:null,timeText:'10月7号17:00前',location:'智慧学工'},
@@ -145,3 +145,5 @@ describe('readable notice facts',()=>{
   expect(summaryPreview(n)).toEqual({text:'',full:'',more:false});expect(noticeOverview(n).times).toEqual([]);
  });
 });
+
+describe('compact card times',()=>{it('keeps card time badges compact without shortening the saved explanation',()=>{expect(compactHeadlineTime('语言成绩要求：2026年11月10日前')).toBe('11月10日前');expect(compactHeadlineTime('周六16:00')).toBe('周六16:00');const long='当前流程：'+ '请等待学校审批后再根据后续通知完成系统提交。'.repeat(3);expect(compactHeadlineTime(long)).toBe('');expect(long).toContain('学校审批');});});

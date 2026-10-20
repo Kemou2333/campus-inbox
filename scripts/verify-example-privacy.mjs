@@ -65,6 +65,12 @@ async function main(){
   const catalogNotice=backup.notices.find(notice=>notice.id===demo?.notice?.id);
   if(!catalogNotice||publicExampleHash(catalogNotice)!==publicExampleHash(demo.notice))findings.push({path:'onboarding.notice',category:'demo_must_match_reviewed_catalog'});
   findings.push(...auditPublicExamples({notices:[demo.notice]},{privacyReview:provenance.privacyReview,results:[demo.provenance]}).map(finding=>({...finding,path:'onboarding.'+finding.path})));
+  const guestDemos=JSON.parse(await readFile(new URL('../src/features/onboarding/guest-demo-notices.json',import.meta.url),'utf8'));
+  for(const [index,guestDemo] of guestDemos.entries()){
+    const catalogNotice=backup.notices.find(notice=>notice.id===guestDemo?.notice?.id);
+    if(!catalogNotice||publicExampleHash(catalogNotice)!==publicExampleHash(guestDemo.notice))findings.push({path:`guestDemos[${index}].notice`,category:'demo_must_match_reviewed_catalog'});
+    findings.push(...auditPublicExamples({notices:[guestDemo.notice]},{privacyReview:provenance.privacyReview,results:[guestDemo.provenance]}).map(finding=>({...finding,path:`guestDemos[${index}].`+finding.path})));
+  }
   for(const name of ['examples-legacy.json','examples-legacy-2.4.json']){
     const registry=JSON.parse(await readFile(new URL(name,publicRoot),'utf8'));
     if(!Array.isArray(registry)||registry.some(entry=>!entry||Object.keys(entry).sort().join(',')!=='fingerprint,id'||typeof entry.id!=='string'||!/^example-(?:reading|v1)-[a-z0-9-]+$/.test(entry.id)||!/^[a-f0-9]{64}$/.test(entry.fingerprint)))findings.push({path:name,category:'legacy_must_be_fingerprints_only'});

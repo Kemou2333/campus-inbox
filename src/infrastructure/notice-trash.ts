@@ -24,6 +24,7 @@ export class NoticeTrash {
  }
  private stored(scope:string):TrashEntry[]{return this.keys().filter(key=>key.startsWith(this.prefix(scope))).flatMap(key=>{const entry=this.read(key);return entry?[entry]:[];});}
  list(scope:string):TrashEntry[]{return this.stored(scope).filter(entry=>Date.parse(entry.expiresAt)>this.now()).sort((a,b)=>b.deletedAt.localeCompare(a.deletedAt));}
+ get(scope:string,id:string):TrashEntry|null{const entry=this.read(this.key(scope,id));return entry&&Date.parse(entry.expiresAt)>this.now()?entry:null;}
  add(scope:string,notice:Notice,position:number):TrashEntry{
   const existing=this.stored(scope),items=existing.filter(entry=>Date.parse(entry.expiresAt)>this.now());
   if(items.length>=MAX_TRASH_ITEMS)throw new Error('回收站已满，请先在设置中清理。');

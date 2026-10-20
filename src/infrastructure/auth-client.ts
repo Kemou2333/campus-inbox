@@ -1,5 +1,5 @@
 import { normalizeSyncEndpoint } from './sync-client';
-import { canonicalEmail } from '../../server/contracts/email-policy.mjs';
+import { canonicalEmail,canonicalLoginEmail } from '../../server/contracts/email-policy.mjs';
 
 export interface AuthSession { key: string; username: string; expiresAt: string; email?: string | null }
 export interface AuthStatus { username: string; expiresAt: string; email?: string | null }
@@ -24,14 +24,14 @@ const keyPattern = /^[A-Za-z0-9_-]{43}$/;
 const validExpiry = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value) && Number.isFinite(Date.parse(value));
 const validUsername = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0 && [...value].length <= 24;
 const formatError = () => new AuthError('登录服务返回格式不正确。');
-function emailValue(value: string): string {
-  try { return canonicalEmail(value); }
+function emailValue(value: string,restrictDomain=true): string {
+  try { return restrictDomain?canonicalEmail(value):canonicalLoginEmail(value); }
   catch (error) { throw new AuthError(error instanceof Error ? error.message : '请填写支持的邮箱地址。'); }
 }
 function optionalEmail(value: unknown): string | null | undefined {
   if (value === undefined || value === null) return value;
   if (typeof value !== 'string') throw formatError();
-  try { if (canonicalEmail(value) === value) return value; } catch { /* Invalid server field. */ }
+  try { if (canonicalLoginEmail(value) === value) return value; } catch { /* Invalid server field. */ }
   throw formatError();
 }
 
@@ -96,8 +96,10 @@ export class AuthClient {
     if (!/^[A-HJ-NP-Z2-9]{8}$/.test(invite.trim().toUpperCase())) throw new AuthError('请填写正确的 8 位邀请码。');
     return this.session(await this.request('register', { invite: invite.trim().toUpperCase(), username, password,...(captcha?{captcha}:{}) }));
   }
-  async login(username: string, password: string,captcha?:AuthCaptcha): Promise<AuthSession> {
-    return this.session(await this.request('login', { username, password,...(captcha?{captcha}:{}) }));
+  async login(identifier: string, password: string,captcha?:AuthCaptcha): Promise<AuthSession> {
+    let account:{email:string}|{username:string};
+    try{account=identifier.includes('@')?{email:canonicalLoginEmail(identifier)}:{username:identifier};}catch(issue){throw new AuthError(issue instanceof Error?issue.message:'请填写正确的邮箱地址。');}
+    return this.session(await this.request('login', { ...account, password,...(captcha?{captcha}:{}) }));
   }
   async status(key: string): Promise<AuthStatus | null> {
     const value = await this.request('status', {}, key);
@@ -114,7 +116,8 @@ export class AuthClient {
   async requestEmail(email: string, purpose: EmailPurpose = 'login', key?: string,captcha?:AuthCaptcha): Promise<EmailChallenge> {
     if (!['login', 'bind', 'register', 'password'].includes(purpose)) throw new AuthError('请选择注册或绑定邮箱。');
     if (purpose === 'bind' && !key) throw new AuthError('请先登录原账号，再绑定邮箱。', { code: 'AUTH_REQUIRED' });
-    const value = await this.request('email/request', { email: emailValue(email), purpose,...(captcha?{captcha}:{}) }, key);
+    const address=emailValue(email,['register','bind'].includes(purpose));
+    const value = await this.request('email/request', { email: address, purpose,...(captcha?{captcha}:{}) }, key);
     if (!value || typeof value.challengeId !== 'string' || !keyPattern.test(value.challengeId) || !validExpiry(value.expiresAt)
       || !Number.isSafeInteger(value.retryAfterSeconds) || Number(value.retryAfterSeconds) < 0 || Number(value.retryAfterSeconds) > 86400) throw formatError();
     return { challengeId: value.challengeId, retryAfterSeconds: Number(value.retryAfterSeconds), expiresAt: value.expiresAt };
@@ -122,9 +125,9 @@ export class AuthClient {
   async verifyEmail(challengeId: string, code: string): Promise<AuthSession> {
     return this.session(await this.request('email/verify', this.verification(challengeId, code)));
   }
-  async registerEmail(challengeId: string, code: string, username: string, password: string): Promise<AuthSession> {
+  async registerEmail(challengeId: string, code: string, password: string): Promise<AuthSession> {
     this.password(password);
-    return this.session(await this.request('email/verify', { ...this.verification(challengeId, code), username, password }));
+    return this.session(await this.request('email/verify', { ...this.verification(challengeId, code), password }));
   }
   async setEmailPassword(challengeId: string, code: string, password: string): Promise<AuthSession> {
     this.password(password);

@@ -26,6 +26,14 @@ describe('account-separated device recycle bin',()=>{
   restored.tasks[0].note='modified';expect(entry.notice.tasks[0].note).toBe('事项笔记');
   const builtin={...entry,notice:{...entry.notice,id:'example-reading-v211-1'}};expect(isExampleNotice(restoredTrashNotice(builtin))).toBe(true);
  });
+ test('restoration lookup reads only its own entry, respects expiry and keeps other accounts isolated',()=>{
+  let now=Date.parse('2026-10-18T00:00:00Z');const storage=memory(),trash=new NoticeTrash(storage,()=>now);
+  const entry=trash.add('account:one',notice(),0);trash.add('account:two',notice(),0);
+  const read=vi.spyOn(storage,'getItem'),enumerate=vi.spyOn(storage,'key');
+  expect(trash.get('account:one',entry.id)?.notice).toEqual(entry.notice);expect(read).toHaveBeenCalledTimes(1);expect(enumerate).not.toHaveBeenCalled();
+  expect(trash.get('account:two',entry.id)).toBeNull();
+  now+=30*86400_000;expect(trash.get('account:one',entry.id)).toBeNull();
+ });
  test('expires at 30 days without automatically touching attachment data',()=>{
   let now=Date.parse('2026-10-18T00:00:00Z');const storage=memory(),trash=new NoticeTrash(storage,()=>now);trash.add('account:one',notice(),0);
   now+=30*86400_000-1;expect(trash.list('account:one')).toHaveLength(1);now++;expect(trash.list('account:one')).toEqual([]);

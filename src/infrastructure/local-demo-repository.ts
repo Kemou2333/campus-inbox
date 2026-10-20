@@ -32,9 +32,10 @@ export class LocalDemoRepository implements NoticeRepository {
    if(old!==next){if(old===null)this.storage.removeItem(LOCAL_DEMOS_KEY);else this.storage.setItem(LOCAL_DEMOS_KEY,old);}
    throw error;
   }finally{this.saving=false;}
-  this.emit();
+  this.emitSnapshot(notices);
  }
- private emit=()=>{if(!this.saving){const records=this.load();this.listeners.forEach(listener=>listener(structuredClone(records)));}};
+ private emitSnapshot(records:Notice[]){this.listeners.forEach(listener=>listener(structuredClone(records)));}
+ private emit=()=>{if(!this.saving)this.emitSnapshot(this.load());};
  private storageChanged=(event:Event)=>{const value=event as StorageEvent;if(value.key===LOCAL_DEMOS_KEY&&(value.storageArea===undefined||value.storageArea===null||value.storageArea===this.storage))this.emit();};
  subscribe(listener:(notices:Notice[])=>void):()=>void{
   if(!this.listeners.size){this.unsubscribe=this.personal.subscribe(this.emit);this.events?.addEventListener('storage',this.storageChanged);}

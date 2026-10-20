@@ -20,7 +20,7 @@ html[data-theme="dark"]{--scroll-thumb:#8491A2;--scroll-track:#252D38}
 @media(prefers-reduced-motion:reduce){.guide-focus-target{animation:none!important}.guide-spotlight{transition:none}.guide-target-hole,.guide-target-ring{transition:none}}
 
 html[data-platform="android"],html[data-platform="android"] body,html[data-platform="android"] .workspace-pane{overscroll-behavior:none}
-.notice-expand .MuiButton-startIcon svg,.task-expand svg{transition:transform .32s cubic-bezier(.4,0,.2,1)}
+.notice-expand svg,.task-expand svg{transition:transform .62s cubic-bezier(.3,0,.2,1)}
 
 /* The control reacts on press; the release and surrounding surface settle gently. */
 button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation}

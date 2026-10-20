@@ -14,7 +14,7 @@ import {InboxCharm} from './InboxCharm';
 const guideSteps=[
  {title:'粘贴通知',description:'先用这条通知试试看。'},
  {title:'生成待办',description:'点「模拟整理」，看看结果。'},
- {title:'展开查看',description:'先点「展开」，\n再点一条待办。'},
+ {title:'展开查看',description:'先点向下箭头，\n再点一条待办。'},
  {title:'打勾完成',description:'点方框打勾，\n记录完成进度。'}
 ];
 const demoReadingText=demoOriginal.replace(/^【脱敏示例】[^\n]*\n+/,'').replace(/。(?=.)/g,'。\n');
@@ -29,7 +29,7 @@ export function HelpDialog({open,onClose,onExamples,onCompose,onFinished}:{open:
  const current=guideSteps[step],last=step===guideSteps.length-1,firstTask=demo?.tasks[0];
  const ready=canAdvanceGuide(step,{pasted,generated:!!demo,reviewed,completed:!!firstTask?.completed});
  const selector=step===0?(pasted?'[data-guide-next]':'[data-guide-paste]'):step===1?'[data-guide-generate]':step===2?(reviewed?'[data-guide-next]':!expanded?'.notice-expand':'.task-expand'):!firstTask?.completed?'.task-list .MuiCheckbox-root':'[data-guide-finish]';
- const description=step===0&&pasted?'原文在这里。\n继续看看整理结果。':step===2?(reviewed?'步骤在这里。\n看完点「下一步」。':expanded?'再点待办标题，\n查看具体步骤。':'点「展开」，\n看看有哪些待办。'):last?(firstTask?.completed?'完成啦！\n可以试试自己的通知了。':current.description):current.description;
+ const description=step===0&&pasted?'原文在这里。\n继续看看整理结果。':step===2?(reviewed?'步骤在这里。\n看完点「下一步」。':expanded?'再点待办标题，\n查看具体步骤。':'点向下箭头，\n看看有哪些待办。'):last?(firstTask?.completed?'完成啦！\n可以试试自己的通知了。':current.description):current.description;
  function next(){if(ready)setStep(value=>value+1);}
 
  const app:NoticeCardController={act:(id,change,text)=>{if(!demo||demo.id!==id)return;const before=demo,after=change(before);setDemo(after);setMessage(text);return {before,after};},remove:()=>{setDemo(null);setReviewed(false);setMessage('已删除，可重新生成。');}};

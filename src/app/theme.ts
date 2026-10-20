@@ -29,6 +29,7 @@ export function makeTheme(dark:boolean,native:NativeTheme|null){
   shape:{borderRadius:16},
   transitions:{easing:{easeInOut:'cubic-bezier(.4,0,.2,1)',easeOut:settle},duration:{shortest:160,shorter:240,short:320,standard:440,complex:560,enteringScreen:480,leavingScreen:320}},
   components:{
+   MuiButtonBase:{styleOverrides:{root:{WebkitTapHighlightColor:'transparent',touchAction:'manipulation','@media (hover:none)':{'&:active:not(.Mui-disabled)':{backgroundColor:alpha(primary,dark?.18:.1)}}}}},
    MuiPaper:{defaultProps:{elevation:0},styleOverrides:{root:{backgroundImage:'none'},outlined:{borderColor:divider,boxShadow:`0 1px 2px ${alpha(dark?'#000000':'#263746',.025)}`}}},
    MuiButton:{defaultProps:{disableElevation:true},styleOverrides:{root:{borderRadius:12,minHeight:44,padding:'12px 17px',transition:`background-color 300ms ease, border-color 300ms ease, color 300ms ease, box-shadow 400ms ease, transform 480ms ${settle}`,'@media (prefers-reduced-motion:no-preference)':{'&:active:not(.Mui-disabled)':{transform:'scale(.97)',transitionDuration:'100ms'}},'@media (hover:hover) and (prefers-reduced-motion:no-preference)':{'&:hover:not(:active)':{transform:'translateY(-1px)'}}},sizeSmall:{padding:'8px 12px'},outlined:{borderColor:outline},text:{padding:'8px 12px'}}},
    MuiIconButton:{styleOverrides:{root:{width:48,height:48,flexShrink:0,transition:`background-color 300ms ease, color 300ms ease, transform 480ms ${settle}`,'@media (prefers-reduced-motion:no-preference)':{'&:active:not(.Mui-disabled)':{transform:'scale(.91)',transitionDuration:'100ms'}}},sizeSmall:{width:48,height:48}}},
@@ -44,6 +45,7 @@ export function makeTheme(dark:boolean,native:NativeTheme|null){
    MuiCheckbox:{styleOverrides:{root:{padding:12,width:48,height:48,flexShrink:0}}},
    MuiSnackbarContent:{styleOverrides:{root:{borderRadius:12,boxShadow:'0 4px 16px rgba(0,0,0,.14)',backgroundColor:dark?'#E3E6EB':'#293138',color:dark?'#222930':'#F2F5F7',lineHeight:1.5}}},
    MuiAccordion:{styleOverrides:{root:{boxShadow:'none',background:'transparent','&:before':{display:'none'}}}},
+   MuiAccordionSummary:{styleOverrides:{root:{minHeight:52,transition:`background-color 280ms ease`,'&:active':{backgroundColor:alpha(primary,dark?.16:.09)},'&.Mui-focusVisible':{outline:`2px solid ${primary}`,outlineOffset:-2}},content:{minWidth:0}}},
    MuiMenu:{defaultProps:{transitionDuration:{enter:420,exit:280}},styleOverrides:{paper:{borderRadius:14,border:`1px solid ${divider}`,backgroundColor:dark?'#252D39':surface,boxShadow:`0 8px 32px ${alpha('#000000',dark?.28:.12)}`}}},
    MuiMenuItem:{styleOverrides:{root:{minHeight:44,fontSize:15,lineHeight:1.5}}},
    MuiTooltip:{defaultProps:{enterDelay:400}}
