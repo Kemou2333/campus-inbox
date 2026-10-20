@@ -1,4 +1,4 @@
-html{scroll-behavior:smooth}body{margin:0}*{box-sizing:border-box}button,input,textarea{font:inherit}a{color:inherit;overflow-wrap:anywhere}textarea{resize:none}input[type=checkbox]{touch-action:manipulation}.notice-card{scroll-margin-top:90px;animation:card-in .42s cubic-bezier(.16,1,.3,1)}.notice-card:focus-within{outline:none}.page-enter{animation:page-in .4s cubic-bezier(.16,1,.3,1)}.note-marker{white-space:pre-wrap;overflow-wrap:anywhere}.detail-original{white-space:pre-wrap;overflow-wrap:anywhere}.attachment-name{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.composer-text textarea{font-size:16px!important;line-height:1.9!important}@media(min-width:600px){.composer-text textarea{font-size:17px!important}}@keyframes card-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}@keyframes page-in{from{opacity:.5}to{opacity:1}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}@media(max-width:599px){.notice-card{scroll-margin-top:76px}}
+html{scroll-behavior:auto}body{margin:0}*{box-sizing:border-box}button,input,textarea{font:inherit}a{color:inherit;overflow-wrap:anywhere}textarea{resize:none}input[type=checkbox]{touch-action:manipulation}.notice-card{scroll-margin-top:90px;animation:card-in .42s cubic-bezier(.16,1,.3,1)}.notice-card:focus-within{outline:none}.page-enter{animation:page-in .4s cubic-bezier(.16,1,.3,1)}.note-marker{white-space:pre-wrap;overflow-wrap:anywhere}.detail-original{white-space:pre-wrap;overflow-wrap:anywhere}.attachment-name{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.composer-text textarea{font-size:16px!important;line-height:1.9!important}@media(min-width:600px){.composer-text textarea{font-size:17px!important}}@keyframes card-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}@keyframes page-in{from{opacity:.5}to{opacity:1}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}@media(max-width:599px){.notice-card{scroll-margin-top:76px}}
 
 :root{--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px)}
 html[data-platform="android"]{--safe-top:0px;--safe-bottom:0px}
@@ -20,7 +20,7 @@ html[data-theme="dark"]{--scroll-thumb:#8491A2;--scroll-track:#252D38}
 @media(prefers-reduced-motion:reduce){.guide-focus-target{animation:none!important}.guide-spotlight{transition:none}.guide-target-hole,.guide-target-ring{transition:none}}
 
 html[data-platform="android"],html[data-platform="android"] body,html[data-platform="android"] .workspace-pane{overscroll-behavior:none}
-.notice-expand svg,.task-expand svg{transition:transform .62s cubic-bezier(.3,0,.2,1)}
+.notice-expand svg,.task-expand svg{transition:transform .46s cubic-bezier(.3,0,.2,1)}
 
 /* The control reacts on press; the release and surrounding surface settle gently. */
 button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
@@ -33,3 +33,5 @@ button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 
 @media(prefers-reduced-motion:no-preference){.sample-hint-once .sample-entry{animation:sample-greeting 2200ms cubic-bezier(.22,1,.36,1) 1200ms 1}}
 @keyframes sample-greeting{0%,100%{transform:scale(1);box-shadow:none}38%{transform:scale(1.055);box-shadow:0 0 0 7px color-mix(in srgb,currentColor 9%,transparent)}65%{transform:scale(.99)}}
+
+@keyframes boundary-breathe{0%{opacity:0;transform:scaleX(.35)}35%{opacity:.65;transform:scaleX(1.1)}100%{opacity:0;transform:scaleX(.65)}}

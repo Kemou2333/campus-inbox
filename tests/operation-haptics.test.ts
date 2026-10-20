@@ -14,6 +14,16 @@ beforeEach(()=>{
 afterEach(()=>vi.unstubAllGlobals());
 
 describe('saved operation haptics',()=>{
+ it('lets a child completion stay light and keeps priority selection less frequent',async()=>{
+  const haptics=await import('../src/shared/operation-haptics');
+  const feedback=vi.fn().mockResolvedValue(undefined),platform={kind:'android',hapticFeedback:feedback} as unknown as PlatformAPI;
+  expect(haptics.triggerOperationHaptic(platform,'step')).toBe(true);
+  clock+=149;expect(haptics.triggerOperationHaptic(platform,'step')).toBe(false);
+  clock+=1;expect(haptics.triggerOperationHaptic(platform,'step')).toBe(true);
+  clock+=449;expect(haptics.triggerOperationHaptic(platform,'selection')).toBe(false);
+  clock+=1;expect(haptics.triggerOperationHaptic(platform,'selection')).toBe(true);
+  expect(feedback.mock.calls).toEqual([['step'],['step'],['selection']]);
+ });
  it('confirms only on Android and suppresses repeated feedback',async()=>{
   const haptics=await import('../src/shared/operation-haptics');
   const feedback=vi.fn().mockResolvedValue(undefined),platform={kind:'android',hapticFeedback:feedback} as unknown as PlatformAPI;

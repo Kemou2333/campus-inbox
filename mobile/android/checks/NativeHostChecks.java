@@ -27,10 +27,11 @@ public final class NativeHostChecks {
         check(NativePolicy.isExternalLink("https://jwc.cqu.edu.cn/info/1080/6186.htm"), "official source opens externally");
         long updateNow = 1_800_000_000_000L;
         check(NativeUpdatePolicy.checkDue(updateNow, 0), "first public release check is due");
-        check(!NativeUpdatePolicy.checkDue(updateNow, updateNow - 60_000), "resume within a day does not check again");
-        check(NativeUpdatePolicy.checkDue(updateNow, updateNow - NativeUpdatePolicy.CHECK_INTERVAL), "daily release check unlocks at the boundary");
-        check(!NativeUpdatePolicy.checkDue(updateNow, updateNow + 60_000), "minor clock rollback cannot cause repeated checks");
-        check(NativeUpdatePolicy.checkDue(updateNow, updateNow + NativeUpdatePolicy.CHECK_INTERVAL + 1), "large clock correction does not block updates forever");
+        check(NativeUpdatePolicy.checkDue(updateNow, updateNow - 60_000), "each foreground entry checks again even within the same day");
+        check(!NativeUpdatePolicy.checkDue(updateNow, updateNow - 4_999), "brief duplicate foreground callbacks are coalesced");
+        check(NativeUpdatePolicy.checkDue(updateNow, updateNow - NativeUpdatePolicy.CHECK_DEBOUNCE), "entry check unlocks at the short debounce boundary");
+        check(!NativeUpdatePolicy.checkDue(updateNow, updateNow + 1_000), "minor clock rollback cannot cause repeated checks");
+        check(NativeUpdatePolicy.checkDue(updateNow, updateNow + NativeUpdatePolicy.CHECK_DEBOUNCE + 1), "large clock correction does not block updates forever");
         check(NativeUpdatePolicy.manualCheckDue(updateNow, 0), "first manual check is allowed");
         check(!NativeUpdatePolicy.manualCheckDue(updateNow, updateNow - 29_999), "manual repeated clicks are throttled");
         check(NativeUpdatePolicy.manualCheckDue(updateNow, updateNow - 30_000), "manual check unlocks after 30 seconds");

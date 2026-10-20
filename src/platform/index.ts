@@ -47,7 +47,7 @@ export interface LocalReminder {
   triggerMillis: number;
 }
 export type ReminderResult = { status: 'scheduled' | 'permission-denied' | 'unsupported'; approximate: true };
-export type OperationHaptic = 'complete' | 'organized' | 'remove';
+export type OperationHaptic = 'complete' | 'organized' | 'remove' | 'step' | 'selection';
 export type AppUpdateResult = {
   status: 'current' | 'available' | 'busy' | 'cooldown' | 'error' | 'unsupported';
   currentVersion?: string;

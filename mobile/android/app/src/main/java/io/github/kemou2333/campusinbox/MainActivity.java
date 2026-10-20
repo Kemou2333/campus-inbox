@@ -78,8 +78,9 @@ public final class MainActivity extends Activity {
     private boolean foreground;
     private long lastHaptic = -900;
     private boolean updateDialogShowing;
+    private boolean updateOfferedThisEntry;
     private final Runnable updateCheck = () -> {
-        if (foreground && updates != null) updates.checkWhenDue(this::offerUpdate);
+        if (foreground && updates != null) updates.checkOnEntry(this::offerUpdate);
     };
 
     @Override public void onCreate(Bundle state) {
@@ -323,13 +324,16 @@ public final class MainActivity extends Activity {
 
     private boolean performOperationHaptic(JSONObject payload) throws JSONException {
         String kind = payload.getString("kind");
-        if (!"complete".equals(kind) && !"organized".equals(kind) && !"remove".equals(kind)) {
+        if (!"complete".equals(kind) && !"organized".equals(kind) && !"remove".equals(kind)
+                && !"step".equals(kind) && !"selection".equals(kind)) {
             throw new IllegalArgumentException("不支持这项触感操作");
         }
         long now = SystemClock.uptimeMillis();
-        if (!foreground || web == null || !web.isShown() || !web.hasWindowFocus() || now - lastHaptic < 900) return false;
+        long interval = "step".equals(kind) ? 150 : "selection".equals(kind) ? 450 : 900;
+        if (!foreground || web == null || !web.isShown() || !web.hasWindowFocus() || now - lastHaptic < interval) return false;
         lastHaptic = now;
-        int effect = "remove".equals(kind) ? HapticFeedbackConstants.CONTEXT_CLICK
+        int effect = "step".equals(kind) || "selection".equals(kind) ? HapticFeedbackConstants.CLOCK_TICK
+                : "remove".equals(kind) ? HapticFeedbackConstants.CONTEXT_CLICK
                 : Build.VERSION.SDK_INT >= 30 ? HapticFeedbackConstants.CONFIRM : HapticFeedbackConstants.VIRTUAL_KEY;
         try {
             // No override flags: Android's system touch-feedback setting stays in control.
@@ -558,24 +562,30 @@ public final class MainActivity extends Activity {
 
     private void openExternal(String url) {
         if (!NativePolicy.isExternalLink(url)) return;
-        try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE)); }
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE));
+            if (updates != null) updates.noteDownloadOpened(url);
+        }
         catch (ActivityNotFoundException ignored) { toast(getString(R.string.no_browser)); }
     }
 
     private void offerUpdate(NativeUpdates.Release release) {
         runOnUiThread(() -> {
-            if (!foreground || isFinishing() || isDestroyed() || web == null || updateDialogShowing
+            if (!foreground || isFinishing() || isDestroyed() || web == null || updateDialogShowing || updateOfferedThisEntry
                     || !NativePolicy.isTrustedPage(web.getUrl()) || !updates.shouldPrompt(release)) return;
             // Let onboarding and any current edit dialog finish; cached metadata can be offered on the next resume.
             web.evaluateJavascript("Boolean(document.querySelector('[role=\"dialog\"],dialog[open]'))", hasDialog -> {
                 if (!"false".equals(hasDialog) || !foreground || isFinishing() || isDestroyed()
-                        || updateDialogShowing || !updates.shouldPrompt(release)) return;
+                        || updateDialogShowing || updateOfferedThisEntry || !updates.shouldPrompt(release)) return;
                 updates.markPrompted(release);
+                updateOfferedThisEntry = true;
                 updateDialogShowing = true;
                 new AlertDialog.Builder(MainActivity.this).setTitle("发现新版本 " + release.version)
-                        .setMessage("可以前往 GitHub 下载更新，手机中的通知会保留。")
+                        .setMessage("前往 GitHub 下载更新，手机中的通知会保留。下载后仍需在系统安装界面确认。")
                         .setPositiveButton("去下载", (dialog, which) -> {
-                            if (NativeUpdatePolicy.verifiedDownload(release.download, release.version)) openExternal(release.download);
+                            if (NativeUpdatePolicy.verifiedDownload(release.download, release.version)) {
+                                openExternal(release.download);
+                            }
                         })
                         .setNegativeButton("暂不", null)
                         .setOnDismissListener(dialog -> updateDialogShowing = false).show();
@@ -677,8 +687,9 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onResume() {
         super.onResume();
+        if (!foreground) updateOfferedThisEntry = false;
         foreground = true;
-        if (web != null) { web.onResume(); web.removeCallbacks(updateCheck); web.postDelayed(updateCheck, 4000); }
+        if (web != null) { web.onResume(); web.removeCallbacks(updateCheck); web.postDelayed(updateCheck, 1200); }
     }
 
     @Override protected void onDestroy() {

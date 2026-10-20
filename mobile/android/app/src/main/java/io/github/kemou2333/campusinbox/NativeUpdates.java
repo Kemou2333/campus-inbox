@@ -16,7 +16,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
-/** Daily public metadata checks plus an explicit, throttled settings action; no installer or service. */
+/** Foreground-entry metadata checks plus an explicit settings action; no installer or background service. */
 final class NativeUpdates {
     static final class Release {
         final String version;
@@ -31,6 +31,8 @@ final class NativeUpdates {
 
     private final SharedPreferences preferences;
     private final ExecutorService network = Executors.newSingleThreadExecutor();
+    // A browser handoff is not proof of installation. Keep this version quiet for the current app process.
+    private static volatile String downloadOpenedVersion;
     private volatile boolean checking;
     private Consumer<CheckResult> waitingManual;
 
@@ -38,12 +40,12 @@ final class NativeUpdates {
         preferences = context.getApplicationContext().getSharedPreferences("release-check", Context.MODE_PRIVATE);
     }
 
-    synchronized void checkWhenDue(Consumer<Release> available) {
+    synchronized void checkOnEntry(Consumer<Release> available) {
+        if (checking || !NativeUpdatePolicy.checkDue(System.currentTimeMillis(), preferences.getLong("lastAttempt", 0))) return;
         Release cached = cachedRelease();
         if (cached != null) available.accept(cached);
-        if (checking || !NativeUpdatePolicy.checkDue(System.currentTimeMillis(), preferences.getLong("lastAttempt", 0))) return;
         checking = true;
-        // Persist before starting: offline failures and Activity recreation must also be throttled.
+        // Persist only a short debounce, so Activity recreation cannot start duplicate requests.
         preferences.edit().putLong("lastAttempt", System.currentTimeMillis()).apply();
         runCheck(available);
     }
@@ -66,7 +68,7 @@ final class NativeUpdates {
         }
         checking = true;
         waitingManual = completed;
-        // A manual attempt also postpones the automatic daily request, including when offline.
+        // A manual request and a near-simultaneous foreground callback share the short debounce.
         preferences.edit().putLong("lastAttempt", now).putLong("lastManualAttempt", now).apply();
         runCheck(null);
     }
@@ -91,12 +93,19 @@ final class NativeUpdates {
     boolean shouldPrompt(Release release) {
         return NativeUpdatePolicy.newer(release.version, BuildConfig.VERSION_NAME)
                 && NativeUpdatePolicy.verifiedDownload(release.download, release.version)
+                && !release.version.equals(downloadOpenedVersion)
                 && (!release.version.equals(preferences.getString("promptVersion", ""))
                 || NativeUpdatePolicy.checkDue(System.currentTimeMillis(), preferences.getLong("promptTime", 0)));
     }
 
     void markPrompted(Release release) {
         preferences.edit().putString("promptVersion", release.version).putLong("promptTime", System.currentTimeMillis()).apply();
+    }
+
+    void noteDownloadOpened(String download) {
+        Release cached = cachedMetadata();
+        if (cached != null && cached.download.equals(download)
+                && NativeUpdatePolicy.verifiedDownload(download, cached.version)) downloadOpenedVersion = cached.version;
     }
 
     private Release cachedRelease() {

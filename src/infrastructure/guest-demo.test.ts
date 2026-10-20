@@ -15,17 +15,30 @@ describe('explicit guest sample',()=>{
   expect(isGuestDemoDraft({...draft,attachments:['local-file']})).toBe(false);
   expect(isGuestDemoDraft({text:GUEST_DEMO_SOURCE,attachments:[]})).toBe(false);
  });
- test('rotates three reviewed originals in order and each one returns its corresponding isolated result',()=>{
-  const storage=memory(),sources=Array.from({length:4},()=>nextGuestDemoSource(storage));
-  expect(sources).toEqual([...GUEST_DEMO_SOURCES,GUEST_DEMO_SOURCE]);
-  expect(GUEST_DEMO_SOURCES).toHaveLength(3);
-  expect(nextGuestDemoSource(storage)).toBe(GUEST_DEMO_SOURCES[1]);
+ test('starts with evaluation and cycles all eight reviewed originals without repeats',()=>{
+  const storage=memory(),sources=Array.from({length:GUEST_DEMO_SOURCES.length},()=>nextGuestDemoSource(storage,()=>.5));
+  expect(sources[0]).toBe(GUEST_DEMO_SOURCE);
+  expect(new Set(sources)).toEqual(new Set(GUEST_DEMO_SOURCES));
+  expect(GUEST_DEMO_SOURCES).toHaveLength(8);
+  expect(nextGuestDemoSource(storage,()=>.5)).not.toBe(sources.at(-1));
   expect(GUEST_DEMO_SOURCES.map((text,index)=>{
    expect(isGuestDemoDraft({text,attachments:[],demo:GUEST_DEMO_MARKER})).toBe(true);
    expect(isGuestDemoDraft({text,attachments:[]})).toBe(false);
    const result=createGuestDemoNotice(String(index),text);expect(result.originalText).toBe(text);return result.title;
-  })).toEqual(['本科生评教','篮球队招新','SRTP项目申报']);
+  })).toEqual(['本科生评教','篮球队招新','SRTP项目申报','军训宿舍安全','助学贷款入账','操作系统训练营','班干部竞选面试','高数II-1网课']);
   expect(()=>createGuestDemoNotice('edited','已修改的示例')).toThrow('示例已修改');
+ });
+ test('persists its remaining deck, respects the old next sample, and works without storage',()=>{
+  const storage=memory();storage.setItem('campus-inbox:guest-demo-next:v1','1');
+  expect(nextGuestDemoSource(storage,()=>.1)).toBe(GUEST_DEMO_SOURCES[1]);
+  const reopened={getItem:storage.getItem,setItem:storage.setItem};
+  const remaining=Array.from({length:GUEST_DEMO_SOURCES.length-1},()=>nextGuestDemoSource(reopened,()=>.1));
+  expect(remaining).not.toContain(GUEST_DEMO_SOURCES[1]);expect(new Set(remaining).size).toBe(7);
+  const restricted={getItem:()=>{throw new Error('blocked');},setItem:()=>{throw new Error('blocked');}};
+  const session=Array.from({length:GUEST_DEMO_SOURCES.length},()=>nextGuestDemoSource(restricted,()=>.1));
+  expect(session[0]).toBe(GUEST_DEMO_SOURCE);expect(new Set(session).size).toBe(8);
+  const damaged=memory();damaged.setItem('campus-inbox:guest-demo-cycle:v2','{"remaining":[999],"last":1}');
+  expect(nextGuestDemoSource(damaged)).toBe(GUEST_DEMO_SOURCE);
  });
  test('waits three seconds with no request and supports cancellation',async()=>{
   vi.useFakeTimers();let complete=false;const pending=waitForGuestDemo(new AbortController().signal).then(()=>{complete=true;});

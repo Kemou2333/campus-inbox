@@ -14,7 +14,7 @@ export function triggerOperationHaptic(platform:PlatformAPI,kind:OperationHaptic
  try{
   if(platform.kind!=='android'||!platform.hapticFeedback||!operationHapticsEnabled()||document.visibilityState!=='visible')return false;
   const now=performance.now();
-  if(now-lastRequested<900)return false;
+  if(now-lastRequested<(kind==='step'?150:kind==='selection'?450:900))return false;
   lastRequested=now;
   void platform.hapticFeedback(kind).catch(()=>{});
   return true;

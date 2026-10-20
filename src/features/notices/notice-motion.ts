@@ -1,9 +1,9 @@
 import {keyframes} from '@emotion/react';
 
 export const noticeMotion={
- duration:{enter:820,exit:640},
+ duration:{enter:620,exit:460},
  easing:{enter:'cubic-bezier(.3,0,.2,1)',exit:'cubic-bezier(.4,0,.3,1)'},
- transition:'620ms cubic-bezier(.3,0,.2,1)',
+ transition:'460ms cubic-bezier(.3,0,.2,1)',
 };
 
 export const favoriteFeedback=keyframes`
