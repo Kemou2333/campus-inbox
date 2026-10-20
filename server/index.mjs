@@ -24,7 +24,7 @@ auth=await createAuthService({signingSecret:env.CAMPUS_ACCESS_TOKEN,allowedOrigi
 const handleAI=await createService({apiKey:env.DEEPSEEK_API_KEY,accessToken:env.CAMPUS_ACCESS_TOKEN,requireAccess:false,requireIdentity:true,accountDailyLimit:Number(env.ACCOUNT_DAILY_REQUEST_LIMIT)||10,ipDailyLimit:Number(env.IP_DAILY_REQUEST_LIMIT)||10,model:env.AI_MODEL||'deepseek-flash',allowedOrigins,dailyLimit:Number(env.DAILY_REQUEST_LIMIT)||30,stateFile:env.USAGE_STATE_FILE||join(stateDirectory,'usage.json'),
   thinkingMode:env.AI_THINKING_MODE==='none'?'none':'low',captchaMode:env.CAPTCHA_MODE||'image',dailyBudgetRmb:Number(env.AI_DAILY_BUDGET_RMB)||3,requireSourceEvidence:env.AI_REQUIRE_SOURCE_EVIDENCE!=='false',oneNoticePerSource:true
 },{accountForToken:key=>auth.getIdentity(key)?sync.accountForKey(key):null,jobs:sync.jobs,questions:sync.questions});
-const handleAdmin=createAdminService({usernames:(env.ADMIN_USERNAMES||'').split(',').map(name=>name.trim()).filter(Boolean),allowedOrigins,backupStateFile:env.BACKUP_STATUS_FILE||join(stateDirectory,'backups/status.json')},{auth,sync,ai:handleAI});
+const handleAdmin=createAdminService({usernames:(env.ADMIN_USERNAMES||'').split(',').map(name=>name.trim()).filter(Boolean),userIDs:(env.ADMIN_USER_IDS||'').split(',').map(id=>id.trim()).filter(Boolean),allowedOrigins,backupStateFile:env.BACKUP_STATUS_FILE||join(stateDirectory,'backups/status.json')},{auth,sync,ai:handleAI});
 const handle=(request,ip)=>{const path=new URL(request.url).pathname;return path.startsWith('/admin')?handleAdmin(request):path.startsWith('/auth/')?auth.handle(request,ip):path.startsWith('/sync')?sync.handle(request,ip):handleAI(request,ip);};
 const server=http.createServer(async(req,res)=>{
   try{

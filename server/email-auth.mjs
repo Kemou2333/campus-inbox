@@ -1,5 +1,5 @@
 import {createHmac,randomBytes,randomInt,timingSafeEqual} from 'node:crypto';
-import {ALLOWED_EMAIL_DOMAINS,canonicalEmail} from './contracts/email-policy.mjs';
+import {ALLOWED_EMAIL_DOMAINS,canonicalEmail,canonicalLoginEmail} from './contracts/email-policy.mjs';
 import {ServiceError} from './analyze.mjs';
 
 const MINUTE=60000,HOUR=60*MINUTE,DAY=24*HOUR,CODE_TTL=5*MINUTE;
@@ -58,7 +58,7 @@ export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCod
   }
   function emailForUser(user){return stmt.email.get(user)?.email;}
   function options(){return {emailEnabled:enabled,inviteEnabled:true,domains:[...ALLOWED_EMAIL_DOMAINS]};}
-  function requireEnabled(){if(!enabled)throw error('邮箱登录暂未开放，请使用用户名和密码登录。',503,'EMAIL_UNAVAILABLE');}
+  function requireEnabled(){if(!enabled)throw error('邮箱服务暂时不可用，请稍后再试。',503,'EMAIL_UNAVAILABLE');}
   function emailValue(value){try{return canonicalEmail(value);}catch(issue){throw error(issue.message);}}
   function userForEmail(email){return stmt.identity.get(email);}
   function currentIdentity(key){const identity=getIdentity(key);if(!identity)throw error('请先登录原账号，再绑定邮箱。',401,'AUTH_REQUIRED');return identity;}
@@ -66,8 +66,13 @@ export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCod
 
   async function request(body,ip,key){
     requireEnabled();
-    const email=emailValue(body.email),purpose=body.purpose;
+    const purpose=body.purpose;
     if(!['login','bind','register','password'].includes(purpose))throw error('请选择注册或绑定邮箱。');
+    let email;
+    try{email=canonicalLoginEmail(body.email);}catch(issue){throw error(issue.message);}
+    // New identities use the allowlist. Existing verified accounts retain
+    // login/first-password access when provider rules later change.
+    if(['register','bind'].includes(purpose)||!userForEmail(email))email=emailValue(email);
     const target=purpose==='bind'?currentIdentity(key).subject:null;
     // The public send reply never discloses whether this mailbox has an account.
     // Ownership-sensitive registration/setup checks happen after code validation.
@@ -118,6 +123,7 @@ export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCod
     let credentials;
     if(preview&&['register','password'].includes(preview.purpose)&&preview.state==='sent'&&preview.attempts<5&&preview.expires>now()
       &&typeof body.code==='string'&&/^\d{6}$/.test(body.code)&&timingSafeEqual(Buffer.from(preview.code_hash,'hex'),Buffer.from(hashCode(preview,body.code),'hex'))){
+      if(preview.purpose==='register')emailValue(preview.email);
       const existing=userForEmail(preview.email);
       if(preview.purpose==='register'&&existing)throw error('此邮箱已注册，请直接登录。',409,'EMAIL_ALREADY_REGISTERED');
       if(preview.purpose==='password'&&(!existing||existing.password_hash))throw error('账号已有密码，请直接登录。',409,'EMAIL_PASSWORD_EXISTS');
@@ -151,6 +157,7 @@ export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCod
       }
       let user=stmt.identity.get(challenge.email),created=false;
       if(identity){
+        emailValue(challenge.email);
         const oldEmail=emailForUser(identity.subject);
         if(user&&user.id!==identity.subject||oldEmail&&oldEmail!==challenge.email){
           stmt.attempt.run(attempts,'used',challengeId);
