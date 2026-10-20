@@ -29,15 +29,15 @@ export function SettingsFAQ({app}:{app:CampusController}){
    slotProps={{transition:{timeout:reducedMotion?0:380}}}
    sx={{bgcolor:'transparent','&:before':{display:'none'},borderTop:index?'1px solid':'none',borderColor:'divider',mx:{xs:2,sm:2.5}}}>
    <AccordionSummary expandIcon={<Add sx={{fontSize:19}}/>} id={`settings-question-${index}`} aria-controls={`settings-answer-${index}`}
-    sx={{px:0,minHeight:56,'& .MuiAccordionSummary-content':{my:1.5},'& .MuiAccordionSummary-expandIconWrapper.Mui-expanded':{transform:'rotate(45deg)'}}}>
-    <Typography component="span" sx={{fontSize:16,fontWeight:600,pr:1,lineHeight:1.6}}>{item.title}</Typography>
+    sx={{px:0,minHeight:64,'& .MuiAccordionSummary-content':{my:1.5},'& .MuiAccordionSummary-expandIconWrapper.Mui-expanded':{transform:'rotate(45deg)'}}}>
+    <Typography component="span" sx={{fontSize:18,fontWeight:650,pr:1,lineHeight:1.6}}>{item.title}</Typography>
    </AccordionSummary>
-   <AccordionDetails sx={{px:0,pt:0,pb:2}}><Typography sx={{fontSize:13,color:'text.secondary',lineHeight:1.9}}>{item.answer}</Typography></AccordionDetails>
+   <AccordionDetails sx={{px:0,pt:0,pb:2}}><Typography sx={{fontSize:16,color:'text.secondary',lineHeight:1.8}}>{item.answer}</Typography></AccordionDetails>
   </Accordion>)}
   <Stack spacing={1} sx={{px:{xs:2,sm:2.5},pb:1.5,alignItems:'flex-start'}}>
-   <Button size="small" color="inherit" startIcon={<ContentCopyOutlined sx={{fontSize:'16px!important'}}/>} onClick={()=>void copy()} sx={{color:'text.secondary',fontSize:13,minHeight:36}}>{copied?'已复制':'复制使用状态'}</Button>
+   <Button size="small" color="inherit" startIcon={<ContentCopyOutlined sx={{fontSize:'16px!important'}}/>} onClick={()=>void copy()} sx={{color:'text.secondary',fontSize:14,minHeight:36}}>{copied?'已复制':'复制使用状态'}</Button>
    {copied&&<Typography role="status" variant="caption" color="success.main">状态已复制</Typography>}
-   {manual&&<Alert severity="info" sx={{width:'100%',fontSize:13}}>请长按复制：<Typography component="pre" sx={{fontFamily:'inherit',whiteSpace:'pre-wrap',fontSize:13,userSelect:'text',mb:0}}>{manual}</Typography></Alert>}
+   {manual&&<Alert severity="info" sx={{width:'100%',fontSize:14}}>请长按复制：<Typography component="pre" sx={{fontFamily:'inherit',whiteSpace:'pre-wrap',fontSize:14,userSelect:'text',mb:0}}>{manual}</Typography></Alert>}
   </Stack>
  </Box>;
 }

@@ -21,6 +21,8 @@ export interface PlatformCapabilities {
   fileSave: boolean;
   shareText: boolean;
   localReminders: boolean;
+  /** Installed APK version, when reported by the native host. */
+  appVersion?: string;
   theme: NativeTheme | null;
 }
 
@@ -46,6 +48,12 @@ export interface LocalReminder {
 }
 export type ReminderResult = { status: 'scheduled' | 'permission-denied' | 'unsupported'; approximate: true };
 export type OperationHaptic = 'complete' | 'organized' | 'remove';
+export type AppUpdateResult = {
+  status: 'current' | 'available' | 'busy' | 'cooldown' | 'error' | 'unsupported';
+  currentVersion?: string;
+  version?: string;
+  download?: string;
+};
 
 export interface PlatformAPI {
   readonly kind: 'browser' | 'android';
@@ -54,6 +62,8 @@ export interface PlatformAPI {
   setAppearance?(dark:boolean):Promise<void>;
   /** Best-effort confirmation after saving an important action; follows system touch feedback. */
   hapticFeedback?(kind:OperationHaptic):Promise<void>;
+  /** Public release metadata only; never downloads or installs an APK. */
+  checkForUpdate?():Promise<AppUpdateResult>;
   /** Takes one item from the native queue. Never triggers AI or alters a draft. */
   getSharedText(): Promise<string | null>;
   onShare(listener: () => void): () => void;

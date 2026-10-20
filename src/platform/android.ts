@@ -1,4 +1,4 @@
-import type { CalendarResult, NativeTheme, PlatformAPI, PlatformCapabilities, SaveResult } from './index';
+import type { AppUpdateResult, CalendarResult, NativeTheme, PlatformAPI, PlatformCapabilities, SaveResult } from './index';
 import { calendarFile } from './browser';
 
 export interface NativeBridge {
@@ -25,6 +25,18 @@ function readTheme(value: unknown): NativeTheme | null {
   return typeof theme.dark === 'boolean' && colors.every(key => /^#[0-9a-f]{6}$/i.test(theme[key])) ? theme : null;
 }
 
+function readUpdateResult(value: unknown): AppUpdateResult {
+  if(!value||typeof value!=='object')return {status:'error'};
+  const result=value as AppUpdateResult;
+  if(!['current','available','busy','cooldown','error','unsupported'].includes(result.status))return {status:'error'};
+  const versionPattern=/^\d{1,4}\.\d{1,4}\.\d{1,4}$/;
+  const currentVersion=typeof result.currentVersion==='string'&&versionPattern.test(result.currentVersion)?result.currentVersion:undefined;
+  if(result.status!=='available')return {status:result.status,currentVersion};
+  if(typeof result.version!=='string'||!versionPattern.test(result.version))return {status:'error',currentVersion};
+  const expected=`https://github.com/Kemou2333/campus-inbox/releases/download/android-v${result.version}/campus-inbox-${result.version}.apk`;
+  return result.download===expected?{status:'available',currentVersion,version:result.version,download:expected}:{status:'error',currentVersion};
+}
+
 function base64(bytes: Uint8Array): string {
   let binary = '';
   for (let start = 0; start < bytes.length; start += 32_768) {
@@ -43,6 +55,7 @@ export function createAndroidPlatform(bridge: NativeBridge): PlatformAPI {
   let saving = false;
   let appearanceSupported = false;
   let hapticsSupported = false;
+  let updatesSupported = false;
 
   const receive = (event: { data: string }) => {
     let reply: NativeReply;
@@ -75,11 +88,12 @@ export function createAndroidPlatform(bridge: NativeBridge): PlatformAPI {
   };
 
   const ready: Promise<PlatformCapabilities> = call<Record<string, unknown>>('capabilities', {}, 10_000)
-    .then(value => { appearanceSupported=value.appearance===true;hapticsSupported=value.haptics===true;return {
+    .then(value => { appearanceSupported=value.appearance===true;hapticsSupported=value.haptics===true;updatesSupported=value.updates===true;return {
       calendar: value.calendar === true,
       fileSave: value.fileSave === true,
       shareText: value.shareText === true,
       localReminders: value.localReminders === true,
+      appVersion: typeof value.appVersion==='string'&&/^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(value.appVersion)?value.appVersion:undefined,
       theme: readTheme(value.theme),
     };});
 
@@ -104,6 +118,11 @@ export function createAndroidPlatform(bridge: NativeBridge): PlatformAPI {
       // Older hosts do not advertise this capability and receive no new action.
       await ready;
       if(hapticsSupported&&document.visibilityState==='visible')await call('haptic',{kind},1_500);
+    },
+    async checkForUpdate() {
+      await ready;
+      if(!updatesSupported)return {status:'unsupported'};
+      return readUpdateResult(await call<unknown>('checkUpdate',{},20_000));
     },
     async getSharedText() {
       if (!(await ready).shareText) return null;

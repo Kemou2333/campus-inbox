@@ -22,6 +22,44 @@ beforeEach(() => vi.stubGlobal('window', new EventTarget()));
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('shared platform adapter', () => {
+  it('checks public updates only on request and preserves the native installed version', async () => {
+    const {bridge,requests}=host(request=>request.action==='capabilities'
+      ?{updates:true,appVersion:'2.21.0'}:{status:'current',currentVersion:'2.21.0'});
+    const api=createAndroidPlatform(bridge);
+    expect((await api.ready).appVersion).toBe('2.21.0');
+    expect(requests.map(request=>request.action)).toEqual(['capabilities']);
+    expect(await api.checkForUpdate?.()).toEqual({status:'current',currentVersion:'2.21.0'});
+    expect(requests[1]).toMatchObject({action:'checkUpdate',payload:{}});
+    api.dispose();
+  });
+
+  it('older hosts do not receive an unsupported update bridge action', async () => {
+    const {bridge,requests}=host();
+    const api=createAndroidPlatform(bridge);
+    expect(await api.checkForUpdate?.()).toEqual({status:'unsupported'});
+    expect(requests.map(request=>request.action)).toEqual(['capabilities']);
+    api.dispose();
+  });
+
+  it('exposes only a version-matching APK from the fixed update repository', async () => {
+    let download='https://github.com/Kemou2333/campus-inbox/releases/download/android-v2.22.0/campus-inbox-2.22.0.apk';
+    const {bridge}=host(request=>request.action==='capabilities'?{updates:true}
+      :{status:'available',currentVersion:'2.21.0',version:'2.22.0',download});
+    const api=createAndroidPlatform(bridge);
+    expect(await api.checkForUpdate?.()).toMatchObject({status:'available',version:'2.22.0',download});
+    download=download.replace('github.com','github.com.evil.test');
+    expect(await api.checkForUpdate?.()).toEqual({status:'error',currentVersion:'2.21.0'});
+    api.dispose();
+  });
+
+  it('keeps busy, throttled and failed checks distinct from being up to date', async () => {
+    let status='busy';
+    const {bridge}=host(request=>request.action==='capabilities'?{updates:true}:{status,currentVersion:'2.21.0'});
+    const api=createAndroidPlatform(bridge);
+    for(status of ['busy','cooldown','error'])expect(await api.checkForUpdate?.()).toEqual({status,currentVersion:'2.21.0'});
+    api.dispose();
+  });
+
   it('consumes shared text without changing a draft or calling AI', async () => {
     const queue = ['第一条原文', '第二条原文'];
     const { bridge, requests } = host(request => request.action === 'consumeShare' ? { text: queue.shift() ?? null } : undefined);
