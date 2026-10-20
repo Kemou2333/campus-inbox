@@ -9,7 +9,9 @@ import {EvidenceLink} from './EvidenceLink';
 describe('谨慎展示出处',()=>{
  const competition=parseNotice(examples.notices.find(n=>n.id==='example-reading-v26-12')!);
  it('外研社旧例的七个相同截止指代不会再自动落到演讲初选',()=>{
-  const legacy=structuredClone(competition);legacy.tasks.forEach(task=>{task.timeText='报名截止时间之前';});
+  const legacy=structuredClone(competition);
+  // Recreate the historical seven-task shape independently of the current reviewed catalog.
+  legacy.tasks=Array.from({length:7},(_,index)=>({...structuredClone(competition.tasks[0]),id:`legacy-${index}`,timeText:'报名截止时间之前'}));
   const before=structuredClone(legacy),segments=segmentSource(legacy.originalText);
   expect(legacy.sourceRefs).toBeUndefined();expect(legacy.tasks.length).toBe(7);
   for(const [i,task] of legacy.tasks.entries()){

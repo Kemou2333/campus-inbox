@@ -140,13 +140,14 @@ describe('safe built-in example upgrades',()=>{
     const basketball=fresh.find(n=>n.id==='example-reading-v211-1')!;
     expect(basketball.deadlineSpec).toMatchObject({month:10,day:14,year:null,rawText:'10 月14日23:59'});expect(basketball.deadline).toBeNull();
     const math=fresh.find(n=>n.id==='example-reading-v211-0')!;
-    expect(math.tasks[0].steps.map(step=>step.details.length)).toEqual([5,4]);
+    const mathDetails=math.tasks[0].steps.flatMap(step=>step.details).join('\n');
+    expect(mathDetails).toContain('音频');expect(mathDetails).toContain('任选5套');expect(math.deadline).toBeNull();
     const origin=provenance.results.find((row:{exampleId:string})=>row.exampleId===math.id);
     expect(origin).toMatchObject({case:'r14-math-01',originalFirstStatus:'failed',originalFailureCode:'AI_FORMAT_INVALID',additionalProviderCallsForRevalidation:0,manualContentCorrections:false});
     expect(origin.firstResponseValidation).toContain('same first response');
     expect(origin.knownLimitations.join(' ')).toContain('omits audio');
-    const conflict=math.tasks[0].steps.flatMap(step=>step.details).find(detail=>detail.includes('入口有冲突'))!;
-    expect(conflict).toContain('[平台入口 A]');expect(conflict).toContain('[平台入口 B]');
+    expect(origin.currentGeneration).toMatchObject({version:'2.24.0',snapshotKind:'first-authenticated-production-service-record',providerCalled:true,cacheReuse:false,manualPresentationEdits:true,providerEnvelopeCaptured:false});
+    expect(mathDetails).toContain('两种写法');expect(mathDetails).toContain('核实入口');
     for(const notice of fresh){expect(notice.originalText.startsWith('【脱敏示例】')).toBe(false);expect(notice.originalText).not.toContain('（化名）');}
   });
 
