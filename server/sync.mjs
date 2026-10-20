@@ -22,10 +22,11 @@ function unique(values){if(new Set(values).size!==values.length)throw new Servic
 /** Validate one externally supplied v5 boundary; retain its original text,
  * timestamps and field values. No attachment binaries or unknown fields enter SQLite. */
 export function validateCloudNotice(record,expectedID){
-  shape(record,['schemaVersion','kind','title','summary','deadline','deadlineText','timeline','tasks','materials','warnings','reminders','id','originalText','createdAt','updatedAt','completed','dismissed','note','localDeadline','audienceOverride','attachments'],['deadlineSpec','sourceRefs','corrections','reminderTitles','favorite']);
+  shape(record,['schemaVersion','kind','title','summary','deadline','deadlineText','timeline','tasks','materials','warnings','reminders','id','originalText','createdAt','updatedAt','completed','dismissed','note','localDeadline','audienceOverride','attachments'],['deadlineSpec','sourceRefs','corrections','reminderTitles','favorite','manualPriority']);
   if(record.schemaVersion!==5||id(record.id)!==expectedID||!Array.isArray(record.attachments)||record.attachments.length)throw new ServiceError('同步只接受第5版文字记录，附件留在本机。',400);
   boolean(record.dismissed);
   if(record.favorite!==undefined)boolean(record.favorite);
+  if(Object.hasOwn(record,'manualPriority')&&record.manualPriority!==null&&!['important-urgent','important','urgent','later'].includes(record.manualPriority))throw new ServiceError('优先级格式不正确。',400);
   if(!D.date(record.updatedAt))throw new ServiceError('同步记录缺少更新时间。',400);
   if(!Array.isArray(record.tasks)||record.tasks.length>100||!Array.isArray(record.reminders)||record.reminders.length>100||!Array.isArray(record.timeline)||record.timeline.length>100)throw new ServiceError('同步记录项目数量过多。',400);
   for(const task of record.tasks){
@@ -140,9 +141,10 @@ export async function createSyncService(config,options={}){
         if(change.baseVersion!==version){conflicts.push({id:change.id,version,record:current?.json?JSON.parse(current.json):null});continue;}
         // Older clients do not know favorites. Unrelated edits must not erase
         // this newer optional field; new clients explicitly send true/false.
-        if(current?.json&&change.record&&!Object.hasOwn(change.record,'favorite')){
-          const previous=JSON.parse(current.json);
-          if(Object.hasOwn(previous,'favorite'))Object.assign(change,validateCloudNotice({...change.record,favorite:previous.favorite},change.id));
+        if(current?.json&&change.record){
+          const previous=JSON.parse(current.json),preserved={};
+          for(const field of ['favorite','manualPriority'])if(!Object.hasOwn(change.record,field)&&Object.hasOwn(previous,field))preserved[field]=previous[field];
+          if(Object.keys(preserved).length)Object.assign(change,validateCloudNotice({...change.record,...preserved},change.id));
         }
         if(change.json===null&&!current||current&&current.json===change.json){accepted.push({id:change.id,version});continue;}
         const bytes=usage.bytes-(current?.bytes||0)+change.bytes,live=usage.live-(current?.json!==null&&current?1:0)+(change.json!==null?1:0);

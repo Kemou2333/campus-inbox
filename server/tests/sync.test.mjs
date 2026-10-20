@@ -171,3 +171,14 @@ test('favorite syncs across devices, survives older-client edits, and explicit f
 test('bad favorite values reject the whole batch without altering saved records',async()=>{
  const f=await fixture();try{for(const favorite of ['yes',1,null,{}]){const source={...notice(),favorite};assert.equal((await f.post({cursor:0,changes:[{id:source.id,baseVersion:0,record:source}]})).status,400);}assert.equal((await (await f.post({cursor:0,changes:[]})).json()).cursor,0);}finally{f.close();}
 });
+
+test('manual priority survives old-client edits and explicit null clears it',async()=>{
+ const f=await fixture();try{
+  const record={...notice(),manualPriority:'important-urgent'};
+  const first=await (await f.post({cursor:0,changes:[{id:record.id,baseVersion:0,record}]})).json();assert.equal(first.updates[0].record.manualPriority,'important-urgent');
+  const {manualPriority:_,...old}=record;
+  const second=await (await f.post({cursor:1,changes:[{id:record.id,baseVersion:1,record:{...old,note:'保留旧设备笔记'}}]})).json();assert.equal(second.updates[0].record.manualPriority,'important-urgent');
+  const third=await (await f.post({cursor:2,changes:[{id:record.id,baseVersion:2,record:{...second.updates[0].record,manualPriority:null}}]})).json();assert.equal(third.updates[0].record.manualPriority,null);
+  for(const invalid of [['important'],{},'invalid'])assert.equal((await f.post({cursor:3,changes:[{id:'invalid',baseVersion:0,record:{...notice('invalid'),manualPriority:invalid}}]})).status,400);
+ }finally{f.close();}
+});

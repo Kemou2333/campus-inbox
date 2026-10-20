@@ -2,8 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {modelPayload} from '../analyze.mjs';
 import {SYSTEM_PROMPT,SHORT_NOTICE_PROMPT} from '../../worker/prompt.mjs';
-import {segmentSource} from '../contracts/source-evidence.js';
-const marked=text=>segmentSource(text).map(segment=>({id:segment.index,text:segment.text}));
 
 test('short single-source extraction uses the concise contract while retaining low thinking and complete output budget',()=>{
   const input={sources:[{text:'有兴趣的同学请在9月19日前报名数学竞赛。'}]};
@@ -12,7 +10,7 @@ test('short single-source extraction uses the concise contract while retaining l
   assert.equal(payload.thinking.type,'enabled');
   assert.equal(payload.reasoning_effort,'low');
   assert.equal(payload.max_tokens,32768);
-  assert.deepEqual(JSON.parse(payload.messages[1].content),{sources:[{sourceId:1,segments:marked(input.sources[0].text)}]});
+  assert.deepEqual(JSON.parse(payload.messages[1].content),{sources:[{sourceId:1,text:input.sources[0].text}]});
 });
 
 test('long and multi-source notices retain the full extraction contract',()=>{
@@ -43,6 +41,6 @@ test('complex short and long sources both send uncertainty, pending-state and el
     assert.match(policy,/任选材料.*选项/);
     assert.match(policy,/timeline不重复同一deadlineText/);
     assert.equal(payload.reasoning_effort,'low');
-    assert.deepEqual(JSON.parse(payload.messages[1].content),{sources:[{sourceId:1,segments:marked(sourceText)}]});
+    assert.deepEqual(JSON.parse(payload.messages[1].content),{sources:[{sourceId:1,text:sourceText}]});
   }
 });

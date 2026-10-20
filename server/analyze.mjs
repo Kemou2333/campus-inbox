@@ -1,7 +1,7 @@
 import './contracts/time.js';
 import './contracts/data.js';
 import {promptForInput} from '../worker/prompt.mjs';
-import {segmentSource,parseSourceRefs,requiredEvidencePaths} from './contracts/source-evidence.js';
+import {parseSourceRefs} from './contracts/source-evidence.js';
 const D=globalThis.CampusData;
 const T=globalThis.CampusTime;
 const record=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -144,8 +144,8 @@ function originalQuestionQuote(quote,source){
 export function modelPayload(notice,config={}){
   const input=modelInput(notice);
   const sources=input.sources||[{sourceId:1,text:input.notice}];
-  const marked={sources:sources.map(source=>({sourceId:source.sourceId,segments:segmentSource(source.text).map(segment=>({id:segment.index,text:compactModelText(segment.text)}))}))};
-  return {model:config.model||'deepseek-flash',thinking:{type:config.thinkingMode==='low'?'enabled':'disabled'},...(config.thinkingMode==='low'?{reasoning_effort:'low'}:{}),max_tokens:config.thinkingMode==='low'?32768:12288,response_format:{type:'json_object'},messages:[{role:'system',content:promptForInput(input)},{role:'user',content:JSON.stringify(marked)}]};
+  const prepared={sources:sources.map(source=>({sourceId:source.sourceId,text:compactModelText(source.text.trim())}))};
+  return {model:config.model||'deepseek-flash',thinking:{type:config.thinkingMode==='low'?'enabled':'disabled'},...(config.thinkingMode==='low'?{reasoning_effort:'low'}:{}),max_tokens:config.thinkingMode==='low'?32768:12288,response_format:{type:'json_object'},messages:[{role:'system',content:promptForInput(input)},{role:'user',content:JSON.stringify(prepared)}]};
 }
 function sourceMapping(parsed,sources){
   if(!Array.isArray(parsed?.notices)||!parsed.notices.length||parsed.notices.length>20)throw new Error('source');
@@ -205,7 +205,8 @@ export async function analyze(notice,config,modelFetch=fetch,signal){
       result.notices=result.notices.map((item,index)=>{
         const text=sources?sources[mapping.indexes[index]].text:typeof notice==='string'?notice:'';
         const refs=parseSourceRefs(item.sourceRefs,item,text);
-        if(config.requireSourceEvidence&&(requiredEvidencePaths(item).some(path=>!refs?.[path])||!item.reminderTitles&&item.reminders.length))throw new Error('出处或提醒标题缺少');
+        // Old citation maps remain readable. Extraction no longer requires
+        // them, even if an older environment still enables the legacy flag.
         return refs===undefined?item:{...item,sourceRefs:refs};
       });
     }catch(error){throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:validationCode(error)});}
