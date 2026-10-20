@@ -31,6 +31,11 @@ public final class NativeHostChecks {
         check(NativeUpdatePolicy.checkDue(updateNow, updateNow - NativeUpdatePolicy.CHECK_INTERVAL), "daily release check unlocks at the boundary");
         check(!NativeUpdatePolicy.checkDue(updateNow, updateNow + 60_000), "minor clock rollback cannot cause repeated checks");
         check(NativeUpdatePolicy.checkDue(updateNow, updateNow + NativeUpdatePolicy.CHECK_INTERVAL + 1), "large clock correction does not block updates forever");
+        check(NativeUpdatePolicy.manualCheckDue(updateNow, 0), "first manual check is allowed");
+        check(!NativeUpdatePolicy.manualCheckDue(updateNow, updateNow - 29_999), "manual repeated clicks are throttled");
+        check(NativeUpdatePolicy.manualCheckDue(updateNow, updateNow - 30_000), "manual check unlocks after 30 seconds");
+        check(!NativeUpdatePolicy.manualCheckDue(updateNow, updateNow + 5_000), "minor clock rollback cannot bypass manual throttle");
+        check(NativeUpdatePolicy.manualCheckDue(updateNow, updateNow + 30_001), "large clock rollback does not block manual checks forever");
         check("2.16.0".equals(NativeUpdatePolicy.releaseVersion("android-v2.16.0")), "fixed Android release tag accepted");
         check(NativeUpdatePolicy.releaseVersion("android-v2.16.0-beta") == null, "preview releases rejected");
         check(NativeUpdatePolicy.releaseVersion("v2.16.0") == null, "other release channels rejected");

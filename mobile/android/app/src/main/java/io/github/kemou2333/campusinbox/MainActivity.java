@@ -282,8 +282,10 @@ public final class MainActivity extends Activity {
             switch (action) {
                 case "capabilities":
                     respond(reply, id, new JSONObject().put("calendar", calendarIntent().resolveActivity(getPackageManager()) != null)
-                            .put("fileSave", exports != null).put("shareText", true).put("localReminders", true).put("appearance", true).put("haptics", true).put("theme", theme()));
+                            .put("fileSave", exports != null).put("shareText", true).put("localReminders", true).put("appearance", true).put("haptics", true)
+                            .put("updates", true).put("appVersion", BuildConfig.VERSION_NAME).put("theme", theme()));
                     break;
+                case "checkUpdate": checkUpdate(reply, id); break;
                 case "haptic":
                     respond(reply, id, new JSONObject().put("performed", performOperationHaptic(payload)));
                     break;
@@ -578,6 +580,19 @@ public final class MainActivity extends Activity {
                         .setNegativeButton("暂不", null)
                         .setOnDismissListener(dialog -> updateDialogShowing = false).show();
             });
+        });
+    }
+
+    private void checkUpdate(JavaScriptReplyProxy reply, String id) {
+        updates.checkNow(result -> {
+            try {
+                JSONObject data = new JSONObject().put("status", result.status).put("currentVersion", BuildConfig.VERSION_NAME);
+                if ("available".equals(result.status) && result.release != null
+                        && NativeUpdatePolicy.verifiedDownload(result.release.download, result.release.version)) {
+                    data.put("version", result.release.version).put("download", result.release.download);
+                }
+                respond(reply, id, data);
+            } catch (JSONException ignored) { reject(reply, id, "暂时无法检查更新，请稍后再试。"); }
         });
     }
 

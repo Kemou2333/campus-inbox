@@ -3,37 +3,53 @@ const TUTORIAL_KEY='campus-inbox:tutorial:v2';
 const sequence=['masthead','composer-title','composer-input','composer-action','feed-tools','feed-results','home-nav'];
 type EntryStorage=Pick<Storage,'getItem'|'setItem'>;
 
-/** One short welcome per new device, with each visible surface introduced once. */
+/** The current screen enters once. Later pages and newly mounted controls stay still. */
 export function createFirstEntryMotion(storage:EntryStorage|null){
  let eligible=false;
- try{eligible=!!storage&&storage.getItem(ENTRY_KEY)!=='seen'&&storage.getItem(TUTORIAL_KEY)!=='seen';}catch{/* Storage restrictions should never interrupt entry. */}
- const introduced=new Set<string>();
- let recorded=false;
+ try{eligible=!!storage&&storage.getItem(ENTRY_KEY)!=='seen'&&storage.getItem(TUTORIAL_KEY)!=='seen';}catch{/* A private browsing restriction must not interrupt entry. */}
+ let played=false;
  return {
-  play(root:ParentNode,reducedMotion:boolean){
-   if(!eligible)return ()=>{};
-   if(!recorded){try{storage?.setItem(ENTRY_KEY,'seen');recorded=true;}catch{eligible=false;return ()=>{};}}
+  get pending(){return eligible&&!played;},
+  // Called in a layout effect so every group is hidden before the first paint.
+  play(root:ParentNode,reducedMotion:boolean,onSettled?:()=>void){
+   const animations:Animation[]=[],finished:Promise<void>[]=[];
+   let settled=false,stopped=false,timer:ReturnType<typeof setTimeout>|undefined;
+   const settle=()=>{if(settled)return;settled=true;if(timer!==undefined)clearTimeout(timer);onSettled?.();};
+   const stop=()=>{if(stopped)return;stopped=true;for(const animation of animations){try{animation.cancel();}catch{/* A broken WebView must not block the rest of the screen. */}}settle();};
+   if(!eligible||played){settle();return stop;}
+   // Consume the entire entry, rather than playing late-arriving groups on another page.
+   played=true;
+   try{storage?.setItem(ENTRY_KEY,'seen');}catch{eligible=false;settle();return stop;}
+   if(reducedMotion){settle();return stop;}
    const groups=new Map<string,HTMLElement[]>();
    for(const element of root.querySelectorAll<HTMLElement>('[data-first-entry]')){
     const key=element.dataset.firstEntry;
-    if(!key||introduced.has(key)||!sequence.includes(key)||!element.getClientRects().length)continue;
+    if(!key||!sequence.includes(key)||!element.getClientRects().length)continue;
     groups.set(key,[...(groups.get(key)??[]),element]);
    }
-   const animations:Animation[]=[];
    let stage=0;
-   for(const key of sequence){
-    const elements=groups.get(key);if(!elements)continue;
-    introduced.add(key);
-    if(!reducedMotion)for(const element of elements){
-     // Every control remains usable; opacity never reaches zero and no overlay is added.
-     try{animations.push(element.animate([
-      {opacity:.4,transform:'translateY(12px) scale(.993)'},
-      {opacity:1,transform:'translateY(0) scale(1)'}
-     ],{duration:840,delay:stage*180,easing:'cubic-bezier(.22,1,.36,1)',fill:'backwards'}));}catch{/* Older WebViews simply show the final layout. */}
+   try{
+    for(const key of sequence){
+     const elements=groups.get(key);if(!elements)continue;
+     for(const element of elements){
+      const animation=element.animate([
+       {opacity:0,transform:'translateY(8px) scale(.985)'},
+       {opacity:1,transform:'translateY(0) scale(1)'}
+      ],{duration:1250,delay:380+stage*280,easing:'cubic-bezier(.35,0,.2,1)',fill:'backwards'});
+      animations.push(animation);
+      // Without reliable completion support, show the static page immediately.
+      if(!animation.finished||typeof animation.finished.then!=='function')throw new Error('Animation completion is unavailable');
+      finished.push(animation.finished.then(()=>{},()=>{}));
+     }
+     stage++;
     }
-    stage++;
-   }
-   return ()=>animations.forEach(animation=>animation.cancel());
+   }catch{stop();return stop;}
+   if(!animations.length){settle();return stop;}
+   // Resolve on finish or cancellation. A safety deadline also releases the UI hint
+   // on older WebViews whose finished promise can remain pending in the background.
+   void Promise.allSettled(finished).then(settle);
+   timer=setTimeout(stop,380+(stage-1)*280+1250+120);
+   return stop;
   }
  };
 }

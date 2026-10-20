@@ -1,4 +1,4 @@
-import {lazy,Suspense,useCallback,useEffect,useRef,useState} from 'react';
+import {lazy,Suspense,useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {Alert,AppBar,BottomNavigation,BottomNavigationAction,Box,Button,CircularProgress,Container,CssBaseline,Dialog,DialogActions,DialogContent,DialogTitle,Divider,IconButton,Paper,Snackbar,Stack,Toolbar,Tooltip,Typography,useMediaQuery} from '@mui/material';
 import {ThemeProvider} from '@mui/material/styles';
 import Inbox from '@mui/icons-material/Inbox';
@@ -40,7 +40,11 @@ export default function App(){
  const [downloadsOpen,setDownloadsOpen]=useState(false),[downloadHint,setDownloadHint]=useState(false);
  const [firstEntry]=useState(()=>{try{return createFirstEntryMotion(localStorage);}catch{return createFirstEntryMotion(null);}});
  const reducedMotion=useMediaQuery('(prefers-reduced-motion: reduce)');
- useEffect(()=>{if(help||app.bootError)return;let stop=()=>{};const timer=setTimeout(()=>{stop=firstEntry.play(document,reducedMotion);},360);return()=>{clearTimeout(timer);stop();};},[firstEntry,help,page,split,reducedMotion,app.bootError]);
+ const [entryReady,setEntryReady]=useState(()=>!firstEntry.pending);
+ const cancelEntry=useRef<(()=>void)|null>(null);
+ // Prepare transparent module frames before the tutorial's backdrop can uncover them.
+ useLayoutEffect(()=>{if(help||app.bootError)return;let active=true;const stop=firstEntry.play(document,reducedMotion,()=>{if(active)setEntryReady(true);});cancelEntry.current=stop;return()=>{active=false;stop();if(cancelEntry.current===stop)cancelEntry.current=null;};},[firstEntry,help,page,split,reducedMotion,app.bootError]);
+ function finishEntry(){if(!entryReady)cancelEntry.current?.();}
  const [about,setAbout]=useState(false);const [note,setNote]=useState<NoteEditor|null>(null);const [details,setDetails]=useState<string|null>(null);const [calendar,setCalendar]=useState<CalendarSelection|null>(null);const [focusID,setFocusID]=useState<string|null>(null);
  const [settingsDialog,setSettingsDialog]=useState(false);
  const [expandCampus,setExpandCampus]=useState(false);
@@ -84,6 +88,7 @@ export default function App(){
  },[app.notices,app.platform]);
  async function rescue(){const raw:Object=Object.fromEntries(Object.keys(localStorage).filter(k=>k.startsWith('campus-inbox:notices')).map(k=>[k,localStorage.getItem(k)]));await app.platform.saveFile(new Blob([JSON.stringify(raw,null,2)],{type:'application/json'}),'campus-inbox-original-data.json');}
  return <ThemeProvider theme={theme}><CssBaseline/>
+  <Box data-first-entry-shell inert={help} aria-hidden={help||undefined} onPointerDownCapture={finishEntry} onKeyDownCapture={finishEntry} sx={{visibility:help?'hidden':undefined,minHeight:'100dvh'}}>
   <AppBar data-first-entry="masthead" position="sticky" color="inherit" elevation={0} sx={{borderBottom:'1px solid',borderColor:'divider',pt:'var(--safe-top)',bgcolor:'background.default'}}>
    <Toolbar sx={{maxWidth:1240,width:'100%',mx:'auto',gap:{xs:.5,sm:1},minHeight:{xs:56,sm:64},px:{xs:1.5,sm:3}}}>
     <Button onClick={()=>setAbout(true)} sx={{px:0,minWidth:0,color:'text.primary',gap:1.25}}><Box component="img" src="./icon.svg" width={32} height={32} alt=""/><Typography sx={{fontWeight:700,fontSize:'1.125rem',lineHeight:1.4}}>校园 Inbox</Typography></Button>
@@ -108,6 +113,7 @@ export default function App(){
   {!wide&&<Paper data-first-entry="home-nav" sx={{position:'fixed',bottom:0,left:0,right:0,borderTop:'1px solid',borderColor:'divider',pb:'var(--safe-bottom)',zIndex:10}}>
    <BottomNavigation value={page} onChange={(_,value)=>navigate(value)} showLabels sx={{bgcolor:'background.paper',height:64,alignItems:'center',px:1,gap:1,'& .MuiBottomNavigationAction-root':{minWidth:0,maxWidth:180,height:48,borderRadius:6,color:'text.secondary'},'& .MuiBottomNavigationAction-root.Mui-selected':{color:'primary.main',bgcolor:'action.selected'},'& .MuiBottomNavigationAction-label':{fontSize:'1rem',fontWeight:600},'& .MuiBottomNavigationAction-label.Mui-selected':{fontSize:'1rem'}}}>{nav.map(item=><BottomNavigationAction key={item.label} label={item.label}/>)}</BottomNavigation>
   </Paper>}
+  </Box>
   <NoteDialog editor={note} app={app} onClose={()=>setNote(null)}/>
   <SearchQueryContext.Provider value={feedView.query}><DetailDialog notice={app.notices.find(n=>n.id===details)??null} path={sourcePath} app={app} onCorrect={actions.correct} onClose={()=>setDetails(null)}/></SearchQueryContext.Provider>
   <CorrectionDialog notice={correction?.path?app.notices.find(n=>n.id===correction.noticeID)??null:null} path={correction?.path} app={app} onClose={()=>setCorrection(value=>value?{noticeID:value.noticeID}:null)}/>
@@ -118,7 +124,7 @@ export default function App(){
   <HumanVerificationDialog request={verification.request} onComplete={verification.complete} onCancel={()=>{app.cancel();verification.cancel();}}/>
   <HelpDialog open={help} onClose={closeHelp} onFinished={()=>{if(app.platform.kind!=='android')setDownloadHint(true);}} onCompose={()=>{closeHelp();navigate(1);}} onExamples={()=>app.loadExamples().then(()=>{closeHelp();navigate(0);}).catch(app.report)}/><AboutDialog open={about} onClose={()=>setAbout(false)}/>
   <Dialog open={downloadsOpen} onClose={()=>setDownloadsOpen(false)} maxWidth="xs" fullWidth><DialogTitle>安卓手机版</DialogTitle><DialogContent><AndroidDownloads compact/></DialogContent><DialogActions><Button onClick={()=>setDownloadsOpen(false)}>关闭</Button></DialogActions></Dialog>
-  <Snackbar open={downloadHint&&!help} autoHideDuration={12000} onClose={()=>setDownloadHint(false)} message="手机上也能用" action={<Button color="inherit" onClick={()=>{setDownloadHint(false);setDownloadsOpen(true);}}>安卓下载</Button>} anchorOrigin={{vertical:'bottom',horizontal:'center'}} sx={{bottom:wide?24:84}}/>
+  <Snackbar open={downloadHint&&!help&&entryReady} autoHideDuration={12000} onClose={()=>setDownloadHint(false)} message="手机上也能用" action={<Button color="inherit" onClick={()=>{setDownloadHint(false);setDownloadsOpen(true);}}>安卓下载</Button>} anchorOrigin={{vertical:'bottom',horizontal:'center'}} sx={{bottom:wide?24:84}}/>
   <Snackbar open={!!app.toast} key={app.toast?.id} autoHideDuration={6500} onClose={(_,reason)=>{if(reason!=='clickaway')app.setToast(null);}} message={app.toast?.text} action={app.toast?.undo?<Button color="inherit" onClick={()=>{const undo=app.toast?.undo;app.setToast(null);undo?.();}}>撤销</Button>:undefined} anchorOrigin={{vertical:'bottom',horizontal:'center'}} sx={{bottom:wide?24:84}}/>
   <Snackbar open={!!app.error} onClose={()=>app.setError('')} anchorOrigin={{vertical:'top',horizontal:'center'}}><Alert severity="error" onClose={()=>app.setError('')} variant="filled" sx={{maxWidth:560}}>{app.error}</Alert></Snackbar>
  </ThemeProvider>;

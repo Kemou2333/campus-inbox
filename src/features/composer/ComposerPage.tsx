@@ -111,7 +111,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
    <AttachmentList ids={draft.attachments} platform={app.platform} onRemove={app.busy||adding?undefined:id=>void app.detach(draft.id,id).catch(app.report)}/>
   </Paper></Collapse>)}
   <input hidden ref={input} type="file" multiple onChange={e=>void picked(e.target.files)}/>
-  <Tooltip title="再加一条通知"><span style={{alignSelf:'center'}}><IconButton aria-label="再加一条通知" sx={{border:'1px solid',borderColor:'divider',color:'primary.main'}} disabled={app.busy||adding||app.drafts.length>=20} onClick={addDraft}><Add/></IconButton></span></Tooltip>
+  <Tooltip title="再加一条通知"><span data-first-entry="composer-action" style={{alignSelf:'center'}}><IconButton aria-label="再加一条通知" sx={{border:'1px solid',borderColor:'divider',color:'primary.main'}} disabled={app.busy||adding||app.drafts.length>=20} onClick={addDraft}><Add/></IconButton></span></Tooltip>
   <Box data-first-entry="composer-action" className="composer-actions" sx={{py:1,position:shortViewport&&!embedded?'static':'sticky',bottom:embedded?0:topNavigation?16:'calc(80px + var(--safe-bottom))',zIndex:2,bgcolor:'background.default'}}>
    {app.busy&&<LinearProgress sx={{mb:1,borderRadius:1}}/>}
    {app.busy&&showWaitHint&&<Typography variant="body2" color="text.secondary" role="status" sx={{mb:1}}>正在确认提交，确认后可离开。</Typography>}
