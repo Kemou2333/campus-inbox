@@ -180,10 +180,35 @@ test('cloud record pagination is account-scoped and deleted markers never revive
   assert.equal((await s.request(root+'/'+encodeURIComponent(gone))).status,404);assert.equal((await s.request(root+'?before=invalid')).status,400);assert.equal((await s.request(root+'/invalid%')).status,400);
   const db=new DatabaseSync(s.syncFile);assert.equal(db.prepare('SELECT json FROM records WHERE id=?').get(gone).json,null);assert.equal(db.prepare('SELECT COUNT(*) AS count FROM records').get().count,23);db.close();
 });
-test('bound login email, session keys and password hashes never appear in administrator metadata or notification detail',async t=>{
+test('verified email is confined to protected account metadata and credentials never enter any admin response',async t=>{
   const s=await setup();t.after(s.close);const subject=s.auth.getIdentity(s.sessions[1].key).subject,record=cloudRecord('safe-notice');await syncChanges(s,s.sessions[1],[{id:record.id,baseVersion:0,record}]);
   const db=new DatabaseSync(s.authFile);db.prepare('INSERT INTO email_identities(email,user) VALUES(?,?)').run('private-fixture-mailbox@163.com',subject);const credentials=db.prepare('SELECT password_hash,salt FROM invite_users WHERE id=?').get(subject);db.close();assert.equal(s.auth.getIdentity(s.sessions[1].key).email,'private-fixture-mailbox@163.com');
   for(const path of ['/admin/accounts','/admin/jobs','/admin/summary','/admin/accounts/'+subject+'/records','/admin/accounts/'+subject+'/records/'+record.id]){
-    const output=JSON.stringify((await s.request(path)).body);for(const secret of ['private-fixture-mailbox@163.com',s.sessions[1].key,credentials.password_hash,credentials.salt])assert(!output.includes(secret));
+    const output=JSON.stringify((await s.request(path)).body);for(const secret of [s.sessions[1].key,credentials.password_hash,credentials.salt])assert(!output.includes(secret));if(path!=='/admin/accounts'&&path!=='/admin/jobs')assert(!output.includes('private-fixture-mailbox@163.com'));
   }
+});
+
+test('explicit administrator UUIDs preserve permission independently of a display credential and reject other users',async t=>{
+ const s=await setup();t.after(s.close);
+ const owner=s.auth.getIdentity(s.sessions[1].key).subject;
+ const admin=createAdminService({usernames:[],userIDs:[owner],allowedOrigins:[origin]},{auth:s.auth,sync:s.sync,ai:s.ai});
+ const call=async(session)=>admin(new Request('https://api.example.test/admin/summary',{method:'GET',headers:{Origin:origin,Authorization:'Bearer '+session.key}}));
+ assert.equal((await call(s.sessions[1])).status,200);assert.equal((await call(s.sessions[0])).status,403);
+ const db=new DatabaseSync(s.authFile);db.prepare('UPDATE invite_users SET username=? WHERE id=?').run('new-internal-label',owner);db.close();
+ assert.equal((await call(s.sessions[1])).status,200);
+ const missing=createAdminService({usernames:[],userIDs:[randomUUID()],allowedOrigins:[origin]},{auth:s.auth,sync:s.sync,ai:s.ai});
+ const rejected=await missing(new Request('https://api.example.test/admin/summary',{method:'GET',headers:{Origin:origin,Authorization:'Bearer '+s.sessions[1].key}}));assert.equal(rejected.status,403);
+ assert.throws(()=>createAdminService({userIDs:['not-an-id']},{auth:s.auth,sync:s.sync,ai:s.ai}));
+});
+
+test('only the authorized backend shows a verified email while record selections retain UUIDs',async t=>{
+ const s=await setup();t.after(s.close);
+ const owner=s.auth.getIdentity(s.sessions[1].key).subject,address='student@163.com';
+ const db=new DatabaseSync(s.authFile);db.prepare('INSERT INTO email_identities(email,user) VALUES (?,?)').run(address,owner);db.close();s.job();
+ const accounts=(await s.request('/admin/accounts')).body.accounts;
+ const row=accounts.find(account=>account.id===owner);assert.equal(row.email,address);assert.equal(row.accountLabel,address);
+ const old=accounts.find(account=>account.id!==owner);assert.equal(old.accountLabel,'旧账号');
+ const jobs=(await s.request('/admin/jobs')).body.jobs;assert.equal(jobs[0].email,address);assert.equal(jobs[0].accountLabel,address);assert.equal(jobs[0].ownerSubject,owner);
+ const denied=await s.request('/admin/accounts',s.sessions[1]);assert.equal(denied.status,403);assert(!JSON.stringify(denied.body).includes(address));
+ const html=(await s.request('/admin',null,origin,'GET')).body;assert(html.includes('function accountLabel(account)'));assert(!html.includes('[account.username,dates'));
 });

@@ -230,7 +230,7 @@ test('email-only accounts reject password login safely and login failures retain
   assert.equal((await f.verify(challenge)).status,400);const oldSubject=f.identities[0].subject;
   fail=false;f.advance(60000);const logged=await f.verify(await f.send());assert.equal(logged.status,200);
   assert.equal(f.auth.getIdentity(logged.body.key).subject,oldSubject);
-  const rejected=await f.request('login',{username:logged.body.username,password});assert.equal(rejected.status,401);assert.equal(rejected.body.error,'用户名或密码不正确。');
+  const rejected=await f.request('login',{username:logged.body.username,password});assert.equal(rejected.status,401);assert.equal(rejected.body.error,'邮箱或密码不正确。');
 });
 
 test('binding an old account keeps its UUID and password while requiring the same authenticated account',async t=>{
@@ -272,10 +272,10 @@ test('email registration verifies once, stores a password hash and then logs in 
  assert.equal(f.identities.length,0);assert.equal(f.messages[0].purpose,'register');
  const short=await f.request('email/verify',{challengeId:challenge.challengeId,code,username:'student-one',password:'short'});assert.equal(short.status,400);
  const registered=await f.request('email/verify',{challengeId:challenge.challengeId,code,username:'ＳＴＵＤＥＮＴ-one',password});
- assert.equal(registered.status,200);assert.equal(registered.body.username,'student-one');
+ assert.equal(registered.status,200);assert.match(registered.body.username,/^同学_[a-f0-9]{16}$/);assert.notEqual(registered.body.username,'student-one');
  const owner=f.auth.getIdentity(registered.body.key).subject;
  const byEmail=await f.request('login',{username:' REVIEW@163.COM ',password});
- const byUsername=await f.request('login',{username:'STUDENT-one',password});
+ const byUsername=await f.request('login',{username:registered.body.username,password});
  assert.equal(byEmail.status,200);assert.equal(byUsername.status,200);
  assert.equal(f.auth.getIdentity(byEmail.body.key).subject,owner);assert.equal(f.auth.getIdentity(byUsername.body.key).subject,owner);
  assert.equal(f.messages.length,1);assert.equal((await f.verify(challenge,code)).status,400);
@@ -339,4 +339,34 @@ test('public registration and first-password send replies do not reveal mailbox 
   if(purpose==='password')assert.equal((await f.request('email/verify',{challengeId:reply.body.challengeId,code:f.messages.at(-1).code,password})).status,409);
  }
  assert.equal(f.identities.length,1);
+});
+
+
+test('email registration needs no name and ignores the name sent by installed older clients',async t=>{
+ const f=await fixture();t.after(()=>f.auth.close());const legacy=await f.register('already-taken');
+ const first=await f.send(email,'register');
+ const registered=await f.request('email/verify',{challengeId:first.challengeId,code:f.messages.at(-1).code,password});
+ assert.equal(registered.status,200);assert.match(registered.body.username,/^同学_[a-f0-9]{16}$/);
+ const second=await f.send('second@163.com','register');
+ const compatible=await f.request('email/verify',{challengeId:second.challengeId,code:f.messages.at(-1).code,username:legacy.username,password});
+ assert.equal(compatible.status,200);assert.notEqual(compatible.body.username,legacy.username);
+ assert.notEqual(f.auth.getIdentity(compatible.body.key).subject,f.auth.getIdentity(legacy.key).subject);
+ const login=await f.request('login',{email:'second@163.com',password});
+ assert.equal(login.status,200);assert.equal(f.auth.getIdentity(login.body.key).subject,f.auth.getIdentity(compatible.body.key).subject);
+});
+
+test('existing verified external email remains a login credential without allowing new external registration or binding',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'campus-email-existing-'));t.after(()=>rm(directory,{recursive:true,force:true}));
+ const file=join(directory,'auth.sqlite'),f=await fixture({file});t.after(()=>f.auth.close());
+ const old=await f.register(),owner=f.auth.getIdentity(old.key).subject,address='student@previous-provider.example';
+ const db=new DatabaseSync(file);db.prepare('INSERT INTO email_identities(email,user) VALUES (?,?)').run(address,owner);db.close();
+ const logged=await f.request('login',{email:address,password});assert.equal(logged.status,200);
+ assert.equal(logged.body.email,address);assert.equal(f.auth.getIdentity(logged.body.key).subject,owner);
+ const status=await f.request('status',{},old.key);assert.equal(status.body.email,address);
+ const otp=await f.send(address,'login');const verified=await f.verify(otp);assert.equal(verified.status,200);
+ assert.equal(f.auth.getIdentity(verified.body.key).subject,owner);
+ assert.equal((await f.request('email/request',{email:address,purpose:'register'})).status,400);
+ assert.equal((await f.request('email/request',{email:'new@previous-provider.example',purpose:'login'})).status,400);
+ assert.equal((await f.request('email/request',{email:address,purpose:'bind'},old.key)).status,400);
+ assert.equal(f.messages.length,1);
 });

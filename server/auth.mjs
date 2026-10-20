@@ -5,6 +5,7 @@ import {mkdir,chmod} from 'node:fs/promises';
 import {dirname} from 'node:path';
 import {boundedText,ServiceError} from './analyze.mjs';
 import {createEmailAuth} from './email-auth.mjs';
+import {canonicalLoginEmail} from './contracts/email-policy.mjs';
 import {createImageCaptcha,captchaAnswerHash} from './image-captcha.mjs';
 
 const scrypt=promisify(derive),DAY=86400000,SESSION_TTL=30*DAY;
@@ -155,9 +156,11 @@ export async function createAuthService(config,options={}){
   }
   async function login(body,ip,origin){
     let username,user;
-    if(typeof body.username==='string'&&body.username.includes('@')){
-      username=emailAuth.emailValue(body.username);user=emailAuth.userForEmail(username);
-    }else{username=canonicalUsername(body.username);user=stmt.user.get(username);}
+    const identifier=body.email??body.username; // Older installed apps still send username.
+    if(typeof identifier==='string'&&identifier.includes('@')){
+      try{username=canonicalLoginEmail(identifier);}catch(issue){throw new ServiceError(issue.message,400);}
+      user=emailAuth.userForEmail(username);
+    }else{username=canonicalUsername(identifier);user=stmt.user.get(username);}
     const password=passwordValue(body.password);
     // Email and username aliases share the account's guessing budget.
     transaction(()=>{clean();rollingRate('login-ip',hashSubject('ip:'+ip),limits.loginIPMinute,60000);rollingRate('login-ip-hour',hashSubject('ip:'+ip),limits.loginIPHour,3600000);});
@@ -168,7 +171,7 @@ export async function createAuthService(config,options={}){
     const hasPassword=!!user&&/^[a-f0-9]{128}$/.test(user.password_hash),salt=hasPassword?user.salt:'00000000000000000000000000000000';
     const actual=await hashPassword(password,salt),expected=hasPassword?Buffer.from(user.password_hash,'hex'):Buffer.alloc(64);
     const matches=timingSafeEqual(actual,expected);
-    if(!hasPassword||!matches)throw new ServiceError('用户名或密码不正确。',401);
+    if(!hasPassword||!matches)throw new ServiceError('邮箱或密码不正确。',401);
     return sessionFor(user,ip);
   }
   /** Private CLI only: no HTTP endpoint or admin page issues invitations. */
@@ -188,11 +191,12 @@ export async function createAuthService(config,options={}){
     return {provider:'invite',subject:session.id,username:session.username,expiresAt:new Date(expires).toISOString(),...(email?{email}:{})};
   }
   const emailAuth=createEmailAuth({db,signingSecret:config.signingSecret,now,limits:options.limits,sendCode:options.sendCode,getIdentity,sessionFor,
-    async prepareCredentials(body,purpose){
-      const password=passwordValue(body.password),username=purpose==='register'?canonicalUsername(body.username):undefined;
-      if(username&&stmt.user.get(username))throw new ServiceError('此用户名已被使用，请换一个。',409);
+    async prepareCredentials(body){
+      // Public email registration has no user-selected name. Ignore the legacy
+      // username field so older installed clients can still redeem their code.
+      const password=passwordValue(body.password);
       const salt=randomBytes(16).toString('hex'),passwordHash=(await hashPassword(password,salt)).toString('hex');
-      return {username,salt,passwordHash};
+      return {salt,passwordHash};
     },
     setPassword(user,credentials){
       const changed=db.prepare("UPDATE invite_users SET salt=?,password_hash=? WHERE id=? AND salt='' AND password_hash=''").run(credentials.salt,credentials.passwordHash,user.id);
@@ -234,7 +238,9 @@ export async function createAuthService(config,options={}){
       ...(error instanceof ServiceError&&error.code?{code:error.code}:{}),
       ...(error instanceof ServiceError&&error.retryAfterSeconds?{retryAfterSeconds:error.retryAfterSeconds}:{})},error.status||503);}
   }
-  // Internal administrator reader: no password/email/session columns leave it.
-  const adminReader={count:()=>stmt.count.get().count,list:({offset=0,limit=50}={})=>stmt.publicUsers.all(limit,offset).map(row=>({id:row.id,username:row.username,createdAt:new Date(row.created).toISOString()}))};
+  // Internal administrator reader: verified email is the display credential;
+  // password hashes and sessions never leave the auth service.
+  const adminUsers=db.prepare('SELECT invite_users.id,username,created,email FROM invite_users LEFT JOIN email_identities ON invite_users.id=email_identities.user ORDER BY created DESC,invite_users.id DESC LIMIT ? OFFSET ?');
+  const adminReader={count:()=>stmt.count.get().count,list:({offset=0,limit=50}={})=>adminUsers.all(limit,offset).map(row=>({id:row.id,username:row.username,...(row.email?{email:row.email}:{}),createdAt:new Date(row.created).toISOString()}))};
   return {handle,getIdentity,issueInvites,adminReader,close:()=>db.close()};
 }
