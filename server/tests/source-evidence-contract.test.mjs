@@ -19,11 +19,11 @@ test('source segments are exact stable slices and never split an emoji UTF16 pai
  for(const [i,segment] of segments.entries()){assert.equal(segment.index,i+1);assert.equal(trimmed.slice(segment.start,segment.end),segment.text);assert.equal(segment.text.isWellFormed(),true);}
  assert.equal(segments.map(s=>s.text).join('').includes('😀'),true);
 });
-test('provider receives only numbered source segments, never a duplicate complete text or device fields',()=>{
+test('provider receives each source once without numbered segments or citation instructions',()=>{
  const payload=modelPayload({sources:[{text:source},{text:'宿舍通知😀。'}]},{thinkingMode:'low'}),body=JSON.parse(payload.messages[1].content);
- assert.deepEqual(Object.keys(body),['sources']);assert.deepEqual(body.sources.map(s=>Object.keys(s)),[['sourceId','segments'],['sourceId','segments']]);
- for(const [i,entry] of body.sources.entries()){assert.equal(entry.sourceId,i+1);assert.deepEqual(entry.segments,segmentSource(i? '宿舍通知😀。':source).map(s=>({id:s.index,text:s.text})));}
- assert.equal(payload.messages[0].content.includes('sourceRefs'),true);assert.equal(payload.reasoning_effort,'low');
+ assert.deepEqual(Object.keys(body),['sources']);assert.deepEqual(body.sources.map(s=>Object.keys(s)),[['sourceId','text'],['sourceId','text']]);
+ for(const [i,entry] of body.sources.entries()){assert.equal(entry.sourceId,i+1);assert.equal(entry.text,i?'宿舍通知😀。':source);}
+ assert.equal(payload.messages[0].content.includes('sourceRefs'),false);assert.equal(payload.reasoning_effort,'low');
 });
 test('valid path coverage survives strict source analysis and strips only transport sourceId',async()=>{
  const n=analysis(),before=structuredClone(n);let calls=0;
@@ -62,16 +62,19 @@ test('step citations override task citations and a sentence overrides both witho
  assert.deepEqual(parsed,parseSourceRefs(Object.fromEntries(Object.entries(refs).reverse()),n,source));
  for(const key of ['tasks.0.steps.1','tasks.0.steps.00','tasks.1.steps.0','tasks.0.steps.__proto__'])assert.throws(()=>parseSourceRefs({[key]:[1]},n,source));
 });
-test('strict mode rejects missing actionable headings after one mock call',async()=>{
+test('missing citations are accepted after one call even with the old production flag enabled',async()=>{
  for(const path of requiredEvidencePaths(analysis())){
   const n=analysis();delete n.sourceRefs[path];let calls=0;
-  await assert.rejects(analyze(source,config,async()=>{calls++;return envelope(n);}),rejected);assert.equal(calls,1);
+  const output=await analyze(source,config,async()=>{calls++;return envelope(n);});assert.equal(output.result.notices.length,1);assert.equal(calls,1);
  }
 });
-test('legacy model envelopes are accepted only when the production evidence requirement is disabled',async()=>{
- const legacy=analysis();delete legacy.sourceRefs;delete legacy.reminderTitles;
- const accepted=await analyze(source,{...config,requireSourceEvidence:false},async()=>envelope(legacy));assert.equal(accepted.result.notices.length,1);assert.equal(accepted.result.notices[0].sourceRefs,undefined);
- await assert.rejects(analyze(source,config,async()=>envelope(legacy)),rejected);
+test('new envelopes omit citation maps; legacy titles and maps remain compatible without a data migration',async()=>{
+ const n=analysis();delete n.sourceRefs;
+ for(const requireSourceEvidence of [true,false]){
+  const accepted=await analyze(source,{...config,requireSourceEvidence},async()=>envelope(n));assert.equal(accepted.result.notices.length,1);assert.equal(accepted.result.notices[0].sourceRefs,undefined);
+ }
+ const legacy=structuredClone(n);delete legacy.reminderTitles;
+ assert.equal((await analyze(source,config,async()=>envelope(legacy))).result.notices.length,1);
 });
 test('unknown field/prototype paths, empty refs, string/float/negative IDs and repeated IDs are invalid',()=>{
  const n=analysis();
@@ -90,5 +93,5 @@ test('information cards require concise topic titles but do not force citation o
  const n={sourceId:1,schemaVersion:4,kind:'information',title:'课程信息',summary:'留意课程学习要求。',deadline:null,deadlineText:'',timeline:[],tasks:[],materials:[],warnings:[],reminders:['需完成**20%**的视频观看。'],reminderTitles:['线上学习'],sourceRefs:{title:[1],summary:[1],'reminders.0':[1],'reminderTitles.0':[1]}};
  const output=await analyze('线上学习需完成不少于20%的视频观看。',config,async()=>envelope(n));assert.equal(output.result.notices[0].reminderTitles[0],'线上学习');
  const missing=structuredClone(n);missing.sourceRefs={};const withoutRefs=await analyze(source,config,async()=>envelope(missing));assert.deepEqual(withoutRefs.result.notices[0].sourceRefs,{});
- const absent=structuredClone(n);delete absent.reminderTitles;delete absent.sourceRefs['reminderTitles.0'];await assert.rejects(analyze(source,config,async()=>envelope(absent)),rejected);
+ const absent=structuredClone(n);delete absent.reminderTitles;delete absent.sourceRefs['reminderTitles.0'];assert.equal((await analyze(source,config,async()=>envelope(absent))).result.notices.length,1);
 });

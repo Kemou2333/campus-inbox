@@ -7,7 +7,6 @@ import {DatabaseSync} from 'node:sqlite';
 import {createSyncService,validateCloudNotice} from '../sync.mjs';
 import {createService} from '../service.mjs';
 import {captchaAnswerHash} from '../image-captcha.mjs';
-import {segmentSource} from '../contracts/source-evidence.js';
 
 const origin='https://campus.example',secret='job-signing-secret-at-least-twenty-characters';
 const requestId='123e4567-e89b-42d3-a456-426614174000';
@@ -95,7 +94,7 @@ test('a failed single paid response retains original text and diagnosis without 
 
 test('provider cleanup leaves saved job originals, source reference numbers and original-input idempotency unchanged',async()=>{
   const raw='学校通知：\n\n\n\n  请按要求提交20元材料。';let calls=0;
-  const s=await setup(async(_url,options)=>{calls++;assert.deepEqual(JSON.parse(JSON.parse(options.body).messages[1].content).sources[0].segments,segmentSource(raw).map(segment=>({id:segment.index,text:segment.text})));return envelope([{...info('通知',1),sourceRefs:{'reminders.0':[2]}}]);});
+  const s=await setup(async(_url,options)=>{calls++;assert.equal(JSON.parse(JSON.parse(options.body).messages[1].content).sources[0].text,raw.replace(/\n{3,}/g,'\n\n'));return envelope([{...info('通知',1),sourceRefs:{'reminders.0':[2]}}]);});
   try{
     const {job}=await (await s.service(s.jobRequest(requestId,[{text:raw}]))).json();await s.service.drain();
     const done=(await (await s.service(s.get('/analysis-jobs/'+job.id))).json()).job;assert.equal(done.status,'completed');assert.equal(done.sources[0].text,raw);assert.equal(done.records[0].originalText,raw);assert.deepEqual(done.records[0].sourceRefs,{'reminders.0':[2]});

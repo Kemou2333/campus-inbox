@@ -99,6 +99,7 @@ function legacyStepID(noticeID,taskIndex,stepIndex,s){
 function notice(x){
  if(!object(x)||!Array.isArray(x.tasks)||x.tasks.length>100||typeof x.completed!=='boolean')throw new Error('通知记录格式不正确');
  if(x.favorite!==undefined&&typeof x.favorite!=='boolean')throw new Error('收藏状态格式不正确');
+ if(Object.hasOwn(x,'manualPriority')&&x.manualPriority!==null&&!['important-urgent','important','urgent','later'].includes(x.manualPriority))throw new Error('优先级格式不正确');
  const noticeID=text(x.id,'通知编号',150);
  const states=x.tasks.map((t,taskIndex)=>{if(!object(t)||typeof t.completed!=='boolean'||(t.dismissed!==undefined&&typeof t.dismissed!=='boolean'))throw new Error('任务完成状态格式不正确');const ids=new Set(),stepStates=steps(t.steps).map((s,stepIndex)=>{const v=t.steps[stepIndex];if(v.completed!==undefined&&typeof v.completed!=='boolean')throw new Error('步骤完成状态格式不正确');const id=v.id===undefined?legacyStepID(noticeID,taskIndex,stepIndex,s):localStepID(v.id);if(ids.has(id))throw new Error('同一事项内的步骤编号重复');ids.add(id);return {id,completed:v.completed===undefined?false:v.completed,note:text(v.note===undefined?'':v.note,'步骤笔记',MAX_NOTE,true)};});return {completed:t.completed,dismissed:t.dismissed===undefined?false:t.dismissed,note:text(t.note===undefined?'':t.note,'事项笔记',MAX_NOTE,true),localDeadline:date(t.localDeadline===undefined?null:t.localDeadline),steps:stepStates};});
  const normalized=analysis(x);
@@ -106,7 +107,7 @@ function notice(x){
  const audienceOverride=x.audienceOverride===undefined?'':x.audienceOverride;
  if(!['','all'].includes(audienceOverride))throw new Error('本地适用范围设置不正确');
  const originalText=text(x.originalText,'通知原文',MAX_STORED_TEXT),refs=parseSourceRefs(x.sourceRefs,normalized,originalText),corrections=parseCorrections(x.corrections,normalized);
- return {...normalized,...(refs===undefined?{}:{sourceRefs:refs}),...(corrections===undefined?{}:{corrections}),id:noticeID,originalText,createdAt,completed:x.completed,localDeadline:date(x.localDeadline===undefined?null:x.localDeadline),reminderNotes:reminderNotes(x.reminderNotes,normalized.reminders.length),note:text(x.note===undefined?'':x.note,'笔记',MAX_NOTE,true),audienceOverride,attachments:attachmentIDs(x.attachments),tasks:normalized.tasks.map((t,i)=>({...t,...states[i],steps:t.steps.map((s,j)=>({...s,...states[i].steps[j]}))}))};
+ return {...normalized,...(Object.hasOwn(x,'manualPriority')?{manualPriority:x.manualPriority}:{}),...(refs===undefined?{}:{sourceRefs:refs}),...(corrections===undefined?{}:{corrections}),id:noticeID,originalText,createdAt,completed:x.completed,localDeadline:date(x.localDeadline===undefined?null:x.localDeadline),reminderNotes:reminderNotes(x.reminderNotes,normalized.reminders.length),note:text(x.note===undefined?'':x.note,'笔记',MAX_NOTE,true),audienceOverride,attachments:attachmentIDs(x.attachments),tasks:normalized.tasks.map((t,i)=>({...t,...states[i],steps:t.steps.map((s,j)=>({...s,...states[i].steps[j]}))}))};
 }
 function notices(x){if(!Array.isArray(x)||x.length>MAX_NOTICES)throw new Error(`最多保存 ${MAX_NOTICES} 条通知`);const ids=new Set();return x.map(v=>{const n=notice(v);if(ids.has(n.id))throw new Error('存在重复的通知编号');ids.add(n.id);return n;});}
 function backup(x){if(!object(x)||x.app!=='campus-inbox'||![1,2,3,4].includes(x.version))throw new Error('请选择校园 Inbox 导出的 JSON 备份');return notices(x.notices);}

@@ -6,7 +6,6 @@ import {join} from 'node:path';
 import {analyze,modelInput,ServiceError} from '../analyze.mjs';
 import {createService} from '../service.mjs';
 import {SYSTEM_PROMPT,promptForInput} from '../../worker/prompt.mjs';
-import {segmentSource} from '../contracts/source-evidence.js';
 
 // Fixed local model envelopes only. No network, moderation or paid calls.
 const origin='https://app.example.test',token='mock-access-token-long-enough-for-tests';
@@ -52,7 +51,7 @@ test('injection remains user data; model messages contain no service secrets, lo
     assert.equal(url,'https://api.deepseek.com/chat/completions');assert.equal(options.redirect,'error');
     const payload=JSON.parse(options.body);assert.equal(payload.tools,undefined);assert.equal(payload.messages.length,2);
     assert.deepEqual(payload.messages.map(message=>message.role),['system','user']);assert.equal(payload.messages[0].content,promptForInput(modelInput({sources:[{text}]})));
-    assert.deepEqual(JSON.parse(payload.messages[1].content),{sources:[{sourceId:1,segments:segmentSource(text).map(segment=>({id:segment.index,text:segment.text}))}]});
+    assert.deepEqual(JSON.parse(payload.messages[1].content),{sources:[{sourceId:1,text}]});
     for(const secret of [config.apiKey,token,'private-local-secret','private-smtp-password'])assert.equal(JSON.stringify(payload.messages).includes(secret),false);
     for(const prompt of [SYSTEM_PROMPT,payload.messages[0].content]){
       assert.match(prompt,/refusal.*UNSUPPORTED_REQUEST/);assert.match(prompt,/校园反诈、纪律、(?:性教育、)?健康/);

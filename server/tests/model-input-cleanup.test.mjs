@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {answerNoticeQuestion,compactModelText,modelInput,modelPayload,questionInput,questionPayload} from '../analyze.mjs';
-import {segmentSource} from '../contracts/source-evidence.js';
 const envelope=result=>Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(result)}}],usage:{prompt_tokens:10,completion_tokens:20}});
 
 test('provider copies collapse only excessive blank lines while preserving paragraphs, indentation and factual text',()=>{
@@ -15,12 +14,12 @@ test('provider copies collapse only excessive blank lines while preserving parag
   }
 });
 
-test('source limits and numbered analysis segments still come from the unmodified input',()=>{
+test('source limits and stored originals remain unchanged while provider text loses redundant blank lines',()=>{
   const sourceText='学校通知：\n\n\n\n  1. 提交20元材料。\n\n\n\t2. 入口：https://example.test/form';
   const original={sources:[{text:sourceText}]},before=JSON.stringify(original);
   const payload=modelPayload(original,{thinkingMode:'low'}),prepared=JSON.parse(payload.messages[1].content);
   assert.equal(JSON.stringify(original),before);assert.equal(modelInput(original).sources[0].text,sourceText);
-  assert.deepEqual(prepared.sources[0].segments,segmentSource(sourceText).map(value=>({id:value.index,text:value.text})));
+  assert.equal(prepared.sources[0].text,compactModelText(sourceText));
   const question='何时办理？\n\n\n\n是否必须？',input={sourceText,question};
   assert.deepEqual(questionInput(input),input);
   assert.deepEqual(JSON.parse(questionPayload(input).messages[1].content),{sourceText:compactModelText(sourceText),question:compactModelText(question)});
