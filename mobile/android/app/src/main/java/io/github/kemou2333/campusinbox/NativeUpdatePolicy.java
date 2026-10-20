@@ -6,16 +6,16 @@ import java.net.URISyntaxException;
 /** Fixed public release channel; never accepts a download host supplied by a page. */
 final class NativeUpdatePolicy {
     static final String RELEASE_API = "https://api.github.com/repos/Kemou2333/campus-inbox/releases/latest";
-    static final long CHECK_INTERVAL = 24L * 60 * 60 * 1000;
+    static final long CHECK_DEBOUNCE = 5_000;
     static final long MANUAL_INTERVAL = 30_000;
     static final int MAX_RESPONSE_BYTES = 512 * 1024;
 
     private NativeUpdatePolicy() {}
 
     static boolean checkDue(long now, long previous) {
-        // A large clock correction should not disable checking indefinitely.
-        return previous <= 0 || now >= previous && now - previous >= CHECK_INTERVAL
-                || previous > now && previous - now > CHECK_INTERVAL;
+        // Every foreground entry checks again; only brief duplicate lifecycle callbacks are coalesced.
+        return previous <= 0 || now >= previous && now - previous >= CHECK_DEBOUNCE
+                || previous > now && previous - now > CHECK_DEBOUNCE;
     }
 
     static boolean manualCheckDue(long now, long previous) {

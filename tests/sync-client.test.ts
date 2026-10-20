@@ -127,6 +127,13 @@ describe('conflicts preserve both devices until a choice is made', () => {
     expect(records.find(r => r.id === n.id)?.note).toBe('第一台笔记');
     const copy = records.find(r => r.id !== n.id)!; expect(copy.note).toBe('第二台笔记'); expect(copy.originalText).toBe(n.originalText); expect(copy.title).toBe(n.title);
   });
+  test('the default local choice uses edits made after the conflict appeared',async()=>{
+    const {n,second}=await conflict();
+    const latest=updateNote(second.repository.load()[0],{type:'notice'},'冲突出现后仍继续编辑');
+    second.repository.save([latest]);
+    await second.sync.resolveConflict(n.id,'local');
+    expect(second.repository.load()[0].note).toBe('冲突出现后仍继续编辑');
+  });
   test('a stale local deletion cannot silently remove a newer server edit', async () => {
     const server = new SyncServer(), n = record(), first = device(server, [n]); await first.sync.connect(server.key);
     const second = device(server); await second.sync.connect(server.key);

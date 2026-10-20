@@ -1,7 +1,7 @@
 import {afterEach,expect,test,vi} from 'vitest';
 import {createGuideSession,GUIDE_NOTICE_ID} from '../src/features/onboarding/guide-session';
-import {canAdvanceGuide,GUIDE_READING_PAUSE,guideStepTarget} from '../src/features/onboarding/guide-progress';
-import {guideLayout} from '../src/features/onboarding/guide-layout';
+import {canAdvanceGuide,GUIDE_READING_PAUSE,GUIDE_COMPLETE_TARGET,guideBlockedMessage,guideReadingTarget,guideStepTarget} from '../src/features/onboarding/guide-progress';
+import {followGuideRect,guideLayout,guideRectOffset} from '../src/features/onboarding/guide-layout';
 
 afterEach(()=>vi.useRealTimers());
 test('practice only generates after the real fill action and can update its isolated notice',async()=>{
@@ -36,4 +36,34 @@ test('phone caption leaves the reading hole above it and desktop uses available 
  expect(phone.panel.x).toBeGreaterThanOrEqual(12);expect(phone.panel.x+phone.panel.width).toBeLessThanOrEqual(378);
  const desktop=guideLayout({width:1440,height:900},{x:100,y:100,width:320,height:430},null,220);
  expect(desktop.side).toBe(true);expect(desktop.panel.x).toBeGreaterThan(420);
+});
+
+test('filled example targets the real textarea and completion targets the whole-notice button',()=>{
+ const filled={pasted:true,generated:false,reviewed:false,completed:false};
+ expect(guideStepTarget(0,filled,false)).toBe('.composer-text textarea');
+ expect(guideReadingTarget(0,filled)).toBe('.composer-text textarea');
+ const reviewed={...filled,generated:true,reviewed:true};
+ expect(guideStepTarget(3,reviewed,true)).toBe(GUIDE_COMPLETE_TARGET);
+ expect(guideReadingTarget(3,reviewed)).toBe(GUIDE_COMPLETE_TARGET);
+ expect(guideStepTarget(3,{...reviewed,completed:true},true)).toBe(GUIDE_COMPLETE_TARGET);
+ expect(GUIDE_COMPLETE_TARGET).not.toContain('Checkbox');
+});
+test('blocked attempts explain the current action, including the reading pause',()=>{
+ const generated={pasted:true,generated:true,reviewed:false,completed:false};
+ expect(guideBlockedMessage(1,generated,false)).toContain('先看看整理后的通知');
+ expect(guideBlockedMessage(2,generated,false)).toContain('发光的箭头');
+ expect(guideBlockedMessage(2,generated,true)).toContain('待办标题');
+ expect(guideBlockedMessage(3,generated,true)).toContain('大勾');
+ expect(guideBlockedMessage(3,{...generated,reviewed:true,completed:true},true)).toContain('已经完成');
+});
+test('live scroll and expansion follow the measurement without restarting the intentional move',()=>{
+ const before={x:40,y:100,width:100,height:44},destination={x:180,y:400,width:56,height:56};
+ const offset=guideRectOffset(before,destination);
+ expect(followGuideRect(destination,offset,1)).toEqual(before);
+ const midpoint=followGuideRect(destination,offset,.5);
+ const scrolled=followGuideRect({...destination,y:destination.y-120,height:destination.height+30},offset,.5);
+ expect(scrolled.y-midpoint.y).toBe(-120);
+ expect(scrolled.height-midpoint.height).toBe(30);
+ const settled={...destination,y:250,height:86};
+ expect(followGuideRect(settled,offset,0)).toEqual(settled);
 });

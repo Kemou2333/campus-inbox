@@ -1,6 +1,9 @@
 import {useEffect,useRef,useState} from 'react';
 import type {CampusController} from '../../app/useCampus';
 import {createGuideSession,GUIDE_DRAFT_ID} from './guide-session';
+import {isNewCompletion} from '../notices/completion-feedback';
+import {playOperationSound} from '../../shared/operation-sounds';
+import {triggerOperationHaptic} from '../../shared/operation-haptics';
 
 /** Only these explicitly local operations reach the practice shown by the real pages. */
 export function useGuideSession(app:CampusController,active:boolean){
@@ -17,10 +20,19 @@ export function useGuideSession(app:CampusController,active:boolean){
   retryAt:0,pending:false,legacyRecords:[],legacyMissingFiles:false,bootError:'',
   analysisJobs:[],unconfirmedSubmissions:[],jobStatusError:'',unreadNoticeIDs:[],
   latestAddedID:null,toast:null,error:'',
-  fillDemoDraft:()=>session.fill()??undefined,analyzeDemo:()=>session.organize(),
+  fillDemoDraft:()=>session.fill()??undefined,
+  analyzeDemo:async()=>{
+   const generated=await session.organize();
+   if(generated){playOperationSound('organized');triggerOperationHaptic(app.platform,'organized');}
+   return generated;
+  },
   // A tutorial can never fall through to a paid or personal action.
   analyze:async()=>false,askQuestion:async()=>{throw new Error('请先完成引导。');},
-  act:(id,change)=>session.act(id,change),update:()=>undefined,remove:noAction,
+  act:(id,change)=>{
+   const result=session.act(id,change);
+   if(isNewCompletion(result)){playOperationSound('complete');triggerOperationHaptic(app.platform,'complete');}
+   return result;
+  },update:()=>undefined,remove:noAction,
   changeDraft:noAction,insertDraft:noAction,pasteDraft:noAction,addDraft:noAction,
   removeDraft:async()=>{},attach:async()=>{},detach:async()=>{},
   markNoticeRead:noAction,clearUnreadNotices:noAction,loadExamples:async()=>{},

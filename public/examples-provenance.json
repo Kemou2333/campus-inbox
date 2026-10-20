@@ -34,7 +34,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "2427577d4c6eec8bd1595742ff0518b4ccfcf85cff6d66d4b334a9db1364817b",
-      "publishedRecordSha256": "7acd9aed56fbddafcfff5b5bc4faa9c3ac401e7efa9e3d420aa6632dfe01fe54",
+      "publishedRecordSha256": "76a39b0dab1a37306813a8d4544e9dd2bbb5f53520dac2f5b2e613caade56405",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
       "presentationRevision": "2026-10-20-short-cards",
@@ -59,7 +59,7 @@
       "manualContentCorrections": false,
       "privacyPreparation": "The browser submitted the existing manually-redacted public original. Every returned field was manually checked; no additional semantic or privacy wording edits were needed.",
       "publishedOriginalSha256": "376a65f8be5871c60bf8e079db39265820ddf76f5280c31df9e1b0a543b2a35b",
-      "publishedRecordSha256": "2e089b1599e5fa04cb3ec43523c33c89cf1910aa7c146c4a64d765a9291483c1",
+      "publishedRecordSha256": "3405ce54152d2ab80f7a76a59e6c60d19c5f7a621b7b09a2c4ee17298c2dad78",
       "providerCalled": true,
       "cacheReuse": false,
       "realProviderCalls": 1,
@@ -117,15 +117,37 @@
       "associatedPaths": 7,
       "unassociatedAfterPrivacy": [],
       "publishedOriginalSha256": "13c89ec16bc543cf98549a696c6169afcd180fbda1713e9f31c9b8d95e30ebfc",
-      "publishedRecordSha256": "c784b9a3ff41991181614a47ee9ee6618f5a1ef0edcb322654ed6a07fbaeecf6",
+      "publishedRecordSha256": "ffaafbe037c1d43678b33ad9dcc8a2856d4bb4bd00d8f8ad8298aaa34dd485d1",
       "semanticLimitations": [
         "The source has contradictory Zhihuishu platform entrypoints; this response chooses the operating-guide entrypoint without retaining the explicit conflict warning.",
         "The XueTangX task no longer explicitly restates that completing the required videos and material yields 100 platform points.",
         "Originality requirements still recur in both task material details and cautions; the selected response is not a promise of zero repetition."
       ],
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
+      "presentationRevision": "2.24.0-first-service-result-reviewed",
+      "presentationEditScope": "Current presentation starts from the new first service snapshot, then human-shortens and groups details. Original source and historical provider provenance stay intact. Restored source details are explicitly manual.",
+      "currentGeneration": {
+        "version": "2.24.0",
+        "snapshotKind": "first-authenticated-production-service-record",
+        "firstServerRecordSnapshotSha256": "7558b26fc78b0382a262e5b897a55588e3a319445edd226fb65d85a676059e3b",
+        "sourceSha256": "13c89ec16bc543cf98549a696c6169afcd180fbda1713e9f31c9b8d95e30ebfc",
+        "promptSha256": "709849614c16c05c68a278f9c57aff2b6aa3d58c1b2130a084605aaacf045ea2",
+        "thinking": "low",
+        "maxTokens": 32768,
+        "providerCalled": true,
+        "cacheReuse": false,
+        "automaticPaidRetries": 0,
+        "manualPresentationEdits": true,
+        "manualOriginalSourceRestoration": [],
+        "providerEnvelopeCaptured": false,
+        "usage": {
+          "input": 3023,
+          "output": 7303,
+          "reasoning": 6534
+        },
+        "estimatedCostRmb": 0.077364,
+        "providerInvoiceVerified": false
+      }
     },
     {
       "exampleId": "example-reading-v25-4",
@@ -143,7 +165,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "9e7b5853ccadc824ae4f3353d9677c9bb92db82986ba8001a60e09f8f8ae8e40",
-      "publishedRecordSha256": "b855bfb4fc5554775ac5256c2b8bbc9abba3cd8caa481e2e22eb509622c61832",
+      "publishedRecordSha256": "c734d68c554a5836f368d5c8539412dec30be246cfbb5a443ec66b7ece319992",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
       "presentationRevision": "2026-10-20-short-cards",
@@ -177,7 +199,7 @@
       "associatedPaths": 14,
       "unassociatedAfterPrivacy": [],
       "publishedOriginalSha256": "c01d832fa2b9cf9e02d01442404caa60f7c875e31c00ad407ec4c1173b86c979",
-      "publishedRecordSha256": "d4a00b5ff814cda522a7cc222685d427bfb81ae5d54d9b7d1d12cc108ed78bff",
+      "publishedRecordSha256": "aded25d11f95e62157d4e409281720b5e09e2e5cccace921f9bfa602cbca265f",
       "semanticLimitations": [
         "Midterm information occurs in two sections.",
         "Contact uses first-person wording, not the named course assistant.",
@@ -204,7 +226,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "ef1e6deb6da52beb03f6adcbb2f2be014114001f27a6eabac12cd6a346d9ad6d",
-      "publishedRecordSha256": "13435433af21b951667e93f7f28a3e7f77fd06532804220a28442eccad829e71",
+      "publishedRecordSha256": "b4b8b083f00f7e23aebd4c0c6fd1256f51607fe4e4d0ba5e0a9bb3880b0c5faf",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
       "presentationRevision": "2026-10-20-short-cards",
@@ -226,7 +248,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "c69e50b1c29544c2b525fd313f5c664295c934e3c8ceebb3aa4645855ade869c",
-      "publishedRecordSha256": "d346a3fc2bc1b497d44a308927e61794967e145617a1c6c3ba58bd4cc63ae177",
+      "publishedRecordSha256": "b68c3463a37520b0a778b8861155d56c07e64ce3ca851ff14195da0789a07300",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
       "presentationRevision": "2026-10-20-short-cards",
@@ -248,7 +270,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "599989e87cd30dc5f07672914e7afc1a3683a6eb8be76470bb24bf0c27d51f35",
-      "publishedRecordSha256": "eac2f155e53be4761a9a4bef2d2ab647628021bf1cb622042a9212f7a2ef6d14",
+      "publishedRecordSha256": "a1729d5d4c72729f04c3868c62f8e93abe3e3bce8eb358f45836f83f5145445a",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
       "presentationRevision": "2026-10-20-short-cards",
@@ -270,7 +292,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "6ba802cc228eb97fb93e1d73d66823d4e47629903caa8d367c732d869b0b8d69",
-      "publishedRecordSha256": "f1b2863abb5c11c47f8f3595588e44d8f90c7b5ca5e138b183f70e1cde914820",
+      "publishedRecordSha256": "c1f24ddde449b5b7399d88752f1123d66e41029bfd2726e276c4a5f5fcb6ff0c",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
       "presentationRevision": "2026-10-20-short-cards",
@@ -292,7 +314,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "b53f6f7efdca5f9e6ce327fcefa3d61ddaff718ca3e28adb2d671826c1a605a4",
-      "publishedRecordSha256": "dca3e146c2cf948954459a623e7f855cc61ed8e20b94369fe1341bef33fdc66e",
+      "publishedRecordSha256": "f996db305306ad81e426ac3680784190066758f7ae12f8e105c8fa50690de2ed",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
       "presentationRevision": "2026-10-20-short-cards",
@@ -314,7 +336,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "7b45eca477f1aa27791c7239ae6aa735bcc48a2e97171b0d6b8a5bdedd0f12cd",
-      "publishedRecordSha256": "ae89a46acb801fcab783a49c2e8815c40816d325c492d884b0cb78ffbdb98b4f",
+      "publishedRecordSha256": "ce393f9f3efca5ec06500e53d96366a6952805e02e34ca9a21634588e9d6084a",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
       "presentationRevision": "2026-10-20-short-cards",
@@ -336,7 +358,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "baa0dee1e8e1dc0d43518e277a52e082688516bb988e48362a054008fff5a1af",
-      "publishedRecordSha256": "d85f33cc1a4ce8bb480c89ce2ec03344af60d91da8372fdcad7b928697de620c",
+      "publishedRecordSha256": "fa41c9783d0253017ea4e6c5911352ccc420ca53e8f63c3498280bba684cf262",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
       "presentationRevision": "2026-10-20-short-cards",
@@ -358,7 +380,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "baa0dee1e8e1dc0d43518e277a52e082688516bb988e48362a054008fff5a1af",
-      "publishedRecordSha256": "6b83dc512ebe42b72ee5dd0e36c9fecd9d60dcce07b20fae14b1572e2cf75ae4",
+      "publishedRecordSha256": "d78d20a97d7fbf92920afa63819b496bbd308f187d6603b0a268276ccd88146f",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
       "presentationRevision": "2026-10-20-short-cards",
@@ -380,7 +402,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "baa0dee1e8e1dc0d43518e277a52e082688516bb988e48362a054008fff5a1af",
-      "publishedRecordSha256": "c6b540e1be4229f86986dc755621f6a523c330e4a8f7785efba5ec41d08f0f96",
+      "publishedRecordSha256": "f9636588bf0b790fec2295a6a4333c3403f30fdb485470972f72d4c117dcc70f",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
       "presentationRevision": "2026-10-20-short-cards",
@@ -402,7 +424,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "f0dc35b9ed053ecfa6b631c6d942038cfdceb00f2fe49804fb7dd54b60129d97",
-      "publishedRecordSha256": "b976fa1c8ee4a3e36e0081629a028eafc26fd2adb215c1bbbef139682bbeb306",
+      "publishedRecordSha256": "290b8cdaf0a3046d67d7c72f08aeb12966816177fc9106940bf223b117e896be",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
       "presentationRevision": "2026-10-20-short-cards",
@@ -424,11 +446,35 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "7317db84295945977df8ec97a72568b813661cfa960ed3d56fd530f64c53c74f",
-      "publishedRecordSha256": "7818c788c79738807aeadac2e9a7f873f1e222e719c38d528fda7bffd42d36c8",
+      "publishedRecordSha256": "4c3d405e81606f4e035ce8a02e2ed88454fe540980e14d57300979f7bdc18e75",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
+      "presentationRevision": "2.24.0-first-service-result-reviewed",
+      "presentationEditScope": "Current presentation starts from the new first service snapshot, then human-shortens and groups details. Original source and historical provider provenance stay intact. Restored source details are explicitly manual.",
+      "currentGeneration": {
+        "version": "2.24.0",
+        "snapshotKind": "first-authenticated-production-service-record",
+        "firstServerRecordSnapshotSha256": "256229199f908aff5dbeb533b4f07092bb6c9b231aaff647ed4a705b88a11340",
+        "sourceSha256": "7317db84295945977df8ec97a72568b813661cfa960ed3d56fd530f64c53c74f",
+        "promptSha256": "709849614c16c05c68a278f9c57aff2b6aa3d58c1b2130a084605aaacf045ea2",
+        "thinking": "low",
+        "maxTokens": 32768,
+        "providerCalled": true,
+        "cacheReuse": false,
+        "automaticPaidRetries": 0,
+        "manualPresentationEdits": true,
+        "manualOriginalSourceRestoration": [
+          "Brief exam formats and international-Chinese video requirements checked against the already reviewed original."
+        ],
+        "providerEnvelopeCaptured": false,
+        "usage": {
+          "input": 3576,
+          "output": 9458,
+          "reasoning": 8044
+        },
+        "estimatedCostRmb": 0.0993792,
+        "providerInvoiceVerified": false
+      }
     },
     {
       "exampleId": "example-reading-v211-0",
@@ -446,7 +492,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "13c89ec16bc543cf98549a696c6169afcd180fbda1713e9f31c9b8d95e30ebfc",
-      "publishedRecordSha256": "162c8c989aa9c92b6ea277b97adb436204446cd09813a3390f83dcda7aae8291",
+      "publishedRecordSha256": "c90db8b953a7adb8ee8fb1504609a2c000ae5ab7adf88a3087e5c380731168aa",
       "firstResponseValidation": "initially rejected by prior five-detail limit; same first response passes bounded twenty-detail contract offline",
       "originalFirstStatus": "failed",
       "originalFailureCode": "AI_FORMAT_INVALID",
@@ -467,8 +513,30 @@
       ],
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
+      "presentationRevision": "2.24.0-first-service-result-reviewed",
+      "presentationEditScope": "Current presentation starts from the new first service snapshot, then human-shortens and groups details. Original source and historical provider provenance stay intact. Restored source details are explicitly manual.",
+      "currentGeneration": {
+        "version": "2.24.0",
+        "snapshotKind": "first-authenticated-production-service-record",
+        "firstServerRecordSnapshotSha256": "7558b26fc78b0382a262e5b897a55588e3a319445edd226fb65d85a676059e3b",
+        "sourceSha256": "13c89ec16bc543cf98549a696c6169afcd180fbda1713e9f31c9b8d95e30ebfc",
+        "promptSha256": "709849614c16c05c68a278f9c57aff2b6aa3d58c1b2130a084605aaacf045ea2",
+        "thinking": "low",
+        "maxTokens": 32768,
+        "providerCalled": true,
+        "cacheReuse": false,
+        "automaticPaidRetries": 0,
+        "manualPresentationEdits": true,
+        "manualOriginalSourceRestoration": [],
+        "providerEnvelopeCaptured": false,
+        "usage": {
+          "input": 3023,
+          "output": 7303,
+          "reasoning": 6534
+        },
+        "estimatedCostRmb": 0.077364,
+        "providerInvoiceVerified": false
+      }
     },
     {
       "exampleId": "example-reading-v211-2",
@@ -486,7 +554,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "976f88e1a2d02adaa043937da92e35c41f107e7aa121fc08415611a6aee6bd77",
-      "publishedRecordSha256": "90d130e420e1ecbe6fea0c6d069e4eb3715b457bc22bafeea1b9c1562142c5c2",
+      "publishedRecordSha256": "09aa6898fe9982742ff3f13127b307936c661394653dc6870f2ea1286baac687",
       "firstResponseValidation": "accepted_by_backend; offline revalidated without provider request",
       "providerElapsedMs": 29960,
       "tokens": {
@@ -518,7 +586,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "a3ccf48794db1252c9d6576fd9390cdbaae51e2fdf57ad6b181d5eb6115d8cda",
-      "publishedRecordSha256": "779274f04691d0508aad76c3c691625be792f1cd9fcd6ca26f6cd68aafe94beb",
+      "publishedRecordSha256": "11461816487f335fab0ab92723703b08746e7c9ea627dce5ced8a402a94d2e67",
       "firstResponseValidation": "accepted_by_backend; offline revalidated without provider request",
       "providerElapsedMs": 11104,
       "tokens": {
@@ -550,7 +618,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "62133a717d602a280b49a82fc8c2afd2839276dc3c9ed6a73fff808f9d26976c",
-      "publishedRecordSha256": "78e8afaa5a01b3f225161080eee3c0ee983fd9d3ab011cbdb8bd6815e2b58f25",
+      "publishedRecordSha256": "29231d3d81fe8578f969a39624a2fd83b7a046b0aec6e482614cb99a31338c31",
       "firstResponseValidation": "accepted_by_backend; offline revalidated without provider request",
       "providerElapsedMs": 26609,
       "tokens": {
@@ -582,7 +650,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "4dd3b383ca5055ac1d43cd47339902df94c88bea241f850496ff9d9de36da225",
-      "publishedRecordSha256": "7753244f29721068d92c6445faec8c3d43ac35de708b293f67e8d69e4a161de6",
+      "publishedRecordSha256": "af89d160b54dca8a021e7d9bee893123f5a56123a9e02be2a15a29ca25782548",
       "firstResponseValidation": "accepted_by_backend; offline revalidated without provider request",
       "providerElapsedMs": 13310,
       "tokens": {
@@ -626,7 +694,7 @@
       "associatedPaths": 39,
       "unassociatedAfterPrivacy": [],
       "publishedOriginalSha256": "13c89ec16bc543cf98549a696c6169afcd180fbda1713e9f31c9b8d95e30ebfc",
-      "publishedRecordSha256": "9cb9f54978f18bfd85d211debd406c31b2d0d8ef0aa3b8dbea9a738a393ca425",
+      "publishedRecordSha256": "1d5e379a9d6c4d5ba080c34964a31d4901ca3eb8891682aab205094c71630ea5",
       "semanticLimitations": [
         "Audio is still omitted as an allowed material format in the structured result.",
         "Ten warnings repeat some deadline and originality facts.",
@@ -634,8 +702,30 @@
       ],
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
+      "presentationRevision": "2.24.0-first-service-result-reviewed",
+      "presentationEditScope": "Current presentation starts from the new first service snapshot, then human-shortens and groups details. Original source and historical provider provenance stay intact. Restored source details are explicitly manual.",
+      "currentGeneration": {
+        "version": "2.24.0",
+        "snapshotKind": "first-authenticated-production-service-record",
+        "firstServerRecordSnapshotSha256": "7558b26fc78b0382a262e5b897a55588e3a319445edd226fb65d85a676059e3b",
+        "sourceSha256": "13c89ec16bc543cf98549a696c6169afcd180fbda1713e9f31c9b8d95e30ebfc",
+        "promptSha256": "709849614c16c05c68a278f9c57aff2b6aa3d58c1b2130a084605aaacf045ea2",
+        "thinking": "low",
+        "maxTokens": 32768,
+        "providerCalled": true,
+        "cacheReuse": false,
+        "automaticPaidRetries": 0,
+        "manualPresentationEdits": true,
+        "manualOriginalSourceRestoration": [],
+        "providerEnvelopeCaptured": false,
+        "usage": {
+          "input": 3023,
+          "output": 7303,
+          "reasoning": 6534
+        },
+        "estimatedCostRmb": 0.077364,
+        "providerInvoiceVerified": false
+      }
     },
     {
       "exampleId": "example-reading-v212-2",
@@ -665,7 +755,7 @@
       "associatedPaths": 14,
       "unassociatedAfterPrivacy": [],
       "publishedOriginalSha256": "976f88e1a2d02adaa043937da92e35c41f107e7aa121fc08415611a6aee6bd77",
-      "publishedRecordSha256": "5c922d979cbc253ad5bed69475b390a5e4fe090ea72217f0af62cd59ac04771a",
+      "publishedRecordSha256": "3d8cf7aad2d2b083f532572f05b85b2bd04611a5b5a1dd7bb2bbc39e9c9856ba",
       "semanticLimitations": [
         "The eligibility section says submit separately from the next section explaining pending approval; summary/current-state section retain the prerequisite."
       ],
@@ -704,15 +794,39 @@
       "associatedPaths": 10,
       "unassociatedAfterPrivacy": [],
       "publishedOriginalSha256": "7317db84295945977df8ec97a72568b813661cfa960ed3d56fd530f64c53c74f",
-      "publishedRecordSha256": "00f569db0f5d8776a36f617127aaff77a418da658df0e3863e55fc49c0ab1662",
+      "publishedRecordSha256": "d9d49c08069c2259014f60aa2b9e73621e9495817aeeef5fae6e44991e3a7a8a",
       "semanticLimitations": [
         "The response aggregates signup and group joining into one shared task; event-specific information remains inside its details rather than separate signup tasks.",
         "The comprehensive-ability and written-translation exam-format descriptions are not retained as explicit structured details.",
         "The original includes broader background and some process subcases that are summarized; users should inspect the original for full wording."
       ],
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
+      "presentationRevision": "2.24.0-first-service-result-reviewed",
+      "presentationEditScope": "Current presentation starts from the new first service snapshot, then human-shortens and groups details. Original source and historical provider provenance stay intact. Restored source details are explicitly manual.",
+      "currentGeneration": {
+        "version": "2.24.0",
+        "snapshotKind": "first-authenticated-production-service-record",
+        "firstServerRecordSnapshotSha256": "256229199f908aff5dbeb533b4f07092bb6c9b231aaff647ed4a705b88a11340",
+        "sourceSha256": "7317db84295945977df8ec97a72568b813661cfa960ed3d56fd530f64c53c74f",
+        "promptSha256": "709849614c16c05c68a278f9c57aff2b6aa3d58c1b2130a084605aaacf045ea2",
+        "thinking": "low",
+        "maxTokens": 32768,
+        "providerCalled": true,
+        "cacheReuse": false,
+        "automaticPaidRetries": 0,
+        "manualPresentationEdits": true,
+        "manualOriginalSourceRestoration": [
+          "Brief exam formats and international-Chinese video requirements checked against the already reviewed original."
+        ],
+        "providerEnvelopeCaptured": false,
+        "usage": {
+          "input": 3576,
+          "output": 9458,
+          "reasoning": 8044
+        },
+        "estimatedCostRmb": 0.0993792,
+        "providerInvoiceVerified": false
+      }
     }
   ],
   "promptRevisions": [
@@ -1055,5 +1169,11 @@
     "manualContentCorrections": false,
     "citationMapsRemoved": true,
     "legacyUpgrade": "Only exact full normalized record fingerprints may upgrade. Notes, progress, attachments, favorites, manual priorities and edits remain protected."
+  },
+  "manualSummaryRefinement20261020": {
+    "reviewedRecords": 24,
+    "purpose": "Describe the notice topic; leave action steps and grading details inside the expanded content.",
+    "originalTextUnchanged": true,
+    "providerCalls": 0
   }
 }

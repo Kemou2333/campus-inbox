@@ -59,7 +59,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  const [sync,setSync]=useState(initialSync);
  const [username,setUsername]=useState(()=>localStorage.getItem(USERNAME_KEY)||'');
  const [theme,setThemeState]=useState<ThemePreference>(()=>{
-  const t=localStorage.getItem('campus-inbox:theme:v5');return t==='dark'||t==='light'?t:'system';
+  const t=localStorage.getItem('campus-inbox:theme:v5');if(!localStorage.getItem('campus-inbox:light-default:v224')){localStorage.setItem('campus-inbox:light-default:v224','seen');if(t!=='dark'&&t!=='light'){localStorage.setItem('campus-inbox:theme:v5','light');return 'light';}}return t==='dark'||t==='light'||t==='system'?t:'light';
  });
  const [preferences,setPreferencesState]=useState(()=>readCampusPreferences(localStorage));
  const [legacyWork]=useState(()=>readLegacyWork(localStorage,sessionStorage));
@@ -99,6 +99,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  const noticeRef=useRef(notices);noticeRef.current=notices;
  const draftWriteError=useRef(false);
  const receivingShare=useRef(false);
+ const automaticConflicts=useRef(new Set<string>());
 
  function tell(text:string,undo?:()=>void){setToast({id:Date.now(),text,undo});}
  function report(e:unknown){setError(message(e));}
@@ -163,6 +164,8 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  }
  function act(id:string,change:(n:Notice)=>Notice,text:string){const result=update(id,change);if(result){
   if(isNewCompletion(result)){playOperationSound('complete');triggerOperationHaptic(platform,'complete');}
+  else if(result.after.tasks.some(task=>{const old=result.before.tasks.find(t=>t.id===task.id);return !!old&&(!old.completed&&task.completed||task.steps.some(step=>!old.steps.find(s=>s.id===step.id)?.completed&&step.completed));}))triggerOperationHaptic(platform,'step');
+  else if(result.after.favorite&&!result.before.favorite||result.after.manualPriority&&result.after.manualPriority!==result.before.manualPriority){playOperationSound('selection');triggerOperationHaptic(platform,'selection');}
   if(!result.after.completed)for(const old of result.before.tasks){const next=result.after.tasks.find(task=>task.id===old.id);if(!old.completed&&!old.dismissed&&next&&(next.completed||next.dismissed))void platform.cancelReminder(localReminderID(id,old.id)).catch(report);}
   tell(text,()=>undoChange(result.before,result.after));return result;
  }}
@@ -232,11 +235,11 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  function changeDraft(id:string,text:string){replaceDrafts(draftRef.current.map(d=>{if(d.id!==id)return d;if(d.demo)tell('示例已修改，需登录后使用 AI 整理。');const {demo:_,...ordinary}=d;return {...ordinary,text};}));}
  function fillDemoDraft(){
   if(busy||analyzing.current||attaching.current.size)return;
-  const target=draftRef.current.find(isGuestDemoDraft)??draftRef.current.find(d=>!d.text.trim()&&!d.attachments.length);
+  const target=draftRef.current.find(d=>!d.text.trim()&&!d.attachments.length);
   if(!target&&draftRef.current.length>=20){tell('草稿已满，请先移除一条。');return;}
   const example={...(target??makeDraft()),text:nextGuestDemoSource(),demo:GUEST_DEMO_MARKER};
   replaceDrafts(target?draftRef.current.map(d=>d.id===target.id?example:d):[...draftRef.current,example]);
-  tell('示例已填入，点击“整理”试试。');return example.id;
+  tell('示例已填入，还可以再加一条一起整理。');return example.id;
  }
  function pasteDraft(id:string,text:string){const target=draftRef.current.find(d=>d.id===id);if(!target||target.text||busy){tell('输入框已有内容，请新建通知后再粘贴。');return;}changeDraft(id,text);}
  function insertDraft(id:string,text:string,selection?:DraftSelection){
@@ -427,16 +430,17 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  }
  async function analyzeDemo(){
   if(analyzing.current||busy)return false;
-  const source=draftRef.current.find(isGuestDemoDraft);
-  if(!source)throw new Error('示例已修改。请登录后整理，或重新填入示例。');
+  const sources=draftRef.current.filter(d=>d.text.trim());
+  if(sources.reduce((n,d)=>n+d.text.length,0)>4000)throw new Error('这批超过4000字，请分两次整理。');
+  if(!sources.length||sources.some(d=>!isGuestDemoDraft(d)))throw new Error('示例已修改。请登录后整理，或重新填入示例。');
   analyzing.current=true;setBusy(true);setStage('示例整理中');const controller=new AbortController();abort.current=controller;
   try{
    await waitForGuestDemo(controller.signal);
-   if(!draftRef.current.some(d=>d.id===source.id&&d.text===source.text&&isGuestDemoDraft(d)))throw new Error('示例已修改，请重新整理。');
-   const notice=createGuestDemoNotice(source.id,source.text),current=repository.load();
-   if(!current.some(n=>n.id===notice.id))save([...current,notice]);
+   if(!sources.every(source=>draftRef.current.some(d=>d.id===source.id&&d.text===source.text&&isGuestDemoDraft(d))))throw new Error('示例已修改，请重新整理。');
+   const notices=sources.map(source=>createGuestDemoNotice(source.id,source.text)),current=repository.load();
+   const additions=notices.filter(n=>!current.some(old=>old.id===n.id));if(additions.length)save([...current,...additions]);
    // Only this explicit sample is consumed. Personal drafts and attachments remain intact.
-   consumeJobDrafts([source]);setLatestAddedID(notice.id);tell('示例已整理');playOperationSound('organized');triggerOperationHaptic(platform,'organized');return true;
+   consumeJobDrafts(sources);setLatestAddedID(notices[0].id);tell(notices.length>1?`已整理 ${notices.length} 条示例`:'示例已整理');playOperationSound('organized');triggerOperationHaptic(platform,'organized');return true;
   }catch(error){if(controller.signal.aborted){tell('已停止，示例原文仍在。');return false;}throw error;}
   finally{analyzing.current=false;setBusy(false);setStage('');if(abort.current===controller)abort.current=null;}
  }
@@ -456,6 +460,15 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   if(!quiet)tell(merged.replaced?'示例已更新':merged.added?`已载入 ${merged.added} 条示例`:'示例已载入');
  }
  useEffect(()=>{const scope=localDataScope;if(examplesRefreshing.current.has(scope))return;examplesRefreshing.current.add(scope);void loadExamples(0,true).catch(()=>{/* A later explicit load can retry; user edits remain untouched. */});},[localDataScope]);
+ useEffect(()=>{
+  if(!cloud||!sync.connected||!username.trim()||username.normalize('NFKC').trim().toLowerCase()==='kemou')return;
+  const conflict=sync.conflicts.find(c=>!automaticConflicts.current.has(`${localDataScope}:${c.id}:${c.version}`));if(!conflict)return;
+  const token=cloud.getKey(),scope=localDataScopeRef.current,key=`${localDataScope}:${conflict.id}:${conflict.version}`;automaticConflicts.current.add(key);
+  void (async()=>{if(cloud.getKey()!==token||localDataScopeRef.current!==scope)return;
+   if(conflict.remote){trashStore.add(scope,conflict.remote,Math.max(0,repository.load().findIndex(n=>n.id===conflict.id)));refreshLocalNoticeState();}
+   await cloud.resolveConflict(conflict.id,'local');
+  })().catch(report);
+ },[cloud,sync.connected,sync.conflicts,username,localDataScope]);
  async function backup(includeAttachments=true){
   const records=repository.load();const data=includeAttachments?exportBackup(records,await exportFiles(records)):exportTextBackup(records);
   const result=await platform.saveFile(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),`campus-inbox-${includeAttachments?'':'text-'}${new Date().toISOString().slice(0,10)}.json`);
@@ -489,7 +502,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   if(cloud?.getKey()!==key)throw new Error('账号已切换，请重新打开通知。');
   return result;
  }
- return {notices,drafts,remainingExamples,localDataScope,trashItems,restoreTrash,deleteTrashEntry,emptyTrash,unreadNoticeIDs,markNoticeRead,clearUnreadNotices,demoDraftID:drafts.find(isGuestDemoDraft)?.id??null,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,preferences,setPreferences,bootError:boot.error,
+ return {notices,drafts,remainingExamples,localDataScope,trashItems,restoreTrash,deleteTrashEntry,emptyTrash,unreadNoticeIDs,markNoticeRead,clearUnreadNotices,demoDraftID:drafts.some(d=>d.text.trim())&&drafts.filter(d=>d.text.trim()).every(isGuestDemoDraft)?drafts.find(isGuestDemoDraft)?.id??null:null,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,preferences,setPreferences,bootError:boot.error,
   report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,fillDemoDraft,attach,detach,removeDraft,analyze,analyzeDemo,askQuestion,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;

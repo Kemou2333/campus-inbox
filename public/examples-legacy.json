@@ -278,5 +278,125 @@
   {
     "id": "example-reading-v213-1",
     "fingerprint": "933928490f21994b7cb2598a27a601f9acb8f65cde3c9e3765d67b4bb776f5ef"
+  },
+  {
+    "id": "example-reading-v25-5",
+    "fingerprint": "a1716851e1888cd6bace8289d26b5d00f4d7e1649e3445fd498c441e67099755"
+  },
+  {
+    "id": "example-reading-v211-1",
+    "fingerprint": "1d8835d3cb210047d5c75438c308fe8f44de42f2af9c9bb73c138ccbdc61718c"
+  },
+  {
+    "id": "example-reading-v213-0",
+    "fingerprint": "331b0765ef57febea68480466be73f2f3de8349f847e5845c20f9ce8b73cc4ac"
+  },
+  {
+    "id": "example-reading-v25-4",
+    "fingerprint": "30bffcd5a1fb1542f8cc6f841ab382f4eada7171606b786af6118e284278710e"
+  },
+  {
+    "id": "example-reading-v212-0",
+    "fingerprint": "40129c5478beb07f6527cf8360e0d990d028a4aa433393f0a7b4d12bf237d76a"
+  },
+  {
+    "id": "example-reading-v25-0",
+    "fingerprint": "8adb54c3d468e6a386d82ca7c11f18407b76cf54fd6ef077491f16d912c38ecd"
+  },
+  {
+    "id": "example-reading-v25-1",
+    "fingerprint": "fab70c1eb9fb608b17aaf8b34ed3f793b1b6440e33d941d0f8b025e9d8a3ca23"
+  },
+  {
+    "id": "example-reading-v25-2",
+    "fingerprint": "5552c90ca9290dc9338dd1939ff5ea255eac36ce25a967444ed2bbf8f4d6fd2b"
+  },
+  {
+    "id": "example-reading-v25-3",
+    "fingerprint": "911e3bb3b9c1141d4d4e4857552d2e7719b95519bcf7e3388199adf61731eb89"
+  },
+  {
+    "id": "example-reading-v25-6",
+    "fingerprint": "dd583747edcb1512b4685f745f23caf7dffdb16e59b9e99814832f8fd6be789a"
+  },
+  {
+    "id": "example-reading-v25-7",
+    "fingerprint": "cffe6420dd4ec948556fc38a9f924d2bcdeb0845358492c7b33d76f2c8c88d73"
+  },
+  {
+    "id": "example-reading-v25-8",
+    "fingerprint": "8f20e93c8711f69f037e35bc6817c6bbfccaa1f6f7d417d63d301cedcad6ea4f"
+  },
+  {
+    "id": "example-reading-v25-9",
+    "fingerprint": "0bed133e3663fd2766697014d9390f9d7ffcba22b605c8e97be325d1b765aff8"
+  },
+  {
+    "id": "example-reading-v25-10",
+    "fingerprint": "66ff4d56ededb4a7a302dca5065a420c012581b88155ccd5af6f78161f819f23"
+  },
+  {
+    "id": "example-reading-v25-11",
+    "fingerprint": "8feccdea308ef66606df4edf588ab216eb5be16a581e2a41a51aa5d39d1228f2"
+  },
+  {
+    "id": "example-reading-v26-12",
+    "fingerprint": "bcedf5e2d588263d6c22acf77f4ee26466b85eb9851e682d4e6e1ca3455d695a"
+  },
+  {
+    "id": "example-reading-v211-0",
+    "fingerprint": "366e71cb7cb5dbb9ddad58ab93f9597c841fda286d0f5f4c0058546c12959bf4"
+  },
+  {
+    "id": "example-reading-v211-2",
+    "fingerprint": "5ba2d6b43509472c85c39e1d359fa913973e971f34fe8e9f5b4e3dc3c25305e0"
+  },
+  {
+    "id": "example-reading-v211-3",
+    "fingerprint": "4c677ca007bd81ed10154efa2e65404e4a67a811712e0ff6fed706e81150996c"
+  },
+  {
+    "id": "example-reading-v211-4",
+    "fingerprint": "ee24f72f21ec1005ecfaa28fbd2c30ed8e5dab70af90ed1bad652b0388f9f8da"
+  },
+  {
+    "id": "example-reading-v211-5",
+    "fingerprint": "1a91a5a37da35a7c174c4d2549e026a4e9597f055587da2f23eff8095ba6173d"
+  },
+  {
+    "id": "example-reading-v212-1",
+    "fingerprint": "adea6bbff87b5b8c080fd2cd3292bbbf2f757194391cda486bdd8e30aa09bd1f"
+  },
+  {
+    "id": "example-reading-v212-2",
+    "fingerprint": "c002ae1eb9042296fe95dda5a8b2e3d52352f418af20b4a964b3de24583eebd7"
+  },
+  {
+    "id": "example-reading-v213-1",
+    "fingerprint": "b40e57307677f2e92279eed692be0964c7d0a48e3800a00336e62b3b68a52267"
+  },
+  {
+    "id": "example-reading-v25-0",
+    "fingerprint": "abd4ee8d7439580c7c20af7316a7795118eb4e82eec1ca7c6c5527837c11a7eb"
+  },
+  {
+    "id": "example-reading-v213-0",
+    "fingerprint": "a4f66f5059d9cde3c512d6dbcfae70876ea5cd9fa556fbadee007be26d3415a5"
+  },
+  {
+    "id": "example-reading-v211-0",
+    "fingerprint": "e183e01b87ae6063e21c0049377a8f590b43b79038f59e0454ae54e0271b146c"
+  },
+  {
+    "id": "example-reading-v212-1",
+    "fingerprint": "753edc9b713ac0bfec304bb8209cd10dbf4a6fb21493cfcbf6274054a6b29f31"
+  },
+  {
+    "id": "example-reading-v213-1",
+    "fingerprint": "b33228666c7c229e5d3916ffa69f7ed000c929c87da07f7cbc8855674f61074f"
+  },
+  {
+    "id": "example-reading-v26-12",
+    "fingerprint": "d7062035d16a08bdb33f8b993aaa31f8d830eff9515743da167cb8788909c215"
   }
 ]
