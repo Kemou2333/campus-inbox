@@ -27,7 +27,7 @@ export function CalendarDialog({selection,app,onClose}:{selection:CalendarSelect
   if(result.status!=='cancelled'){savePersonal();app.tell(result.status==='opened'?'已打开日历，请在日历中确认保存。':'已下载日历文件，请导入你的日历。');onClose();}
  }catch(e){setError(e instanceof Error?e.message:'日历暂时无法使用。');}finally{setBusy(false);}}
  async function reminder(){setBusy(true);setError('');try{const triggerMillis=millis()-lead*60_000;if(triggerMillis<=Date.now())throw new Error('提醒时间已经过去，请调整时间。');const n=selection!.notice;const result=await app.platform.scheduleReminder({id:localReminderID(n.id,selection?.task?.id),noticeId:n.id,title:plainReadingText(title),body:plainReadingText(selection?.task?.text||n.summary),triggerMillis});
-  if(result.status==='scheduled'){savePersonal();app.tell('已设置应用通知，仅此手机');onClose();}else setError(result.status==='permission-denied'?'请在手机应用设置中允许校园 Inbox 发送通知后再试。':'此设备暂不支持应用通知，可以改用日历。');
+  if(result.status==='scheduled'){savePersonal();app.tell('已设置应用通知，仅此手机');onClose();}else setError(result.status==='permission-denied'?'请在手机应用设置中允许拾笺 Inbox 发送通知后再试。':'此设备暂不支持应用通知，可以改用日历。');
  }catch(e){setError(e instanceof Error?e.message:'提醒暂时无法设置。');}finally{setBusy(false);}}
  return <Dialog open={!!selection} onClose={busy?undefined:onClose}>
   <DialogTitle>创建提醒</DialogTitle>
