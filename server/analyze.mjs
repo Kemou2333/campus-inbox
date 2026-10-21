@@ -112,7 +112,22 @@ export function modelInput(notice){
       return {sourceId:index+1,text:source.text.trim()};
     });
     if(total>D.MAX_TEXT)throw new ServiceError('本次通知合计不能超过 4,000 字。',400);
-    return {sources};
+    // A pasted digest can contain several explicitly separated notices. Split
+    // only whole-line delimiters, then keep their original composer positions.
+    // Models should not have to contradict the one-card-per-source contract.
+    const separated=[],originIndexes=[];
+    for(const [index,source] of sources.entries()){
+      const parts=source.text.split(/^[\t ]*---[\t ]*\r?$/m).map(value=>value.trim()).filter(Boolean);
+      // A Markdown rule can also separate paragraphs in one notification.
+      // Treat it as a digest only when every block has its own clear heading.
+      const heading=/^(?:【[^】\r\n]{0,70}(?:通知|公告|安排)[^】\r\n]{0,30}】|(?:#{1,3}[\t ]+)?[^\r\n。！？]{2,60}(?:通知|公告|安排)[\t ]*(?:\r?\n|$))/u;
+      const digest=parts.length>1&&parts.every(text=>heading.test(text));
+      for(const text of digest?parts:[source.text]){
+        separated.push({sourceId:separated.length+1,text});originIndexes.push(index);
+      }
+    }
+    if(separated.length>20)throw new ServiceError('本次分隔后的通知超过 20 条，请分批提交。',400);
+    return separated.length===sources.length?{sources}:{sources:separated,sourceOriginIndexes:originIndexes};
   }
   if(typeof notice!=='string'||!notice.trim()||notice.length>D.MAX_TEXT)throw new ServiceError('请提供 1–4,000 字的通知文字。',400);
   checkContent(notice);
@@ -162,6 +177,28 @@ function sourceMapping(parsed,sources){
   if(indexes.some((value,index)=>index>0&&value<indexes[index-1])||new Set(indexes).size!==limit)throw new Error('source');
   return {parsed:{...parsed,notices:parsed.notices.map(({sourceId,...item})=>item)},indexes};
 }
+/** Normalize only a harmless provider representation difference. Do not add
+ * missing fields, split prose, invent facts, or loosen the card validators. */
+export function normalizeDescriptionArrays(parsed){
+  if(!record(parsed)||!Array.isArray(parsed.notices))return parsed;
+  const fields=(item,keys)=>{
+    if(!record(item))return item;
+    const result={...item};
+    for(const key of keys)if(typeof item[key]==='string')result[key]=item[key].trim()?[item[key]]:[];
+    return result;
+  };
+  return {...parsed,notices:parsed.notices.map(notice=>{
+    if(!record(notice))return notice;
+    const result=fields(notice,['materials','warnings','reminders']);
+    if(Array.isArray(notice.tasks))result.tasks=notice.tasks.map(task=>{
+      if(!record(task))return task;
+      const next=fields(task,['details']);
+      if(Array.isArray(task.steps))next.steps=task.steps.map(step=>fields(step,['details']));
+      return next;
+    });
+    return result;
+  })};
+}
 export async function analyze(notice,config,modelFetch=fetch,signal){
   const input=modelInput(notice),sources=input.sources;
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),config.timeoutMs||(config.thinkingMode==='low'?180000:45000));
@@ -200,7 +237,8 @@ export async function analyze(notice,config,modelFetch=fetch,signal){
       parsed=mapping.parsed;
     }catch{throw new ServiceError('AI 没有完整对应本次原文，请稍后重试。',502,{usage,finishReason,failureCode:'SOURCE_COUNT'});}
     try{
-      const grounded=sources?{...parsed,notices:parsed.notices.map((item,index)=>groundDates({notices:[item]},sources[mapping.indexes[index]].text).notices[0])}:groundDates(parsed,notice);
+      const normalized=normalizeDescriptionArrays(parsed);
+      const grounded=sources?{...normalized,notices:normalized.notices.map((item,index)=>groundDates({notices:[item]},sources[mapping.indexes[index]].text).notices[0])}:groundDates(normalized,notice);
       result=D.batch(grounded,true);
       result.notices=result.notices.map((item,index)=>{
         const text=sources?sources[mapping.indexes[index]].text:typeof notice==='string'?notice:'';
@@ -212,7 +250,8 @@ export async function analyze(notice,config,modelFetch=fetch,signal){
     }catch(error){throw new ServiceError('AI 未返回有效的整理结果，请稍后重试。',502,{usage,finishReason,failureCode:validationCode(error)});}
     if(!result.notices.every((item,index)=>ownSourceLinks(item,sources?sources[mapping.indexes[index]].text:notice)))throw new ServiceError('AI 返回的链接无法对应原通知，请稍后重试。',502,{usage,finishReason,failureCode:'SOURCE_LINK'});
     // Old clients still accept ordinary one-source/one-card batches unchanged.
-    if(sources&&(mapping.indexes.length!==sources.length||mapping.indexes.some((value,index)=>value!==index)))result={...result,sourceIndexes:mapping.indexes};
+    const outputIndexes=input.sourceOriginIndexes?mapping.indexes.map(index=>input.sourceOriginIndexes[index]):mapping.indexes;
+    if(sources&&(input.sourceOriginIndexes||mapping.indexes.length!==sources.length||mapping.indexes.some((value,index)=>value!==index)))result={...result,sourceIndexes:outputIndexes};
     return {result,usage,usageAvailable,finishReason};
   }catch(e){if(e instanceof ServiceError){e.usageAvailable=usageAvailable;throw e;}if(signal?.aborted)throw new ServiceError('整理已取消，请重新提交。',499,{usage,usageAvailable,finishReason});const timeout=e.name==='AbortError';throw new ServiceError(timeout?'AI 整理超时，请稍后重试。':'AI 未返回有效的整理结果，请稍后重试。',502,{usage,usageAvailable,finishReason,code:timeout?'AI_TIMEOUT':undefined});}
   finally{clearTimeout(timer);signal?.removeEventListener('abort',cancel);}
