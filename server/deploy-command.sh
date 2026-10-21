@@ -1,4 +1,7 @@
 #!/bin/sh
 set -eu
-[ "${SSH_ORIGINAL_COMMAND:-}" = "deploy-campus-inbox" ] || exit 1
-exec /usr/bin/sudo -n /usr/local/sbin/campus-inbox-install
+case "${SSH_ORIGINAL_COMMAND:-}" in
+  deploy-campus-inbox) exec /usr/bin/sudo -n /usr/local/sbin/campus-inbox-install ;;
+  deploy-campus-inbox-web) exec /usr/bin/sudo -n /usr/local/sbin/campus-inbox-web-install ;;
+  *) exit 1 ;;
+esac

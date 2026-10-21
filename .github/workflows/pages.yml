@@ -2,7 +2,7 @@ name: Build and publish campus Inbox web
 on:
   push:
     branches: [main]
-    paths: ['src/**', 'public/**', 'server/contracts/email-policy.mjs', 'server/contracts/source-evidence.js', 'index.html', 'admin-preview.html', 'package.json', 'pnpm-lock.yaml', 'tsconfig*.json', 'vite.config.*', 'tests/**', '.github/workflows/pages.yml']
+    paths: ['src/**', 'public/**', 'server/contracts/email-policy.mjs', 'server/contracts/source-evidence.js', 'index.html', 'admin-preview.html', 'package.json', 'pnpm-lock.yaml', 'tsconfig*.json', 'vite.config.*', 'tests/**', 'ops/web/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -10,7 +10,7 @@ permissions:
   id-token: write
 concurrency:
   group: github-pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   publish:
     environment:
@@ -28,6 +28,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Free product checks
         run: pnpm test
+      - name: Check static release boundary
+        run: python3 -m unittest discover -s ops/web -p 'test_*.py'
       - name: Build web
         run: pnpm build
       - uses: actions/configure-pages@v5
@@ -37,3 +39,17 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v5
+      - name: Publish the same build to the application server
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          set -eu
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/campus-deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/campus-deploy ~/.ssh/known_hosts
+          python3 ops/web/package.py dist "$GITHUB_SHA" > web-release.tar.gz
+          ssh -i ~/.ssh/campus-deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes -p "$SERVER_PORT" "campus-deploy@$SERVER_HOST" deploy-campus-inbox-web < web-release.tar.gz

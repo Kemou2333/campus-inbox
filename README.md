@@ -4,7 +4,7 @@
 
 把通知粘进来，点「AI 整理」，就能看到简短说明、截止时间和待办步骤。办完打个勾，需要时还能提问、记笔记，或存成一张长图。
 
-**[打开网页](https://kemou2333.github.io/campus-inbox/)** · [下载安卓版](https://github.com/Kemou2333/campus-inbox/releases/latest)
+**[打开网页](https://123.57.30.129/)** · [备用入口](https://kemou2333.github.io/campus-inbox/) · [下载安卓版](https://github.com/Kemou2333/campus-inbox/releases/latest)
 
 可以先填入示例，试一遍从粘贴到完成的过程。支持多条通知一起整理，也支持收藏、搜索和账号同步。
 
