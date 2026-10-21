@@ -39,6 +39,12 @@ test('a later mobile page, new group or reload cannot play a second entry',()=>{
  expect(restored.pending).toBe(false);restored.play(root(reloaded),false);
  expect(reloaded.animate).not.toHaveBeenCalled();stop();
 });
+test('an explicit introduction can play its entrance even after an older tutorial was seen',()=>{
+ const saved=storage({'campus-inbox:tutorial:v2':'seen','campus-inbox:first-entry:v1':'seen'}),element=surface('composer-input');
+ const motion=createFirstEntryMotion(saved,{force:true});expect(motion.pending).toBe(true);
+ const stop=motion.play(root(element),false);expect(element.animate).toHaveBeenCalledOnce();
+ motion.play(root(surface('composer-input')),false);expect(element.animate).toHaveBeenCalledOnce();stop();
+});
 test('settles exactly once after the last group finishes, including a canceled group',async()=>{
  const input=surface('composer-input'),feed=surface('feed-tools'),settled=vi.fn();
  const stop=createFirstEntryMotion(storage()).play(root(input,feed),false,settled);

@@ -14,14 +14,15 @@
         "scope": "conditional",
         "condition": "本科生",
         "details": [
-          "请在**课程结束前**完成；评价以**匿名**方式反映。"
+          "**课程结束前**完成；评价**匿名**。"
         ],
         "steps": [
           {
             "text": "进入评教系统",
             "details": [
-              "微信关注“重庆大学服务号” → 功能 → 评教，用统一认证号和密码登录；也可扫码进入。",
-              "忘记密码时，在统一认证页点“忘记密码”找回。"
+              "微信搜索并关注 **重庆大学服务号**。",
+              "点 **功能 → 评教**。",
+              "用 **统一认证号和密码** 登录，也可扫码。"
             ],
             "id": "4d4eb3c9-9d25-43d7-b938-510cf793d5bc",
             "completed": false,
@@ -39,7 +40,9 @@
       }
     ],
     "materials": [],
-    "warnings": [],
+    "warnings": [
+      "忘记密码时，在统一认证页点“忘记密码”找回。"
+    ],
     "reminders": [],
     "id": "example-reading-v25-5",
     "originalText": "本科生评教系统已经开放了，请提醒学生（在课程结束前）及时评教。《关于开展2026—2027学年第一学期学生评教的通知》见QQ群文件[表情][表情]\n\n学生评教方式：\n使用微信搜索并关注“重庆大学服务号”，点击菜单“功能”->“评教”，输入统一认证号和密码（或者扫描二维码）即可进入系统。若忘记密码，在统一认证界面点击“忘记密码”按照指引操作即可。\n\n温馨提示：学生评教都将以【匿名】的方式反映，请同学们在评教时不要有所顾虑。",
@@ -68,10 +71,10 @@
     "manualPrivacyEdits": true,
     "manualContentCorrections": false,
     "publishedOriginalSha256": "2427577d4c6eec8bd1595742ff0518b4ccfcf85cff6d66d4b334a9db1364817b",
-    "publishedRecordSha256": "76a39b0dab1a37306813a8d4544e9dd2bbb5f53520dac2f5b2e613caade56405",
+    "publishedRecordSha256": "90ec0b7c2c74d962b30a0585a508b63a1effac05dd1a3451b3b3b1148d3000ae",
     "manualIdentityReview": true,
     "manualPresentationEdits": true,
-    "presentationRevision": "2026-10-20-short-cards",
+    "presentationRevision": "2.24.1-first-impression",
     "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
   }
 }

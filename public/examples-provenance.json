@@ -34,10 +34,10 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "2427577d4c6eec8bd1595742ff0518b4ccfcf85cff6d66d4b334a9db1364817b",
-      "publishedRecordSha256": "76a39b0dab1a37306813a8d4544e9dd2bbb5f53520dac2f5b2e613caade56405",
+      "publishedRecordSha256": "90ec0b7c2c74d962b30a0585a508b63a1effac05dd1a3451b3b3b1148d3000ae",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
+      "presentationRevision": "2.24.1-first-impression",
       "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
     },
     {

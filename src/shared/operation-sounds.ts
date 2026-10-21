@@ -39,7 +39,7 @@ export function playOperationSound(kind:OperationSound):boolean{
    oscillator.type='sine';oscillator.frequency.value=frequency;
    const start=now+offset;
    gain.gain.setValueAtTime(0,start);
-   gain.gain.linearRampToValueAtTime(kind==='selection'?.018:.045,start+.012);
+   gain.gain.linearRampToValueAtTime(kind==='welcome'?.012:kind==='selection'?.018:.045,start+.012);
    gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
    oscillator.connect(gain);gain.connect(context.destination);
    oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};

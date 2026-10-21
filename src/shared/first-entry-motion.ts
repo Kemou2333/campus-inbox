@@ -4,9 +4,9 @@ const sequence=['masthead','composer-title','composer-input','composer-action','
 type EntryStorage=Pick<Storage,'getItem'|'setItem'>;
 
 /** The current screen enters once. Later pages and newly mounted controls stay still. */
-export function createFirstEntryMotion(storage:EntryStorage|null){
- let eligible=false;
- try{eligible=!!storage&&storage.getItem(ENTRY_KEY)!=='seen'&&storage.getItem(TUTORIAL_KEY)!=='seen';}catch{/* A private browsing restriction must not interrupt entry. */}
+export function createFirstEntryMotion(storage:EntryStorage|null,{force=false}:{force?:boolean}={}){
+ let eligible=force;
+ try{eligible=force||!!storage&&storage.getItem(ENTRY_KEY)!=='seen'&&storage.getItem(TUTORIAL_KEY)!=='seen';}catch{/* A private browsing restriction must not interrupt entry. */}
  let played=false;
  return {
   get pending(){return eligible&&!played;},
