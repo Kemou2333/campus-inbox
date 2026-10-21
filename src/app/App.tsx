@@ -43,6 +43,9 @@ export default function App(){
  const exampleRequest=useRef(new URLSearchParams(location.search).get('examples')==='1'),exampleStarted=useRef(false);
  const [page,setPage]=useState(0);const [login,setLogin]=useState(false);const [help,setHelp]=useState(false);
  const [launchStage,setLaunchStage]=useState<'intro'|'leaving'|'entry'|'idle'>(()=>{try{return localStorage.getItem('campus-inbox:tutorial:v2')!=='seen'?'intro':'idle';}catch{return 'intro';}});
+ const [tutorialRequired,setTutorialRequired]=useState(()=>launchStage==='intro');
+ const [developerUnlocked,setDeveloperUnlocked]=useState(()=>{try{return localStorage.getItem('campus-inbox:developer:v1')==='enabled';}catch{return false;}});
+ function unlockDeveloper(){try{localStorage.setItem('campus-inbox:developer:v1','enabled');}catch{}setDeveloperUnlocked(true);app.tell('开发者设置已开启');}
  const guide=useGuideSession(app,help||launchStage!=='idle'),viewApp=guide.controller;
  const [guideStep,setGuideStep]=useState(0);
  const [downloadsOpen,setDownloadsOpen]=useState(false);
@@ -85,7 +88,9 @@ export default function App(){
  const unreadReminders=app.notices.filter(n=>app.unreadNoticeIDs.includes(n.id)&&getNoticeStatus(n)==='reminder');
  function clearNewReminders(){app.clearUnreadNotices(unreadReminders.map(n=>n.id));}
  function viewNewReminders(){const first=unreadReminders[0];if(!first)return;setPage(0);setFocusID(first.id);app.markNoticeRead(first.id);}
- function closeHelp(){setHelp(false);setLaunchStage('idle');clearCelebration();guide.session.dispose();const saved=guideSaved.current;guideSaved.current=null;if(saved){setPage(saved.page);setFeedView(saved.view);setFocusID(saved.focus);requestAnimationFrame(()=>window.scrollTo({top:saved.scroll,behavior:'instant'}));}try{localStorage.setItem('campus-inbox:tutorial:v2','seen');}catch{/* Closing the guide stays available when storage is restricted. */}}
+ function leaveGuide(){setHelp(false);setLaunchStage('idle');clearCelebration();guide.session.dispose();const saved=guideSaved.current;guideSaved.current=null;if(saved){setPage(saved.page);setFeedView(saved.view);setFocusID(saved.focus);requestAnimationFrame(()=>window.scrollTo({top:saved.scroll,behavior:'instant'}));}try{localStorage.setItem('campus-inbox:tutorial:v2','seen');}catch{/* Closing the guide stays available when storage is restricted. */}}
+ function closeHelp(){if(!tutorialRequired)leaveGuide();}
+ function finishHelp(){setTutorialRequired(false);leaveGuide();}
  function navigate(next:number){if(next===2)setExpandCampus(false);setPage(next);if(split&&next===1){setTimeout(()=>{document.getElementById('compose-pane')?.scrollIntoView({block:'start',behavior:'smooth'});document.querySelector<HTMLTextAreaElement>('#compose-pane textarea')?.focus({preventScroll:true});},0);}else window.scrollTo({top:0,behavior:'instant'});}
  function openCampusSettings(){navigate(2);setExpandCampus(true);}
  function startWelcome(){if(app.bootError){setLaunchStage('idle');return;}guideSaved.current??={page,view:feedView,focus:focusID,scroll:window.scrollY};setPage(1);setFeedView(createFeedViewState());setFocusID(null);try{firstEntry.current=createFirstEntryMotion(localStorage,{force:true});}catch{firstEntry.current=createFirstEntryMotion(null,{force:true});}setLaunchStage('leaving');}
@@ -97,12 +102,13 @@ export default function App(){
   const offShare=app.platform.onShare(receive);const offNotice=app.platform.onOpenNotice(openNotice);receive();openNotice();return()=>{offShare();offNotice();};
  },[app.platform,app.busy,login,help,about,note,details,calendar,settingsDialog,share]);
  useEffect(()=>app.platform.onBack(()=>{
+  if(help){closeHelp();return true;}
   const dialog=Array.from(document.querySelectorAll('[role="dialog"]')).at(-1);
   if(dialog){dialog.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',code:'Escape',bubbles:true}));return true;}
   if(correction){setCorrection(null);return true;}
-  if(launchStage==='intro'){setLaunchStage('idle');return true;}if(launchStage==='entry'||launchStage==='leaving')return true;
+  if(launchStage==='intro'){if(!tutorialRequired)setLaunchStage('idle');return true;}if(launchStage==='entry'||launchStage==='leaving')return true;
   if(page!==0){navigate(0);return true;}return false;
- }),[app.platform,page,correction,launchStage]);
+ }),[app.platform,page,correction,launchStage,help,tutorialRequired]);
  useEffect(()=>{if(details&&!app.notices.some(n=>n.id===details))setDetails(null);},[app.notices,details]);
  useEffect(()=>{if(correction&&!app.notices.some(n=>n.id===correction.noticeID))setCorrection(null);},[app.notices,correction]);
  useEffect(()=>{if(questionID&&!app.notices.some(n=>n.id===questionID))setQuestionID(null);},[app.notices,questionID]);
@@ -131,10 +137,10 @@ export default function App(){
     </Box>:
     page===0?<FeedPage onDownload={()=>setDownloadsOpen(true)} app={viewApp} actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} focusID={help?null:focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView} editingID={correction?.noticeID} onEditingClose={()=>setCorrection(null)}/>:
     page===1?<ComposerPage app={viewApp} onDone={()=>navigate(0)} onLogin={()=>setLogin(true)}/>:
-    <SettingsPage app={app} onLogin={()=>setLogin(true)} onHelp={showWelcome} onAbout={()=>setAbout(true)} onDialogChange={setSettingsDialog} expandCampus={expandCampus} onFilterNotices={enabled=>{setFeedView(previous=>({...previous,tab:0,query:'',favoritesOnly:false,relevantOnly:enabled}));navigate(0);}} onShowNotices={()=>{setFeedView(previous=>({...previous,tab:0,query:'',favoritesOnly:false,relevantOnly:false}));navigate(0);}}/>}
+    <SettingsPage developerEnabled={developerUnlocked} app={app} onLogin={()=>setLogin(true)} onHelp={showWelcome} onAbout={()=>setAbout(true)} onDialogChange={setSettingsDialog} expandCampus={expandCampus} onFilterNotices={enabled=>{setFeedView(previous=>({...previous,tab:0,query:'',favoritesOnly:false,relevantOnly:enabled}));navigate(0);}} onShowNotices={()=>{setFeedView(createFeedViewState());setFocusID(null);navigate(0);}}/>}
   </Container>
   {!wide&&<Paper data-first-entry="home-nav" sx={{position:'fixed',bottom:0,left:0,right:0,borderTop:'1px solid',borderColor:'divider',pb:'var(--safe-bottom)',zIndex:10}}>
-   <BottomNavigation value={page} onChange={(_,value)=>navigate(value)} showLabels sx={{bgcolor:'background.paper',height:64,alignItems:'center',px:1,gap:1,'& .MuiBottomNavigationAction-root':{minWidth:0,maxWidth:180,height:48,borderRadius:6,color:'text.secondary'},'& .MuiBottomNavigationAction-root.Mui-selected':{color:'primary.main',bgcolor:'action.selected'},'& .MuiBottomNavigationAction-label':{fontSize:'1rem',fontWeight:600},'& .MuiBottomNavigationAction-label.Mui-selected':{fontSize:'1rem'}}}>{nav.map(item=><BottomNavigationAction key={item.label} label={item.label}/>)}</BottomNavigation>
+   <BottomNavigation value={page} onChange={(_,value)=>navigate(value)} showLabels sx={{bgcolor:'background.paper',height:64,alignItems:'center',px:1,gap:1,'& .MuiBottomNavigationAction-root':{minWidth:0,maxWidth:180,height:48,borderRadius:6,color:'text.secondary',transition:'background-color 180ms ease, color 180ms ease, transform 240ms cubic-bezier(.22,1,.36,1)','&:active':{bgcolor:'action.selected',transform:'scale(.97)'},'&:hover:not(.Mui-selected)':{bgcolor:'transparent'},'&.Mui-focusVisible':{outline:'2px solid',outlineColor:'primary.main',outlineOffset:-2}},'& .MuiBottomNavigationAction-root.Mui-selected':{color:'primary.main',bgcolor:'action.selected'},'& .MuiBottomNavigationAction-label':{fontSize:'1rem',fontWeight:600},'& .MuiBottomNavigationAction-label.Mui-selected':{fontSize:'1rem'}}}>{nav.map(item=><BottomNavigationAction disableRipple key={item.label} label={item.label}/>)}</BottomNavigation>
   </Paper>}
   </Box>
   <NoteDialog editor={note} app={app} onClose={()=>setNote(null)}/>
@@ -145,7 +151,7 @@ export default function App(){
   {questionID&&<Suspense fallback={null}><NoticeQuestionDialog notice={app.notices.find(n=>n.id===questionID)??null} app={app} onClose={()=>setQuestionID(null)} onLogin={()=>setLogin(true)}/></Suspense>}
   <LoginDialog open={login} app={app} onClose={()=>setLogin(false)}/>
   <HumanVerificationDialog request={verification.request} onComplete={verification.complete} onCancel={()=>{app.cancel();verification.cancel();}}/>
-  <HelpDialog open={help} onClose={closeHelp} step={guideStep} onStep={changeGuideStep} progress={guideProgress} expanded={!!guide.state.notice&&feedView.expandedIDs.has(guide.state.notice.id)} onFinished={closeHelp}/><AboutDialog open={about||launchStage==='intro'} introduction={launchStage==='intro'||launchStage==='leaving'} onStart={startWelcome} onExited={()=>{if(launchStage==='leaving')setLaunchStage('entry');}} onClose={()=>{setAbout(false);if(launchStage==='intro')setLaunchStage('idle');}}/>
+  <HelpDialog dismissible={!tutorialRequired} open={help} onClose={closeHelp} step={guideStep} onStep={changeGuideStep} progress={guideProgress} expanded={!!guide.state.notice&&feedView.expandedIDs.has(guide.state.notice.id)} onFinished={finishHelp}/><AboutDialog dismissible={!tutorialRequired} onDeveloperUnlock={unlockDeveloper} open={about||launchStage==='intro'} introduction={launchStage==='intro'||launchStage==='leaving'} onStart={startWelcome} onExited={()=>{if(launchStage==='leaving')setLaunchStage('entry');}} onClose={()=>{setAbout(false);if(launchStage==='intro')setLaunchStage('idle');}}/>
   <Dialog open={downloadsOpen} onClose={()=>setDownloadsOpen(false)} maxWidth="xs" fullWidth><DialogTitle>安卓手机版</DialogTitle><DialogContent><AndroidDownloads compact/></DialogContent><DialogActions><Button onClick={()=>setDownloadsOpen(false)}>关闭</Button></DialogActions></Dialog>
   <Snackbar open={!!app.toast} key={app.toast?.id} autoHideDuration={6500} onClose={(_,reason)=>{if(reason!=='clickaway')app.setToast(null);}} message={app.toast?.text} action={app.toast?.undo?<Button color="inherit" onClick={()=>{const undo=app.toast?.undo;app.setToast(null);undo?.();}}>撤销</Button>:undefined} anchorOrigin={{vertical:'bottom',horizontal:'center'}} sx={{bottom:wide?24:84}}/>
   <Snackbar open={!!app.error} onClose={()=>app.setError('')} anchorOrigin={{vertical:'top',horizontal:'center'}}><Alert severity="error" onClose={()=>app.setError('')} variant="filled" sx={{maxWidth:560}}>{app.error}</Alert></Snackbar>

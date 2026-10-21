@@ -1,4 +1,4 @@
-import {Fragment,useEffect,useMemo,useRef,useState,type Dispatch,type SetStateAction} from 'react';
+import {Fragment,useEffect,useMemo,useRef,useState,type Dispatch,type SetStateAction,type ReactNode} from 'react';
 import {Box,Button,Checkbox,Chip,Collapse,Dialog,DialogActions,DialogContent,DialogTitle,Divider,FormControlLabel,InputAdornment,MenuItem,Paper,Stack,Tab,Tabs,TextField,Tooltip,Typography,useMediaQuery} from '@mui/material';
 import PersonOutline from '@mui/icons-material/PersonOutlineOutlined';
 import FilterAltOutlined from '@mui/icons-material/FilterAltOutlined';
@@ -32,6 +32,21 @@ import {BackToTop} from '../../shared/ui/BackToTop';
 export interface FeedViewState {tab:0|1|2;query:string;sort:SortOrder;expandedIDs:Set<string>;expandedTaskIDs:Set<string>;favoritesOnly?:boolean;relevantOnly?:boolean;manualPriorities?:ManualPriority[];pastSevenDaysOnly?:boolean}
 export const createFeedViewState=():FeedViewState=>({tab:0,query:'',sort:'priority',expandedIDs:new Set(),expandedTaskIDs:new Set(),favoritesOnly:false,relevantOnly:false,manualPriorities:[],pastSevenDaysOnly:false});
 
+/** Leave sideways first; only then close the gap for the following card. */
+function NoticeRowTransition({visible,departure,reduced,onExited,children}:{visible:boolean;departure:'complete'|'delete'|'filter';reduced:boolean;onExited:()=>void;children:ReactNode}){
+ const [open,setOpen]=useState(visible);
+ useEffect(()=>{
+  if(visible){setOpen(true);return;}
+  if(reduced){setOpen(false);return;}
+  const timer=setTimeout(()=>setOpen(false),departure==='filter'?180:440);
+  return()=>clearTimeout(timer);
+ },[visible,departure,reduced]);
+ const transform=visible?'none':departure==='complete'?'translateX(110%) rotate(1.5deg)':departure==='delete'?'translateX(-55px) rotate(-3deg) skewY(-2deg)':'translateY(-5px)';
+ return <Collapse in={open} timeout={reduced?0:{enter:440,exit:360}} easing="cubic-bezier(.22,1,.36,1)" onExited={onExited}>
+  <Box className="notice-row-motion" data-departure={visible?undefined:departure} sx={{opacity:visible?1:0,transform,transformOrigin:'top right',clipPath:!visible&&departure==='delete'?'inset(0 25% 0 0 round 17px)':'none',pointerEvents:visible?undefined:'none',transition:reduced?'none':`transform 440ms cubic-bezier(.45,0,.85,.45), opacity ${departure==='complete'?120:departure==='filter'?180:280}ms ease ${visible?0:departure==='complete'?320:120}ms, clip-path 440ms cubic-bezier(.4,0,.3,1)`}}>{children}</Box>
+ </Collapse>;
+}
+
 function AnimatedNotices({query,editingID,onEditingClose,records,allRecords,viewKey,exampleDivider=false,app,actions,now,expandedIDs,onExpandedChange,expandedTaskIDs,onTaskExpandedChange,onEmpty,uiPreferences}:{query:string;editingID?:string;onEditingClose?:()=>void;records:Notice[];allRecords:Notice[];viewKey:string;exampleDivider?:boolean;app:CampusController;actions:NoticeActions;now:number;expandedIDs:Set<string>;onExpandedChange:(id:string)=>void;expandedTaskIDs:Set<string>;onTaskExpandedChange:(id:string)=>void;onEmpty:(empty:boolean)=>void;uiPreferences:UiPreferences}){
  const liveIDs=new Set(allRecords.map(n=>n.id));
  const [rows,setRows]=useState(()=>records.map(record=>({record,visible:true})));
@@ -44,7 +59,7 @@ function AnimatedNotices({query,editingID,onEditingClose,records,allRecords,view
  const completionChanged=(noticeID:string,anchor?:HTMLElement)=>{
   actions.completionChanged?.(noticeID,anchor);
   const old=holds.current.get(noticeID);if(old!==undefined)clearTimeout(old);
-  holds.current.set(noticeID,setTimeout(()=>{holds.current.delete(noticeID);setHoldRevision(value=>value+1);},reducedMotion?750:1500));
+  holds.current.set(noticeID,setTimeout(()=>{holds.current.delete(noticeID);setHoldRevision(value=>value+1);},reducedMotion?750:1100));
   setHoldRevision(value=>value+1);
  };
  const cardActions:NoticeActions={...actions,completionChanged};
@@ -55,9 +70,9 @@ function AnimatedNotices({query,editingID,onEditingClose,records,allRecords,view
   setRows(previous=>transitionRows(previous.map(row=>({...row,record:latest.get(row.record.id)??row.record})),records,new Set(holds.current.keys())));
  },[records,allRecords,holdRevision,viewKey]);
  useEffect(()=>onEmpty(rows.length===0),[rows.length,onEmpty]);
- return <Stack>{rows.map((row,index)=><Fragment key={row.record.id}>{exampleDivider&&index===exampleStart&&<Divider className="example-group-divider" sx={{mt:1,mb:2,color:'text.secondary',fontSize:'.875rem'}}>示例通知 {exampleCount}</Divider>}<Collapse in={row.visible} timeout={reducedMotion?0:520} easing={{enter:'cubic-bezier(.22,1,.36,1)',exit:'cubic-bezier(.65,0,.35,1)'}} onExited={()=>setRows(old=>old.filter(v=>v.record.id!==row.record.id||current.current.some(n=>n.id===v.record.id)))}>
-  <Box data-search-active={row.visible?'true':'false'} data-search-editing={row.record.id===editingID?'true':undefined} sx={{pb:1.5,opacity:row.visible?1:0,transform:row.visible?'none':!liveIDs.has(row.record.id)?'translateX(-40px) rotate(-3deg) skewY(-2deg)':'translateY(-5px)',transformOrigin:'top right',clipPath:row.visible||liveIDs.has(row.record.id)?'inset(0 round 17px)':'inset(0 20% 0 0 round 17px)',transition:reducedMotion?'none':'opacity 400ms ease, transform 460ms cubic-bezier(.4,0,.3,1), clip-path 460ms cubic-bezier(.4,0,.3,1)'}}><NoticeCard uiPreferences={uiPreferences} notice={row.record} unread={app.unreadNoticeIDs.includes(row.record.id)} app={app} actions={cardActions} now={now} expanded={expandedIDs.has(row.record.id)} onExpandedChange={()=>onExpandedChange(row.record.id)} expandedTaskIDs={expandedTaskIDs} onTaskExpandedChange={onTaskExpandedChange} disabled={!row.visible} editing={row.record.id===editingID} onEditingClose={onEditingClose}/>{query.trim()&&<Box className="search-results-context" data-search-notice-id={row.record.id} sx={{px:2,py:1,mt:-1.5,mb:1.5,border:'1px solid',borderColor:'divider',borderRadius:'0 0 12px 12px',bgcolor:'action.hover'}}>{noticeSearchMatches(row.record,query).map((match,i)=><Box key={i} data-search-task-id={match.path?.startsWith('tasks.')?row.record.tasks[Number(match.path.split('.')[1])]?.id:undefined} sx={{mb:.75}}><Typography component="div" sx={{fontSize:12,color:'text.secondary',fontWeight:700}}>{match.label}</Typography><Typography component="div" data-search-excerpt="true" sx={{fontSize:14,lineHeight:1.65,overflowWrap:'anywhere'}}><HighlightedText text={match.text}/></Typography>{match.label==='原文'&&<Button size="small" onClick={()=>actions.details(row.record)} sx={{p:0,minWidth:0}}>查看原文</Button>}</Box>)}</Box>}</Box>
- </Collapse></Fragment>)}</Stack>;
+ return <Stack sx={{overflowX:'clip'}}>{rows.map((row,index)=><Fragment key={row.record.id}>{exampleDivider&&index===exampleStart&&<Divider className="example-group-divider" sx={{mt:1,mb:2,color:'text.secondary',fontSize:'.875rem'}}>示例通知 {exampleCount}</Divider>}<NoticeRowTransition visible={row.visible} departure={!liveIDs.has(row.record.id)?'delete':getNoticeStatus(row.record)==='completed'?'complete':'filter'} reduced={reducedMotion} onExited={()=>setRows(old=>old.filter(v=>v.record.id!==row.record.id||current.current.some(n=>n.id===v.record.id)))}>
+  <Box data-search-active={row.visible?'true':'false'} data-search-editing={row.record.id===editingID?'true':undefined} sx={{pb:1.5}}><NoticeCard uiPreferences={uiPreferences} notice={row.record} unread={app.unreadNoticeIDs.includes(row.record.id)} app={app} actions={cardActions} now={now} expanded={expandedIDs.has(row.record.id)} onExpandedChange={()=>onExpandedChange(row.record.id)} expandedTaskIDs={expandedTaskIDs} onTaskExpandedChange={onTaskExpandedChange} disabled={!row.visible} editing={row.record.id===editingID} onEditingClose={onEditingClose}/>{query.trim()&&<Box className="search-results-context" data-search-notice-id={row.record.id} sx={{px:2,py:1,mt:-1.5,mb:1.5,border:'1px solid',borderColor:'divider',borderRadius:'0 0 12px 12px',bgcolor:'action.hover'}}>{noticeSearchMatches(row.record,query).map((match,i)=><Box key={i} data-search-task-id={match.path?.startsWith('tasks.')?row.record.tasks[Number(match.path.split('.')[1])]?.id:undefined} sx={{mb:.75}}><Typography component="div" sx={{fontSize:12,color:'text.secondary',fontWeight:700}}>{match.label}</Typography><Typography component="div" data-search-excerpt="true" sx={{fontSize:14,lineHeight:1.65,overflowWrap:'anywhere'}}><HighlightedText text={match.text}/></Typography>{match.label==='原文'&&<Button size="small" onClick={()=>actions.details(row.record)} sx={{p:0,minWidth:0}}>查看原文</Button>}</Box>)}</Box>}</Box>
+ </NoticeRowTransition></Fragment>)}</Stack>;
 }
 export function FeedPage({app,actions,onCompose,onSettings,focusID,onFocusHandled,embedded=false,viewState,onViewStateChange,editingID,onEditingClose,onDownload}:{onDownload?:()=>void;editingID?:string;onEditingClose?:()=>void;app:CampusController;actions:NoticeActions;onCompose:()=>void;onSettings?:()=>void;focusID:string|null;onFocusHandled?:(id:string)=>void;embedded?:boolean;viewState?:FeedViewState;onViewStateChange?:Dispatch<SetStateAction<FeedViewState>>}){
  const {preferences:uiPreferences}=useUiPreferences();

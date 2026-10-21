@@ -1,15 +1,19 @@
 export type GuideRect={x:number;y:number;width:number;height:number};
 
-export function guideLayout(viewport:{width:number;height:number},context:GuideRect,target:GuideRect|null,panelHeight:number){
+export function guideLayout(viewport:{width:number;height:number;top?:number},context:GuideRect,target:GuideRect|null,panelHeight:number){
  const margin=12,panelWidth=Math.min(320,viewport.width-margin*2),gap=18;
  const right=viewport.width-(context.x+context.width),left=context.x;
  const side=viewport.width>=900&&(right>=panelWidth+gap||left>=panelWidth+gap);
  const panelX=side?(right>=panelWidth+gap?Math.min(viewport.width-panelWidth-margin,context.x+context.width+gap):Math.max(margin,context.x-panelWidth-gap)):Math.max(margin,(viewport.width-panelWidth)/2);
  const panelY=side?Math.max(margin,Math.min(viewport.height-panelHeight-margin,context.y)):Math.max(margin,viewport.height-panelHeight-margin);
  const availableBottom=side?viewport.height-margin:panelY-gap;
- const x=Math.max(6,context.x-7),y=Math.max(68,context.y-7),bottom=Math.max(y,Math.min(availableBottom,context.y+context.height+7));
- const focus={x,y,width:Math.max(0,Math.min(viewport.width-6,context.x+context.width+7)-x),height:Math.max(0,bottom-y)};
- const control=target?{x:Math.max(6,target.x-4),y:Math.max(6,target.y-4),width:Math.min(viewport.width-12,target.width+8),height:target.height+8}:null;
+ const top=Math.max(6,viewport.top??68);
+ function clip(r:GuideRect,padding:number){
+  const x=Math.max(6,Math.min(viewport.width-6,r.x-padding)),y=Math.max(top,Math.min(availableBottom,r.y-padding));
+  return {x,y,width:Math.max(0,Math.min(viewport.width-6,r.x+r.width+padding)-x),height:Math.max(0,Math.min(availableBottom,r.y+r.height+padding)-y)};
+ }
+ const focus=clip(context,7),action=target?clip(target,4):null;
+ const control=action&&action.width>0&&action.height>0?action:null;
  return {focus,control,panel:{x:panelX,y:panelY,width:panelWidth},availableBottom,side};
 }
 

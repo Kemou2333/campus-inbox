@@ -9,6 +9,29 @@ export function canonicalExample(value){
 }
 export function publicExampleHash(value){return createHash('sha256').update(JSON.stringify(canonicalExample(value))).digest('hex');}
 
+/** Only familiar reserved-domain paths are permitted in reviewed public copy.
+ * Query strings, private hosts and contact-shaped values still fail closed. */
+export function auditPublicExampleText(value,path,approvedPseudonyms=[]){
+  const findings=[],add=category=>findings.push({path,category});
+  const checks=[
+    ['specific_link',/https?:\/\/[^\s]+/i],
+    ['link_parameter',/(?:params|token|key|signature|code)=[a-z0-9_-]{8,}/i],
+    ['phone',/(?<!\d)1[3-9]\d{9}(?!\d)/],
+    ['email',/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i],
+    ['identity_number',/(?<!\d)\d{17}[\dXx](?!\d)/],
+    ['group_number',/(?:QQ|Q ?Q|群号|qq群|QQ群)[^\n]{0,25}\d{5,12}/i],
+    ['student_identifier',/(?:学号|学生编号|学生证号|一卡通号|校园卡号|统一(?:身份)?认证号)\s*[：:=]?\s*[*_`]{0,2}\s*[A-Za-z]?\d[A-Za-z\d-]{5,23}\b/],
+    ['unnatural_privacy_placeholder',/\[(?:群号|联系电话|报名入口|通知入口|平台入口(?:\s*[AB])?|链接已脱敏|学号|姓名)\]|【(?:群号|联系电话|链接)已脱敏】/],
+  ];
+  for(const [category,pattern] of checks)if(pattern.test(value))add(category);
+  const domains=/(?<![\w@.-])(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}(?::\d+)?(?:[/?#][^\s<>"'()[\]{}，。；：！？、（）“”‘’]*)?/gi;
+  for(const match of value.matchAll(domains))if(!/^(?:www\.)?example\.com(?:\/[a-z0-9/_-]*)?$/i.test(match[0]))add('specific_link');
+  const approved=new Set(approvedPseudonyms);
+  const labelledName=/(?:姓名|联系人姓名|负责人姓名)\s*[：:]\s*[*_`]{0,2}\s*([\u4e00-\u9fff]{2,4})(?![\u4e00-\u9fff])/g;
+  for(const match of value.matchAll(labelledName))if(!approved.has(match[1]))add('unreviewed_person_name');
+  return findings;
+}
+
 /** A publishing gate, not an automatic anonymizer. A human reviews names,
  * roles, links, indirect identification and meaning before signing hashes.
  * Errors contain paths/categories only; never print a sensitive value. */
@@ -29,20 +52,9 @@ export function auditPublicExamples(backup,provenance){
     if(Array.isArray(value)){value.forEach((entry,index)=>scan(entry,`${path}[${index}]`));return;}
     if(value&&typeof value==='object'){Object.entries(value).forEach(([key,entry])=>scan(entry,`${path}.${key}`));return;}
     if(typeof value!=='string')return;
-    const checks=[
-      ['specific_link',/https?:\/\/[^\s]+/i],
-      ['link_parameter',/(?:params|token|key|signature|code)=[a-z0-9_-]{8,}/i],
-      ['phone',/(?<!\d)1[3-9]\d{9}(?!\d)/],
-      ['email',/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i],
-      ['identity_number',/(?<!\d)\d{17}[\dXx](?!\d)/],
-      ['group_number',/(?:QQ|Q ?Q|群号|qq群|QQ群)[^\n]{0,25}\d{5,12}/i],
-      ['student_identifier',/(?:学号|学生编号|学生证号|一卡通号|校园卡号|统一(?:身份)?认证号)\s*[：:=]?\s*[*_`]{0,2}\s*[A-Za-z]?\d[A-Za-z\d-]{5,23}\b/],
-    ];
-    for(const [category,pattern] of checks)if(pattern.test(value))add(path,category);
     // Approved fictional identities live in the signed human review rather
     // than repeated labels in every notice. Generic field requirements stay.
-    const labelledName=/(?:姓名|联系人姓名|负责人姓名)\s*[：:]\s*[*_`]{0,2}\s*([\u4e00-\u9fff]{2,4})(?![\u4e00-\u9fff])/g;
-    for(const match of value.matchAll(labelledName))if(!approvedPseudonyms.has(match[1]))add(path,'unreviewed_person_name');
+    findings.push(...auditPublicExampleText(value,path,[...approvedPseudonyms]));
   }
   backup.notices.forEach((notice,index)=>{
     const path=`notices[${index}]`,source=sources.get(notice.id);
@@ -70,6 +82,13 @@ async function main(){
     const catalogNotice=backup.notices.find(notice=>notice.id===guestDemo?.notice?.id);
     if(!catalogNotice||publicExampleHash(catalogNotice)!==publicExampleHash(guestDemo.notice))findings.push({path:`guestDemos[${index}].notice`,category:'demo_must_match_reviewed_catalog'});
     findings.push(...auditPublicExamples({notices:[guestDemo.notice]},{privacyReview:provenance.privacyReview,results:[guestDemo.provenance]}).map(finding=>({...finding,path:`guestDemos[${index}].`+finding.path})));
+  }
+  const questions=JSON.parse(await readFile(new URL('../src/features/questions/reviewed-example-questions.json',import.meta.url),'utf8'));
+  if(!Array.isArray(questions)||questions.length!==backup.notices.length||new Set(questions.map(entry=>entry.catalogId)).size!==backup.notices.length)findings.push({path:'questions',category:'reviewed_question_count_mismatch'});
+  else for(const [index,question] of questions.entries()){
+    const path=`questions[${index}]`,notice=backup.notices.find(entry=>entry.id===question.catalogId);
+    for(const [field,value] of [['question',question.question],['answer',question.answer],...question.evidence.map((text,index)=>[`evidence[${index}]`,text])])findings.push(...auditPublicExampleText(value,`${path}.${field}`,provenance.privacyReview.approvedPseudonyms));
+    if(!notice||question.sourceSha256!==createHash('sha256').update(notice.originalText).digest('hex')||!question.evidence.every(text=>notice.originalText.includes(text)))findings.push({path,category:'question_must_match_reviewed_original'});
   }
   for(const name of ['examples-legacy.json','examples-legacy-2.4.json']){
     const registry=JSON.parse(await readFile(new URL(name,publicRoot),'utf8'));
