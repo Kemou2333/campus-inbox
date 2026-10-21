@@ -28,6 +28,7 @@ export function useGuideSession(app:CampusController,active:boolean){
   },
   // A tutorial can never fall through to a paid or personal action.
   analyze:async()=>false,askQuestion:async()=>{throw new Error('请先完成引导。');},
+  keepGuidePractice:()=>null,
   act:(id,change)=>{
    const result=session.act(id,change);
    if(isNewCompletion(result)){playOperationSound('complete');triggerOperationHaptic(app.platform,'complete');}

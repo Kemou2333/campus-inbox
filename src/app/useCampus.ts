@@ -19,6 +19,7 @@ import {addFiles, cleanupFiles, exportFiles, getFile, restoreFiles, MAX_NOTICE_F
 import {createNotice, exportBackup, exportTextBackup, newID, parseAnalysisBatch, parseBackup, parseNotices} from '../domain/notice';
 import {mergeExamples,selectExampleBatch,writeExamplesHidden} from '../domain/examples';
 import {planExampleReset} from '../domain/reset-examples';
+import {keepFirstPractice} from '../features/onboarding/keep-practice';
 import {MODEL_TEST_MODE_KEY,isModelTestNotice,parseModelTestCatalog} from '../domain/model-tests';
 import type {Notice} from '../domain/types';
 import {createPlatform, type PlatformCapabilities} from '../platform';
@@ -238,14 +239,23 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  function replaceDrafts(next:Draft[]){draftRef.current=next;setDrafts(next);}
  function fileReferences(draftList=draftRef.current){return [...repository.load(),...draftList.map(d=>({attachments:d.attachments}) as Notice),{attachments:pendingAnalysisFiles()} as Notice,...trashStore.attachmentReferences() as Notice[]];}
  function changeDraft(id:string,text:string){replaceDrafts(draftRef.current.map(d=>{if(d.id!==id)return d;if(d.demo)tell('示例已修改，需登录后使用 AI 整理。');const {demo:_,...ordinary}=d;return {...ordinary,text};}));}
- function fillDemoDraft(preferredID?:string){
+ function fillDemoDraft(preferredID?:string,replaceShort=false){
   if(busy||analyzing.current||attaching.current.size)return;
   const empty=(d:Draft)=>!d.text.trim()&&!d.attachments.length;
-  const target=draftRef.current.find(d=>d.id===preferredID&&empty(d))??draftRef.current.find(empty);
+  const target=draftRef.current.find(d=>d.id===preferredID&&(empty(d)||replaceShort&&!d.demo&&!d.attachments.length&&Array.from(d.text.replace(/\s/g,'')).length<=20))??draftRef.current.find(empty);
   if(!target&&draftRef.current.length>=20){tell('草稿已满，请先移除一条。');return;}
   const example={...(target??makeDraft()),text:nextGuestDemoSource(),demo:GUEST_DEMO_MARKER};
   replaceDrafts(target?draftRef.current.map(d=>d.id===target.id?example:d):[...draftRef.current,example]);
-  tell('示例已填入');return example.id;
+  tell('示例已填入',target?.text?()=>{
+   const current=draftRef.current.find(d=>d.id===example.id);
+   if(JSON.stringify(current)!==JSON.stringify(example)){tell('草稿已有修改，已保留当前内容。');return;}
+   replaceDrafts(draftRef.current.map(d=>d.id===target.id?target:d));tell('已恢复原文');
+  }:undefined);return example.id;
+ }
+ function keepGuidePractice(practice:Notice){
+  try{const current=repository.load(),kept=keepFirstPractice(current,practice);if(!kept)return null;
+   if(kept.notices!==current)save(kept.notices);return kept.id;
+  }catch(e){report(e);return null;}
  }
  function pasteDraft(id:string,text:string){const target=draftRef.current.find(d=>d.id===id);if(!target||target.text||busy){tell('输入框已有内容，请新建通知后再粘贴。');return;}changeDraft(id,text);}
  function insertDraft(id:string,text:string,selection?:DraftSelection){
@@ -532,6 +542,6 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   return result;
  }
  return {notices,drafts,remainingExamples,localDataScope,trashItems,restoreTrash,deleteTrashEntry,emptyTrash,unreadNoticeIDs,markNoticeRead,clearUnreadNotices,demoDraftID:drafts.some(d=>d.text.trim())&&drafts.filter(d=>d.text.trim()).every(isGuestDemoDraft)?drafts.find(isGuestDemoDraft)?.id??null:null,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,preferences,setPreferences,bootError:boot.error,
-  report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,fillDemoDraft,attach,detach,removeDraft,analyze,analyzeDemo,askQuestion,cancel:()=>abort.current?.abort(),loadExamples,resetExamples,loadModelTests,modelTestMode,setModelTestMode,modelTestFailureCount,backup,importBackup,login,logout,bindEmail,receiveShare};
+  report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,fillDemoDraft,keepGuidePractice,attach,detach,removeDraft,analyze,analyzeDemo,askQuestion,cancel:()=>abort.current?.abort(),loadExamples,resetExamples,loadModelTests,modelTestMode,setModelTestMode,modelTestFailureCount,backup,importBackup,login,logout,bindEmail,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;
