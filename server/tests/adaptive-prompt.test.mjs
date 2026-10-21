@@ -6,7 +6,8 @@ import {SYSTEM_PROMPT,SHORT_NOTICE_PROMPT} from '../../worker/prompt.mjs';
 test('short single-source extraction uses the concise contract while retaining low thinking and complete output budget',()=>{
   const input={sources:[{text:'有兴趣的同学请在9月19日前报名数学竞赛。'}]};
   const payload=modelPayload(input,{thinkingMode:'low'});
-  assert.equal(payload.messages[0].content,SHORT_NOTICE_PROMPT);
+  assert.equal(payload.messages[0].content.startsWith(SHORT_NOTICE_PROMPT+'\n'),true);
+  assert.match(payload.messages[0].content,/恰有 1 张卡/);
   assert.equal(payload.thinking.type,'enabled');
   assert.equal(payload.reasoning_effort,'low');
   assert.equal(payload.max_tokens,32768);
@@ -18,7 +19,8 @@ test('long and multi-source notices retain the full extraction contract',()=>{
   const multiple={sources:[{text:'学生提交申请。'},{text:'家长发送短信。'}]};
   for(const input of [long,multiple]){
     const payload=modelPayload(input,{thinkingMode:'low'});
-    assert.equal(payload.messages[0].content,SYSTEM_PROMPT);
+    assert.equal(payload.messages[0].content.startsWith(SYSTEM_PROMPT+'\n'),true);
+    assert.equal(payload.messages[0].content.includes(`恰有 ${input.sources.length} 张卡`),true);
     assert.equal(payload.thinking.type,'enabled');
     assert.equal(payload.reasoning_effort,'low');
   }
@@ -31,15 +33,15 @@ test('complex short and long sources both send uncertainty, pending-state and el
   for(const sourceText of [text,text.repeat(14)]){
     const payload=modelPayload({sources:[{text:sourceText}]},{thinkingMode:'low'});
     const policy=payload.messages[0].content;
-    assert.match(policy,/互不兼容.*details\/warnings\/reminders.*核实/);
-    assert.match(policy,/条件或先后阶段.*不是矛盾/);
-    assert.match(policy,/绝不追加进deadlineText\/timeText/);
-    assert.match(policy,/当前状态.*information/);
-    assert.match(policy,/不生成现在提交或等待的任务/);
-    assert.match(policy,/资格取得期限放timeline/);
-    assert.match(policy,/不能改称报名截止|不改称报名截止/);
-    assert.match(policy,/任选材料.*选项/);
-    assert.match(policy,/timeline不重复同一deadlineText/);
+    assert.match(policy,/互不兼容.*保留两种.*核实/);
+    assert.match(policy,/条件差异.*先后阶段不是冲突/);
+    assert.match(policy,/不加.*核实说明/);
+    assert.match(policy,/尚待审批\/开放.*kind="information"/);
+    assert.match(policy,/不造“查看”“等待”待办/);
+    assert.match(policy,/资格取得时间用 timeline/);
+    assert.match(policy,/最早明确办理截止/);
+    assert.match(policy,/材料任选项/);
+    assert.match(policy,/共同截止只在 deadlineText 出现一次/);
     assert.equal(payload.reasoning_effort,'low');
     assert.deepEqual(JSON.parse(payload.messages[1].content),{sources:[{sourceId:1,text:sourceText}]});
   }
