@@ -35,3 +35,5 @@ button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 @keyframes sample-greeting{0%,100%{transform:scale(1);box-shadow:none}38%{transform:scale(1.055);box-shadow:0 0 0 7px color-mix(in srgb,currentColor 9%,transparent)}65%{transform:scale(.99)}}
 
 @keyframes boundary-breathe{0%{opacity:0;transform:scaleX(.35)}35%{opacity:.65;transform:scaleX(1.1)}100%{opacity:0;transform:scaleX(.65)}}
+
+@keyframes settings-enter{from{opacity:.35;transform:translateX(9px)}to{opacity:1;transform:translateX(0)}}

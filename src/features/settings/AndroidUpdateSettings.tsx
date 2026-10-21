@@ -34,7 +34,7 @@ export function AndroidUpdateSettings({platform}:{platform:PlatformAPI}){
    '&.Mui-focusVisible':{outline:'2px solid',outlineColor:'primary.main',outlineOffset:-3}}}>
    <Box sx={{width:34,height:34,borderRadius:'10px',display:'grid',placeItems:'center',flexShrink:0,color:'text.secondary',bgcolor:'action.hover'}}><SystemUpdateOutlined sx={{fontSize:21}}/></Box>
    <Box sx={{flex:1,minWidth:0}}><Typography component="span" sx={{display:'block',fontSize:18,fontWeight:650}}>检查更新</Typography>
-    <Typography component="span" sx={{display:'block',fontSize:14,color:'text.secondary',mt:.35}}>当前版本 {currentVersion} · 每次进入时自动检查</Typography></Box>
+    <Typography component="span" sx={{display:'block',fontSize:14,color:'text.secondary',mt:.35}}>当前版本 {currentVersion}</Typography></Box>
    {checking?<Stack direction="row" sx={{gap:.75,alignItems:'center',flexShrink:0}}><CircularProgress size={18}/><Typography sx={{fontSize:14}}>检查中…</Typography></Stack>:<Refresh sx={{fontSize:21,color:'text.secondary',flexShrink:0}}/>}
   </ButtonBase>
   {result&&<Alert role="status" severity={result.status==='current'?'success':result.status==='error'?'warning':'info'} sx={{mx:{xs:2,sm:2.5},mb:2,fontSize:15,

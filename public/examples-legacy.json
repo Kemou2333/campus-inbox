@@ -402,5 +402,65 @@
   {
     "id": "example-reading-v25-5",
     "fingerprint": "e5c7d1d9ce8694e0ce537cb27039bbd9f1c06fee5fccf14ae491f08551366964"
+  },
+  {
+    "id": "example-reading-v211-1",
+    "fingerprint": "1e8685b7479acb129ba9dd141fd3e41a8d67c77b870ad853312622250382e967"
+  },
+  {
+    "id": "example-reading-v213-0",
+    "fingerprint": "05916e33360ab32eebc78204c3fc412e8fda7537ee837ab9ee264af06365ee86"
+  },
+  {
+    "id": "example-reading-v212-0",
+    "fingerprint": "7f608bb905a0ca8c4511ec7a496dd03e460cd583b798cd6d2610b186058628c2"
+  },
+  {
+    "id": "example-reading-v25-0",
+    "fingerprint": "ee2d636564a0a4e339273673273d07cdd54306733178818d6a0eab010ffb80fa"
+  },
+  {
+    "id": "example-reading-v25-2",
+    "fingerprint": "6506cd7a575d3384c15dac9ccac461ce715d93b41004ac89672733bf3d2ac6f3"
+  },
+  {
+    "id": "example-reading-v25-8",
+    "fingerprint": "0e75bfa0c1ce2091834a8971066f18e2ec8403a46f8f3e7d00a09315ceca1428"
+  },
+  {
+    "id": "example-reading-v25-9",
+    "fingerprint": "5ca7b9489de87c96b7aad5c7d51e119e461e9de5603f7594b614fceb6d0bb6bb"
+  },
+  {
+    "id": "example-reading-v25-10",
+    "fingerprint": "ca93afdf7bc81980933ae81ef2cf4d6e486724c6d79ef5eaa06c5540d55e123b"
+  },
+  {
+    "id": "example-reading-v26-12",
+    "fingerprint": "e7ca8043fadb20f6adc8ec19084e8a39394c13c595d85ff3a6375debdc78a962"
+  },
+  {
+    "id": "example-reading-v211-0",
+    "fingerprint": "77091273b9343d78c27e0ea61f55c0d128c7f58159379267b5d804ee5e2df367"
+  },
+  {
+    "id": "example-reading-v211-5",
+    "fingerprint": "5b65e0fbf75e28d7e61ecb362293eef08b9a4f21de70efc7faf4f6cf58164e01"
+  },
+  {
+    "id": "example-reading-v212-1",
+    "fingerprint": "0991a1f2f8ec878d44a2969b05d5d0955d40c5e38c4f033386683d4b06c3d908"
+  },
+  {
+    "id": "example-reading-v213-1",
+    "fingerprint": "38e916d8c3a997b56ab06a9061c1c2c56dcd680499656bf0d26b40c9db91a77c"
+  },
+  {
+    "id": "example-reading-v211-1",
+    "fingerprint": "498a76d7847926e3ad46551c6e0e74940c140dd4b1c6ed4fa304feb7e1f9dec9"
+  },
+  {
+    "id": "example-reading-v213-0",
+    "fingerprint": "86461e8e6161bf96691a1b22916ab68a084510fc26c39dfd64f23d46a8e418eb"
   }
 ]

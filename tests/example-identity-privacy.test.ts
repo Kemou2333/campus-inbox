@@ -1,7 +1,7 @@
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {expect,test} from 'vitest';
-import {auditPublicExamples,publicExampleHash} from '../scripts/verify-example-privacy.mjs';
+import {auditPublicExamples,auditPublicExampleText,publicExampleHash} from '../scripts/verify-example-privacy.mjs';
 
 async function fixture(){
   return {
@@ -50,4 +50,14 @@ test('a catalog and each changed record need human identity review in addition t
   expect(auditPublicExamples(backup,provenance).some(entry=>entry.category==='missing_identity_review')).toBe(true);
   provenance.privacyReview.manualIdentityReview=true;delete provenance.results[0].manualIdentityReview;
   expect(auditPublicExamples(backup,provenance).some(entry=>entry.category==='missing_record_identity_review')).toBe(true);
+});
+
+test('natural fictional contacts and reserved paths pass while private and lookalike links fail closed',()=>{
+  for(const text of ['QQ群：1234XXXX','李老师：138XXXX1234','课程：www.example.com/courses/math-a；另一入口：example.com/courses/math-b。'])expect(auditPublicExampleText(text,'reviewed')).toEqual([]);
+  for(const text of ['www.private.invalid/form','private.invalid/form','www.example.com.private.invalid/form','example.com@private.invalid','example.com/forms/signup?token=private-value','https://private.invalid/form']){
+    const findings=auditPublicExampleText(text,'reviewed');
+    expect(findings.some(entry=>entry.category==='specific_link'||entry.category==='email')).toBe(true);
+    expect(JSON.stringify(findings)).not.toContain(text);
+  }
+  for(const text of ['QQ群：[群号]','表格：[报名入口]','[平台入口 A]','[通知入口]','[链接已脱敏]'])expect(auditPublicExampleText(text,'reviewed').some(entry=>entry.category==='unnatural_privacy_placeholder')).toBe(true);
 });

@@ -77,3 +77,21 @@ test('live scroll and expansion follow the measurement without restarting the in
  const settled={...destination,y:250,height:86};
  expect(followGuideRect(settled,offset,0)).toEqual(settled);
 });
+
+test('a scrolled textarea ring clips to its visible area, not its original full height',()=>{
+ const context={x:20,y:-180,width:350,height:600};
+ const layout=guideLayout({width:390,height:844,top:74},context,context,210);
+ expect(layout.control!.y).toBe(74);
+ expect(layout.control!.height).toBe(350);
+ expect(layout.control!.y+layout.control!.height).toBeLessThan(layout.panel.y);
+ const gone=guideLayout({width:390,height:844,top:74},{...context,y:-800},{...context,y:-800},210);
+ expect(gone.control).toBeNull();
+ expect(gone.focus.height).toBe(0);
+});
+
+test('the generated-result reading step reveals the overview without the expand controls',()=>{
+ const generated={pasted:true,generated:true,reviewed:false,completed:false};
+ expect(guideStepTarget(1,generated,false)).toBe('.notice-overview');
+ expect(guideReadingTarget(1,generated)).toBe('.notice-overview');
+ expect(guideStepTarget(2,generated,false)).toBe('.notice-expand');
+});

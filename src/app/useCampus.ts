@@ -17,7 +17,8 @@ import {askNoticeQuestion} from '../infrastructure/notice-question-client';
 import {AnalysisJobsClient,AnalysisJobJournal,submitAnalysisJob,withoutSubmittedDrafts,attachJobFiles,pendingAnalysisFiles,type AnalysisJob,type LocalAnalysisSubmission} from '../infrastructure/analysis-jobs';
 import {addFiles, cleanupFiles, exportFiles, getFile, restoreFiles, MAX_NOTICE_FILES, MAX_NOTICE_FILE_BYTES} from '../infrastructure/attachment-store';
 import {createNotice, exportBackup, exportTextBackup, newID, parseAnalysisBatch, parseBackup, parseNotices} from '../domain/notice';
-import {mergeExamples,selectExampleBatch} from '../domain/examples';
+import {mergeExamples,selectExampleBatch,writeExamplesHidden} from '../domain/examples';
+import {planExampleReset} from '../domain/reset-examples';
 import type {Notice} from '../domain/types';
 import {createPlatform, type PlatformCapabilities} from '../platform';
 import {loadConfig, type RuntimeConfig} from './config';
@@ -233,13 +234,14 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  function replaceDrafts(next:Draft[]){draftRef.current=next;setDrafts(next);}
  function fileReferences(draftList=draftRef.current){return [...repository.load(),...draftList.map(d=>({attachments:d.attachments}) as Notice),{attachments:pendingAnalysisFiles()} as Notice,...trashStore.attachmentReferences() as Notice[]];}
  function changeDraft(id:string,text:string){replaceDrafts(draftRef.current.map(d=>{if(d.id!==id)return d;if(d.demo)tell('示例已修改，需登录后使用 AI 整理。');const {demo:_,...ordinary}=d;return {...ordinary,text};}));}
- function fillDemoDraft(){
+ function fillDemoDraft(preferredID?:string){
   if(busy||analyzing.current||attaching.current.size)return;
-  const target=draftRef.current.find(d=>!d.text.trim()&&!d.attachments.length);
+  const empty=(d:Draft)=>!d.text.trim()&&!d.attachments.length;
+  const target=draftRef.current.find(d=>d.id===preferredID&&empty(d))??draftRef.current.find(empty);
   if(!target&&draftRef.current.length>=20){tell('草稿已满，请先移除一条。');return;}
   const example={...(target??makeDraft()),text:nextGuestDemoSource(),demo:GUEST_DEMO_MARKER};
   replaceDrafts(target?draftRef.current.map(d=>d.id===target.id?example:d):[...draftRef.current,example]);
-  tell('示例已填入，还可以再加一条一起整理。');return example.id;
+  tell('示例已填入');return example.id;
  }
  function pasteDraft(id:string,text:string){const target=draftRef.current.find(d=>d.id===id);if(!target||target.text||busy){tell('输入框已有内容，请新建通知后再粘贴。');return;}changeDraft(id,text);}
  function insertDraft(id:string,text:string,selection?:DraftSelection){
@@ -459,6 +461,18 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   setRemainingExamples(batch.remaining);
   if(!quiet)tell(merged.replaced?'示例已更新':merged.added?`已载入 ${merged.added} 条示例`:'示例已载入');
  }
+ async function resetExamples(){
+  if(busy)throw new Error('请等当前操作完成。');
+  const scope=localDataScopeRef.current;
+  const response=await fetch('./examples.json',{cache:'no-store'});if(!response.ok)throw new Error('示例暂时无法载入。');
+  const catalog=parseBackup(await response.json());
+  if(scope!==localDataScopeRef.current)throw new Error('账号已切换，请重试。');
+  const reset=planExampleReset(repository.load(),catalog,trashStore.list(scope));
+  save(reset.notices);
+  for(const id of reset.trashIDs)trashStore.forget(scope,id);
+  refreshLocalNoticeState(reset.notices);setRemainingExamples(reset.remaining);
+  writeExamplesHidden(localStorage,false);tell('示例已恢复');
+ }
  useEffect(()=>{const scope=localDataScope;if(examplesRefreshing.current.has(scope))return;examplesRefreshing.current.add(scope);void loadExamples(0,true).catch(()=>{/* A later explicit load can retry; user edits remain untouched. */});},[localDataScope]);
  useEffect(()=>{
   if(!cloud||!sync.connected||!username.trim()||username.normalize('NFKC').trim().toLowerCase()==='kemou')return;
@@ -503,6 +517,6 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   return result;
  }
  return {notices,drafts,remainingExamples,localDataScope,trashItems,restoreTrash,deleteTrashEntry,emptyTrash,unreadNoticeIDs,markNoticeRead,clearUnreadNotices,demoDraftID:drafts.some(d=>d.text.trim())&&drafts.filter(d=>d.text.trim()).every(isGuestDemoDraft)?drafts.find(isGuestDemoDraft)?.id??null:null,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,preferences,setPreferences,bootError:boot.error,
-  report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,fillDemoDraft,attach,detach,removeDraft,analyze,analyzeDemo,askQuestion,cancel:()=>abort.current?.abort(),loadExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
+  report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,fillDemoDraft,attach,detach,removeDraft,analyze,analyzeDemo,askQuestion,cancel:()=>abort.current?.abort(),loadExamples,resetExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;

@@ -12,7 +12,10 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
  const input=useRef<HTMLInputElement>(null);const [target,setTarget]=useState<string|null>(null);const [adding,setAdding]=useState(false);
  const importLock=useRef(false);const [dragTarget,setDragTarget]=useState<string|null>(null);
  const [importWarnings,setImportWarnings]=useState<Record<string,string>>({});
- const [aiNotice,setAiNotice]=useState(false);
+ const [aiNotice,setAiNotice]=useState(false),[shortNotice,setShortNotice]=useState(false);
+ const shortApproval=useRef<string|null>(null);
+ const draftSignature=JSON.stringify(app.drafts.map(d=>[d.id,d.text]));
+ const hasShortNotice=app.drafts.some(d=>!d.demo&&d.text.trim()&&Array.from(d.text.replace(/\s/g,'')).length<=20);
  const reducedMotion=useMediaQuery('(prefers-reduced-motion: reduce)');
  const draftElements=useRef(new Map<string,HTMLElement>());
  const [leavingDrafts,setLeavingDrafts]=useState<{draft:Draft;index:number}[]>([]);
@@ -44,8 +47,8 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
  const retryText=retrySeconds>3600?'稍后再试':retrySeconds>=60?`${Math.ceil(retrySeconds/60)} 分钟后`:`${retrySeconds} 秒后`;
  const total=app.drafts.reduce((n,d)=>n+d.text.length,0);const hasContent=app.drafts.some(d=>d.text.trim());
  async function analyze(){try{if(await app.analyze())onDone();}catch(e){app.report(e);}}
- async function submit(){if(app.demoDraftID){try{if(await app.analyzeDemo())onDone();}catch(e){app.report(e);}return;}if(!app.cloud?.getKey()){onLogin();return;}if(localStorage.getItem('campus-inbox:ai-notice:v1')!=='seen'){setAiNotice(true);return;}await analyze();}
- function fillDemo(){const id=app.fillDemoDraft();if(id)requestAnimationFrame(()=>{const element=draftElements.current.get(id);element?.scrollIntoView({block:'nearest',behavior:reducedMotion?'instant':'smooth'});element?.querySelector<HTMLTextAreaElement>('textarea:not([aria-hidden="true"])')?.focus({preventScroll:true});});}
+ async function submit(){if(app.demoDraftID){try{if(await app.analyzeDemo())onDone();}catch(e){app.report(e);}return;}if(hasShortNotice&&shortApproval.current!==draftSignature){setShortNotice(true);return;}if(!app.cloud?.getKey()){onLogin();return;}if(localStorage.getItem('campus-inbox:ai-notice:v1')!=='seen'){setAiNotice(true);return;}await analyze();}
+ function fillDemo(draftID:string){const id=app.fillDemoDraft(draftID);if(id)requestAnimationFrame(()=>{const element=draftElements.current.get(id);element?.scrollIntoView({block:'nearest',behavior:reducedMotion?'instant':'smooth'});element?.querySelector<HTMLTextAreaElement>('textarea:not([aria-hidden="true"])')?.focus({preventScroll:true});});}
  function acknowledge(){localStorage.setItem('campus-inbox:ai-notice:v1','seen');setAiNotice(false);void analyze();}
  async function picked(files:FileList|null){const id=target;if(!files||!id||importLock.current)return;importLock.current=true;setAdding(true);try{await app.attach(id,Array.from(files));setImportWarnings(old=>({...old,[id]:''}));}catch(e){app.report(e);}finally{importLock.current=false;setAdding(false);if(input.current)input.current.value='';}}
  async function importContent(id:string,read:()=>Promise<ClipboardImport>,selection?:DraftSelection){
@@ -97,7 +100,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
    <Stack direction="row" sx={{alignItems:"center",justifyContent:"space-between",gap:1,mb:1.5}}>
     <Typography variant="h6">通知 {index+1}</Typography>
     <Stack direction="row" sx={{gap:.5,alignItems:'center'}}>
-     {index===0&&<Button data-guide="fill" size="small" variant="contained" startIcon={<AutoAwesomeOutlined sx={{fontSize:17}}/>} disabled={app.busy||adding} onClick={fillDemo} sx={{minHeight:36,px:1.25,borderRadius:"10px",fontSize:14,fontWeight:700,whiteSpace:"nowrap",boxShadow:"none"}}>填入示例</Button>}
+     <Button data-guide={index===0?"fill":undefined} size="small" variant="contained" startIcon={<AutoAwesomeOutlined sx={{fontSize:17}}/>} disabled={app.busy||adding} onClick={()=>fillDemo(draft.id)} sx={{minHeight:36,px:1.25,borderRadius:"10px",fontSize:14,fontWeight:700,whiteSpace:"nowrap",boxShadow:"none"}}>填入示例</Button>
      {(app.drafts.length>1||draft.text||draft.attachments.length>0)&&<IconButton aria-label={`移除通知${index+1}`} disabled={app.busy||adding||leaving} onClick={()=>removeDraft(draft,index)}><Close/></IconButton>}
     </Stack>
    </Stack>
@@ -111,7 +114,6 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
   </Paper></Collapse>)}
   <input hidden ref={input} type="file" multiple onChange={e=>void picked(e.target.files)}/>
   <Button data-first-entry="composer-action" aria-label="再加一条通知" startIcon={<Add/>} sx={{alignSelf:'center',color:'primary.main'}} disabled={app.busy||adding||app.drafts.length>=20} onClick={addDraft}>再加一条</Button>
-  {hasContent&&<Typography sx={{fontSize:13,color:'text.secondary',textAlign:'center'}}>多条通知可以一起整理</Typography>}
   <Box data-first-entry="composer-action" className="composer-actions" sx={{py:1,position:shortViewport&&!embedded?'static':'sticky',bottom:embedded?0:topNavigation?16:'calc(80px + var(--safe-bottom))',zIndex:2,bgcolor:'background.default'}}>
    {app.busy&&<LinearProgress sx={{mb:1,borderRadius:1}}/>}
    {app.busy&&showWaitHint&&<Typography variant="body2" color="text.secondary" role="status" sx={{mb:1}}>正在确认提交，确认后可离开。</Typography>}
@@ -120,6 +122,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
      {app.busy&&<Button sx={{flexShrink:0,whiteSpace:'nowrap'}} onClick={app.cancel}>停止等待</Button>}
    </Stack>
   </Box>
+  <Dialog open={shortNotice} onClose={()=>setShortNotice(false)} aria-labelledby="short-notice-heading"><DialogTitle id="short-notice-heading">通知比较短，要继续吗？</DialogTitle><DialogContent><Typography>建议粘贴一条班群长通知，或填入示例体验。</Typography></DialogContent><DialogActions><Button onClick={()=>setShortNotice(false)}>返回编辑</Button><Button variant="contained" onClick={()=>{shortApproval.current=draftSignature;setShortNotice(false);void submit();}}>继续整理</Button></DialogActions></Dialog>
   <Dialog open={aiNotice} onClose={()=>setAiNotice(false)} aria-labelledby="ai-notice-heading"><DialogTitle id="ai-notice-heading">整理前请留意</DialogTitle><DialogContent><Typography>AI 可能出错，重要信息请核对原文。</Typography></DialogContent><DialogActions><Button onClick={()=>setAiNotice(false)}>取消</Button><Button variant="contained" onClick={acknowledge}>开始整理</Button></DialogActions></Dialog>
  </Stack>;
 }

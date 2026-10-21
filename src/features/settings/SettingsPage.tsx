@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Alert, Box, Button, ButtonBase, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
-  DialogTitle, Divider, Paper, Stack, Switch, TextField, ToggleButton, ToggleButtonGroup, Typography,
+  DialogTitle, Divider, Paper, Stack, Switch, TextField, ToggleButton, ToggleButtonGroup, Typography, useMediaQuery,
 } from '@mui/material';
 import MailOutline from '@mui/icons-material/MailOutlined';
 import PaletteOutlined from '@mui/icons-material/PaletteOutlined';
@@ -12,7 +12,9 @@ import DeleteOutline from '@mui/icons-material/DeleteOutlined';
 import ChevronRight from '@mui/icons-material/ChevronRight';
 import ArrowBack from '@mui/icons-material/ArrowBack';
 import TuneOutlined from '@mui/icons-material/TuneOutlined';
+import CodeOutlined from '@mui/icons-material/CodeOutlined';
 import HelpOutline from '@mui/icons-material/HelpOutlineOutlined';
+import PlayCircleOutline from '@mui/icons-material/PlayCircleOutlined';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import PersonOutline from '@mui/icons-material/PersonOutlined';
 import Sync from '@mui/icons-material/Sync';
@@ -32,6 +34,7 @@ import {friendlyErrorMessage} from '../../shared/error-message';
 
 interface Props {
   app: CampusController;
+  developerEnabled?:boolean;
   onLogin: () => void;
   onHelp: () => void;
   onAbout: () => void;
@@ -40,8 +43,8 @@ interface Props {
   onFilterNotices?: (enabled:boolean) => void;
   expandCampus?: boolean;
 }
-type Category='appearance'|'feedback'|'sync'|'tools'|'campus'|'faq';
-const categoryTitles:Record<Category,string>={appearance:'外观与阅读',feedback:'操作反馈',sync:'账号与同步',tools:'工具与帮助',campus:'通知筛选与校历',faq:'常见问题'};
+type Category='appearance'|'feedback'|'sync'|'tools'|'campus'|'faq'|'developer';
+const categoryTitles:Record<Category,string>={appearance:'外观与阅读',feedback:'操作反馈',sync:'账号与同步',tools:'工具与帮助',campus:'通知筛选',faq:'常见问题',developer:'开发者设置'};
 const sectionStyle={borderRadius:'18px',overflow:'hidden'} as const;
 const rowStyle={alignItems:'center',gap:1.5,px:{xs:2,sm:2.5},py:2.25,borderTop:'1px solid',borderColor:'divider'} as const;
 
@@ -64,7 +67,7 @@ function SettingIcon({children}:{children:ReactNode}) {
   return <Box sx={{width:38,height:38,borderRadius:'12px',display:'grid',placeItems:'center',flexShrink:0,color:'text.secondary',bgcolor:'action.hover','& .MuiSvgIcon-root':{fontSize:22}}}>{children}</Box>;
 }
 function ToolRow({icon,title,detail,onClick,disabled=false}:{icon:ReactNode;title:string;detail?:string;onClick:()=>void;disabled?:boolean}) {
-  return <ButtonBase onClick={onClick} disabled={disabled} sx={{width:'100%',display:'flex',gap:1.5,alignItems:'center',textAlign:'left',px:{xs:2,sm:2.5},py:2.2,minHeight:86,borderTop:'1px solid',borderColor:'divider','&:first-of-type':{borderTop:0},'&.Mui-disabled':{opacity:.5},'&:hover':{bgcolor:'action.hover'},'&.Mui-focusVisible':{outline:'2px solid',outlineColor:'primary.main',outlineOffset:-3}}}>
+  return <ButtonBase onClick={onClick} disabled={disabled} sx={{width:'100%',display:'flex',gap:1.5,alignItems:'center',textAlign:'left',px:{xs:2,sm:2.5},py:2.2,minHeight:86,borderTop:'1px solid',borderColor:'divider','&:first-of-type':{borderTop:0},'&.Mui-disabled':{opacity:.5},'@media (hover:hover)':{'&:hover':{bgcolor:'action.hover'}},'&:active':{bgcolor:'action.selected'},'&.Mui-focusVisible':{outline:'2px solid',outlineColor:'primary.main',outlineOffset:-3}}}>
     <SettingIcon>{icon}</SettingIcon>
     <Box component="span" sx={{flex:1,minWidth:0}}><Typography component="span" sx={{display:'block',fontSize:18,fontWeight:650,lineHeight:1.5}}>{title}</Typography>
       {detail&&<Typography component="span" sx={{display:'block',fontSize:14,color:'text.secondary',mt:.4,lineHeight:1.6,overflowWrap:'anywhere'}}>{detail}</Typography>}</Box>
@@ -78,7 +81,8 @@ function PreferenceRow({title,detail,checked,onChange,disabled=false}:{title:str
   </Stack>;
 }
 
-export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, onFilterNotices, expandCampus = false }: Props) {
+export function SettingsPage({ developerEnabled=false, app, onLogin, onHelp, onAbout, onDialogChange, onShowNotices, onFilterNotices, expandCampus = false }: Props) {
+  const reducedMotion=useMediaQuery('(prefers-reduced-motion: reduce)');
   const [category,setCategory]=useState<Category|null>(()=>expandCampus?'campus':null);
   const [running, setRunning] = useState<string | null>(null);
   const [sounds,setSounds]=useState(operationSoundsEnabled),[haptics,setHaptics]=useState(operationHapticsEnabled);
@@ -99,7 +103,7 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
     if(!category)return;
     return app.platform.onBack(()=>{
       if(document.querySelector('[role="dialog"],dialog[open]'))return false;
-      setCategory(category==='campus'||category==='faq'?'tools':null);return true;
+      setCategory(category==='campus'||category==='faq'||category==='developer'?'tools':null);return true;
     });
   },[app.platform,category]);
   function openCategory(next:Category|null){setError('');setCategory(next);window.scrollTo({top:0,behavior:'instant'});}
@@ -122,9 +126,9 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
     ? 'warning' : app.sync.status === 'syncing' || app.sync.pendingChanges || app.sync.conflicts.length ? 'primary' : 'success';
   const themeLabel=app.theme==='system'?'跟随系统':app.theme==='light'?'浅色':'深色';
 
-  return <Stack spacing={2.5} sx={{maxWidth:720,mx:'auto',pb:4,'& .MuiButton-root':{fontSize:15,minHeight:42}}}>
+  return <Stack key={category??'main'} className="settings-page" spacing={2.5} sx={{animation:reducedMotion?'none':'settings-enter 340ms cubic-bezier(.22,1,.36,1)',maxWidth:720,mx:'auto',pb:4,'& .MuiButton-root':{fontSize:15,minHeight:42}}}>
     <Box>
-      {category&&<Button color="inherit" startIcon={<ArrowBack sx={{fontSize:19}}/>} onClick={()=>openCategory(category==='campus'||category==='faq'?'tools':null)} sx={{ml:-1,mb:1,color:'text.secondary'}}>返回{category==='campus'||category==='faq'?'工具与帮助':'设置'}</Button>}
+      {category&&<Button color="inherit" startIcon={<ArrowBack sx={{fontSize:19}}/>} onClick={()=>openCategory(category==='campus'||category==='faq'||category==='developer'?'tools':null)} sx={{ml:-1,mb:1,color:'text.secondary'}}>返回{category==='campus'||category==='faq'||category==='developer'?'工具与帮助':'设置'}</Button>}
       <Typography ref={heading} tabIndex={-1} component="h1" sx={{fontSize:{xs:30,sm:34},lineHeight:1.3,fontWeight:760,outline:'none'}}>{category?categoryTitles[category]:'设置'}</Typography>
     </Box>
     {error && !logoutOpen && !conflict && !transferOpen && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
@@ -136,7 +140,6 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
         <ToolRow icon={<MailOutline/>} title="账号与同步" detail={app.sync.connected?`${status}${app.email?` · ${app.email}`:''}`:'登录后同步通知与进度'} onClick={()=>openCategory('sync')}/>
         <ToolRow icon={<TuneOutlined/>} title="工具与帮助" detail="备份、回收站、常见问题" onClick={()=>openCategory('tools')}/>
       </Paper>
-      <SettingsUsageState app={app}/>
     </>}
 
     {category==='appearance'&&<Paper variant="outlined" sx={sectionStyle}>
@@ -149,13 +152,13 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
         </ToggleButtonGroup>
       </Box>
       <PreferenceRow title="自动展开全部细节" detail="打开通知时，同时展开各事项的步骤、材料与说明。" checked={uiPreferences.expandAllDetails} onChange={enabled=>changePreference('expandAllDetails',enabled)}/>
-      <PreferenceRow title="显示添加日期" detail="在通知卡片上显示保存到 Inbox 的日期。" checked={uiPreferences.showAddedDate} onChange={enabled=>changePreference('showAddedDate',enabled)}/>
+      <PreferenceRow title="显示添加日期" detail="展开通知后显示添加日期。" checked={uiPreferences.showAddedDate} onChange={enabled=>changePreference('showAddedDate',enabled)}/>
     </Paper>}
 
     {category==='feedback'&&<Paper variant="outlined" sx={{...sectionStyle,'& > :first-child':{borderTop:0}}}>
       <PreferenceRow title="操作音效" detail="完成、整理、删除时轻响。" checked={sounds} onChange={enabled=>{try{setOperationSoundsEnabled(enabled);setSounds(enabled);}catch(issue){app.report(issue);}}}/>
       {app.platform.kind==='android'&&<PreferenceRow title="操作震动" detail="跟随系统触感设置。" checked={haptics} onChange={enabled=>{try{setOperationHapticsEnabled(enabled);setHaptics(enabled);}catch(issue){app.report(issue);}}}/>}
-      <PreferenceRow title="手机滑动操作" detail="左右滑动通知，快速收藏或删除。" checked={uiPreferences.swipeActions} onChange={enabled=>changePreference('swipeActions',enabled)}/>
+      <PreferenceRow title="手机滑动操作" detail="右滑完成，左滑删除。" checked={uiPreferences.swipeActions} onChange={enabled=>changePreference('swipeActions',enabled)}/>
     </Paper>}
 
     {category==='sync'&&<Paper variant="outlined" sx={{...sectionStyle,p:{xs:2,sm:2.5}}}>
@@ -183,11 +186,13 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
       {app.platform.kind!=='android'?<ToolRow icon={<DownloadOutlined/>} title="安卓下载" detail="蓝奏 / GitHub" onClick={()=>setDownloadsOpen(true)}/>:<AndroidUpdateSettings platform={app.platform}/>}
       <ToolRow icon={<Inventory2Outlined/>} title="导入与导出" disabled={busy} onClick={()=>setTransferOpen(true)}/>
       <ToolRow icon={<DeleteOutline/>} title="回收站" detail={app.trashItems.length?`${app.trashItems.length} 条通知`:undefined} disabled={busy} onClick={()=>setTrashOpen(true)}/>
-      <ToolRow icon={<PersonOutline/>} title="通知筛选与校历" onClick={()=>openCategory('campus')}/>
+      <ToolRow icon={<PersonOutline/>} title="通知筛选" onClick={()=>openCategory('campus')}/>
       <ToolRow icon={<HelpOutline/>} title="常见问题" onClick={()=>openCategory('faq')}/>
-      <ToolRow icon={<HelpOutline/>} title="重新看引导" onClick={onHelp}/>
+      <ToolRow icon={<PlayCircleOutline/>} title="重看教程" onClick={onHelp}/>
       <ToolRow icon={<InfoOutlined/>} title="关于拾笺 Inbox" onClick={onAbout}/>
+      {(developerEnabled||isOwner)&&<ToolRow icon={<CodeOutlined/>} title="开发者设置" onClick={()=>openCategory('developer')}/>}
     </Paper>}
+    {category==='developer'&&(developerEnabled||isOwner)&&<><Paper variant="outlined" sx={{...sectionStyle,p:2.5}}><Typography sx={{fontSize:18,fontWeight:650,mb:1}}>重新加载示例</Typography><Typography sx={{fontSize:14,color:'text.secondary',mb:2}}>恢复内置示例的进度与删除记录。</Typography><Button variant="outlined" disabled={busy} onClick={()=>void run('resetexamples',async()=>{await app.resetExamples();onShowNotices?.();})}>重新加载示例</Button></Paper><SettingsUsageState app={app}/></>}
     {category==='campus'&&<Paper variant="outlined" sx={sectionStyle}>
       <CampusPreferencesPanel value={app.preferences} onSave={app.setPreferences} disabled={busy} initiallyExpanded={expandCampus} onApplyFilter={onFilterNotices}/>
       <TeachingWeekPanel value={app.preferences} onSave={app.setPreferences} disabled={busy}/>

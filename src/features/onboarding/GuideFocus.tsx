@@ -85,13 +85,14 @@ export function GuideFocus({selector,readingSelector,active,children,onClose,blo
    if(reading){
     const action=currentAction(),height=window.visualViewport?.height??window.innerHeight;
     const width=window.visualViewport?.width??window.innerWidth,panelHeight=panel.current?.getBoundingClientRect().height??210;
-    const measured=guideLayout({width,height},rect(reading),action?rect(action):null,panelHeight);
+    const top=(shell!.querySelector('header')?.getBoundingClientRect().bottom??62)+6;
+    const measured=guideLayout({width,height,top},rect(reading),action?rect(action):null,panelHeight);
     if(first){
      first=false;moveStarted=now;
      const before=lastLayout.current;
      // A newly generated card fades into focus where it actually appears.
      // Do not fly the caption or stretch a hole from the bottom submit button.
-     if(before&&!reduced&&selector!=='.notice-card'){
+     if(before&&!reduced&&selector!=='.notice-card'&&selector!=='.notice-overview'){
       focusOffset=guideRectOffset(before.focus,measured.focus);
       if(before.control&&measured.control)controlOffset=guideRectOffset(before.control,measured.control);
      }
@@ -154,7 +155,7 @@ export function GuideFocus({selector,readingSelector,active,children,onClose,blo
   for(const name of events)document.addEventListener(name,guard,true);
   document.addEventListener('keydown',keyboard,true);
   lock();frame=requestAnimationFrame(measure);
-  const fade=selector==='.notice-card'&&!reduced?panel.current?.animate([{opacity:0},{opacity:1}],{duration:320,easing:'ease-out'}):undefined;
+  const fade=(selector==='.notice-card'||selector==='.notice-overview')&&!reduced?panel.current?.animate([{opacity:0},{opacity:1}],{duration:320,easing:'ease-out'}):undefined;
   const firstReveal=requestAnimationFrame(reveal),settled=setTimeout(reveal,reduced?0:760);
   return()=>{
    disposed=true;cancelAnimationFrame(frame);cancelAnimationFrame(firstReveal);clearTimeout(settled);
