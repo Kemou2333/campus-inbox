@@ -40,7 +40,7 @@ export function GuideFocus({selector,readingSelector,active,children,onClose,blo
   const shell=document.querySelector<HTMLElement>('[data-guide-shell]');
   if(!shell)return;
   let frame=0,disposed=false,first=true,moveStarted=0;
-  let focusOffset:GuideRect|null=null,controlOffset:GuideRect|null=null,panelOffset:GuideRect|null=null;
+  let focusOffset:GuideRect|null=null,controlOffset:GuideRect|null=null;
   let highlighted:HTMLElement|null=null,targetPulse:Animation|null=null;
   let readOnly:HTMLTextAreaElement|null=null,wasReadOnly=false;
   const locked=new Map<HTMLElement,ControlState>();
@@ -89,10 +89,11 @@ export function GuideFocus({selector,readingSelector,active,children,onClose,blo
     if(first){
      first=false;moveStarted=now;
      const before=lastLayout.current;
-     if(before&&!reduced){
+     // A newly generated card fades into focus where it actually appears.
+     // Do not fly the caption or stretch a hole from the bottom submit button.
+     if(before&&!reduced&&selector!=='.notice-card'){
       focusOffset=guideRectOffset(before.focus,measured.focus);
       if(before.control&&measured.control)controlOffset=guideRectOffset(before.control,measured.control);
-      panelOffset=guideRectOffset({...before.panel,height:0},{...measured.panel,height:0});
      }
     }
     const remaining=reduced?0:1-ease(Math.min(1,(now-moveStarted)/720));
@@ -101,7 +102,7 @@ export function GuideFocus({selector,readingSelector,active,children,onClose,blo
     const displayed:GuideLayout={...measured,
      focus:focusOffset?followGuideRect(measured.focus,focusOffset,remaining):measured.focus,
      control:measured.control&&controlOffset?followGuideRect(measured.control,controlOffset,remaining):measured.control,
-     panel:panelOffset?followGuideRect({...measured.panel,height:0},panelOffset,remaining):measured.panel};
+     panel:measured.panel};
     lastLayout.current=displayed;
     setLayout(previous=>sameLayout(previous,displayed)?previous:displayed);
     const space=measured.side?'0px':`${panelHeight+44}px`;
@@ -153,10 +154,11 @@ export function GuideFocus({selector,readingSelector,active,children,onClose,blo
   for(const name of events)document.addEventListener(name,guard,true);
   document.addEventListener('keydown',keyboard,true);
   lock();frame=requestAnimationFrame(measure);
+  const fade=selector==='.notice-card'&&!reduced?panel.current?.animate([{opacity:0},{opacity:1}],{duration:320,easing:'ease-out'}):undefined;
   const firstReveal=requestAnimationFrame(reveal),settled=setTimeout(reveal,reduced?0:760);
   return()=>{
    disposed=true;cancelAnimationFrame(frame);cancelAnimationFrame(firstReveal);clearTimeout(settled);
-   mutation.disconnect();targetPulse?.cancel();highlighted?.classList.remove('guide-focus-target');
+   mutation.disconnect();fade?.cancel();targetPulse?.cancel();highlighted?.classList.remove('guide-focus-target');
    for(const name of events)document.removeEventListener(name,guard,true);
    document.removeEventListener('keydown',keyboard,true);
    for(const [control,state] of locked)restore(control,state);

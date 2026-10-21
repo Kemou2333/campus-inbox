@@ -17,6 +17,11 @@ beforeEach(()=>{
 });
 afterEach(()=>vi.unstubAllGlobals());
 describe('sparse operation sounds',()=>{
+ it('keeps the introduction chime quieter than a saved-operation confirmation',async()=>{
+  const sound=await import('../src/shared/operation-sounds');const dispose=sound.installOperationSounds();
+  expect(sound.playOperationSound('welcome')).toBe(false);doc.dispatchEvent(new Event('pointerdown'));
+  expect(sound.playOperationSound('welcome')).toBe(true);expect(peak.mock.calls.every(([gain])=>gain<=.012)).toBe(true);dispose();
+ });
  it('uses a softer short sound for favorite and priority selection',async()=>{
   const sound=await import('../src/shared/operation-sounds');const dispose=sound.installOperationSounds();doc.dispatchEvent(new Event('pointerdown'));
   expect(sound.playOperationSound('selection')).toBe(true);

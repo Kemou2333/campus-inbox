@@ -2,6 +2,7 @@ import {afterEach,expect,test,vi} from 'vitest';
 import {createGuideSession,GUIDE_NOTICE_ID} from '../src/features/onboarding/guide-session';
 import {canAdvanceGuide,GUIDE_READING_PAUSE,GUIDE_COMPLETE_TARGET,guideBlockedMessage,guideReadingTarget,guideStepTarget} from '../src/features/onboarding/guide-progress';
 import {followGuideRect,guideLayout,guideRectOffset} from '../src/features/onboarding/guide-layout';
+import {setNoticeCompleted} from '../src/domain/notice';
 
 afterEach(()=>vi.useRealTimers());
 test('practice only generates after the real fill action and can update its isolated notice',async()=>{
@@ -20,6 +21,14 @@ test('closing mid-generation cancels work and a new practice cannot receive old 
  vi.useFakeTimers();const session=createGuideSession();session.fill();const work=session.organize();
  session.dispose();expect(await work).toBe(false);session.reset();await vi.advanceTimersByTimeAsync(4000);
  expect(session.snapshot.notice).toBeNull();expect(session.snapshot.filled).toBe(false);expect(session.snapshot.busy).toBe(false);
+});
+test('going back after completion restores the previous practice so the big check can work again',async()=>{
+ const session=createGuideSession();session.fill();await session.organize(0);
+ const before=structuredClone(session.snapshot.notice!);
+ session.act(GUIDE_NOTICE_ID,n=>setNoticeCompleted(n,true));expect(session.snapshot.notice?.completed).toBe(true);
+ session.rewindCompletion();expect(session.snapshot.notice).toEqual(before);
+ session.act(GUIDE_NOTICE_ID,n=>setNoticeCompleted(n,true));expect(session.snapshot.notice?.completed).toBe(true);
+ session.rewindCompletion();expect(session.snapshot.notice).toEqual(before);session.dispose();
 });
 test('steps gate on performed actions and retain a reading pause',()=>{
  const empty={pasted:false,generated:false,reviewed:false,completed:false};
@@ -45,7 +54,8 @@ test('filled example targets the real textarea and completion targets the whole-
  const reviewed={...filled,generated:true,reviewed:true};
  expect(guideStepTarget(3,reviewed,true)).toBe(GUIDE_COMPLETE_TARGET);
  expect(guideReadingTarget(3,reviewed)).toBe(GUIDE_COMPLETE_TARGET);
- expect(guideStepTarget(3,{...reviewed,completed:true},true)).toBe(GUIDE_COMPLETE_TARGET);
+ expect(guideStepTarget(3,{...reviewed,completed:true},true)).toBe('.notice-card');
+ expect(guideReadingTarget(3,{...reviewed,completed:true})).toBe('.notice-card');
  expect(GUIDE_COMPLETE_TARGET).not.toContain('Checkbox');
 });
 test('blocked attempts explain the current action, including the reading pause',()=>{

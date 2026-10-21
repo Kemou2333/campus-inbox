@@ -16,13 +16,13 @@ export function guideStepTarget(step:number,progress:GuideProgress,expanded:bool
  if(step===0)return progress.pasted?'.composer-text textarea':'[data-guide="fill"]';
  if(step===1)return progress.generated?'.notice-card':'[data-guide="organize"]';
  if(step===2)return progress.reviewed?'.task-content':expanded?'.task-expand':'.notice-expand';
- return GUIDE_COMPLETE_TARGET;
+ return progress.completed?'.notice-card':GUIDE_COMPLETE_TARGET;
 }
 
 export function guideReadingTarget(step:number,progress:GuideProgress){
  if(step===0)return progress.pasted?'.composer-text textarea':'.composer-draft';
  if(step===1&&!progress.generated)return '.composer-actions';
- if(step===3)return GUIDE_COMPLETE_TARGET;
+ if(step===3)return progress.completed?'.notice-card':GUIDE_COMPLETE_TARGET;
  return '.notice-card';
 }
 

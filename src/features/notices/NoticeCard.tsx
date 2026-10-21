@@ -25,7 +25,6 @@ import {CorrectionProvider,CorrectionTarget} from './CorrectionTarget';
 import {restoreAIContent} from '../../domain/corrections';
 import {HighlightedText} from '../../shared/ui/SearchHighlight';
 import {completeFeedback,favoriteFeedback,noticeMotion} from './notice-motion';
-import {CompletionCelebration} from './CompletionCelebration';
 import {isNewCompletion} from './completion-feedback';
 import {SwipeSurface} from './SwipeSurface';
 import {defaultUiPreferences,type UiPreferences} from '../../shared/ui-preferences';
@@ -117,5 +116,5 @@ export function NoticeCard({notice:n,app,actions,now,expanded:providedExpanded,o
     {editing&&<Box sx={{display:'flex',justifyContent:'flex-end',mt:1.5}}><Button variant="contained" onClick={onEditingClose}>完成</Button></Box>}
    </Box></Collapse>
   </Box>
- </Paper></SwipeSurface>{celebration&&status==='completed'&&<CompletionCelebration point={celebration} reducedMotion={reducedMotion}/>}</CorrectionProvider>;
+ </Paper></SwipeSurface></CorrectionProvider>;
 }
