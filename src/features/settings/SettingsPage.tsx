@@ -13,6 +13,7 @@ import ChevronRight from '@mui/icons-material/ChevronRight';
 import ArrowBack from '@mui/icons-material/ArrowBack';
 import TuneOutlined from '@mui/icons-material/TuneOutlined';
 import CodeOutlined from '@mui/icons-material/CodeOutlined';
+import GitHub from '@mui/icons-material/GitHub';
 import HelpOutline from '@mui/icons-material/HelpOutlineOutlined';
 import PlayCircleOutline from '@mui/icons-material/PlayCircleOutlined';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
@@ -31,6 +32,7 @@ import {SettingsFAQ,SettingsUsageState} from './SettingsFAQ';
 import {AndroidDownloads} from '../../shared/ui/AndroidDownloads';
 import {AndroidUpdateSettings} from './AndroidUpdateSettings';
 import {friendlyErrorMessage} from '../../shared/error-message';
+import {InboxCharm} from '../../shared/ui/InboxCharm';
 
 interface Props {
   app: CampusController;
@@ -198,6 +200,14 @@ export function SettingsPage({ developerEnabled=false, app, onLogin, onHelp, onA
       <TeachingWeekPanel value={app.preferences} onSave={app.setPreferences} disabled={busy}/>
     </Paper>}
     {category==='faq'&&<Paper variant="outlined" sx={sectionStyle}><SettingsFAQ/></Paper>}
+    {!category&&<Box component="footer" sx={{textAlign:'center',pt:2,pb:1}}>
+      <InboxCharm size={64} message="今天也少翻了几条群通知。"/>
+      <Typography sx={{fontSize:14,color:'text.secondary',mt:.5}}>慢慢来，一件一件就好。</Typography>
+      <Stack direction="row" sx={{justifyContent:'center',gap:1,mt:1,flexWrap:'wrap'}}>
+        {app.platform.kind!=='android'&&<Button startIcon={<DownloadOutlined sx={{fontSize:18}}/>} onClick={()=>setDownloadsOpen(true)} sx={{color:'text.secondary'}}>安卓下载</Button>}
+        <Button component="a" href="https://github.com/Kemou2333/campus-inbox" target="_blank" rel="noopener noreferrer" startIcon={<GitHub sx={{fontSize:18}}/>} sx={{color:'text.secondary'}}>GitHub 仓库</Button>
+      </Stack>
+    </Box>}
     <input ref={picker} type="file" accept="application/json,.json" hidden aria-label="选择通知备份" onChange={event=>{const file=event.target.files?.[0];event.target.value='';if(file){setTransferOpen(false);void run('import',()=>app.importBackup(file));}}}/>
 
     <TrashDialog open={trashOpen} app={app} onClose={()=>setTrashOpen(false)}/>

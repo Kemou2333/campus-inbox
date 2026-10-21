@@ -57,11 +57,11 @@ export function createGuestDemoNotice(draftID:string=crypto.randomUUID(),source=
   reminders:notice.reminders.map(reminder=>({...reminder,id:`demo-${crypto.randomUUID()}`}))};
 }
 /** This wait models the product flow only; no provider or business endpoint is called. */
-export function waitForGuestDemo(signal:AbortSignal):Promise<void>{
+export function waitForGuestDemo(signal:AbortSignal,delay=GUEST_DEMO_DELAY_MS):Promise<void>{
  return new Promise((resolve,reject)=>{
   if(signal.aborted){reject(new DOMException('示例体验已停止','AbortError'));return;}
   const done=()=>{signal.removeEventListener('abort',cancel);resolve();};
-  const timer=setTimeout(done,GUEST_DEMO_DELAY_MS);
+  const timer=setTimeout(done,delay);
   const cancel=()=>{clearTimeout(timer);signal.removeEventListener('abort',cancel);reject(new DOMException('示例体验已停止','AbortError'));};
   signal.addEventListener('abort',cancel,{once:true});
  });
