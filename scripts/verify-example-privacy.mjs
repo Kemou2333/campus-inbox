@@ -68,6 +68,21 @@ export function auditPublicExamples(backup,provenance){
   return findings;
 }
 
+/** First provider results: review privacy only, never improve the model's words. */
+export function auditModelTests(dataset){
+ const findings=[],add=category=>findings.push({path:'modelTests',category});
+ if(dataset?.version!==1||dataset.manualWordEdits!==false||dataset.manualContentCorrections!==false||dataset.privacyReview?.manualReview!==true||!Array.isArray(dataset.cases)||!dataset.cases.length||dataset.cases.length>30)return [{path:'modelTests',category:'missing_raw_result_review'}];
+ const names=dataset.privacyReview.approvedPseudonyms??[];
+ const scan=(value,path)=>{if(Array.isArray(value))value.forEach((v,i)=>scan(v,`${path}[${i}]`));else if(value&&typeof value==='object')Object.entries(value).forEach(([k,v])=>scan(v,`${path}.${k}`));else if(typeof value==='string')findings.push(...auditPublicExampleText(value,path,names));};
+ const ids=new Set();
+ for(const row of dataset.cases){
+  if(ids.has(row.id)||typeof row.id!=='string')add('duplicate_case');ids.add(row.id);
+  if(row.sourceSha256!==createHash('sha256').update(row.originalText??'').digest('hex')||row.analysisSha256!==publicExampleHash(row.analysis))add('reviewed_model_result_changed');
+  scan(row.originalText,`modelTests.${row.id}.originalText`);scan(row.analysis,`modelTests.${row.id}.analysis`);
+ }
+ return findings;
+}
+
 async function main(){
   const publicRoot=new URL('../public/',import.meta.url);
   const backup=JSON.parse(await readFile(new URL('examples.json',publicRoot),'utf8'));
@@ -90,6 +105,7 @@ async function main(){
     for(const [field,value] of [['question',question.question],['answer',question.answer],...question.evidence.map((text,index)=>[`evidence[${index}]`,text])])findings.push(...auditPublicExampleText(value,`${path}.${field}`,provenance.privacyReview.approvedPseudonyms));
     if(!notice||question.sourceSha256!==createHash('sha256').update(notice.originalText).digest('hex')||!question.evidence.every(text=>notice.originalText.includes(text)))findings.push({path,category:'question_must_match_reviewed_original'});
   }
+  findings.push(...auditModelTests(JSON.parse(await readFile(new URL('model-tests.json',publicRoot),'utf8'))));
   for(const name of ['examples-legacy.json','examples-legacy-2.4.json']){
     const registry=JSON.parse(await readFile(new URL(name,publicRoot),'utf8'));
     if(!Array.isArray(registry)||registry.some(entry=>!entry||Object.keys(entry).sort().join(',')!=='fingerprint,id'||typeof entry.id!=='string'||!/^example-(?:reading|v1)-[a-z0-9-]+$/.test(entry.id)||!/^[a-f0-9]{64}$/.test(entry.fingerprint)))findings.push({path:name,category:'legacy_must_be_fingerprints_only'});

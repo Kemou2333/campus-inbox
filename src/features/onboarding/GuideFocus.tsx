@@ -14,12 +14,12 @@ const ease=(t:number)=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
 
 type GuideFocusProps={
  selector:string;readingSelector:string;active:boolean;children:ReactNode;onClose:()=>void;
- blockedMessage:string;targetReadOnly?:boolean;actionEnabled?:boolean;pulse?:boolean;
+ blockedMessage:string;targetReadOnly?:boolean;actionEnabled?:boolean;pulse?:boolean;returnToTop?:boolean;
 };
 type ControlState={tabIndex:string|null;ariaDisabled:string|null};
 
 /** The hole reveals the real page. Only the current practice action can run. */
-export function GuideFocus({selector,readingSelector,active,children,onClose,blockedMessage,targetReadOnly=false,actionEnabled=true,pulse=false}:GuideFocusProps){
+export function GuideFocus({selector,readingSelector,active,children,onClose,blockedMessage,targetReadOnly=false,actionEnabled=true,pulse=false,returnToTop=false}:GuideFocusProps){
  const theme=useTheme(),reduced=useMediaQuery('(prefers-reduced-motion: reduce)');
  const panel=useRef<HTMLDivElement>(null),lastLayout=useRef<GuideLayout|null>(null);
  const [layout,setLayout]=useState<GuideLayout|null>(null),[arrived,setArrived]=useState(false);
@@ -39,7 +39,7 @@ export function GuideFocus({selector,readingSelector,active,children,onClose,blo
   if(!active)return;
   const shell=document.querySelector<HTMLElement>('[data-guide-shell]');
   if(!shell)return;
-  let frame=0,disposed=false,first=true,moveStarted=0;
+  let frame=0,disposed=false,first=true,moveStarted=0,topRevealed=false;
   let focusOffset:GuideRect|null=null,controlOffset:GuideRect|null=null;
   let highlighted:HTMLElement|null=null,targetPulse:Animation|null=null;
   let readOnly:HTMLTextAreaElement|null=null,wasReadOnly=false;
@@ -85,14 +85,14 @@ export function GuideFocus({selector,readingSelector,active,children,onClose,blo
    if(reading){
     const action=currentAction(),height=window.visualViewport?.height??window.innerHeight;
     const width=window.visualViewport?.width??window.innerWidth,panelHeight=panel.current?.getBoundingClientRect().height??210;
-    const top=(shell!.querySelector('header')?.getBoundingClientRect().bottom??62)+6;
+    const top=visibleTop(next);
     const measured=guideLayout({width,height,top},rect(reading),action?rect(action):null,panelHeight);
     if(first){
      first=false;moveStarted=now;
      const before=lastLayout.current;
      // A newly generated card fades into focus where it actually appears.
      // Do not fly the caption or stretch a hole from the bottom submit button.
-     if(before&&!reduced&&selector!=='.notice-card'&&selector!=='.notice-overview'){
+     if(before&&!reduced&&!returnToTop&&selector!=='.notice-card'&&selector!=='.notice-overview'){
       focusOffset=guideRectOffset(before.focus,measured.focus);
       if(before.control&&measured.control)controlOffset=guideRectOffset(before.control,measured.control);
      }
@@ -111,15 +111,30 @@ export function GuideFocus({selector,readingSelector,active,children,onClose,blo
    }
    frame=requestAnimationFrame(measure);
   }
+  function visibleTop(next:HTMLElement|null){
+   const headerBottom=shell!.querySelector('header')?.getBoundingClientRect().bottom??62;
+   const pane=next?.closest<HTMLElement>('.workspace-pane');
+   // The sticky feed tabs also cover targets inside the independently scrolling pane.
+   const paneTop=pane?.getBoundingClientRect().top??0;
+   const tabsBottom=pane?.querySelector('.feed-controls')?.getBoundingClientRect().bottom??0;
+   return Math.max(headerBottom,paneTop,tabsBottom)+10;
+  }
   function reveal(){
    if(disposed)return;
    const next=target(),reading=context();if(!next||!reading)return;
    const height=window.visualViewport?.height??window.innerHeight,width=window.visualViewport?.width??window.innerWidth;
-   const area=guideLayout({width,height},rect(reading),rect(next),panel.current?.getBoundingClientRect().height??210);
-   const bounds=next.getBoundingClientRect(),top=82,bottom=area.availableBottom-14;
+   const scroll=next.closest<HTMLElement>('.workspace-pane');
+   if(returnToTop&&!topRevealed){
+    topRevealed=true;
+    if(scroll)scroll.scrollTo({top:0,behavior:reduced?'instant':'smooth'});
+    else window.scrollTo({top:0,behavior:reduced?'instant':'smooth'});
+    return;
+   }
+   const top=visibleTop(next);
+   const area=guideLayout({width,height,top},rect(reading),rect(next),panel.current?.getBoundingClientRect().height??210);
+   const bounds=next.getBoundingClientRect(),bottom=area.availableBottom-14;
    const delta=bounds.height>bottom-top?bounds.top-top:bounds.top<top?bounds.top-top:bounds.bottom>bottom?bounds.bottom-bottom:0;
    if(Math.abs(delta)>1){
-    const scroll=next.closest<HTMLElement>('.workspace-pane');
     if(scroll)scroll.scrollBy({top:delta,behavior:reduced?'instant':'smooth'});
     else window.scrollBy({top:delta,behavior:reduced?'instant':'smooth'});
    }
@@ -166,7 +181,7 @@ export function GuideFocus({selector,readingSelector,active,children,onClose,blo
    if(readOnly)readOnly.readOnly=wasReadOnly;
    shell.style.removeProperty('--guide-bottom-space');
   };
- },[active,selector,readingSelector,reduced,targetReadOnly,actionEnabled,pulse]);
+ },[active,selector,readingSelector,reduced,targetReadOnly,actionEnabled,pulse,returnToTop]);
 
  if(!active)return null;
  const focus=arrived?layout?.focus:null,control=arrived?layout?.control:null;
