@@ -186,7 +186,7 @@ export function SettingsPage({ app, onLogin, onHelp, onAbout, onDialogChange, on
       <ToolRow icon={<PersonOutline/>} title="通知筛选与校历" onClick={()=>openCategory('campus')}/>
       <ToolRow icon={<HelpOutline/>} title="常见问题" onClick={()=>openCategory('faq')}/>
       <ToolRow icon={<HelpOutline/>} title="重新看引导" onClick={onHelp}/>
-      <ToolRow icon={<InfoOutlined/>} title="关于校园 Inbox" onClick={onAbout}/>
+      <ToolRow icon={<InfoOutlined/>} title="关于拾笺 Inbox" onClick={onAbout}/>
     </Paper>}
     {category==='campus'&&<Paper variant="outlined" sx={sectionStyle}>
       <CampusPreferencesPanel value={app.preferences} onSave={app.setPreferences} disabled={busy} initiallyExpanded={expandCampus} onApplyFilter={onFilterNotices}/>

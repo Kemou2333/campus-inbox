@@ -32,7 +32,7 @@ final class NativeReminders {
         alarms = this.context.getSystemService(AlarmManager.class);
         notifications = this.context.getSystemService(NotificationManager.class);
         NotificationChannel channel = new NotificationChannel(CHANNEL, "校园提醒", NotificationManager.IMPORTANCE_DEFAULT);
-        channel.setDescription("你在校园 Inbox 中主动设置的本地提醒");
+        channel.setDescription("你在拾笺 Inbox 中主动设置的本地提醒");
         channel.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
         notifications.createNotificationChannel(channel);
     }

@@ -10,7 +10,7 @@ const syncNames={disconnected:'未连接',idle:'空闲',syncing:'正在同步',o
 /** Explicit allowlist: never copy account names, IDs, notices, credentials or raw errors. */
 export function problemSummary(app:SummaryApp,online:boolean|undefined):string{
  const active=app.analysisJobs.some(job=>job.status==='accepted'||job.status==='running');
- return ['校园 Inbox · 使用状态',`版本：${version}`,`平台：${app.platform.kind==='android'?'安卓应用':'网页'}`,`网络：${online===undefined?'未知':online?'设备在线':'设备离线'}`,`登录：${app.sync.connected?'已登录':'未登录'}`,`同步：${syncNames[app.sync.status]}${app.sync.pendingChanges?'，有改动待上传':''}`,`整理：${app.unconfirmedSubmissions.length?'有提交待确认':active?'云端处理中':app.analysisJobs.some(job=>job.status==='failed')?'有未完成任务':'暂无处理中任务'}${app.jobStatusError?'，状态暂未读到':''}`].join('\n');
+ return ['拾笺 Inbox · 使用状态',`版本：${version}`,`平台：${app.platform.kind==='android'?'安卓应用':'网页'}`,`网络：${online===undefined?'未知':online?'设备在线':'设备离线'}`,`登录：${app.sync.connected?'已登录':'未登录'}`,`同步：${syncNames[app.sync.status]}${app.sync.pendingChanges?'，有改动待上传':''}`,`整理：${app.unconfirmedSubmissions.length?'有提交待确认':active?'云端处理中':app.analysisJobs.some(job=>job.status==='failed')?'有未完成任务':'暂无处理中任务'}${app.jobStatusError?'，状态暂未读到':''}`].join('\n');
 }
 export function ProblemHelpDialog({app,open,onClose}:Props){
  const [online,setOnline]=useState<boolean|undefined>(()=>typeof navigator==='undefined'?undefined:navigator.onLine),[copyState,setCopyState]=useState<'idle'|'copied'|'manual'>('idle');
