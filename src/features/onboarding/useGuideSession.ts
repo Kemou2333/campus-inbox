@@ -35,7 +35,7 @@ export function useGuideSession(app:CampusController,active:boolean){
   },update:()=>undefined,remove:noAction,
   changeDraft:noAction,insertDraft:noAction,pasteDraft:noAction,addDraft:noAction,
   removeDraft:async()=>{},attach:async()=>{},detach:async()=>{},
-  markNoticeRead:noAction,clearUnreadNotices:noAction,loadExamples:async()=>{},resetExamples:async()=>{},
+  markNoticeRead:noAction,clearUnreadNotices:noAction,loadExamples:async()=>{},resetExamples:async()=>{},loadModelTests:async()=>{},modelTestMode:false,setModelTestMode:noAction,modelTestFailureCount:0,
   recoverResult:noAction,recoverLegacyResult:noAction,receiveShare:async()=>false,
   report:noAction,tell:noAction,cancel:()=>session.reset()
  };

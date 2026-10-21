@@ -19,6 +19,7 @@ import {addFiles, cleanupFiles, exportFiles, getFile, restoreFiles, MAX_NOTICE_F
 import {createNotice, exportBackup, exportTextBackup, newID, parseAnalysisBatch, parseBackup, parseNotices} from '../domain/notice';
 import {mergeExamples,selectExampleBatch,writeExamplesHidden} from '../domain/examples';
 import {planExampleReset} from '../domain/reset-examples';
+import {MODEL_TEST_MODE_KEY,isModelTestNotice,parseModelTestCatalog} from '../domain/model-tests';
 import type {Notice} from '../domain/types';
 import {createPlatform, type PlatformCapabilities} from '../platform';
 import {loadConfig, type RuntimeConfig} from './config';
@@ -79,6 +80,9 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  const [toast,setToast]=useState<Toast|null>(null);
  const [pending,setPending]=useState(()=>!!localStorage.getItem(RESULT_KEY));
  const [remainingExamples,setRemainingExamples]=useState<number|null>(null);
+ const [modelTestFailureCount,setModelTestFailureCount]=useState(()=>{try{return Math.min(30,Math.max(0,Number(localStorage.getItem('campus-inbox:model-test-failures:v1'))||0));}catch{return 0;}});
+ const [modelTestMode,setModelTestModeState]=useState(()=>{try{return localStorage.getItem(MODEL_TEST_MODE_KEY)==='shown';}catch{return false;}});
+ function setModelTestMode(enabled:boolean){localStorage.setItem(MODEL_TEST_MODE_KEY,enabled?'shown':'hidden');setModelTestModeState(enabled);}
  const examplesRefreshing=useRef(new Set<string>());
  const [latestAddedID,setLatestAddedID]=useState<string|null>(null);
  const [analysisJobs,setAnalysisJobs]=useState<AnalysisJob[]>([]);
@@ -461,6 +465,17 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   setRemainingExamples(batch.remaining);
   if(!quiet)tell(merged.replaced?'示例已更新':merged.added?`已载入 ${merged.added} 条示例`:'示例已载入');
  }
+ async function loadModelTests(){
+  if(busy)throw new Error('请等当前操作完成。');
+  const scope=localDataScopeRef.current;
+  const response=await fetch('./model-tests.json',{cache:'no-store'});if(!response.ok)throw new Error('测试结果暂时无法载入。');
+  const dataset=await response.json(),records=parseModelTestCatalog(dataset);
+  if(scope!==localDataScopeRef.current)throw new Error('账号已切换，请重试。');
+  // The reserved local-demo prefix cannot enter the cloud repository.
+  save([...repository.load().filter(n=>!isModelTestNotice(n)),...records]);
+  const failures=Array.isArray(dataset.failures)?dataset.failures.length:0;localStorage.setItem('campus-inbox:model-test-failures:v1',String(failures));setModelTestFailureCount(failures);
+  setModelTestMode(true);tell(`已载入 ${records.length} 条真实测试结果`);
+ }
  async function resetExamples(){
   if(busy)throw new Error('请等当前操作完成。');
   const scope=localDataScopeRef.current;
@@ -517,6 +532,6 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   return result;
  }
  return {notices,drafts,remainingExamples,localDataScope,trashItems,restoreTrash,deleteTrashEntry,emptyTrash,unreadNoticeIDs,markNoticeRead,clearUnreadNotices,demoDraftID:drafts.some(d=>d.text.trim())&&drafts.filter(d=>d.text.trim()).every(isGuestDemoDraft)?drafts.find(isGuestDemoDraft)?.id??null:null,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,preferences,setPreferences,bootError:boot.error,
-  report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,fillDemoDraft,attach,detach,removeDraft,analyze,analyzeDemo,askQuestion,cancel:()=>abort.current?.abort(),loadExamples,resetExamples,backup,importBackup,login,logout,bindEmail,receiveShare};
+  report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,fillDemoDraft,attach,detach,removeDraft,analyze,analyzeDemo,askQuestion,cancel:()=>abort.current?.abort(),loadExamples,resetExamples,loadModelTests,modelTestMode,setModelTestMode,modelTestFailureCount,backup,importBackup,login,logout,bindEmail,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;
