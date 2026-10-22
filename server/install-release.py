@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """Install only this application's source; called by a restricted deploy key."""
 import io,os,pathlib,subprocess,sys,tarfile,time,urllib.request,uuid
-allowed={'server/backup-state.py','server/campus-backup.service','server/campus-backup.timer','server/admin.mjs','server/admin-ui.mjs','server/test-records.mjs','server/contracts/source-evidence.js','server/index.mjs','server/analyze.mjs','server/service.mjs','server/image-captcha.mjs','server/sync.mjs','server/auth.mjs','server/email-auth.mjs','server/mail-sender.mjs','server/manage-invites.mjs','worker/prompt.mjs','server/contracts/data.js','server/contracts/time.js','server/contracts/email-policy.mjs','server/vendor/nodemailer-10.0.16.mjs','server/vendor/NODEMAILER-LICENSE','server/vendor/NODEMAILER-SOURCE.md'}
+allowed={'server/site-transfer.mjs','server/backup-state.py','server/campus-backup.service','server/campus-backup.timer','server/admin.mjs','server/admin-ui.mjs','server/test-records.mjs','server/contracts/source-evidence.js','server/index.mjs','server/analyze.mjs','server/service.mjs','server/image-captcha.mjs','server/sync.mjs','server/auth.mjs','server/email-auth.mjs','server/mail-sender.mjs','server/manage-invites.mjs','worker/prompt.mjs','server/contracts/data.js','server/contracts/time.js','server/contracts/email-policy.mjs','server/vendor/nodemailer-10.0.16.mjs','server/vendor/NODEMAILER-LICENSE','server/vendor/NODEMAILER-SOURCE.md'}
 archive=sys.stdin.buffer.read(4*1024*1024+1)
 if len(archive)>4*1024*1024:raise SystemExit('Release archive is too large')
 files={}

@@ -39,6 +39,16 @@ async function write(operation: (store: IDBObjectStore) => void): Promise<void> 
   });
 }
 
+/** Same-device site migration includes drafts and retained recycle-bin files. */
+export async function allLocalFiles():Promise<StoredAttachment[]> {
+  const db=await database();
+  return new Promise((resolve,reject)=>{const request=db.transaction('files').objectStore('files').getAll();request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(new Error('附件暂时无法读取，原文件仍保留。'));});
+}
+export async function appendLocalFiles(files:StoredAttachment[]):Promise<void> {
+  // add, never put: a concurrent tab's attachment must not be replaced.
+  await write(store=>{for(const file of files)store.add(file);});
+}
+
 export function validateFiles(files: readonly Pick<Blob, 'size'>[]): void {
   if (files.length > MAX_NOTICE_FILES) throw new Error('每条通知最多添加 10 个附件。');
   if (files.some(file => file.size > MAX_FILE_BYTES)) throw new Error('单个附件不能超过 5 MB。');

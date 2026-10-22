@@ -24,7 +24,9 @@ export function auditPublicExampleText(value,path,approvedPseudonyms=[]){
     ['unnatural_privacy_placeholder',/\[(?:群号|联系电话|报名入口|通知入口|平台入口(?:\s*[AB])?|链接已脱敏|学号|姓名)\]|【(?:群号|联系电话|链接)已脱敏】/],
   ];
   for(const [category,pattern] of checks)if(pattern.test(value))add(category);
-  const domains=/(?<![\w@.-])(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}(?::\d+)?(?:[/?#][^\s<>"'()[\]{}，。；：！？、（）“”‘’]*)?/gi;
+  // Markdown emphasis/code delimiters are presentation, not URL path bytes.
+  // Hostnames, permitted paths and the ban on query/fragment parameters stay exact.
+  const domains=/(?<![\w@.-])(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}(?::\d+)?(?:[/?#][^\s<>"'`*()[\]{}，。；：！？、（）“”‘’]*)?/gi;
   for(const match of value.matchAll(domains))if(!/^(?:www\.)?example\.com(?:\/[a-z0-9/_-]*)?$/i.test(match[0]))add('specific_link');
   const approved=new Set(approvedPseudonyms);
   const labelledName=/(?:姓名|联系人姓名|负责人姓名)\s*[：:]\s*[*_`]{0,2}\s*([\u4e00-\u9fff]{2,4})(?![\u4e00-\u9fff])/g;

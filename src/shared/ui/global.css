@@ -37,3 +37,6 @@ button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 @keyframes boundary-breathe{0%{opacity:0;transform:scaleX(.35)}35%{opacity:.65;transform:scaleX(1.1)}100%{opacity:0;transform:scaleX(.65)}}
 
 @keyframes settings-enter{from{opacity:.35;transform:translateX(9px)}to{opacity:1;transform:translateX(0)}}
+
+@media(prefers-reduced-motion:no-preference){.sample-entry[data-practice-nudge="true"]{animation:practice-invitation 2100ms cubic-bezier(.22,1,.36,1) 650ms 1}}
+@keyframes practice-invitation{0%,100%{transform:scale(1) rotate(0)}22%{transform:scale(1.085) rotate(-1.5deg)}38%{transform:scale(1.015) rotate(1deg)}57%{transform:scale(1.065) rotate(-.7deg)}76%{transform:scale(.99) rotate(0)}}
