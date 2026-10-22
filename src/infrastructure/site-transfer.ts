@@ -64,30 +64,6 @@ async function post(path:string,body:BodyInit,token?:string,binary=false){
  const response=await fetch(HOME+'site-transfer'+path,{method:'POST',headers:{'Content-Type':binary?'application/octet-stream':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body,cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(30000)});
  if(!response.ok)throw new Error('数据暂时未能合并，原数据仍在旧网址。');return response;
 }
-async function exportSnapshot():Promise<Snapshot>{
- const files:FileCopy[]=[];let size=0;
- for(const file of await allLocalFiles()){
-  size+=file.size;if(size>88*CHUNK)throw new Error('附件较多，请先导出完整备份；原网址仍可使用。');
-  files.push({id:file.id,name:file.name,type:file.type,size:file.size,data:encode(new Uint8Array(await file.blob.arrayBuffer()))});
- }
- return {version:1,source:SOURCE,storage:storageValues(localStorage),session:storageValues(sessionStorage),files};
-}
-async function send(){
- const snapshot=await exportSnapshot();
- if(!Object.keys(snapshot.storage).length&&!Object.keys(snapshot.session).length&&!snapshot.files.length){location.replace(HOME+location.search);return;}
- const bytes=new TextEncoder().encode(JSON.stringify(snapshot));if(bytes.byteLength>MAX)throw new Error('本机数据较多，请先导出备份；原网址仍可使用。');
- const keyBytes=crypto.getRandomValues(new Uint8Array(32)),key=await crypto.subtle.importKey('raw',keyBytes,'AES-GCM',false,['encrypt']);
- const {id,token}=await (await post('',JSON.stringify({parts:Math.ceil(bytes.length/CHUNK),bytes:bytes.length}))).json();
- if(!/^[a-f0-9]{32}$/.test(id)||!/^[A-Za-z0-9_-]{43}$/.test(token))throw new Error('传输入口暂时不可用。');
- for(let part=0;part<Math.ceil(bytes.length/CHUNK);part++){
-  const iv=crypto.getRandomValues(new Uint8Array(12)),aad=new TextEncoder().encode(id+':'+part),cipher=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:aad},key,bytes.subarray(part*CHUNK,(part+1)*CHUNK)));
-  const payload=new Uint8Array(iv.length+cipher.length);payload.set(iv);payload.set(cipher,iv.length);await post('/'+id+'/write/'+part,payload,token,true);
- }
- await post('/'+id+'/ready','{}',token);
- // Disclose only this trusted source origin for the one authenticated handoff.
- document.querySelector<HTMLMetaElement>('meta[name="referrer"]')?.setAttribute('content','origin');
- location.replace(HOME+location.search+'#campus-transfer='+[id,token,encode(keyBytes)].join('.'));
-}
 async function receive(value:string){
  const [id,token,rawKey,...extra]=value.split('.');if(extra.length||!/^[a-f0-9]{32}$/.test(id)||!/^[A-Za-z0-9_-]{43}$/.test(token)||!/^[A-Za-z0-9_-]{43}$/.test(rawKey))throw new Error('合并地址不完整，原数据仍保留。');
  const key=await crypto.subtle.importKey('raw',decode(rawKey),'AES-GCM',false,['decrypt']);
@@ -106,25 +82,31 @@ async function receive(value:string){
 }
 function status(message:string){const root=document.getElementById('root')!;root.replaceChildren();const text=document.createElement('p');text.textContent=message;text.setAttribute('role','status');text.style.cssText='margin:35vh auto 0;text-align:center;font:16px system-ui;color:#315950';root.append(text);}
 
-/** Run before mounting repositories, so no blank initial state can overwrite imports. */
+async function receiveExplicitTransfer(pending:string):Promise<boolean>{
+ status('正在合并本机数据…');
+ try{await receive(pending);return true;}catch(error){
+  status(error instanceof Error&&/[\u4e00-\u9fff]/.test(error.message)?error.message:'合并未完成，原数据仍保留。');
+  const retry=document.createElement('button');retry.textContent='重新合并';
+  retry.onclick=()=>{void receiveExplicitTransfer(pending).then(ready=>{if(ready)location.reload();});};
+  retry.style.cssText='display:block;margin:24px auto;padding:12px 20px';
+  const home=document.createElement('button');home.textContent='先打开主页';
+  // Keep the pending encrypted handoff available. Ordinary entry no longer
+  // resumes it, so opening the home page cannot trigger another merge wait.
+  home.onclick=()=>location.reload();home.style.cssText=retry.style.cssText;
+  document.getElementById('root')!.append(retry,home);return false;
+ }
+}
+
+/** Ordinary visits stay on their own origin and mount local data immediately.
+ * Only an explicit, trusted legacy handoff may run before repositories mount. */
 export async function prepareSiteEntry():Promise<boolean>{
  if(window.top!==window||window.CampusNative?.postMessage)return true;
- if(location.origin===SOURCE&&location.pathname.startsWith('/campus-inbox/')){
-  if(new URLSearchParams(location.search).get('stay')==='1')return true;
-  status('正在合并本机数据…');
-  try{await send();return false;}catch{status('暂时无法切换，原来的数据仍在这里。');const button=document.createElement('button');button.textContent='继续使用备用入口';button.onclick=()=>{const url=new URL(location.href);url.searchParams.set('stay','1');location.replace(url);};button.style.cssText='display:block;margin:24px auto;padding:12px 20px';document.getElementById('root')!.append(button);return false;}
- }
- if(location.origin===TARGET){
-  const hash=location.hash.startsWith('#campus-transfer=')?location.hash.slice('#campus-transfer='.length):null;
-  if(hash){
-   // Prevent a link from another site from fixing an attacker's login session.
-   let trusted=false;try{trusted=new URL(document.referrer).origin===SOURCE;}catch{}
-   history.replaceState(null,'',location.pathname+location.search);
-   if(!trusted){status('合并入口无效，请从原来的 GitHub 网址打开。');return false;}
-   sessionStorage.setItem(PENDING,hash);
-  }
-  const pending=sessionStorage.getItem(PENDING);
-  if(pending){status('正在合并本机数据…');try{await receive(pending);}catch(error){status(error instanceof Error&&/[\u4e00-\u9fff]/.test(error.message)?error.message:'合并未完成，原数据仍保留。');const retry=document.createElement('button');retry.textContent='重新合并';retry.onclick=()=>location.reload();retry.style.cssText='display:block;margin:24px auto;padding:12px 20px';const home=document.createElement('button');home.textContent='先打开主页';home.onclick=()=>{sessionStorage.removeItem(PENDING);location.reload();};home.style.cssText=retry.style.cssText;document.getElementById('root')!.append(retry,home);return false;}}
- }
- return true;
+ if(location.origin!==TARGET||!location.hash.startsWith('#campus-transfer='))return true;
+ const hash=location.hash.slice('#campus-transfer='.length);
+ // Prevent a link from another site from fixing an attacker's login session.
+ let trusted=false;try{trusted=new URL(document.referrer).origin===SOURCE;}catch{}
+ history.replaceState(null,'',location.pathname+location.search);
+ if(!trusted){status('合并入口无效，请从原来的 GitHub 网址打开。');return false;}
+ sessionStorage.setItem(PENDING,hash);
+ return receiveExplicitTransfer(hash);
 }

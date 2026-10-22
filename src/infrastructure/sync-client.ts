@@ -84,7 +84,7 @@ function parseReply(value: unknown): SyncReply {
   return { cursor: o.cursor!, accepted, updates: o.updates.map(parseUpdate), conflicts: o.conflicts.map(parseUpdate), hasMore: o.hasMore };
 }
 
-/** Local-first continuous sync. The app schedules saves/polls; no hidden background timer. */
+/** Local-first text sync. The app triggers changes/login/manual reads, not idle polls. */
 export class CloudSync {
   private endpoint: string;
   private storage: StoragePort;
@@ -114,6 +114,7 @@ export class CloudSync {
   }
   getKey(): string | null { return this.metadata?.key ?? null; }
   getState(): SyncState { return structuredClone(this.state); }
+  needsSync(): boolean { return !!this.metadata&&(this.metadata.hasMore||this.changes(this.localMap()).length>0); }
   subscribe(listener: (state: SyncState) => void): () => void {
     this.listeners.add(listener); listener(this.getState());
     return () => { this.listeners.delete(listener); };
@@ -209,7 +210,7 @@ export class CloudSync {
     } catch (error) {
       if (generation === this.generation && this.metadata) {
         const offline = error instanceof TypeError || error instanceof Error && error.name === 'AbortError';
-        this.refreshState(offline ? 'offline' : 'error', offline ? '暂时无法连接云端，修改已保存在本机，稍后自动重试' : error instanceof Error ? error.message : '暂时无法同步，稍后自动重试');
+        this.refreshState(offline ? 'offline' : 'error', offline ? '暂时无法连接云端，修改已保存在本机，联网后或再次修改时会继续同步' : error instanceof Error ? error.message : '暂时无法同步，修改已保存在本机，可手动重试');
       }
     } finally {
       if (generation === this.generation) this.controller = null;

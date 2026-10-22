@@ -11,6 +11,8 @@ import {triggerOperationHaptic} from '../shared/operation-haptics';
 import {isNewCompletion} from '../features/notices/completion-feedback';
 import {createGuestDemoNotice,GUEST_DEMO_MARKER,nextGuestDemoSource,isGuestDemoDraft,waitForGuestDemo} from '../infrastructure/guest-demo';
 import {createCloudSync, type CloudSync, type SyncState} from '../infrastructure/sync-client';
+import {installEventSync} from '../infrastructure/event-sync';
+import {createPendingJobPolling,type PendingJobPolling} from '../infrastructure/pending-job-polling';
 import {createAuthClient, type AuthClient, type AuthSession, type AuthOptions} from '../infrastructure/auth-client';
 import {AnalysisError,type AnalyzeOptions} from '../infrastructure/ai-client';
 import {askNoticeQuestion} from '../infrastructure/notice-question-client';
@@ -95,7 +97,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  const jobReads=useRef<AbortController|null>(null);
  const jobRefresh=useRef<{generation:number;promise:Promise<void>}|null>(null);
  const jobRefreshRerun=useRef(false);
- const jobNextPoll=useRef(0);
+ const jobPolling=useRef<PendingJobPolling|null>(null);
  const jobSeenCompleted=useRef(new Set<string>());
  const resultRef=useRef<{sources:Draft[];result:unknown}|null>(null);
  const abort=useRef<AbortController|null>(null);
@@ -109,7 +111,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
 
  function tell(text:string,undo?:()=>void){setToast({id:Date.now(),text,undo});}
  function report(e:unknown){setError(message(e));}
- function activateJobAccount(account:string|null){jobGeneration.current++;jobReads.current?.abort();jobAccountRef.current=account;localDataScopeRef.current=accountLocalScope(account);setLocalDataScope(localDataScopeRef.current);jobNextPoll.current=0;jobRefreshRerun.current=false;jobSeenCompleted.current.clear();setJobAccount(account);setAnalysisJobs([]);setUnconfirmedSubmissions([]);setJobStatusError('');}
+ function activateJobAccount(account:string|null){jobGeneration.current++;jobReads.current?.abort();jobAccountRef.current=account;localDataScopeRef.current=accountLocalScope(account);setLocalDataScope(localDataScopeRef.current);jobPolling.current?.setPending(false);jobRefreshRerun.current=false;jobSeenCompleted.current.clear();setJobAccount(account);setAnalysisJobs([]);setUnconfirmedSubmissions([]);setJobStatusError('');}
  function setTheme(value:ThemePreference){localStorage.setItem('campus-inbox:theme:v5',value);setThemeState(value);}
  function setPreferences(value:CampusPreferences){const next=parseCampusPreferences(value);localStorage.setItem(CAMPUS_PREFERENCES_KEY,JSON.stringify(next));setPreferencesState(next);}
  function save(next:Notice[]){repository.save(next);setNotices(next);}
@@ -203,28 +205,22 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  },[config,personalRepository,boot.error]);
  useEffect(()=>{
   if(!cloud||!sync.connected)return;
-  const kick=()=>{if(document.visibilityState==='visible')void cloud.syncNow();};
-  const visibility=()=>{void cloud.syncNow();};
-  const leaving=()=>{void cloud.syncNow();};
-  const timer=setInterval(kick,20_000);window.addEventListener('online',kick);window.addEventListener('focus',kick);document.addEventListener('visibilitychange',visibility);window.addEventListener('pagehide',leaving);
-  return()=>{clearInterval(timer);window.removeEventListener('online',kick);window.removeEventListener('focus',kick);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('pagehide',leaving);};
- },[cloud,sync.connected]);
- useEffect(()=>{if(!cloud||!sync.connected)return;const timer=setTimeout(()=>void cloud.syncNow(),300);return()=>clearTimeout(timer);},[notices,cloud,sync.connected]);
+  return installEventSync(personalRepository,cloud,window);
+ },[cloud,sync.connected,personalRepository]);
 
  useEffect(()=>{
   if(!cloud||!config||!jobAccount||!sync.connected)return;
-  const kick=()=>{if(document.visibilityState==='visible')void refreshAnalysisJobs();};
-  const poll=()=>{if(Date.now()>=jobNextPoll.current)kick();};
-  // Check the due timestamp often enough: a 5s clock plus a 5s deadline skips the next tick after network latency.
-  kick();const timer=setInterval(poll,1_000);window.addEventListener('online',kick);window.addEventListener('focus',kick);document.addEventListener('visibilitychange',kick);
-  return()=>{clearInterval(timer);window.removeEventListener('online',kick);window.removeEventListener('focus',kick);document.removeEventListener('visibilitychange',kick);jobReads.current?.abort();};
+  const polling=createPendingJobPolling({refresh:()=>refreshAnalysisJobs(),visible:()=>document.visibilityState==='visible',windowEvents:window,documentEvents:document});
+  jobPolling.current=polling;polling.start();
+  return()=>{polling.dispose();if(jobPolling.current===polling)jobPolling.current=null;jobReads.current?.abort();};
  },[cloud,config,jobAccount,sync.connected]);
 
  async function login(session:AuthSession){
   if(!cloud)throw new Error('同步服务尚未准备好。');
+  const reloadJobs=jobAccountRef.current===session.username;
   activateJobAccount(session.username);
   setUsername(session.username);setEmail(session.email??null);localStorage.setItem(USERNAME_KEY,session.username);
-  await cloud.connect(session.key);tell('已登录，通知会自动同步。');
+  await cloud.connect(session.key);tell('已登录，有修改时会同步。');if(reloadJobs)void refreshAnalysisJobs();
  }
  async function bindEmail(challengeId:string,code:string){
   const key=cloud?.getKey();if(!key||!auth)throw new Error('请先登录原账号。');
@@ -331,7 +327,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
     const visible=[...jobs.values()].filter(j=>j.status==='accepted'||j.status==='running'||j.status==='failed'&&!context.journal.dismissed(j.id));
     const unconfirmed=context.journal.all().filter(s=>!s.jobId);
     setAnalysisJobs(visible);setUnconfirmedSubmissions(unconfirmed);setJobStatusError('');
-    jobNextPoll.current=Date.now()+(visible.some(j=>j.status==='accepted'||j.status==='running')||unconfirmed.length?5_000:30_000);
+    jobPolling.current?.setPending(visible.some(j=>j.status==='accepted'||j.status==='running')||unconfirmed.length>0);
     const completed=[...jobs.values()].filter(j=>j.status==='completed');
     if(completed.some(j=>!jobSeenCompleted.current.has(j.id)||context.journal.all().some(s=>s.requestId===j.requestId))){
      const state=await context.cloud.syncNow();if(!context.current())return;
@@ -347,13 +343,12 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
        if(first&&Date.now()-Date.parse(submission.createdAt)<120_000){playOperationSound('organized');triggerOperationHaptic(platform,'organized');}
       }
       for(const job of completed)jobSeenCompleted.current.add(job.id);
-     }
+     }else jobPolling.current?.setPending(true);
     }
    }catch(e){
     if(!context.current()||controller.signal.aborted)return;
     if(e instanceof AnalysisError&&e.code==='AUTH_REQUIRED'){activateJobAccount(null);context.cloud.disconnect();}
-    else setJobStatusError(message(e));
-    jobNextPoll.current=Date.now()+5_000;
+    else {setJobStatusError(message(e));jobPolling.current?.setPending(context.journal.all().length>0||!!jobPolling.current?.hasPending());}
    }
   })().finally(()=>{
    if(jobRefresh.current?.promise===promise){jobRefresh.current=null;if(jobRefreshRerun.current&&context.current()){jobRefreshRerun.current=false;void refreshAnalysisJobs();}}
