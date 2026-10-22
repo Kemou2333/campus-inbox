@@ -1,14 +1,17 @@
 import { describe, expect, test } from 'vitest';
 import { createNotice, updateNote } from '../src/domain/notice';
 import type { Notice, NoticeAnalysis } from '../src/domain/types';
-import { createCloudSync, normalizeSyncEndpoint, recordHash } from '../src/infrastructure/sync-client';
+import { createCloudSync, normalizeSyncEndpoint, recordHash,automaticConflictChoice } from '../src/infrastructure/sync-client';
 import { LocalRepository } from '../src/infrastructure/local-repository';
+import {NoticeTrash} from '../src/infrastructure/notice-trash';
 
 class MemoryStorage {
   data = new Map<string, string>();
   getItem(key: string) { return this.data.get(key) ?? null; }
   setItem(key: string, value: string) { this.data.set(key, value); }
   removeItem(key: string) { this.data.delete(key); }
+  get length(){return this.data.size;}
+  key(index:number){return [...this.data.keys()][index]??null;}
 }
 const analysis: NoticeAnalysis = { schemaVersion: 4, kind: 'task', title: '核对学籍', summary: '核对学籍信息后确认。', deadline: null, deadlineText: '10月15日前', timeline: [], materials: [], warnings: [], reminders: [], tasks: [{ text: '核对学籍信息', assignee: '2026级新生', scope: 'all', condition: '', details: [], steps: [], time: null, timeText: '10月15日前', location: null }] };
 const record = () => createNotice(analysis, '通知原文', '2026-10-01T13:00:00Z');
@@ -95,6 +98,81 @@ describe('continuous text-only cloud sync', () => {
     first.repository.save([updateNote(n, { type: 'notice' }, '离线新增笔记')]); server.failed = true; await first.sync.syncNow();
     expect(first.sync.getState()).toMatchObject({ status: 'offline', pendingChanges: 1 }); expect(first.repository.load()[0].note).toBe('离线新增笔记');
     server.failed = false; await first.sync.syncNow(); expect(server.rows.get(n.id)?.record?.note).toBe('离线新增笔记');
+  });
+});
+
+describe('stable account baselines survive session changes',()=>{
+  const account='550e8400-e29b-41d4-a716-446655440000',otherAccount='550e8400-e29b-41d4-a716-446655440001';
+  async function ordinaryDefault(d:ReturnType<typeof device>){
+    const conflict=d.sync.getState().conflicts[0],choice=automaticConflictChoice(conflict);
+    const current=d.repository.load().find(n=>n.id===conflict.id)??null,preserved=choice==='local'?conflict.remote:current;
+    if(preserved)new NoticeTrash(d.storage).add('account:'+account,preserved,0);
+    await d.sync.resolveConflict(conflict.id,choice,{version:conflict.version,localHash:recordHash(current)});
+  }
+  test('logout/reload/relogin accepts a remote edit without uploading the unchanged old snapshot',async()=>{
+    const server=new SyncServer(),n={...record(),attachments:['local-file']},a=device(server,[n]);await a.sync.connect(server.key,account);
+    const b=device(server);await b.sync.connect(server.key,account);a.sync.disconnect();
+    const baselines=[...a.storage.data].filter(([name])=>name.includes('sync-baseline:'));expect(baselines).toHaveLength(1);expect(baselines[0][1]).not.toContain(server.key);expect(JSON.parse(baselines[0][1])).not.toHaveProperty('key');
+    b.repository.save([updateNote(b.repository.load()[0],{type:'notice'},'另一设备的新笔记')]);await b.sync.syncNow();const before=server.revision;
+    server.key='R'.repeat(43);
+    const reloaded=createCloudSync(a.repository,'https://example.test/sync',{storage:a.storage,fetch:server.fetch});expect(reloaded.getKey()).toBeNull();
+    await reloaded.connect(server.key,account);
+    expect(server.requests.at(-1)?.changes).toEqual([]);expect(server.revision).toBe(before);
+    expect(a.repository.load()[0]).toMatchObject({note:'另一设备的新笔记',attachments:['local-file']});expect(reloaded.getState().conflicts).toEqual([]);
+  });
+  test('a remote deletion stays deleted after logout and a new session token',async()=>{
+    const server=new SyncServer(),n=record(),a=device(server,[n]);await a.sync.connect(server.key,account);
+    const b=device(server);await b.sync.connect(server.key,account);a.sync.disconnect();b.repository.save([]);await b.sync.syncNow();const before=server.revision;
+    server.key='D'.repeat(43);await a.sync.connect(server.key,account);
+    expect(a.repository.load()).toEqual([]);expect(server.rows.get(n.id)?.record).toBeNull();expect(server.revision).toBe(before);expect(a.sync.getState().conflicts).toEqual([]);
+  });
+  test('token rotation while connected retains the account CAS versions and fingerprints',async()=>{
+    const server=new SyncServer(),n=record(),a=device(server,[n]);await a.sync.connect(server.key,account);
+    const remote=updateNote(n,{type:'notice'},'换会话前的远端更新');server.rows.set(n.id,{id:n.id,version:++server.revision,record:remote});const before=server.revision;
+    server.key='T'.repeat(43);await a.sync.connect(server.key,account);
+    expect(a.repository.load()[0].note).toBe(remote.note);expect(server.revision).toBe(before);expect(server.requests.at(-1)?.changes).toEqual([]);
+  });
+  test('different stable UUIDs never inherit the other account baseline, even when local IDs overlap',async()=>{
+    const server=new SyncServer(),n=record(),a=device(server,[n]);await a.sync.connect(server.key,account);
+    const remote=updateNote(n,{type:'notice'},'不同账号的云版本');server.rows.set(n.id,{id:n.id,version:++server.revision,record:remote});const before=server.requests.length;
+    server.key='O'.repeat(43);await a.sync.connect(server.key,otherAccount);
+    expect(server.requests[before]).toMatchObject({cursor:0,changes:[{id:n.id,baseVersion:0}]});
+    expect(a.sync.getState().conflicts[0].localChanged).toBe(false);
+    expect([...a.storage.data.keys()].filter(name=>name.includes('sync-baseline:'))).toHaveLength(2);
+  });
+  test('real edits made while logged out retain local-first behavior and preserve the remote version in trash',async()=>{
+    const server=new SyncServer(),n=record(),a=device(server,[n]);await a.sync.connect(server.key,account);
+    const b=device(server);await b.sync.connect(server.key,account);a.sync.disconnect();
+    a.repository.save([updateNote(n,{type:'notice'},'退出后真正新增的本机笔记')]);b.repository.save([updateNote(n,{type:'notice'},'另一设备并发笔记')]);await b.sync.syncNow();
+    server.key='C'.repeat(43);await a.sync.connect(server.key,account);expect(a.sync.getState().conflicts[0].localChanged).toBe(true);
+    expect(server.rows.get(n.id)?.record?.note).toBe('另一设备并发笔记');await ordinaryDefault(a);
+    expect(server.rows.get(n.id)?.record?.note).toBe('退出后真正新增的本机笔记');expect(new NoticeTrash(a.storage).list('account:'+account)[0].notice.note).toBe('另一设备并发笔记');
+  });
+  test('missing legacy baselines preserve stale local snapshots in trash and accept remote edits or deletion',async()=>{
+    for(const deleted of [false,true]){
+      const server=new SyncServer(),n={...record(),attachments:['legacy-file']},a=device(server,[n]);await a.sync.connect(server.key);
+      const b=device(server);await b.sync.connect(server.key,account);a.sync.disconnect();
+      b.repository.save(deleted?[]:[updateNote(n,{type:'notice'},'保留的云端新内容')]);await b.sync.syncNow();const before=server.revision;
+      server.key='L'.repeat(43);await a.sync.connect(server.key,account);expect(a.sync.getState().conflicts[0].localChanged).toBe(false);
+      await ordinaryDefault(a);expect(server.revision).toBe(before);
+      expect(a.repository.load()).toHaveLength(deleted?0:1);if(!deleted)expect(a.repository.load()[0].note).toBe('保留的云端新内容');
+      expect(new NoticeTrash(a.storage).list('account:'+account)[0].notice).toMatchObject({note:'',attachments:['legacy-file']});
+      expect(server.rows.get(n.id)?.record===null).toBe(deleted);
+    }
+  });
+  test('an edit after an unknown conflict is observed becomes a provable new local change',async()=>{
+    const server=new SyncServer(),n=record(),a=device(server,[n]);await a.sync.connect(server.key);a.sync.disconnect();
+    server.rows.set(n.id,{id:n.id,version:++server.revision,record:updateNote(n,{type:'notice'},'云端新笔记')});server.key='U'.repeat(43);await a.sync.connect(server.key,account);
+    expect(a.sync.getState().conflicts[0].localChanged).toBe(false);
+    a.repository.save([updateNote(n,{type:'notice'},'冲突后明确修改')]);await a.sync.syncNow();expect(a.sync.getState().conflicts[0].localChanged).toBe(true);
+    await ordinaryDefault(a);expect(server.rows.get(n.id)?.record?.note).toBe('冲突后明确修改');
+  });
+  test('automatic remote acceptance refuses to discard a newer local edit after preservation',async()=>{
+    const server=new SyncServer(),n=record(),a=device(server,[n]);await a.sync.connect(server.key);a.sync.disconnect();
+    server.rows.set(n.id,{id:n.id,version:++server.revision,record:updateNote(n,{type:'notice'},'云端新笔记')});server.key='G'.repeat(43);await a.sync.connect(server.key,account);
+    const conflict=a.sync.getState().conflicts[0],expected={version:conflict.version,localHash:recordHash(a.repository.load()[0])};
+    a.repository.save([updateNote(n,{type:'notice'},'归档之后继续输入')]);await a.sync.resolveConflict(n.id,'remote',expected);
+    expect(a.repository.load()[0].note).toBe('归档之后继续输入');expect(a.sync.getState().conflicts).toHaveLength(1);expect(server.rows.get(n.id)?.record?.note).toBe('云端新笔记');
   });
 });
 

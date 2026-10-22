@@ -1,8 +1,8 @@
 # 邮箱验证注册、密码登录与发信配置
 
-注册时填写用户名、邮箱和密码，使用一次六位邮件验证码确认邮箱。以后直接用邮箱或用户名加密码登录，无需每次收验证码。已有用户名账号先用原密码登录，再绑定邮箱；绑定后邮箱也使用原密码，通知、笔记和进度继续归原账号。绑定不能覆盖邮箱或合并两个账号。
+登录弹窗默认打开注册，底部可点“已有账户？直接登录”。注册时填写邮箱和密码，使用一次四位邮件验证码确认邮箱，不要求公开用户名。以后直接用邮箱或用户名加密码登录，无需每次收验证码。已有用户名账号先用原密码登录，再绑定邮箱；绑定后邮箱也使用原密码，通知、笔记和进度继续归原账号。绑定不能覆盖邮箱或合并两个账号。
 
-之前仅用邮箱验证码登录、没有设置密码的账号，可在登录页点“设置密码”，验证邮箱后设置首次密码，原账号 UUID 不变。该入口不会覆盖已经设置的密码，也不是密码找回。旧版客户端的验证码登录接口保留兼容，新网页默认使用密码登录。
+之前仅用邮箱验证码登录、没有设置密码的账号，可在登录页点“设置密码”，验证邮箱后设置首次密码，原账号 UUID 不变。该入口不会覆盖已经设置的密码，也不是密码找回。旧版客户端的验证码登录接口保留兼容，新网页的已有账户使用密码登录。
 
 邮箱验证默认关闭：`MAIL_LOGIN_ENABLED=false`。只在维护者配置好现有发信邮箱后开启；缺少配置时仍可用邀请码注册和密码登录。免费测试使用模拟发信，不发送真实邮件，也不创建邮箱、付费资源或微软应用。
 
@@ -43,7 +43,7 @@ Outlook.com 需要 OAuth2 授权，使用 `smtp-mail.outlook.com:587` 和 STARTT
 
 | 限制 | 默认值 |
 | --- | --- |
-| 验证码 | 六位数字，5 分钟有效，最多尝试 5 次，只能使用一次 |
+| 验证码 | 新网页四位数字；旧客户端兼容六位。五分钟有效，最多尝试 5 次，只能使用一次 |
 | 再次发送 | 同邮箱等待 60 秒 |
 | 同邮箱发信 | 连续 1 小时 3 次、连续 24 小时 6 次 |
 | 同网络发信 | 连续 1 小时 20 次、连续 24 小时 40 次 |
@@ -67,14 +67,18 @@ Outlook.com 需要 OAuth2 授权，使用 `smtp-mail.outlook.com:587` 和 STARTT
 | --- | --- | --- |
 | `/auth/options` | `{}` | `{emailEnabled,inviteEnabled,domains}` |
 | `/auth/login` | `{username:邮箱或用户名,password}` | `{key,username,email?,expiresAt}` |
-| `/auth/email/request` | `{email,purpose:'register'}` | `{challengeId,retryAfterSeconds,expiresAt}` |
-| `/auth/email/verify` | `{challengeId,code,username,password}` | `{key,username,email,expiresAt}` |
-| `/auth/email/request` | `{email,purpose:'password'}` | 同上；仅兼容尚未设密码的旧邮箱账号 |
+| `/auth/email/request` | `{email,purpose:'register',codeLength:4}` | `{challengeId,retryAfterSeconds,expiresAt,codeLength}` |
+| `/auth/email/verify` | `{challengeId,code,password}` | `{key,username,email,expiresAt}`；旧客户端附带的公开用户名字段忽略 |
+| `/auth/email/request` | `{email,purpose:'password',codeLength:4}` | 同上；仅兼容尚未设密码的旧邮箱账号 |
 | `/auth/email/verify` | `{challengeId,code,password}` | 同上；保留旧账号 UUID |
-| `/auth/email/request` | `{email,purpose:'bind'}`，Bearer 原账号会话 | 同上 |
+| `/auth/email/request` | `{email,purpose:'bind',codeLength:4}`，Bearer 原账号会话 | 同上 |
 | `/auth/email/verify` | `{challengeId,code}`，Bearer 发起绑定的同账号会话 | `{username,email,expiresAt}` |
 | `/auth/email/request` | `{email,purpose:'login'}` | 兼容旧客户端验证码登录 |
 | `/auth/email/verify` | `{challengeId,code}` | 兼容旧客户端；返回旧邮箱账号或首次创建邮箱账号 |
+
+新客户端取码统一显式发送 `codeLength:4`，服务端只接受该值或字段缺失。字段缺失表示旧 APK 或旧已开网页，仍发送六位；这样旧界面的位数限制不会阻止注册、绑定或首次设置密码。响应仅增加位数，不返回验证码或邮箱是否已注册。新界面按响应位数输入；遇到旧后端未带位数字段时按六位兼容。四位与六位挑战共用现有频控，每个仍最多五次尝试、五分钟有效、成功只能使用一次。
+
+部署前已发送的六位挑战仍按原 HMAC 和有效期验证，不迁移账号或验证码表。新邮件将验证码独立成段，有效期写“五分钟”，正文不再出现单独数字 5，避免换行复制时与验证码拼接。实际邮件投递不属于本次离线验证。
 
 邮箱与验证码表增量加入已有 `auth.sqlite`，保留原账号 UUID 和 `sync.sqlite` 的归属。本轮密码注册没有新增表或破坏性迁移。注册或首次设密码后创建会话失败时，已保存的账号、绑定和密码保留，用户改用邮箱或用户名密码登录；已消费的验证码不能重放。旧邀请码注册已创建账号但会话失败时，也可改用用户名密码登录。
 

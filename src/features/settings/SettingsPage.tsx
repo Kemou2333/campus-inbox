@@ -33,6 +33,7 @@ import {AndroidDownloads} from '../../shared/ui/AndroidDownloads';
 import {AndroidUpdateSettings} from './AndroidUpdateSettings';
 import {friendlyErrorMessage} from '../../shared/error-message';
 import {InboxCharm} from '../../shared/ui/InboxCharm';
+import {MOTION_SPEEDS,setMotionSpeed,useMotionPreferences,type MotionKind,type MotionSpeed} from '../../shared/motion-preferences';
 
 interface Props {
   app: CampusController;
@@ -82,9 +83,18 @@ function PreferenceRow({title,detail,checked,onChange,disabled=false}:{title:str
     <Switch checked={checked} disabled={disabled} slotProps={{input:{'aria-label':title}}} onChange={(_event,enabled)=>onChange(enabled)}/>
   </Stack>;
 }
+function MotionSpeedRow({title,value,onChange}:{title:string;value:MotionSpeed;onChange:(value:MotionSpeed)=>void}){
+ return <Box><Typography component="h2" sx={{fontSize:17,fontWeight:650,mb:1}}>{title}</Typography>
+  <ToggleButtonGroup value={value} exclusive aria-label={title} onChange={(_event,value:MotionSpeed|null)=>{if(value!==null)onChange(value);}}
+   sx={{display:'flex',gap:.5,bgcolor:'action.hover',p:.5,borderRadius:'12px','& .MuiToggleButton-root':{flex:1,minWidth:0,fontSize:15,px:.5,py:.75,border:0,borderRadius:'9px!important'},'& .MuiToggleButton-root.Mui-selected':{bgcolor:'background.paper',color:'info.main',fontWeight:700,boxShadow:'0 1px 4px #00000012'}}}>
+   {MOTION_SPEEDS.map(speed=><ToggleButton key={speed} value={speed}>{speed}×</ToggleButton>)}
+  </ToggleButtonGroup>
+ </Box>;
+}
 
 export function SettingsPage({ developerEnabled=false, app, onLogin, onHelp, onAbout, onDialogChange, onShowNotices, onFilterNotices, expandCampus = false }: Props) {
   const reducedMotion=useMediaQuery('(prefers-reduced-motion: reduce)');
+  const motionPreferences=useMotionPreferences();
   const [category,setCategory]=useState<Category|null>(()=>expandCampus?'campus':null);
   const [running, setRunning] = useState<string | null>(null);
   const [sounds,setSounds]=useState(operationSoundsEnabled),[haptics,setHaptics]=useState(operationHapticsEnabled);
@@ -110,6 +120,7 @@ export function SettingsPage({ developerEnabled=false, app, onLogin, onHelp, onA
   },[app.platform,category]);
   function openCategory(next:Category|null){setError('');setCategory(next);window.scrollTo({top:0,behavior:'instant'});}
   function changePreference(key:keyof typeof uiPreferences,enabled:boolean){try{setPreference(key,enabled);}catch(issue){app.report(issue);}}
+  function changeMotionSpeed(kind:MotionKind,value:MotionSpeed){try{setMotionSpeed(kind,value);}catch(issue){app.report(issue);}}
   async function run(name: string, operation: () => Promise<unknown>) {
     if (busy) return;
     setError('');setRunning(name);
@@ -128,7 +139,7 @@ export function SettingsPage({ developerEnabled=false, app, onLogin, onHelp, onA
     ? 'warning' : app.sync.status === 'syncing' || app.sync.pendingChanges || app.sync.conflicts.length ? 'primary' : 'success';
   const themeLabel=app.theme==='system'?'跟随系统':app.theme==='light'?'浅色':'深色';
 
-  return <Stack key={category??'main'} className="settings-page" spacing={2.5} sx={{animation:reducedMotion?'none':'settings-enter 340ms cubic-bezier(.22,1,.36,1)',maxWidth:720,mx:'auto',pb:4,'& .MuiButton-root':{fontSize:15,minHeight:42}}}>
+  return <Stack key={category??'main'} className="settings-page" spacing={2.5} sx={{animation:reducedMotion?'none':`settings-enter ${Math.round(340/motionPreferences.entry)}ms cubic-bezier(.22,1,.36,1)`,maxWidth:720,mx:'auto',pb:4,'& .MuiButton-root':{fontSize:15,minHeight:42}}}>
     <Box>
       {category&&<Button color="inherit" startIcon={<ArrowBack sx={{fontSize:19}}/>} onClick={()=>openCategory(category==='campus'||category==='faq'||category==='developer'?'tools':null)} sx={{ml:-1,mb:1,color:'text.secondary'}}>返回{category==='campus'||category==='faq'||category==='developer'?'工具与帮助':'设置'}</Button>}
       <Typography ref={heading} tabIndex={-1} component="h1" sx={{fontSize:{xs:30,sm:34},lineHeight:1.3,fontWeight:760,outline:'none'}}>{category?categoryTitles[category]:'设置'}</Typography>
@@ -177,7 +188,7 @@ export function SettingsPage({ developerEnabled=false, app, onLogin, onHelp, onA
           <Button color="inherit" disabled={busy} sx={{color:'text.secondary'}} onClick={()=>{setError('');setLogoutOpen(true);}}>退出登录</Button>
           {isOwner&&<Button component="a" href="https://123.57.30.129/admin" target="_blank" rel="noopener noreferrer">管理后台</Button>}
         </Stack>
-      </>:<Button variant="contained" disabled={busy||!app.auth} onClick={onLogin} sx={{mt:2}}>登录</Button>}
+      </>:<Button variant="contained" disabled={busy||!app.auth} onClick={onLogin} sx={{mt:2}}>注册 / 登录</Button>}
       {isOwner&&!!app.sync.conflicts.length&&<Box sx={{mt:2.5}}><Divider sx={{mb:2}}/>
         <Typography sx={{fontSize:17,fontWeight:650}}>有 {app.sync.conflicts.length} 条通知需要选择版本</Typography>
         <Stack spacing={1} sx={{mt:1}}>{app.sync.conflicts.map(item=><Button key={item.id} variant="outlined" disabled={busy} sx={{justifyContent:'space-between',textAlign:'left',gap:1}} onClick={()=>{setError('');setConflict(item);}}><span>{item.local?.title||item.remote?.title||'已删除的通知'}</span><span>选择版本</span></Button>)}</Stack>
@@ -194,7 +205,7 @@ export function SettingsPage({ developerEnabled=false, app, onLogin, onHelp, onA
       <ToolRow icon={<InfoOutlined/>} title="关于拾笺 Inbox" onClick={onAbout}/>
       {(developerEnabled||isOwner)&&<ToolRow icon={<CodeOutlined/>} title="开发者设置" onClick={()=>openCategory('developer')}/>}
     </Paper>}
-    {category==='developer'&&(developerEnabled||isOwner)&&<><Paper variant="outlined" sx={{...sectionStyle,p:2.5}}><Typography sx={{fontSize:18,fontWeight:650,mb:1}}>重新加载示例</Typography><Typography sx={{fontSize:14,color:'text.secondary',mb:2}}>恢复内置示例的进度与删除记录。</Typography><Button variant="outlined" disabled={busy} onClick={()=>void run('resetexamples',async()=>{await app.resetExamples();onShowNotices?.();})}>重新加载示例</Button></Paper><Paper variant="outlined" sx={{...sectionStyle,p:2.5}}><Typography sx={{fontSize:18,fontWeight:650,mb:1}}>真实测试结果</Typography><Typography sx={{fontSize:14,color:'text.secondary',mb:2}}>查看当前提示词真实调用的结果，暂时隐藏展示示例。</Typography><Stack direction="row" sx={{gap:1,flexWrap:'wrap'}}><Button variant="contained" disabled={busy} onClick={()=>void run('modeltests',async()=>{await app.loadModelTests();onShowNotices?.();})}>查看真实测试结果</Button>{app.modelTestMode&&<Button onClick={()=>{app.setModelTestMode(false);onShowNotices?.();}}>返回展示示例</Button>}</Stack></Paper><SettingsUsageState app={app}/></>}
+    {category==='developer'&&(developerEnabled||isOwner)&&<><Paper variant="outlined" sx={{...sectionStyle,p:2.5}}><Typography sx={{fontSize:18,fontWeight:650,mb:.5}}>动效速率</Typography><Typography sx={{fontSize:14,color:'text.secondary',mb:2}}>倍速越大，动效越快；仅保存在本机。</Typography><Stack spacing={2.25}><MotionSpeedRow title="淡入与首次入场" value={motionPreferences.entry} onChange={value=>changeMotionSpeed('entry',value)}/><MotionSpeedRow title="通知展开" value={motionPreferences.notice} onChange={value=>changeMotionSpeed('notice',value)}/></Stack>{reducedMotion&&<Typography sx={{fontSize:13,color:'text.secondary',mt:1.5}}>系统已开启减少动画，动效保持静止。</Typography>}</Paper><Paper variant="outlined" sx={{...sectionStyle,p:2.5}}><Typography sx={{fontSize:18,fontWeight:650,mb:1}}>重新加载示例</Typography><Typography sx={{fontSize:14,color:'text.secondary',mb:2}}>恢复内置示例的进度与删除记录。</Typography><Button variant="outlined" disabled={busy} onClick={()=>void run('resetexamples',async()=>{await app.resetExamples();onShowNotices?.();})}>重新加载示例</Button></Paper><Paper variant="outlined" sx={{...sectionStyle,p:2.5}}><Typography sx={{fontSize:18,fontWeight:650,mb:1}}>真实测试结果</Typography><Typography sx={{fontSize:14,color:'text.secondary',mb:2}}>查看当前提示词真实调用的结果，暂时隐藏展示示例。</Typography><Stack direction="row" sx={{gap:1,flexWrap:'wrap'}}><Button variant="contained" disabled={busy} onClick={()=>void run('modeltests',async()=>{await app.loadModelTests();onShowNotices?.();})}>查看真实测试结果</Button>{app.modelTestMode&&<Button onClick={()=>{app.setModelTestMode(false);onShowNotices?.();}}>返回展示示例</Button>}</Stack></Paper><SettingsUsageState app={app}/></>}
     {category==='campus'&&<Paper variant="outlined" sx={sectionStyle}>
       <CampusPreferencesPanel value={app.preferences} onSave={app.setPreferences} disabled={busy} initiallyExpanded={expandCampus} onApplyFilter={onFilterNotices}/>
       <TeachingWeekPanel value={app.preferences} onSave={app.setPreferences} disabled={busy}/>

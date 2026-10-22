@@ -85,11 +85,11 @@ describe('device-only sample storage',()=>{
   const remote={...createGuestDemoNotice('remote'),id:'remote-personal'};personal.save([remote]);
   expect(visible.map(n=>n.id)).toEqual([remote.id,sample.id]);expect(visible.find(n=>n.id===sample.id)?.note).toBe('keep');unsubscribe();
  });
- test('a saved snapshot emits once without reloading and parsing the entire notice list again',()=>{
+ test('a saved snapshot preserves its read baseline and emits one detached copy',()=>{
   const storage=memory(),personal=new LocalRepository(storage),repository=new LocalDemoRepository(personal,storage);
   repository.load();const load=vi.spyOn(personal,'load'),listener=vi.fn(),unsubscribe=repository.subscribe(listener),sample=createGuestDemoNotice('one');
   repository.save([sample]);
-  expect(load).toHaveBeenCalledTimes(1);expect(listener).toHaveBeenCalledTimes(1);expect(listener.mock.calls[0][0]).toEqual([sample]);
+  expect(load).not.toHaveBeenCalled();expect(listener).toHaveBeenCalledTimes(1);expect(listener.mock.calls[0][0]).toEqual([sample]);
   sample.note='changed after save';expect(listener.mock.calls[0][0][0].note).toBe('');unsubscribe();
  });
 });

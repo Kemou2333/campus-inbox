@@ -22,7 +22,7 @@ function unique(values){if(new Set(values).size!==values.length)throw new Servic
 /** Validate one externally supplied v5 boundary; retain its original text,
  * timestamps and field values. No attachment binaries or unknown fields enter SQLite. */
 export function validateCloudNotice(record,expectedID){
-  shape(record,['schemaVersion','kind','title','summary','deadline','deadlineText','timeline','tasks','materials','warnings','reminders','id','originalText','createdAt','updatedAt','completed','dismissed','note','localDeadline','audienceOverride','attachments'],['deadlineSpec','sourceRefs','corrections','reminderTitles','favorite','manualPriority']);
+  shape(record,['schemaVersion','kind','title','summary','deadline','deadlineText','timeline','tasks','materials','warnings','reminders','id','originalText','createdAt','updatedAt','completed','dismissed','note','localDeadline','audienceOverride','attachments'],['deadlineSpec','sourceRefs','corrections','reminderTitles','favorite','manualPriority','noteColor']);
   if(record.schemaVersion!==5||id(record.id)!==expectedID||!Array.isArray(record.attachments)||record.attachments.length)throw new ServiceError('同步只接受第5版文字记录，附件留在本机。',400);
   boolean(record.dismissed);
   if(record.favorite!==undefined)boolean(record.favorite);
@@ -139,11 +139,11 @@ export async function createSyncService(config,options={}){
       for(const change of changes){
         const current=stmt.get.get(account.id,change.id),version=current?.version||0;
         if(change.baseVersion!==version){conflicts.push({id:change.id,version,record:current?.json?JSON.parse(current.json):null});continue;}
-        // Older clients do not know favorites. Unrelated edits must not erase
-        // this newer optional field; new clients explicitly send true/false.
+        // Older clients do not know optional presentation fields. Unrelated
+        // edits retain them; newer clients can explicitly clear each choice.
         if(current?.json&&change.record){
           const previous=JSON.parse(current.json),preserved={};
-          for(const field of ['favorite','manualPriority'])if(!Object.hasOwn(change.record,field)&&Object.hasOwn(previous,field))preserved[field]=previous[field];
+          for(const field of ['favorite','manualPriority','noteColor'])if(!Object.hasOwn(change.record,field)&&Object.hasOwn(previous,field))preserved[field]=previous[field];
           if(Object.keys(preserved).length)Object.assign(change,validateCloudNotice({...change.record,...preserved},change.id));
         }
         if(change.json===null&&!current||current&&current.json===change.json){accepted.push({id:change.id,version});continue;}

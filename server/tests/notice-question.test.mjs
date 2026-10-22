@@ -43,7 +43,7 @@ test('blank-line compaction preserves original question request hashes, exact qu
     const body={sourceText:raw,question:q},response=await s.service(s.request(body));assert.equal(response.status,200);assert.deepEqual((await response.json()).evidence,[raw]);
     assert.equal((await s.service(s.request(body))).status,200);assert.equal(calls,1);
     const conflict=await s.service(s.request({sourceText:compact,question:q}));assert.equal(conflict.status,409);assert.equal((await conflict.json()).code,'REQUEST_ID_CONFLICT');assert.equal(calls,1);
-    const state=JSON.parse(await readFile(s.stateFile,'utf8'));assert.equal(state.requests,1);assert.equal(Object.values(state.questionAccounts)[0],1);
+    const state=JSON.parse(await readFile(s.stateFile,'utf8'));assert.equal(state.requests,1);assert.equal(Object.values(state.rolling.accounts)[0].length,1);
   }finally{await s.close();}
 });
 
@@ -78,7 +78,7 @@ test('one durable request consumes shared budget once and replays safely after r
   try{
     const [a,b]=await Promise.all([s.service(s.request(),'one'),s.service(s.request(),'one')]);
     assert.equal(a.status,200);assert.equal(b.status,200);assert.equal(calls,1);
-    const state=JSON.parse(await readFile(s.stateFile,'utf8'));assert.equal(state.requests,1);assert.equal(state.input,11);assert.equal(state.output,13);assert.equal(state.costMicro,Math.ceil(11*2.4+13*9.6));assert.equal(Object.values(state.questionAccounts)[0],1);
+    const state=JSON.parse(await readFile(s.stateFile,'utf8'));assert.equal(state.requests,1);assert.equal(state.input,11);assert.equal(state.output,13);assert.equal(state.costMicro,Math.ceil(11*2.4+13*9.6));assert.equal(Object.values(state.rolling.accounts)[0].length,1);
     assert(!JSON.stringify(state).includes(sourceText));assert(!JSON.stringify(state).includes(question));
     const changed=await s.service(s.request({question:'在哪里？'}));assert.equal(changed.status,409);assert.equal((await changed.json()).code,'REQUEST_ID_CONFLICT');
     const restarted=await createService(s.config,s.options);assert.equal((await restarted(s.request())).status,200);
@@ -100,7 +100,7 @@ test('running requests survive browser disconnect; duplicate lookup never starts
   }finally{pending.resolve(envelope());await s.close();}
 });
 
-test('five daily questions persist across restart and session/network changes, then reset on the next Shanghai day',async()=>{
+test('five shared rolling AI admissions persist across restart and session/network changes, then expire after five hours',async()=>{
   let calls=0;const s=await setup(async()=>{calls++;return envelope();},{accountDailyLimit:10,ipDailyLimit:30});
   try{
     const secondSession=s.sync.provision({provider:'invite',subject:'question-owner'}).key;
@@ -109,8 +109,10 @@ test('five daily questions persist across restart and session/network changes, t
       assert.equal(response.status,200);assert.equal((await response.json()).remainingQuestions,4-i);s.advance(180001);
     }
     const restarted=await createService(s.config,s.options),blocked=await restarted(s.request({requestId:requestId+'-six'},secondSession),'fresh-network');
-    assert.equal(blocked.status,429);assert.equal((await blocked.json()).code,'QUESTION_DAILY_LIMIT');assert.equal(calls,5);
-    s.advance(24*60*60*1000);assert.equal((await restarted(s.request({requestId:requestId+'-tomorrow'}))).status,200);assert.equal(calls,6);
+    assert.equal(blocked.status,429);assert.equal((await blocked.json()).code,'ACCOUNT_FIVE_HOUR_LIMIT');assert.equal(calls,5);
+    // The same Shanghai date can admit another question after five hours;
+    // there is no additional question-only five-per-natural-day cap.
+    s.advance(5*60*60*1000);assert.equal((await restarted(s.request({requestId:requestId+'-after-five-hours'}))).status,200);assert.equal(calls,6);
   }finally{await s.close();}
 });
 
@@ -123,11 +125,11 @@ test('in-flight question across Shanghai midnight settles its admitted day and r
     const reserved=JSON.parse(await readFile(s.stateFile,'utf8'));assert.equal(reserved.day,'2026-10-17');assert.equal(reserved.requests,1);assert(reserved.costMicro>0);
     s.advance(2000);
     const blocked=await s.service(s.request({requestId:requestId+'-next'}),'network');assert.equal(blocked.status,429);assert.equal((await blocked.json()).code,'SERVICE_BUSY');assert.equal(calls,1);
-    pending.resolve(envelope());const completed=await running;assert.equal(completed.status,200);assert.equal((await completed.json()).remainingQuestions,5);
-    const settled=JSON.parse(await readFile(s.stateFile,'utf8'));assert.equal(settled.day,'2026-10-17');assert.equal(settled.requests,1);assert.equal(settled.costMicro,Math.ceil(11*2.4+13*9.6));assert.equal(Object.values(settled.questionAccounts)[0],1);
-    const replay=await s.service(s.request(),'network');assert.equal((await replay.json()).remainingQuestions,5);assert.equal(calls,1);
-    const next=await s.service(s.request({requestId:requestId+'-next'}),'network');assert.equal(next.status,200);assert.equal((await next.json()).remainingQuestions,4);
-    const renewed=JSON.parse(await readFile(s.stateFile,'utf8'));assert.equal(renewed.day,'2026-10-18');assert.equal(renewed.requests,1);assert.equal(renewed.costMicro,Math.ceil(11*2.4+13*9.6));assert.equal(Object.values(renewed.questionAccounts)[0],1);assert.equal(calls,2);
+    pending.resolve(envelope());const completed=await running;assert.equal(completed.status,200);assert.equal((await completed.json()).remainingQuestions,4);
+    const settled=JSON.parse(await readFile(s.stateFile,'utf8'));assert.equal(settled.day,'2026-10-17');assert.equal(settled.requests,1);assert.equal(settled.costMicro,Math.ceil(11*2.4+13*9.6));assert.equal(Object.values(settled.rolling.accounts)[0].length,1);
+    const replay=await s.service(s.request(),'network');assert.equal((await replay.json()).remainingQuestions,4);assert.equal(calls,1);
+    const next=await s.service(s.request({requestId:requestId+'-next'}),'network');assert.equal(next.status,200);assert.equal((await next.json()).remainingQuestions,3);
+    const renewed=JSON.parse(await readFile(s.stateFile,'utf8'));assert.equal(renewed.day,'2026-10-18');assert.equal(renewed.requests,1);assert.equal(renewed.costMicro,Math.ceil(11*2.4+13*9.6));assert.equal(Object.values(renewed.rolling.accounts)[0].length,2);assert.equal(calls,2);
   }finally{pending.resolve(envelope());await s.close();}
 });
 
@@ -148,7 +150,7 @@ test('question costs reserve before dispatch, share all existing daily caps, and
   }finally{await s.close();}
 });
 
-test('image challenges bind the question, owner and network; proof cannot skip the five-question daily cap',async()=>{
+test('image challenges bind the question, owner and network; proof cannot skip the shared five-hour AI cap',async()=>{
   let calls=0;const s=await setup(async()=>{calls++;return envelope();});
   try{
     for(let i=0;i<2;i++)assert.equal((await s.service(s.request({requestId:requestId+'-'+i}),'network')).status,200);
@@ -158,7 +160,7 @@ test('image challenges bind the question, owner and network; proof cannot skip t
     const wrong=await s.service(s.request({requestId:id,question:'地点在哪里？'},s.a,proof),'network');assert.equal(wrong.status,400);
     const correct=await s.service(s.request({requestId:id},s.a,proof),'network');assert.equal(correct.status,200);assert.equal(calls,3);
     for(let i=3;i<5;i++){s.advance(180001);assert.equal((await s.service(s.request({requestId:requestId+'-'+i}),'network')).status,200);}
-    s.advance(180001);const blocked=await s.service(s.request({requestId:requestId+'-six'}),'network');assert.equal((await blocked.json()).code,'QUESTION_DAILY_LIMIT');assert.equal(calls,5);
+    s.advance(180001);const blocked=await s.service(s.request({requestId:requestId+'-six'}),'network');assert.equal((await blocked.json()).code,'ACCOUNT_FIVE_HOUR_LIMIT');assert.equal(calls,5);
   }finally{await s.close();}
 });
 

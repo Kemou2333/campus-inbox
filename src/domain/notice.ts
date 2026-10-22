@@ -1,4 +1,5 @@
-import type { AnalysisBatch, AnalysisStep, AnalysisTask, Backup, BackupAttachment, Notice, NoticeAnalysis, NoticeStatus, NoteTarget, Priority, SortOrder, Step, Task, TimelineEntry } from './types';
+import type { AnalysisBatch, AnalysisStep, AnalysisTask, Backup, BackupAttachment, Notice, NoticeAnalysis, NoticeStatus, NoteColor, NoteTarget, Priority, SortOrder, Step, Task, TimelineEntry } from './types';
+import {NOTE_COLORS} from './types';
 import { deadlineReferenceISO, parseTimeSpec, timeFromText, timeSpecToISO } from './time';
 import {parseSourceRefs} from './source-evidence';
 import {parseCorrections} from './corrections';
@@ -6,6 +7,10 @@ import {parseCorrections} from './corrections';
 export const MAX_TEXT = 4000;
 export const MAX_NOTE = 4000;
 export const MAX_NOTICES = 2000;
+export function parseNoteColor(value:unknown):NoteColor {
+  if(typeof value!=='string'||!NOTE_COLORS.includes(value as NoteColor))throw new Error('笔记颜色格式不正确');
+  return value as NoteColor;
+}
 
 function object(value: unknown, label = '记录'): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${label}格式不正确`);
@@ -182,6 +187,7 @@ export function parseNotice(value: unknown): Notice {
   };
   if(a.sourceRefs!==undefined)result.sourceRefs=parseSourceRefs(a.sourceRefs,result,result.originalText);
   if(o.favorite!==undefined)result.favorite=bool(o.favorite);
+  if(Object.hasOwn(o,'noteColor'))result.noteColor=parseNoteColor(o.noteColor);
   if(Object.hasOwn(o,'manualPriority')){if(o.manualPriority!==null&&(typeof o.manualPriority!=='string'||!['important-urgent','important','urgent','later'].includes(o.manualPriority)))throw new Error('优先级格式不正确');result.manualPriority=o.manualPriority as Notice['manualPriority'];}
   const corrections=parseCorrections(o.corrections,result);if(corrections!==undefined)result.corrections=corrections;
   return result;
@@ -256,9 +262,10 @@ export function setNoticeCompleted(n: Notice, completed: boolean): Notice {
 /** Hiding a whole notification must not rewrite its individual progress or notes. */
 export function setNoticeApplicable(n:Notice,applicable:boolean):Notice{return changed({...n,dismissed:!applicable});}
 export function setFavorite(n:Notice,favorite:boolean):Notice{return changed({...n,favorite});}
-export function updateNote(n: Notice, target: NoteTarget, note: string): Notice {
+export function updateNote(n: Notice, target: NoteTarget, note: string,color?:NoteColor): Notice {
   const value = text(note, '笔记', MAX_NOTE, true);
-  if (target.type === 'notice') return changed({ ...n, note: value });
+  if(color!==undefined&&target.type!=='notice')throw new Error('颜色仅用于整条通知笔记');
+  if (target.type === 'notice') return changed({ ...n, note: value,...(color===undefined?{}:{noteColor:parseNoteColor(color)}) });
   if (target.type === 'reminder') return changed({ ...n, reminders: n.reminders.map(r => r.id === target.reminderId ? { ...r, note: value } : r) });
   // Notes never recalculate completion or restore excluded tasks.
   return changed({ ...n, tasks: n.tasks.map(t => t.id !== target.taskId ? t : target.type === 'task' ? { ...t, note: value } : { ...t, steps: t.steps.map(s => s.id === target.stepId ? { ...s, note: value } : s) }) });

@@ -9,7 +9,7 @@ import nodemailer from '../vendor/nodemailer-10.0.16.mjs';
 // Synthetic sequential-number address used only by mock/offline transports; no live SMTP call.
 const PASSWORD_ENV={MAIL_LOGIN_ENABLED:'true',SMTP_HOST:'smtp.qq.com',SMTP_USER:'123456789@qq.com',SMTP_PASSWORD:'fake-test-authorization-code'};
 const OAUTH_ENV={MAIL_LOGIN_ENABLED:'true',SMTP_HOST:'smtp-mail.outlook.com',SMTP_PORT:'587',SMTP_SECURE:'false',SMTP_USER:'sender@outlook.com',SMTP_AUTH_MODE:'oauth2',SMTP_OAUTH_CLIENT_ID:'test-client',SMTP_OAUTH_CLIENT_SECRET:'test-secret',SMTP_OAUTH_REFRESH_TOKEN:'environment-refresh'};
-const MESSAGE={email:'123456789@qq.com',code:'012345',expiresMinutes:5};
+const MESSAGE={email:'123456789@qq.com',code:'0123',expiresMinutes:5};
 function mockSMTP(){
   const received=[],configurations=[];let closes=0;
   return {received,configurations,get closes(){return closes;},createTransport(config){configurations.push(config);return {sendMail:async message=>{received.push(message);return {accepted:[message.envelope.to[0]],rejected:[]};},close(){closes++;}};}};
@@ -35,19 +35,19 @@ test('enabled incomplete or unsafe startup configuration fails without exposing 
   assert.throws(()=>createMailSender({...PASSWORD_ENV,SMTP_HOST:'smtp-mail.outlook.com',SMTP_PORT:'587',SMTP_SECURE:'false'}),/必须使用 SMTP_AUTH_MODE=oauth2/);
   assert.throws(()=>createMailSender({...OAUTH_ENV,SMTP_OAUTH_STATE_FILE:'https://example.com/token'}),/SMTP_OAUTH_STATE_FILE/);
 });
-test('only one canonical recipient and a six digit five-minute text code are sent over strict TLS',async()=>{
+test('only one canonical recipient and a four-digit text code with an unambiguous Chinese five-minute expiry are sent over strict TLS',async()=>{
   const mock=mockSMTP(),sender=createMailSender(PASSWORD_ENV,mock);
   await sender({...MESSAGE,email:'Student.Name+try@gmail.com'});
   const message=mock.received[0],config=mock.configurations[0];
   assert.deepEqual(message.envelope,{from:PASSWORD_ENV.SMTP_USER,to:['studentname@gmail.com']});
   assert.deepEqual(message.to,{address:'studentname@gmail.com'});assert.equal(message.from.address,PASSWORD_ENV.SMTP_USER);
-  assert.match(message.text,/012345/);assert.match(message.text,/5 分钟/);assert.match(message.text,/校园 Inbox/);
+  assert.match(message.text,/\n\n0123\n\n/);assert.match(message.text,/五分钟/);assert.deepEqual(message.text.match(/\d+/g),['0123']);assert.match(message.text,/校园 Inbox/);
   assert.equal(message.html,undefined);assert.equal(message.attachments,undefined);assert.equal(message.headers,undefined);assert.doesNotMatch(message.text,/https?:\/\//);
   assert.equal(config.secure,true);assert.equal(config.port,465);assert.equal(config.tls.rejectUnauthorized,true);
   assert.equal(config.debug,false);assert.equal(config.logger,false);assert.equal(config.ignoreTLS,false);assert.equal(config.opportunisticTLS,false);
   for(const key of ['connectionTimeout','greetingTimeout','socketTimeout','dnsTimeout'])assert.ok(config[key]<=10000);
   assert.equal(mock.closes,1);
-  for(const patch of [{email:'123456789@qq.com,other@qq.com'},{email:'123456789@qq.com\r\nBcc:other@qq.com'},{code:'12345'},{code:'123456\n'},{code:123456},{expiresMinutes:30}])await assert.rejects(sender({...MESSAGE,...patch}));
+  for(const patch of [{email:'123456789@qq.com,other@qq.com'},{email:'123456789@qq.com\r\nBcc:other@qq.com'},{code:'12345'},{code:'1234\n'},{code:1234},{expiresMinutes:30}])await assert.rejects(sender({...MESSAGE,...patch}));
   assert.equal(mock.received.length,1);
 });
 test('STARTTLS is required on port 587 and the sender may use an Outlook address',async()=>{
@@ -100,4 +100,13 @@ test('registration, binding and password setup mails accurately name their opera
   await sender({...MESSAGE,purpose});assert.equal(mock.received.at(-1).subject,`校园 Inbox ${label}验证码`);assert.ok(mock.received.at(-1).text.includes(`${label}验证码`));
  }
  await assert.rejects(sender({...MESSAGE,purpose:'unsafe purpose'}));assert.equal(mock.received.length,3);
+});
+
+
+test('legacy six-digit mail stays compatible and expiry text never adds an extra numeric sequence',async()=>{
+ const mock=mockSMTP(),sender=createMailSender(PASSWORD_ENV,mock);
+ await sender({...MESSAGE,code:'012345'});
+ const message=mock.received[0];assert.match(message.text,/\n\n012345\n\n/);assert.match(message.text,/五分钟/);assert.deepEqual(message.text.match(/\d+/g),['012345']);
+ for(const code of ['123','12345','1234567','12a4'])await assert.rejects(sender({...MESSAGE,code}));
+ assert.equal(mock.received.length,1);
 });

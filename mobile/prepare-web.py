@@ -9,7 +9,7 @@ destination = project / "mobile/android/app/src/main/assets/web"
 index = source / "index.html"
 if not index.is_file():
     raise SystemExit("Web build missing. Run npm run build first.")
-text = index.read_text()
+text = index.read_text(encoding='utf-8')
 if 'src="/assets/' in text or 'href="/assets/' in text:
     raise SystemExit("Android needs relative assets. Use Vite base='./' for this build.")
 if destination.exists():

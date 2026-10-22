@@ -18,7 +18,7 @@ FILES = {
     'server/test-records.mjs',
     'server/backup-state.py', 'server/campus-backup.service', 'server/campus-backup.timer',
     'server/admin.mjs', 'server/admin-ui.mjs', 'server/contracts/source-evidence.js',
-    'server/index.mjs', 'server/analyze.mjs', 'server/service.mjs', 'server/image-captcha.mjs',
+    'server/index.mjs', 'server/analyze.mjs', 'server/service.mjs','server/ai-quota.mjs','server/vendor/MARKDOWN-PARSER-SOURCE.md','server/vendor/MARKDOWN-PARSER-LICENSES','server/vendor/markdown-parser.mjs','server/contracts/safe-markdown-url.mjs','server/contracts/markdown-links.mjs', 'server/image-captcha.mjs',
     'server/sync.mjs', 'server/auth.mjs', 'server/email-auth.mjs', 'server/mail-sender.mjs', 'server/manage-invites.mjs',
     'worker/prompt.mjs', 'server/contracts/data.js', 'server/contracts/time.js',
     'server/contracts/email-policy.mjs', 'server/vendor/nodemailer-10.0.16.mjs',

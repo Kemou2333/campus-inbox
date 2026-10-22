@@ -19,6 +19,18 @@ async function fixture(options={}){
   return {service,identities,key,create,post,close:()=>service.close()};
 }
 
+test('note colors survive old-client edits; explicit plain clears the choice and invalid colors do not write',async()=>{
+ const f=await fixture();try{
+  const record={...notice(),noteColor:'sky'};
+  const first=await (await f.post({cursor:0,changes:[{id:record.id,baseVersion:0,record}]})).json();assert.equal(first.updates[0].record.noteColor,'sky');
+  const {noteColor:_,...old}=record;
+  const second=await (await f.post({cursor:1,changes:[{id:record.id,baseVersion:1,record:{...old,note:'旧客户端的笔记更新'}}]})).json();assert.equal(second.updates[0].record.noteColor,'sky');
+  const third=await (await f.post({cursor:2,changes:[{id:record.id,baseVersion:2,record:{...second.updates[0].record,note:'',noteColor:'plain'}}]})).json();assert.equal(third.updates[0].record.noteColor,'plain');assert.equal(third.updates[0].record.note,'');
+  for(const noteColor of [null,'#fff','red',{},[],true])assert.equal((await f.post({cursor:3,changes:[{id:'invalid-color',baseVersion:0,record:{...notice('invalid-color'),noteColor}}]})).status,400);
+  const unchanged=await (await f.post({cursor:3,changes:[]})).json();assert.equal(unchanged.cursor,3);assert.deepEqual(unchanged.updates,[]);
+ }finally{f.close();}
+});
+
 test('public anonymous creation is disabled and a device session must be authenticated',async()=>{
   const f=await fixture();
   try{

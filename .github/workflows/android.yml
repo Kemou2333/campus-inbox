@@ -2,7 +2,7 @@ name: Build signed Android APK
 on:
   push:
     branches: [main]
-    paths: ['mobile/**', 'src/**', 'public/**', '!public/android-download.json', 'server/contracts/email-policy.mjs', 'server/contracts/source-evidence.js', 'index.html', 'admin-preview.html', 'package.json', 'pnpm-lock.yaml', 'tsconfig*.json', 'vite.config.*', 'tests/**', '.github/workflows/android.yml']
+    paths: ['mobile/**', 'src/**', 'public/**', '!public/android-download.json', 'server/contracts/email-policy.mjs', 'server/contracts/source-evidence.js', 'server/contracts/safe-markdown-url.*', 'index.html', 'admin-preview.html', 'package.json', 'pnpm-lock.yaml', 'tsconfig*.json', 'vite.config.*', 'tests/**', '.github/workflows/android.yml']
   workflow_dispatch:
 permissions:
   contents: read

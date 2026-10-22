@@ -18,9 +18,9 @@ const request=(text,proof,extra={})=>new Request('https://api.example.test/analy
   body:JSON.stringify({sources:[{text}]}),...(extra.signal?{signal:extra.signal}:{})});
 
 async function fixture(options={}){
-  let time=Date.parse('2026-10-07T08:00:00Z'),modelCalls=0,latest;
+  let time=Date.parse('2026-10-07T08:00:00Z'),modelCalls=0,imageCalls=0,latest;
   const handler=await createService({...settings,...options.config},{now:()=>time,accountForToken:key=>accounts.get(key),
-    imageCaptcha:id=>createImageCaptcha(id,()=>123),modelFetch:async()=>{modelCalls++;return modelResponse();}});
+    imageCaptcha:id=>{imageCalls++;return createImageCaptcha(id,()=>123);},modelFetch:async()=>{modelCalls++;return modelResponse();}});
   async function challenge(){
     for(const text of ['消息一','消息二'])assert.equal((await handler(request(text),'203.0.113.1')).status,200);
     const response=await handler(request('消息三'),'203.0.113.1');assert.equal(response.status,428);
@@ -33,7 +33,7 @@ async function fixture(options={}){
     assert.equal(context.type,'image');
     return {token:latest.token,answer:'0123'};
   }
-  return {handler,challenge,calls:()=>modelCalls,advance:ms=>{time+=ms;},latest:()=>latest};
+  return {handler,challenge,calls:()=>modelCalls,images:()=>imageCalls,advance:ms=>{time+=ms;},latest:()=>latest};
 }
 
 test('numeric captcha is a valid raster PNG without textual/SVG answer metadata, and hash is salted by challenge ID',()=>{
@@ -145,4 +145,53 @@ test('captcha success does not expand account, network, global or rolling reques
   for(let count=0;count<2;count++)assert.equal((await f.handler(request('消息三'),'203.0.113.1')).status,200);
   const sixth=await f.handler(request('消息三'),'203.0.113.1');assert.equal(sixth.status,429);
   assert.equal((await sixth.json()).code,'ACCOUNT_RATE_LIMIT');assert.equal(f.calls(),3);
+});
+
+test('cancel and resubmit reuses the same image and remaining guesses; correct solving has no refresh wait',async()=>{
+  const f=await fixture(),proof=await f.challenge();
+  assert.equal((await f.handler(request('消息三',{...proof,answer:'9999'}),'203.0.113.1')).status,400);
+  for(let i=0;i<5;i++){
+    const response=await f.handler(request('消息三',undefined,{key:secondSession}),'203.0.113.1');assert.equal(response.status,428);
+    assert.equal((await response.json()).challenge.token,proof.token);
+  }
+  assert.equal(f.images(),1);assert.equal(f.calls(),2);
+  const wrong=await f.handler(request('消息三',{...proof,answer:'9999'}),'203.0.113.1');assert.equal((await wrong.json()).remainingAttempts,3);
+  assert.equal((await f.handler(request('消息三',proof),'203.0.113.1')).status,200);assert.equal(f.calls(),3);
+  const next=await f.handler(request('下一条正常通知'),'203.0.113.1');assert.equal(next.status,428);assert.equal(f.images(),2);
+  const fresh=(await next.json()).challenge;
+  assert.equal((await f.handler(request('下一条正常通知',{token:fresh.token,answer:'0123'}),'203.0.113.1')).status,200);assert.equal(f.calls(),4);
+});
+
+test('image replacement waits 30 seconds across text, account, origin and network changes, then invalidates the old image',async()=>{
+  for(const [text,ip,extra] of [['不同文字','203.0.113.1',{}],['消息三','203.0.113.2',{}],['消息三','203.0.113.1',{origin:otherOrigin}]]){
+    const f=await fixture(),old=await f.challenge();
+    const blocked=await f.handler(request(text,undefined,extra),ip);assert.equal(blocked.status,429);assert.equal((await blocked.json()).code,'CAPTCHA_REFRESH_LIMIT');assert.equal(blocked.headers.get('Retry-After'),'30');assert.equal(f.images(),1);
+    f.advance(29999);assert.equal((await f.handler(request(text,undefined,extra),ip)).headers.get('Retry-After'),'1');
+    f.advance(1);const refreshed=await f.handler(request(text,undefined,extra),ip);assert.equal(refreshed.status,428);assert.equal(f.images(),2);
+    const fresh=(await refreshed.json()).challenge;assert.notEqual(fresh.token,old.token);
+    assert.equal((await f.handler(request('消息三',old),'203.0.113.1')).status,400);
+    assert.equal((await f.handler(request(text,{token:fresh.token,answer:'0123'},extra),ip)).status,200);assert.equal(f.calls(),3);
+  }
+  const f=await fixture();await f.challenge();
+  assert.equal((await f.handler(request('另一账号一',undefined,{key:otherSession}),'other-network')).status,200);
+  assert.equal((await f.handler(request('另一账号二',undefined,{key:otherSession}),'other-network')).status,200);
+  const sharedIP=await f.handler(request('另一账号三',undefined,{key:otherSession}),'203.0.113.1');
+  assert.equal((await sharedIP.json()).code,'CAPTCHA_REFRESH_LIMIT');assert.equal(f.images(),1);assert.equal(f.calls(),4);
+});
+
+test('five wrong guesses cannot mint another image inside 30 seconds or reset the guess counter',async()=>{
+  const f=await fixture(),proof=await f.challenge();
+  for(let i=0;i<5;i++)assert.equal((await f.handler(request('消息三',{...proof,answer:'9999'}),'203.0.113.1')).status,400);
+  const blocked=await f.handler(request('消息三'),'203.0.113.1');assert.equal((await blocked.json()).code,'CAPTCHA_REFRESH_LIMIT');assert.equal(f.images(),1);
+  f.advance(30000);const response=await f.handler(request('消息三'),'203.0.113.1');assert.equal(response.status,428);
+  const fresh=(await response.json()).challenge;assert.equal(f.images(),2);
+  assert.equal((await f.handler(request('消息三',{token:fresh.token,answer:'0123'}),'203.0.113.1')).status,200);assert.equal(f.calls(),3);
+});
+
+test('simultaneous first image requests share one challenge after asynchronous persistence',async()=>{
+  const f=await fixture();
+  for(const text of ['消息一','消息二'])assert.equal((await f.handler(request(text),'203.0.113.1')).status,200);
+  const responses=await Promise.all([f.handler(request('消息三'),'203.0.113.1'),f.handler(request('消息三'),'203.0.113.1')]);
+  assert.deepEqual(responses.map(response=>response.status),[428,428]);
+  const [a,b]=await Promise.all(responses.map(response=>response.json()));assert.equal(a.challenge.token,b.challenge.token);assert.equal(f.images(),1);assert.equal(f.calls(),2);
 });

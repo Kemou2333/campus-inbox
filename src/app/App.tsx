@@ -80,7 +80,13 @@ export default function App(){
  const guideProgress={pasted:guide.state.filled,generated:!!guide.state.notice,reviewed:!!guide.state.notice?.tasks[0]&&feedView.expandedTaskIDs.has(guide.state.notice.tasks[0].id),completed:!!guide.state.notice?.completed};
  function changeGuideStep(next:number){if(next<3&&guide.state.notice?.completed){guide.session.rewindCompletion();clearCelebration();setFeedView(previous=>({...previous,tab:0}));}setGuideStep(next);setPage(next===0||next===1&&!guide.state.notice?1:0);}
  const consumeFocus=useCallback((id:string)=>setFocusID(value=>value===id?null:value),[]);
- useEffect(()=>{if(!exampleRequest.current||exampleStarted.current||app.bootError)return;exampleStarted.current=true;void app.loadExamples().catch(app.report);},[app.bootError]);
+ // The introduction stays light. Tutorial time (or a settled returning visit)
+ // warms the catalog without importing notices, changing progress or showing a toast.
+ useEffect(()=>{if(app.bootError||launchStage!=='idle')return;
+  const timer=setTimeout(()=>{void app.prefetchExamples().catch(()=>{/* The show button can retry. */});},help?0:1800);
+  return()=>clearTimeout(timer);
+ },[help,launchStage,app.bootError,app.prefetchExamples]);
+ useEffect(()=>{if(!exampleRequest.current||exampleStarted.current||app.bootError||help||launchStage!=='idle'||tutorialRequired)return;exampleStarted.current=true;void app.loadExamples().catch(app.report);},[app.bootError,help,launchStage,tutorialRequired]);
  useEffect(()=>{if(app.latestAddedID&&!help){setPage(0);setFocusID(app.latestAddedID);}},[app.latestAddedID]);
  const dark=app.theme==='system'?(app.capabilities?.theme?.dark??systemDark):app.theme==='dark';const theme=makeTheme(dark,app.capabilities?.theme??null);
  useEffect(()=>{document.documentElement.dataset.platform=app.platform.kind;document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.style.colorScheme=dark?'dark':'light';document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme.palette.background.default);if(app.platform.setAppearance)void app.platform.setAppearance(dark).catch(app.report);},[app.platform,dark]);
@@ -100,7 +106,7 @@ export default function App(){
  function openCampusSettings(){navigate(2);setExpandCampus(true);}
  function startWelcome(){if(app.bootError){setLaunchStage('idle');return;}guideSaved.current??={page,view:feedView,focus:focusID,scroll:window.scrollY};setPage(1);setFeedView(createFeedViewState());setFocusID(null);try{firstEntry.current=createFirstEntryMotion(localStorage,{force:true});}catch{firstEntry.current=createFirstEntryMotion(null,{force:true});}setLaunchStage('leaving');}
  function showWelcome(){setAbout(false);setLaunchStage('intro');}
- const actions:NoticeActions={completionChanged,note:(notice,target,title,text)=>setNote({noticeID:notice.id,target,title,text}),details:n=>{setSourcePath(undefined);setDetails(n.id);},calendar:(notice,task)=>setCalendar({notice,task}),evidence:(notice,path)=>{setSourcePath(path);setDetails(notice.id);},correct:(notice,path)=>{setDetails(null);setCorrection({noticeID:notice.id,path});},share:notice=>setShare({...notice,corrections:undefined}),question:notice=>setQuestionID(notice.id)};
+ const actions:NoticeActions={completionChanged,note:(notice,target,title,text)=>setNote({noticeID:notice.id,target,title,text}),details:n=>{setSourcePath(undefined);setDetails(n.id);},calendar:(notice,task)=>{if(app.platform.kind==='android')setCalendar({notice,task});},evidence:(notice,path)=>{setSourcePath(path);setDetails(notice.id);},correct:(notice,path)=>{setDetails(null);setCorrection({noticeID:notice.id,path});},share:notice=>setShare({...notice,corrections:undefined}),question:notice=>setQuestionID(notice.id)};
  useEffect(()=>{
   const receive=()=>{if(modalRef.current||app.busy||document.querySelector('[role=\"dialog\"]'))return;void app.receiveShare().then(received=>{if(received)navigate(1);}).catch(app.report);};
   const openNotice=()=>{void app.platform.getOpenedNotice().then(id=>{if(id){setPage(0);setFocusID(id);}}).catch(app.report);};
@@ -129,7 +135,7 @@ export default function App(){
     <Tooltip title="了解拾笺 Inbox"><Button aria-label="关于拾笺 Inbox" onClick={()=>setAbout(true)} endIcon={<InfoOutlined sx={{fontSize:16,color:'text.secondary'}}/>} sx={{px:.5,minWidth:0,color:'text.primary',gap:.75,whiteSpace:'nowrap','& .MuiButton-endIcon':{ml:0}}}><Box component="img" src="./icon.svg" width={32} height={32} alt=""/><Typography sx={{fontWeight:700,fontSize:'1.125rem',lineHeight:1.4}}>拾笺 Inbox</Typography></Button></Tooltip>
     <Box sx={{flex:1}}/>
     {wide&&nav.map((item,i)=>split?i===1?null:<Button key={item.label} variant={(i===0?page!==2:page===2)?'contained':'text'} onClick={()=>navigate(i)} sx={{px:2}}>{item.label}</Button>:<Tooltip key={item.label} title={item.label}><IconButton aria-label={item.label} onClick={()=>navigate(i)} sx={{color:page===i?'primary.main':'text.secondary',bgcolor:page===i?'action.selected':undefined}}>{item.icon}</IconButton></Tooltip>)}
-    <Tooltip title="使用帮助"><IconButton aria-label="使用帮助" onClick={showWelcome} sx={{width:44,height:44}}><HelpOutline/></IconButton></Tooltip>
+    <Tooltip title="重新查看教程"><Button aria-label="重看教程" onClick={showWelcome} sx={{minWidth:58,px:.5,py:.5,flexDirection:'column',gap:.25,color:'text.secondary',lineHeight:1.2}}><HelpOutline sx={{fontSize:24}}/><Typography component="span" sx={{fontSize:11,lineHeight:1.2}}>重看教程</Typography></Button></Tooltip>
    </Toolbar>
   </AppBar>
   <Container maxWidth={false} component="main" sx={{maxWidth:split&&page!==2?1240:900,px:{xs:1,sm:3},pt:{xs:1.5,sm:3},pb:split&&page!==2?0:wide?3:'calc(80px + var(--safe-bottom))',...(split&&page!==2?{display:'flex',flexDirection:'column',height:'calc(100dvh - 77px - var(--safe-top))',minHeight:0,'@media (max-height:500px)':{height:'calc(100dvh - 61px - var(--safe-top))'}}:{})}}>

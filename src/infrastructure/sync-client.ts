@@ -1,7 +1,7 @@
 import { newID, parseNotice } from '../domain/notice';
 import type { Notice, NoticeRepository } from '../domain/types';
 
-export interface SyncConflict { id: string; version: number; local: Notice | null; remote: Notice | null }
+export interface SyncConflict { id: string; version: number; local: Notice | null; remote: Notice | null; localChanged?: boolean }
 export interface SyncState {
   connected: boolean;
   status: 'disconnected' | 'idle' | 'syncing' | 'offline' | 'error';
@@ -12,14 +12,16 @@ export interface SyncState {
   conflicts: SyncConflict[];
 }
 interface RemoteUpdate { id: string; version: number; record: Notice | null }
+interface StoredConflict extends RemoteUpdate { localChanged?: boolean; localHash?: string | null }
 interface Change { id: string; baseVersion: number; record: Notice | null }
 interface Metadata {
   version: 1;
   key: string;
+  account?: string;
   cursor: number;
   versions: Record<string, number>;
   hashes: Record<string, string | null>;
-  conflicts: RemoteUpdate[];
+  conflicts: StoredConflict[];
   lastSyncedAt: string | null;
   hasMore: boolean;
 }
@@ -67,6 +69,21 @@ export function normalizeSyncEndpoint(endpoint: string): string {
 function emptyMetadata(key: string): Metadata {
   return { version: 1, key, cursor: 0, versions: {}, hashes: {}, conflicts: [], lastSyncedAt: null, hasMore: false };
 }
+function stableAccount(account: string): string {
+  const value=account.normalize('NFKC').trim().toLowerCase();
+  if(!value||value.length>120||/[\u0000-\u001f\u007f@]/.test(value))throw new Error('账号身份无效，请重新登录');
+  return value;
+}
+function parseMetadata(value: unknown,key: string): Metadata {
+  const saved=value as Metadata;
+  if(!saved||saved.version!==1||!Number.isSafeInteger(saved.cursor)||saved.cursor<0||!saved.versions||typeof saved.versions!=='object'||Array.isArray(saved.versions)||!saved.hashes||typeof saved.hashes!=='object'||Array.isArray(saved.hashes)||!Array.isArray(saved.conflicts)
+    ||Object.values(saved.versions).some(version=>!Number.isSafeInteger(version)||version<0)||Object.values(saved.hashes).some(hash=>hash!==null&&typeof hash!=='string'))throw new Error('同步设置格式异常，请重新连接云空间');
+  return {...saved,key,...(saved.account?{account:stableAccount(saved.account)}:{}),conflicts:saved.conflicts.map(value=>{
+    const update=parseUpdate(value);return {...update,...(value.localChanged===true?{localChanged:true}:{}),...(Object.hasOwn(value,'localHash')&&(value.localHash===null||typeof value.localHash==='string')?{localHash:value.localHash}:{})};
+  }),hasMore:!!saved.hasMore};
+}
+/** Unknown old snapshots are preserved, but are not evidence of a new local edit. */
+export function automaticConflictChoice(conflict: SyncConflict): 'local' | 'remote' {return conflict.localChanged?'local':'remote';}
 function parseUpdate(value: unknown): RemoteUpdate {
   const o = value as Partial<RemoteUpdate> | null;
   if (!o || typeof o.id !== 'string' || !o.id || o.id.length > 150 || !Number.isSafeInteger(o.version) || Number(o.version) < 1) throw new Error('云同步返回了无效记录');
@@ -107,8 +124,8 @@ export class CloudSync {
     const raw = this.storage.getItem(this.storageKey);
     if (raw) {
       const saved = JSON.parse(raw) as Metadata;
-      if (saved.version !== 1 || typeof saved.key !== 'string' || !Number.isSafeInteger(saved.cursor) || !saved.versions || !saved.hashes || !Array.isArray(saved.conflicts)) throw new Error('同步设置格式异常，请重新连接云空间');
-      this.metadata = { ...saved, conflicts: saved.conflicts.map(parseUpdate), hasMore: !!saved.hasMore };
+      if(typeof saved?.key!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(saved.key))throw new Error('同步设置格式异常，请重新连接云空间');
+      this.metadata = parseMetadata(saved,saved.key);
       this.refreshState('idle');
     }
   }
@@ -137,11 +154,17 @@ export class CloudSync {
     this.state = {
       connected: !!m, status: m ? status : 'disconnected', error, lastSyncedAt: m?.lastSyncedAt ?? null,
       pendingChanges: this.changes(local).length, hasMore: m?.hasMore ?? false,
-      conflicts: m?.conflicts.map(c => ({ ...c, local: local.get(c.id) ?? null, remote: c.record })) ?? [],
+      conflicts: m?.conflicts.map(c => ({ ...c, local: local.get(c.id) ?? null, remote: c.record,
+        localChanged:c.localChanged===true||Object.hasOwn(c,'localHash')&&recordHash(local.get(c.id)??null)!==c.localHash })) ?? [],
     };
     const state = this.getState(); this.listeners.forEach(fn => fn(state));
   }
-  private persist(): void { if (this.metadata) this.storage.setItem(this.storageKey, JSON.stringify(this.metadata)); }
+  private baselineKey(account:string):string{return `campus-inbox:sync-baseline:v1:${this.endpoint}:${encodeURIComponent(account)}`;}
+  private saveBaseline(metadata:Metadata):void {
+    if(!metadata.account)return;
+    const {key:_,...baseline}=metadata;this.storage.setItem(this.baselineKey(metadata.account),JSON.stringify(baseline));
+  }
+  private persist(): void { if (this.metadata) {this.saveBaseline(this.metadata);this.storage.setItem(this.storageKey, JSON.stringify(this.metadata));} }
   private async request(body: unknown, signal?: AbortSignal): Promise<unknown> {
     const controller = new AbortController(), abort = () => controller.abort();
     const timer = setTimeout(abort, 15000); signal?.addEventListener('abort', abort, { once: true });
@@ -159,19 +182,29 @@ export class CloudSync {
       return await response.json();
     } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
   }
-  async connect(key: string): Promise<SyncState> {
+  async connect(key: string,account?:string): Promise<SyncState> {
     const trimmed = key.trim();
     if (!/^[A-Za-z0-9_-]{43}$/.test(trimmed)) throw new Error('登录会话无效，请重新登录');
+    const identity=account===undefined?undefined:stableAccount(account);
+    let next:Metadata;
+    if(this.metadata?.key===trimmed&&(!identity||!this.metadata.account||this.metadata.account===identity)||identity&&this.metadata?.account===identity)next={...this.metadata!,key:trimmed,...(identity?{account:identity}:{})};
+    else{
+      const raw=identity?this.storage.getItem(this.baselineKey(identity)):null;
+      next=raw?parseMetadata(JSON.parse(raw),trimmed):emptyMetadata(trimmed);
+      if(identity){if(next.account&&next.account!==identity)throw new Error('同步基准不属于此账号，本机记录已保留');next.account=identity;}
+    }
+    if(this.metadata)this.saveBaseline(this.metadata);
     this.generation++; this.controller?.abort();
-    if (this.metadata?.key !== trimmed) this.metadata = emptyMetadata(trimmed);
+    this.metadata=next;
     this.persist(); this.refreshState('idle');
     // An old connection may still be unwinding; its response cannot modify this generation.
     if (this.running) await this.running;
     return this.syncNow();
   }
   disconnect(): void {
-    this.generation++; this.controller?.abort(); this.metadata = null; this.rerun = false;
-    this.storage.removeItem(this.storageKey); this.refreshState('disconnected');
+    this.generation++; this.controller?.abort();this.rerun=false;
+    try{if(this.metadata)this.saveBaseline(this.metadata);}
+    finally{this.metadata=null;this.storage.removeItem(this.storageKey);this.refreshState('disconnected');}
   }
   /** Concurrent save/focus calls coalesce. New edits during a request get another pass. */
   syncNow(): Promise<SyncState> {
@@ -226,12 +259,17 @@ export class CloudSync {
       m.versions[ack.id] = ack.version; m.hashes[ack.id] = recordHash(sent.record);
     }
     const conflicts = new Map(m.conflicts.map(c => [c.id, c]));
+    const keepConflict=(update:RemoteUpdate,hash:string|null)=>{
+      const previous=conflicts.get(update.id);
+      conflicts.set(update.id,{...update,localChanged:previous?.localChanged===true||Object.hasOwn(m.hashes,update.id)&&hash!==m.hashes[update.id],
+        localHash:previous&&Object.hasOwn(previous,'localHash')?previous.localHash:hash});
+    };
     const incomingConflicts = new Set(reply.conflicts.map(c => c.id));
     for (const update of reply.updates) {
       if (incomingConflicts.has(update.id) || update.version <= (m.versions[update.id] ?? 0)) continue;
       const current = local.get(update.id) ?? null, hash = recordHash(current), remoteHash = recordHash(update.record);
       if (hash !== remoteHash && hash !== m.hashes[update.id] && !(hash === null && m.hashes[update.id] === undefined)) {
-        conflicts.set(update.id, update); continue;
+        keepConflict(update,hash); continue;
       }
       if (hash !== remoteHash) {
         if (update.record) local.set(update.id, { ...update.record, attachments: current?.attachments ?? [] });
@@ -243,19 +281,21 @@ export class CloudSync {
     for (const conflict of reply.conflicts) {
       const hash = recordHash(local.get(conflict.id) ?? null), remoteHash = recordHash(conflict.record);
       if (hash === remoteHash) { m.versions[conflict.id] = conflict.version; m.hashes[conflict.id] = remoteHash; conflicts.delete(conflict.id); }
-      else if (conflict.version >= (conflicts.get(conflict.id)?.version ?? 0)) conflicts.set(conflict.id, conflict);
+      else if (conflict.version >= (conflicts.get(conflict.id)?.version ?? 0)) keepConflict(conflict,hash);
     }
     if (recordsChanged) this.repository.save([...local.values()]);
     m.conflicts = [...conflicts.values()]; m.cursor = reply.cursor; m.hasMore = reply.hasMore;
     this.metadata = m;
   }
-  async resolveConflict(id: string, choice: 'local' | 'remote' | 'both'): Promise<SyncState> {
+  async resolveConflict(id: string, choice: 'local' | 'remote' | 'both',expected?:{version:number;localHash:string|null}): Promise<SyncState> {
     if (!this.metadata) return this.getState();
+    const generation=this.generation;
     if (this.running) await this.running;
-    if (!this.metadata) return this.getState();
+    if (!this.metadata||generation!==this.generation) return this.getState();
     const m = this.metadata, conflict = m.conflicts.find(c => c.id === id);
     if (!conflict) return this.getState();
     const local = this.localMap(), current = local.get(id) ?? null;
+    if(expected&&(conflict.version!==expected.version||recordHash(current)!==expected.localHash))return this.getState();
     if (choice === 'remote' || choice === 'both') {
       if (choice === 'both' && current) {
         const copy: Notice = { ...structuredClone(current), id: newID(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
