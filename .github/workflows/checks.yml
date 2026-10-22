@@ -1,0 +1,63 @@
+name: Pull request checks
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web tests and production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: python3 -m unittest discover -s ops/web -p 'test_*.py'
+      - run: pnpm build
+      - run: python3 mobile/prepare-web.py
+
+  backend:
+    name: Backend protocol and cost checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test server/tests/*.test.mjs
+
+  android-boundaries:
+    name: Android native boundary checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: |
+          mkdir -p "$RUNNER_TEMP/campus-native-checks"
+          javac -d "$RUNNER_TEMP/campus-native-checks" mobile/android/app/src/main/java/io/github/kemou2333/campusinbox/NativePolicy.java mobile/android/app/src/main/java/io/github/kemou2333/campusinbox/NativeUpdatePolicy.java mobile/android/app/src/main/java/io/github/kemou2333/campusinbox/NativeExport.java mobile/android/checks/NativeHostChecks.java
+          java -cp "$RUNNER_TEMP/campus-native-checks" io.github.kemou2333.campusinbox.NativeHostChecks
