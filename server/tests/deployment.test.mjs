@@ -4,6 +4,7 @@ import {mkdtemp,mkdir,copyFile,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createServer} from 'node:net';
+import {request as httpRequest} from 'node:http';
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';
 
@@ -40,7 +41,7 @@ test('the complete production release boots without dist or frontend dependencie
     await new Promise(resolve=>reservation.close(resolve));
     child=spawn(process.execPath,[join(folder,'server/index.mjs')],{
       cwd:folder,
-      env:{PORT:String(port),BIND_HOST:'127.0.0.1',DEEPSEEK_API_KEY:'test-only-key',CAMPUS_ACCESS_TOKEN:'test-only-signing-secret-at-least-twenty-characters',ALLOWED_ORIGINS:'https://kemou2333.github.io',MAIL_LOGIN_ENABLED:'false',CAMPUS_STATE_DIRECTORY:folder},
+      env:{PORT:String(port),BIND_HOST:'127.0.0.1',DEEPSEEK_API_KEY:'test-only-key',CAMPUS_ACCESS_TOKEN:'test-only-signing-secret-at-least-twenty-characters',ALLOWED_ORIGINS:'https://kemou2333.github.io',ADMIN_ORIGIN:'https://campus.example',MAIL_LOGIN_ENABLED:'false',CAMPUS_STATE_DIRECTORY:folder},
       stdio:['ignore','pipe','pipe']
     });
     let output='',error='';
@@ -52,6 +53,21 @@ test('the complete production release boots without dist or frontend dependencie
     });
     const response=await fetch('http://127.0.0.1:'+port+'/health');
     assert.equal(response.status,200);assert.deepEqual(await response.json(),{status:'ok'});
+    // A real same-origin browser GET omits Origin; it must reach account
+    // authentication rather than the CORS rejection. No model is dispatched.
+    const jobURL='http://127.0.0.1:'+port+'/analysis-jobs';
+    const proxiedJob=(_url,options={})=>new Promise((resolve,reject)=>{
+      const req=httpRequest(jobURL,options,res=>{const chunks=[];res.on('data',chunk=>chunks.push(chunk));res.on('end',()=>resolve(new Response(Buffer.concat(chunks),{status:res.statusCode,headers:res.headers})));});
+      req.on('error',reject);req.end(options.body);
+    });
+    const sameSite={Host:'campus.example','X-Forwarded-Proto':'https','Sec-Fetch-Site':'same-origin'};
+    const sameOrigin=await proxiedJob(jobURL,{headers:sameSite});
+    assert.equal(sameOrigin.status,401);assert.equal((await sameOrigin.json()).code,'AUTH_REQUIRED');
+    for(const headers of [{...sameSite,Host:'unknown.example'},{...sameSite,Origin:'https://evil.example'},{...sameSite,Origin:'null'},{...sameSite,'Sec-Fetch-Site':'cross-site'},{Host:'campus.example','X-Forwarded-Proto':'https'},{...sameSite,'X-Forwarded-Proto':'http'}]){
+      assert.equal((await proxiedJob(jobURL,{headers})).status,403);
+    }
+    assert.equal((await proxiedJob(jobURL,{method:'POST',headers:{...sameSite,'Content-Type':'application/json'},body:'{}'})).status,403);
+    assert.equal((await proxiedJob(jobURL,{headers:{Origin:'https://kemou2333.github.io'}})).status,401);
     for(const name of ['auth.sqlite','sync.sqlite'])assert.equal((await readFile(join(folder,name))).subarray(0,15).toString(),'SQLite format 3');
     const options=await fetch('http://127.0.0.1:'+port+'/auth/options',{method:'POST',headers:{Origin:'https://kemou2333.github.io','Content-Type':'application/json'},body:'{}'});
     assert.equal(options.status,200);const availability=await options.json();assert.equal(availability.emailEnabled,false);assert.equal(availability.inviteEnabled,true);

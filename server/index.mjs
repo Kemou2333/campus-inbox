@@ -31,12 +31,20 @@ const handle=(request,ip)=>{const path=new URL(request.url).pathname;return path
 const server=http.createServer(async(req,res)=>{
   try{
     const headers=new Headers();for(const [k,v] of Object.entries(req.headers))if(v)headers.set(k,Array.isArray(v)?v.join(','):v);
+    const peer=req.socket.remoteAddress||'unknown',localProxy=['127.0.0.1','::1','::ffff:127.0.0.1'].includes(peer);
+    // Browsers omit Origin on same-origin GETs. Recover only a configured
+    // HTTPS origin confirmed by the local proxy and browser fetch metadata.
+    // Explicit origins, cross-site reads and all writes keep the strict gate.
+    if(req.method==='GET'&&!headers.has('Origin')&&localProxy&&headers.get('Sec-Fetch-Site')==='same-origin'&&headers.get('X-Forwarded-Proto')==='https'){
+      const siteOrigin='https://'+headers.get('Host');
+      if(allowedOrigins.includes(siteOrigin))headers.set('Origin',siteOrigin);
+    }
     const controller=new AbortController();req.once('aborted',()=>controller.abort());res.once('close',()=>{if(!res.writableEnded)controller.abort();});
     const options={method:req.method,headers,signal:controller.signal};if(!['GET','HEAD'].includes(req.method)){options.body=Readable.toWeb(req);options.duplex='half';}
     const request=new Request('http://localhost'+req.url,options);
     // Only the local reverse proxy may supply a single verified client IP.
-    const peer=req.socket.remoteAddress||'unknown',forwarded=req.headers['x-real-ip'];
-    const ip=['127.0.0.1','::1','::ffff:127.0.0.1'].includes(peer)&&typeof forwarded==='string'&&isIP(forwarded)?forwarded:peer;
+    const forwarded=req.headers['x-real-ip'];
+    const ip=localProxy&&typeof forwarded==='string'&&isIP(forwarded)?forwarded:peer;
     const response=await handle(request,ip);
     res.writeHead(response.status,{'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'no-referrer',...Object.fromEntries(response.headers)});res.end(Buffer.from(await response.arrayBuffer()));
   }catch{res.writeHead(500,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({error:'整理服务暂时不可用。'}));}
