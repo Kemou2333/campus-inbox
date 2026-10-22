@@ -67,8 +67,10 @@ test('service persists only the new category and token totals after a failed pai
     const state=JSON.parse(await readFile(stateFile,'utf8'));
     assert.equal(state.requests,1);assert.equal(state.input,37);assert.equal(state.output,112);assert.equal(state.reasoning,29);assert.equal(state.lastFinishReason,'stop');assert.equal(state.lastFailureCode,'STEP_DETAILS');
     assert.equal(state.costMicro,1164,'usage cost uses output once, including reasoning');
+    assert.equal(state.rolling.version,1);assert.deepEqual(Object.keys(state.rolling).sort(),['accounts','ips','version']);
+    assert.deepEqual(state.rolling.accounts,{});assert.deepEqual(state.rolling.ips,{});
     assert(!JSON.stringify(state).includes('private-'));assert(!JSON.stringify(state).includes(token));
-    assert.deepEqual(Object.keys(state).sort(),['costMicro','day','input','lastFailureCode','lastFinishReason','output','reasoning','requests'].sort());
+    assert.deepEqual(Object.keys(state).sort(),['costMicro','day','input','lastFailureCode','lastFinishReason','output','reasoning','requests','rolling'].sort());
   }finally{await rm(directory,{recursive:true,force:true});}
 });
 
@@ -121,6 +123,8 @@ test('provider timeout returns a stable code, retains the reservation and never 
     assert.equal(response.status,502);assert.deepEqual(await response.json(),{error:'AI 整理超时，请稍后重试。',code:'AI_TIMEOUT'});
     assert.equal(calls,1);const state=JSON.parse(await readFile(stateFile,'utf8'));
     assert.equal(state.requests,1);assert(state.costMicro>0);assert.equal(state.input,0);assert.equal(state.output,0);
+    assert.equal(state.rolling.version,1);assert.deepEqual(Object.keys(state.rolling).sort(),['accounts','ips','version']);
+    assert.deepEqual(state.rolling.accounts,{});assert.deepEqual(state.rolling.ips,{});
     assert(!JSON.stringify(state).includes('private-'));assert(!JSON.stringify(state).includes(token));
   }finally{await rm(directory,{recursive:true,force:true});}
 });
