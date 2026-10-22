@@ -7,6 +7,7 @@ import {createSyncService} from './sync.mjs';
 import {createAuthService} from './auth.mjs';
 import {createMailSender} from './mail-sender.mjs';
 import {createAdminService} from './admin.mjs';
+import {createSiteTransfer} from './site-transfer.mjs';
 const env=process.env;
 process.umask(0o077);
 // One portable data root, also understood by backup-state.py. Existing explicit
@@ -25,7 +26,8 @@ const handleAI=await createService({apiKey:env.DEEPSEEK_API_KEY,accessToken:env.
   thinkingMode:env.AI_THINKING_MODE==='none'?'none':'low',captchaMode:env.CAPTCHA_MODE||'image',dailyBudgetRmb:Number(env.AI_DAILY_BUDGET_RMB)||3,oneNoticePerSource:true
 },{accountForToken:key=>auth.getIdentity(key)?sync.accountForKey(key):null,jobs:sync.jobs,questions:sync.questions});
 const handleAdmin=createAdminService({usernames:(env.ADMIN_USERNAMES||'').split(',').map(name=>name.trim()).filter(Boolean),userIDs:(env.ADMIN_USER_IDS||'').split(',').map(id=>id.trim()).filter(Boolean),allowedOrigins,backupStateFile:env.BACKUP_STATUS_FILE||join(stateDirectory,'backups/status.json')},{auth,sync,ai:handleAI});
-const handle=(request,ip)=>{const path=new URL(request.url).pathname;return path.startsWith('/admin')?handleAdmin(request):path.startsWith('/auth/')?auth.handle(request,ip):path.startsWith('/sync')?sync.handle(request,ip):handleAI(request,ip);};
+const handleTransfer=createSiteTransfer({directory:join(stateDirectory,'site-transfers')});
+const handle=(request,ip)=>{const path=new URL(request.url).pathname;return path.startsWith('/site-transfer')?handleTransfer(request,ip):path.startsWith('/admin')?handleAdmin(request):path.startsWith('/auth/')?auth.handle(request,ip):path.startsWith('/sync')?sync.handle(request,ip):handleAI(request,ip);};
 const server=http.createServer(async(req,res)=>{
   try{
     const headers=new Headers();for(const [k,v] of Object.entries(req.headers))if(v)headers.set(k,Array.isArray(v)?v.join(','):v);
@@ -43,4 +45,4 @@ server.requestTimeout=210000;server.headersTimeout=10000;
 server.keepAliveTimeout=5000;server.maxRequestsPerSocket=100;server.maxHeadersCount=60;
 const bindHost=env.BIND_HOST||'127.0.0.1';
 server.listen(Number(env.PORT)||8787,bindHost,()=>console.log('Campus Inbox backend ready'));
-for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>server.close(async()=>{await handleAI.drain();auth.close();sync.close();process.exit(0);}));
+for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>server.close(async()=>{await handleAI.drain();handleTransfer.close();auth.close();sync.close();process.exit(0);}));

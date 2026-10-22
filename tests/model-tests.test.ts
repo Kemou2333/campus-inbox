@@ -18,10 +18,11 @@ test('raw result preview hides curated samples without mutating personal records
 });
 test('published first responses retain exactly reviewed prose and reject tampered or polished data',()=>{
  const records=parseModelTestCatalog(dataset);
- expect(records).toHaveLength(7);expect(auditModelTests(dataset)).toEqual([]);
+ expect(dataset.cases.length).toBeGreaterThan(0);expect(records).toHaveLength(dataset.cases.length);expect(auditModelTests(dataset)).toEqual([]);
  expect(records[0].summary).toBe(dataset.cases[0].analysis.summary);
  expect(()=>parseModelTestCatalog({...dataset,manualWordEdits:true})).toThrow();
  const altered=structuredClone(dataset);altered.cases[0].analysis.summary+=' changed';
  expect(auditModelTests(altered).some(n=>n.category==='reviewed_model_result_changed')).toBe(true);
  expect(()=>parseModelTestCatalog({...dataset,cases:[dataset.cases[0],dataset.cases[0]]})).toThrow();
 });
+

@@ -44,7 +44,7 @@ export default function App(){
  const [page,setPage]=useState(0);const [login,setLogin]=useState(false);const [help,setHelp]=useState(false);
  const [launchStage,setLaunchStage]=useState<'intro'|'leaving'|'entry'|'idle'>(()=>{try{return localStorage.getItem('campus-inbox:tutorial:v2')!=='seen'?'intro':'idle';}catch{return 'intro';}});
  const [tutorialRequired,setTutorialRequired]=useState(()=>launchStage==='intro');
- const [practiceKept,setPracticeKept]=useState(false);
+ const [practiceNudge,setPracticeNudge]=useState(false);
  const [developerUnlocked,setDeveloperUnlocked]=useState(()=>{try{return localStorage.getItem('campus-inbox:developer:v1')==='enabled';}catch{return false;}});
  function unlockDeveloper(){try{localStorage.setItem('campus-inbox:developer:v1','enabled');}catch{}setDeveloperUnlocked(true);app.tell('开发者设置已开启');}
  const guide=useGuideSession(app,help||launchStage!=='idle'),viewApp=guide.controller;
@@ -94,9 +94,8 @@ export default function App(){
  function finishHelp(){
   const kept=tutorialRequired&&guide.state.notice?app.keepGuidePractice(guide.state.notice):null;
   setTutorialRequired(false);leaveGuide(!kept);
-  if(kept){app.setModelTestMode(false);setPage(0);setFocusID(null);setFeedView({...createFeedViewState(),tab:2,expandedIDs:new Set([kept])});setPracticeKept(true);window.scrollTo({top:0,behavior:'instant'});}
+  if(kept){app.setModelTestMode(false);setPage(0);setFocusID(null);setFeedView({...createFeedViewState(),tab:2,expandedIDs:new Set()});setPracticeNudge(true);window.scrollTo({top:0,behavior:'instant'});}
  }
- async function addAfterPractice(){try{await app.loadExamples();setPracticeKept(false);setFeedView(createFeedViewState());navigate(0);}catch(e){app.report(e);}}
  function navigate(next:number){if(next===2)setExpandCampus(false);setPage(next);if(split&&next===1){setTimeout(()=>{document.getElementById('compose-pane')?.scrollIntoView({block:'start',behavior:'smooth'});document.querySelector<HTMLTextAreaElement>('#compose-pane textarea')?.focus({preventScroll:true});},0);}else window.scrollTo({top:0,behavior:'instant'});}
  function openCampusSettings(){navigate(2);setExpandCampus(true);}
  function startWelcome(){if(app.bootError){setLaunchStage('idle');return;}guideSaved.current??={page,view:feedView,focus:focusID,scroll:window.scrollY};setPage(1);setFeedView(createFeedViewState());setFocusID(null);try{firstEntry.current=createFirstEntryMotion(localStorage,{force:true});}catch{firstEntry.current=createFirstEntryMotion(null,{force:true});}setLaunchStage('leaving');}
@@ -135,14 +134,13 @@ export default function App(){
   </AppBar>
   <Container maxWidth={false} component="main" sx={{maxWidth:split&&page!==2?1240:900,px:{xs:1,sm:3},pt:{xs:1.5,sm:3},pb:split&&page!==2?0:wide?3:'calc(80px + var(--safe-bottom))',...(split&&page!==2?{display:'flex',flexDirection:'column',height:'calc(100dvh - 77px - var(--safe-top))',minHeight:0,'@media (max-height:500px)':{height:'calc(100dvh - 61px - var(--safe-top))'}}:{})}}>
    {!help&&launchStage==='idle'&&<AnalysisJobStatus app={app} onRestore={()=>navigate(1)}/>}
-   {!help&&launchStage==='idle'&&practiceKept&&page===0&&<Alert severity="success" action={<Stack direction="row" sx={{alignItems:'center'}}><Button onClick={()=>void addAfterPractice()} sx={{whiteSpace:'nowrap'}}>添加示例</Button><IconButton aria-label="关闭示例提示" onClick={()=>setPracticeKept(false)} size="small"><Close fontSize="small"/></IconButton></Stack>} sx={{mb:2,flexShrink:0}}>练习已保留。再看看其他通知？</Alert>}
    {!help&&launchStage==='idle'&&!!unreadReminders.length&&<Alert className="new-reminders-prompt" severity="info" role="status" action={<Stack direction="row" sx={{alignItems:'center',gap:.25}}><Button onClick={viewNewReminders} sx={{whiteSpace:'nowrap'}}>查看</Button><IconButton aria-label="清除未读提醒" onClick={clearNewReminders} sx={{width:40,height:40}}><Close fontSize="small"/></IconButton></Stack>} sx={{mb:2,flexShrink:0}}>未读提醒 {unreadReminders.length}</Alert>}
    {app.bootError?<Alert severity="error" action={<Button onClick={()=>void rescue().catch(app.report)}>保存原始数据</Button>}>原来的通知无法读取：{app.bootError}。数据仍在本机，暂未覆盖。</Alert>:
     split&&page!==2?<Box className="workspace" sx={{display:'grid',gridTemplateColumns:'minmax(280px, 320px) minmax(0, 1fr)',gap:3,flex:1,minHeight:160}}>
      <ScrollPane id="compose-pane" label="添加" onFocus={()=>setPage(1)}><ComposerPage app={viewApp} embedded onDone={()=>setPage(0)} onLogin={()=>setLogin(true)}/></ScrollPane>
-     <ScrollPane id="feed-pane" label="已保存通知" onFocus={()=>setPage(0)}><FeedPage onDownload={()=>setDownloadsOpen(true)} app={viewApp} embedded actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} focusID={help?null:focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView} editingID={correction?.noticeID} onEditingClose={()=>setCorrection(null)}/></ScrollPane>
+     <ScrollPane id="feed-pane" label="已保存通知" onFocus={()=>setPage(0)}><FeedPage sampleNudge={!help&&practiceNudge} onSamplesOpened={()=>setPracticeNudge(false)} onDownload={()=>setDownloadsOpen(true)} app={viewApp} embedded actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} focusID={help?null:focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView} editingID={correction?.noticeID} onEditingClose={()=>setCorrection(null)}/></ScrollPane>
     </Box>:
-    page===0?<FeedPage onDownload={()=>setDownloadsOpen(true)} app={viewApp} actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} focusID={help?null:focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView} editingID={correction?.noticeID} onEditingClose={()=>setCorrection(null)}/>:
+    page===0?<FeedPage sampleNudge={!help&&practiceNudge} onSamplesOpened={()=>setPracticeNudge(false)} onDownload={()=>setDownloadsOpen(true)} app={viewApp} actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} focusID={help?null:focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView} editingID={correction?.noticeID} onEditingClose={()=>setCorrection(null)}/>:
     page===1?<ComposerPage app={viewApp} onDone={()=>navigate(0)} onLogin={()=>setLogin(true)}/>:
     <SettingsPage developerEnabled={developerUnlocked} app={app} onLogin={()=>setLogin(true)} onHelp={showWelcome} onAbout={()=>setAbout(true)} onDialogChange={setSettingsDialog} expandCampus={expandCampus} onFilterNotices={enabled=>{setFeedView(previous=>({...previous,tab:0,query:'',favoritesOnly:false,relevantOnly:enabled}));navigate(0);}} onShowNotices={()=>{setFeedView(createFeedViewState());setFocusID(null);navigate(0);}}/>}
   </Container>

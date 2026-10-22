@@ -177,8 +177,10 @@ function sourceMapping(parsed,sources){
   if(indexes.some((value,index)=>index>0&&value<indexes[index-1])||new Set(indexes).size!==limit)throw new Error('source');
   return {parsed:{...parsed,notices:parsed.notices.map(({sourceId,...item})=>item)},indexes};
 }
-/** Normalize only a harmless provider representation difference. Do not add
- * missing fields, split prose, invent facts, or loosen the card validators. */
+/** Normalize harmless provider representation differences, never prose.
+ * Steps may repeat empty task-only metadata. Only the exact known empty
+ * values are removable; populated/unknown fields still reach strict validation.
+ * Do not add missing fields, split prose or invent facts. */
 export function normalizeDescriptionArrays(parsed){
   if(!record(parsed)||!Array.isArray(parsed.notices))return parsed;
   const fields=(item,keys)=>{
@@ -193,7 +195,16 @@ export function normalizeDescriptionArrays(parsed){
     if(Array.isArray(notice.tasks))result.tasks=notice.tasks.map(task=>{
       if(!record(task))return task;
       const next=fields(task,['details']);
-      if(Array.isArray(task.steps))next.steps=task.steps.map(step=>fields(step,['details']));
+      if(Array.isArray(task.steps))next.steps=task.steps.map(step=>{
+        const value=fields(step,['details']);
+        if(!record(value))return value;
+        const extras=Object.keys(value).filter(key=>key!=='text'&&key!=='details');
+        const empty={time:null,timeText:'',location:null};
+        if(extras.length&&extras.every(key=>Object.hasOwn(empty,key)&&value[key]===empty[key])){
+          return Object.fromEntries(Object.entries(value).filter(([key])=>!extras.includes(key)));
+        }
+        return value;
+      });
       return next;
     });
     return result;
