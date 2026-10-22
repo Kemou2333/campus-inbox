@@ -29,7 +29,7 @@ async function fixture(options={}){
     const result=await request('register',{username,password,invite:auth.issueInvites(1)[0]});assert.equal(result.status,200);return result.body;
   }
   async function send(address=email,purpose='login',key,ip){
-    const result=await request('email/request',{email:address,purpose},key,ip);assert.equal(result.status,200);return result.body;
+    const result=await request('email/request',{email:address,purpose,...(options.legacyClient?{}:{codeLength:4})},key,ip);assert.equal(result.status,200);return result.body;
   }
   const verify=(challenge,code=messages.at(-1).code,key,ip)=>request('email/verify',{challengeId:challenge.challengeId,code},key,ip);
   return {auth,config,messages,identities,request,register,send,verify,now:()=>time,advance:ms=>{time+=ms;}};
@@ -47,9 +47,9 @@ test('mail request returns only an opaque challenge and creates accounts after v
   const f=await fixture();t.after(()=>f.auth.close());
   assert.equal((await f.request('options')).body.emailEnabled,true);
   const challenge=await f.send();
-  assert.deepEqual(Object.keys(challenge).sort(),['challengeId','expiresAt','retryAfterSeconds']);
+  assert.deepEqual(Object.keys(challenge).sort(),['challengeId','codeLength','expiresAt','retryAfterSeconds']);
   assert.match(challenge.challengeId,/^[A-Za-z0-9_-]{43}$/);assert.equal(challenge.retryAfterSeconds,60);
-  assert.match(f.messages[0].code,/^\d{6}$/);assert.equal(f.messages[0].expiresMinutes,5);
+  assert.match(f.messages[0].code,/^\d{4}$/);assert.equal(challenge.codeLength,4);assert.equal(f.messages[0].expiresMinutes,5);
   assert.equal(f.identities.length,0);
   const logged=await f.verify(challenge);assert.equal(logged.status,200);assert.equal(logged.body.email,email);
   assert.match(logged.body.username,/^同学_[a-f0-9]{16}$/);assert.equal(logged.body.key.length,43);
@@ -86,7 +86,7 @@ test('resending cannot cancel another valid login challenge, and each challenge 
 test('five wrong codes remain exhausted after reopening the SQLite database',async t=>{
   const directory=await mkdtemp(join(tmpdir(),'campus-email-attempt-'));t.after(()=>rm(directory,{recursive:true,force:true}));
   const file=join(directory,'auth.sqlite'),f=await fixture({file}),challenge=await f.send(),correct=f.messages[0].code;
-  const wrong=correct==='000000'?'000001':'000000';
+  const wrong=correct==='0000'?'0001':'0000';
   for(let i=0;i<5;i++)assert.equal((await f.verify(challenge,wrong)).status,400);
   f.auth.close();
   const reopened=await fixture({file});t.after(()=>reopened.auth.close());
@@ -96,7 +96,7 @@ test('five wrong codes remain exhausted after reopening the SQLite database',asy
 test('failed verification throttles guesses across challenges without locking out a correct code on the shared network',async t=>{
   const f=await fixture({limits:{emailVerifyIPMinute:2}});t.after(()=>f.auth.close());
   for(let i=0;i<2;i++)assert.equal((await f.request('email/verify',{challengeId:'A'.repeat(43),code:'123456'})).status,400);
-  const challenge=await f.send(),correct=f.messages[0].code,wrong=correct==='000000'?'000001':'000000';
+  const challenge=await f.send(),correct=f.messages[0].code,wrong=correct==='0000'?'0001':'0000';
   assert.equal((await f.verify(challenge,wrong)).status,429);
   assert.equal((await f.verify(challenge,correct)).status,200);
 });
@@ -176,7 +176,7 @@ test('mail failures return the remaining cooldown and release their send slot',a
 test('wrong-code attempt exhaustion persists even when the network failure budget was already exhausted',async t=>{
   const directory=await mkdtemp(join(tmpdir(),'campus-email-throttle-'));t.after(()=>rm(directory,{recursive:true,force:true}));
   const file=join(directory,'auth.sqlite'),f=await fixture({file,limits:{emailVerifyIPMinute:1}}),challenge=await f.send(),correct=f.messages[0].code;
-  const wrong=correct==='000000'?'000001':'000000';
+  const wrong=correct==='0000'?'0001':'0000';
   assert.equal((await f.verify(challenge,wrong)).status,400);
   for(let i=0;i<4;i++)assert.equal((await f.verify(challenge,wrong)).status,429);
   const time=f.now();f.auth.close();const reopened=await fixture({file,time,limits:{emailVerifyIPMinute:1}});t.after(()=>reopened.auth.close());
@@ -293,7 +293,7 @@ test('email registration cannot overwrite an existing bound account or its passw
 
 test('legacy email-only accounts set a password after verification and retain their cloud owner',async t=>{
  const f=await fixture();t.after(()=>f.auth.close());const original=(await f.verify(await f.send())).body,owner=f.auth.getIdentity(original.key).subject;
- f.advance(60000);const challenge=await f.send(email,'password'),code=f.messages.at(-1).code,wrong=code==='000000'?'000001':'000000';
+ f.advance(60000);const challenge=await f.send(email,'password'),code=f.messages.at(-1).code,wrong=code==='0000'?'0001':'0000';
  const invalid=await f.request('email/verify',{challengeId:challenge.challengeId,code:wrong,password});assert.equal(invalid.status,400);
  assert.equal((await f.request('login',{username:email,password})).status,401);
  const saved=await f.request('email/verify',{challengeId:challenge.challengeId,code,password});assert.equal(saved.status,200);
@@ -335,7 +335,7 @@ test('a verified password account survives provisioning failure and can recover 
 test('public registration and first-password send replies do not reveal mailbox membership',async t=>{
  const f=await fixture();t.after(()=>f.auth.close());const old=await f.register();await f.verify(await f.send(email,'bind',old.key),undefined,old.key);f.advance(60000);
  for(const [address,purpose] of [[email,'register'],['new@163.com','register'],['unknown@163.com','password']]){
-  const reply=await f.request('email/request',{email:address,purpose});assert.equal(reply.status,200);assert.deepEqual(Object.keys(reply.body).sort(),['challengeId','expiresAt','retryAfterSeconds']);
+  const reply=await f.request('email/request',{email:address,purpose});assert.equal(reply.status,200);assert.deepEqual(Object.keys(reply.body).sort(),['challengeId','codeLength','expiresAt','retryAfterSeconds']);
   if(purpose==='password')assert.equal((await f.request('email/verify',{challengeId:reply.body.challengeId,code:f.messages.at(-1).code,password})).status,409);
  }
  assert.equal(f.identities.length,1);
@@ -369,4 +369,65 @@ test('existing verified external email remains a login credential without allowi
  assert.equal((await f.request('email/request',{email:'new@previous-provider.example',purpose:'login'})).status,400);
  assert.equal((await f.request('email/request',{email:address,purpose:'bind'},old.key)).status,400);
  assert.equal(f.messages.length,1);
+});
+
+
+test('four-digit requests and unversioned installed clients negotiate without bypassing mailbox limits',async t=>{
+ const f=await fixture();t.after(()=>f.auth.close());
+ const modern=await f.send(),modernCode=f.messages.at(-1).code;assert.equal(modern.codeLength,4);assert.match(modernCode,/^\d{4}$/);
+ assert.equal((await f.request('email/request',{email,purpose:'login'})).status,429);assert.equal(f.messages.length,1);
+ f.advance(60000);
+ const legacy=await f.request('email/request',{email,purpose:'login'});assert.equal(legacy.status,200);assert.equal(legacy.body.codeLength,6);
+ const legacyCode=f.messages.at(-1).code;assert.match(legacyCode,/^\d{6}$/);
+ const first=await f.verify(modern,modernCode);assert.equal(first.status,200);const owner=f.auth.getIdentity(first.body.key).subject;
+ const again=await f.verify(legacy.body,legacyCode);assert.equal(again.status,200);assert.equal(f.auth.getIdentity(again.body.key).subject,owner);
+ assert.equal((await f.verify(legacy.body,legacyCode)).status,400);assert.equal(f.identities.length,2);
+});
+
+test('only the new four-digit negotiation or an absent legacy length is accepted before sending',async t=>{
+ const f=await fixture();t.after(()=>f.auth.close());
+ for(const codeLength of [0,3,5,6,7,'4',null,{},[]]){
+  const response=await f.request('email/request',{email,purpose:'register',codeLength});
+  assert.equal(response.status,400);assert.equal(response.body.code,'EMAIL_CODE_LENGTH_INVALID');
+ }
+ assert.equal(f.messages.length,0);assert.equal((await f.send()).codeLength,4);
+});
+
+test('a persisted legacy six-digit binding challenge still redeems once for its original account UUID',async t=>{
+ const directory=await mkdtemp(join(tmpdir(),'campus-email-six-digit-transition-'));t.after(()=>rm(directory,{recursive:true,force:true}));
+ const file=join(directory,'auth.sqlite'),oldClient=await fixture({file,legacyClient:true}),old=await oldClient.register(),owner=oldClient.auth.getIdentity(old.key).subject;
+ const challenge=await oldClient.send(email,'bind',old.key),code=oldClient.messages.at(-1).code;assert.equal(challenge.codeLength,6);assert.match(code,/^\d{6}$/);
+ const time=oldClient.now();oldClient.auth.close();
+ const modern=await fixture({file,time});t.after(()=>modern.auth.close());
+ const result=await modern.verify(challenge,code,old.key);assert.equal(result.status,200);assert.equal(modern.auth.getIdentity(old.key).subject,owner);assert.equal(modern.auth.getIdentity(old.key).email,email);
+ assert.equal((await modern.verify(challenge,code,old.key)).status,400);assert.equal(modern.messages.length,0);
+});
+
+test('daily send exhaustion stays paused until Shanghai midnight across restart without permanently disabling the mailbox',async t=>{
+  const directory=await mkdtemp(join(tmpdir(),'campus-email-daily-pause-'));t.after(()=>rm(directory,{recursive:true,force:true}));
+  const file=join(directory,'auth.sqlite'),limits={emailSendDay:1},f=await fixture({file,limits,time:Date.parse('2026-10-08T15:00:00Z')});
+  await f.send();f.advance(23*3600000);
+  const limited=await f.request('email/request',{email,purpose:'login'});assert.equal(limited.status,429);assert.match(limited.body.error,/今日已暂停/);
+  const time=f.now();f.auth.close();const reopened=await fixture({file,limits,time});t.after(()=>reopened.auth.close());
+  reopened.advance(80*60000); // The original rolling window has elapsed; this day's stop remains.
+  assert.equal((await reopened.request('email/request',{email,purpose:'login'})).status,429);assert.equal(reopened.messages.length,0);
+  assert.equal((await reopened.request('email/request',{email:'unaffected@163.com',purpose:'login'},undefined,'other-network')).status,200);
+  reopened.advance(40*60000);assert.equal((await reopened.request('email/request',{email,purpose:'login'})).status,200);
+});
+
+test('actual SMTP failures trip a persistent daily circuit breaker and automatically recover the next Shanghai day',async t=>{
+  const directory=await mkdtemp(join(tmpdir(),'campus-email-failure-pause-'));t.after(()=>rm(directory,{recursive:true,force:true}));
+  const file=join(directory,'auth.sqlite'),limits={emailSendFailureDay:2},f=await fixture({file,limits,time:Date.parse('2026-10-08T15:58:00Z'),sendCode:()=>{throw new Error('private SMTP rejection');}});
+  const first=await f.request('email/request',{email,purpose:'login'});assert.equal(first.status,503);
+  const second=await f.request('email/request',{email:'second@163.com',purpose:'login'});assert.equal(second.status,429);assert.equal(second.body.code,'EMAIL_DAILY_PAUSED');assert.equal(f.messages.length,2);assert(!JSON.stringify(second.body).includes('private SMTP'));
+  const time=f.now();f.auth.close();const reopened=await fixture({file,limits,time});t.after(()=>reopened.auth.close());
+  const blocked=await reopened.request('email/request',{email:'third@163.com',purpose:'login'},undefined,'other-network');assert.equal(blocked.status,429);assert.equal(blocked.body.retryAfterSeconds,120);assert.equal(reopened.messages.length,0);
+  reopened.advance(120000);assert.equal((await reopened.request('email/request',{email:'third@163.com',purpose:'login'})).status,200);assert.equal(reopened.messages.length,1);
+});
+
+test('verification remains usable after the mailbox daily send stop and never trips SMTP failure counts',async t=>{
+  const f=await fixture({limits:{emailSendDay:1,emailSendFailureDay:1}});t.after(()=>f.auth.close());const challenge=await f.send(),code=f.messages.at(-1).code;
+  f.advance(60000);assert.equal((await f.request('email/request',{email,purpose:'login'})).status,429);
+  const verified=await f.verify(challenge,code);assert.equal(verified.status,200);const owner=f.auth.getIdentity(verified.body.key).subject;
+  const another=await f.send('another@163.com');const logged=await f.verify(another);assert.equal(logged.status,200);assert.notEqual(f.auth.getIdentity(logged.body.key).subject,owner);
 });

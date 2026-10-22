@@ -8,7 +8,7 @@ import {createEmailAuth} from './email-auth.mjs';
 import {canonicalLoginEmail} from './contracts/email-policy.mjs';
 import {createImageCaptcha,captchaAnswerHash} from './image-captcha.mjs';
 
-const scrypt=promisify(derive),DAY=86400000,SESSION_TTL=30*DAY;
+const scrypt=promisify(derive),DAY=86400000,SESSION_TTL=30*DAY,IMAGE_REFRESH_MS=30000;
 const ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const validKey=key=>typeof key==='string'&&/^[A-Za-z0-9_-]{43}$/.test(key);
@@ -96,8 +96,8 @@ export async function createAuthService(config,options={}){
     transaction(()=>{
       clean();
       const recent=stmt.imageRecent.get(client);
-      if(recent&&t-recent.created<6000){const issue=new ServiceError('请稍后再换一张验证码。',429);issue.code='AUTH_CAPTCHA_RATE_LIMIT';issue.retryAfterSeconds=Math.max(1,Math.ceil((recent.created+6000-t)/1000));throw issue;}
-      rollingRate('image-client-refresh',client,1,6000,'AUTH_CAPTCHA_RATE_LIMIT');
+      if(recent&&t-recent.created<IMAGE_REFRESH_MS){const issue=new ServiceError('请稍后再换一张验证码。',429);issue.code='AUTH_CAPTCHA_RATE_LIMIT';issue.retryAfterSeconds=Math.max(1,Math.ceil((recent.created+IMAGE_REFRESH_MS-t)/1000));throw issue;}
+      rollingRate('image-client-refresh',client,1,IMAGE_REFRESH_MS,'AUTH_CAPTCHA_RATE_LIMIT');
       rollingRate('image-client-minute',client,limits.challengeClientMinute,60000,'AUTH_CAPTCHA_RATE_LIMIT');
       rollingRate('image-ip-minute',network,limits.challengeIPMinute,60000,'AUTH_CAPTCHA_RATE_LIMIT');
       rollingRate('image-ip-hour',network,limits.challengeIPHour,3600000,'AUTH_CAPTCHA_RATE_LIMIT');
@@ -105,7 +105,7 @@ export async function createAuthService(config,options={}){
     });
     const generated=imageCaptcha(id),expires=t+5*60000;
     transaction(()=>{stmt.imagePruneClient.run(client);stmt.imageCreate.run(id,client,network,origin,body.purpose,generated.answerHash,t,expires);});
-    return {id,image:generated.image,expiresAt:new Date(expires).toISOString(),retryAfterSeconds:6};
+    return {id,image:generated.image,expiresAt:new Date(expires).toISOString(),retryAfterSeconds:IMAGE_REFRESH_MS/1000};
   }
   function verifyImage(body,ip,origin,purpose){
     if(!imageCaptchaEnabled)return;

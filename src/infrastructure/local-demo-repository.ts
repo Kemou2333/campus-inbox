@@ -1,6 +1,7 @@
 import {MAX_NOTICES,parseNotices} from '../domain/notice';
 import {isLocalDemoNotice} from '../domain/local-demo';
 import type {Notice,NoticeRepository} from '../domain/types';
+import {NOTICE_KEY} from './legacy-migration';
 
 export const LOCAL_DEMOS_KEY='campus-inbox:notices:local-demo:v1';
 type StoragePort=Pick<Storage,'getItem'|'setItem'|'removeItem'>;
@@ -11,6 +12,10 @@ export class LocalDemoRepository implements NoticeRepository {
  private listeners=new Set<(notices:Notice[])=>void>();
  private unsubscribe:(()=>void)|null=null;
  private saving=false;
+ private loaded=false;
+ private personalSnapshot='[]';
+ private personalRaw:string|null=null;
+ private demoRaw:string|null=null;
  constructor(private personal:NoticeRepository,private storage:StoragePort=localStorage,private events?:StorageEvents){}
  private demos():Notice[]{
   const raw=this.storage.getItem(LOCAL_DEMOS_KEY);if(!raw)return [];
@@ -18,20 +23,29 @@ export class LocalDemoRepository implements NoticeRepository {
   if(rows.some(n=>!isLocalDemoNotice(n)))throw new Error('本机示例格式异常，请先导出备份。');
   return rows;
  }
- load():Notice[]{return [...this.personal.load(),...this.demos()];}
+ load():Notice[]{
+  const personal=this.personal.load(),demos=this.demos();
+  this.personalSnapshot=JSON.stringify(personal);
+  this.personalRaw=this.storage.getItem(NOTICE_KEY);this.demoRaw=this.storage.getItem(LOCAL_DEMOS_KEY);this.loaded=true;
+  return [...personal,...demos];
+ }
  save(notices:Notice[]):void{
   if(notices.length>MAX_NOTICES)throw new Error(`最多保存 ${MAX_NOTICES} 条通知`);
-  const currentPersonal=this.personal.load(),personal=notices.filter(n=>!isLocalDemoNotice(n)),demos=notices.filter(isLocalDemoNotice);
-  const old=this.storage.getItem(LOCAL_DEMOS_KEY),next=demos.length?JSON.stringify(demos):null;
+  if(!this.loaded)this.load();
+  // Compare with the caller's read, without refreshing the personal CAS baseline.
+  if(this.storage.getItem(NOTICE_KEY)!==this.personalRaw||this.storage.getItem(LOCAL_DEMOS_KEY)!==this.demoRaw)throw new Error('另一标签页更新了通知，请重新载入后再试');
+  const personal=notices.filter(n=>!isLocalDemoNotice(n)),demos=notices.filter(isLocalDemoNotice),personalSnapshot=JSON.stringify(personal);
+  const old=this.demoRaw,next=demos.length?JSON.stringify(demos):null;
   this.saving=true;
   try{
    if(old!==next){if(next===null)this.storage.removeItem(LOCAL_DEMOS_KEY);else this.storage.setItem(LOCAL_DEMOS_KEY,next);}
-   if(JSON.stringify(currentPersonal)!==JSON.stringify(personal))this.personal.save(personal);
+   if(this.personalSnapshot!==personalSnapshot)this.personal.save(personal);
   }catch(error){
    // A failed personal save must not silently consume or alter a sample result.
    if(old!==next){if(old===null)this.storage.removeItem(LOCAL_DEMOS_KEY);else this.storage.setItem(LOCAL_DEMOS_KEY,old);}
    throw error;
   }finally{this.saving=false;}
+  this.personalSnapshot=personalSnapshot;this.personalRaw=this.storage.getItem(NOTICE_KEY);this.demoRaw=next;
   this.emitSnapshot(notices);
  }
  private emitSnapshot(records:Notice[]){this.listeners.forEach(listener=>listener(structuredClone(records)));}

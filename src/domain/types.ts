@@ -4,6 +4,8 @@ export type NoticeKind = 'task' | 'reminder' | 'information';
 export type NoticeStatus = 'pending' | 'completed' | 'dismissed' | 'reminder';
 export type TaskScope = 'all' | 'conditional' | 'role' | 'unspecified';
 export type SortOrder = 'priority' | 'deadline' | 'newest';
+export const NOTE_COLORS=['plain','sand','rose','mint','sky','lavender'] as const;
+export type NoteColor=typeof NOTE_COLORS[number];
 
 export interface TimeSpec {
   type: 'date_time' | 'date' | 'partial' | 'relative' | 'unknown';
@@ -80,6 +82,8 @@ export interface Notice extends Omit<NoticeAnalysis, 'schemaVersion' | 'tasks' |
   note: string;
   localDeadline: string | null;
   audienceOverride: '' | 'all';
+  /** Personal whole-notice styling; omitted on older records and never supplied by AI. */
+  noteColor?: NoteColor;
   reminders: Reminder[];
   attachments: string[];
   /** Optional for backwards-compatible records; never supplied by the AI. */

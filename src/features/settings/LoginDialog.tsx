@@ -10,7 +10,7 @@ import {friendlyErrorMessage} from '../../shared/error-message';
 interface Props {open:boolean;app:CampusController;onClose:()=>void}
 const normalUsername=(value:string)=>value.normalize('NFKC').trim().toLowerCase();
 export function LoginDialog({open,app,onClose}:Props){
- const [mode,setMode]=useState<'login'|'register'|'password'>('login');
+ const [mode,setMode]=useState<'login'|'register'|'password'>('register');
  const [legacyLogin,setLegacyLogin]=useState(false),[username,setUsername]=useState(''),[password,setPassword]=useState('');
  const [emailLocal,setEmailLocal]=useState(''),[emailDomain,setEmailDomain]=useState('qq.com');
  const [code,setCode]=useState(''),[challenge,setChallenge]=useState<EmailChallenge|null>(null);
@@ -26,6 +26,7 @@ export function LoginDialog({open,app,onClose}:Props){
  const passwordForm=!binding;
  const email=`${emailLocal.trim()}@${emailDomain}`;
  const needsTransfer=!!pendingSession;
+ const codeLength=challenge?.codeLength??4;
  const waiting=Math.max(0,Math.ceil((retryAt-clock)/1000));
  const waitLabel=waiting>3600?`${Math.ceil(waiting/3600)}小时后`:waiting>60?`${Math.ceil(waiting/60)}分钟后`:`${waiting}s`;
  const busy=working||sending;
@@ -59,7 +60,7 @@ export function LoginDialog({open,app,onClose}:Props){
  useEffect(()=>{if(!open||imageRetryAt<=Date.now())return;const timer=setInterval(()=>setClock(Date.now()),1000);return()=>clearInterval(timer);},[open,imageRetryAt]);
  useEffect(()=>{
   if(!open){setPassword('');setCode('');return;}
-  setMode('login');setLegacyLogin(false);setUsername(app.username);setEmailLocal(app.email?.split('@')[0]||'');setEmailDomain(app.email?.split('@')[1]||'qq.com');setCode('');setChallenge(null);setError('');setInfo('');setPendingSession(null);setTransferApproved(false);setShowPassword(false);
+  setMode('register');setLegacyLogin(false);setUsername(app.username);setEmailLocal(app.email?.split('@')[0]||'');setEmailDomain(app.email?.split('@')[1]||'qq.com');setCode('');setChallenge(null);setError('');setInfo('');setPendingSession(null);setTransferApproved(false);setShowPassword(false);
  },[open]);
  useEffect(()=>{
   if(!open||retryAt<=Date.now())return;
@@ -95,7 +96,7 @@ export function LoginDialog({open,app,onClose}:Props){
   if(busy||!app.auth)return;setError('');
   if(needsTransfer&&!transferApproved){setError('请确认是否把本机通知同步到这个账号。');return;}
   if(!pendingSession){
-   if(emailForm&&(!challenge||!/^\d{6}$/.test(code))){setError('请获取并填写六位验证码。');return;}
+   if(emailForm&&(!challenge||code.length!==codeLength||!/^[0-9]+$/.test(code))){setError(`请获取并填写${codeLength===4?'四':'六'}位邮件验证码。`);return;}
    if(passwordForm){
     try{validatePassword();if(!registering&&!settingPassword){if(legacyLogin){if(!username.trim())throw new Error('请填写旧账号。');}else canonicalLoginEmail(email);}}catch(issue){fail(issue);return;}
    }
@@ -134,13 +135,13 @@ export function LoginDialog({open,app,onClose}:Props){
       {imageEnabled&&<Stack spacing={1}><Stack direction="row" spacing={1} sx={{alignItems:'center'}}>{imageChallenge&&<Box component="img" src={imageChallenge.image} alt="四位图形验证码" sx={{width:160,height:56,objectFit:'contain',bgcolor:'#fff',borderRadius:1}}/>}<Button disabled={busy||imageLoading||!!imageWaiting} onClick={()=>void loadImage()}>{imageLoading?'载入中':imageWaiting?`${imageWaiting}s`:'换一张'}</Button></Stack><TextField label="图形验证码" value={imageAnswer} disabled={busy||!imageChallenge} onChange={event=>setImageAnswer(event.target.value.replace(/\D/g,'').slice(0,4))} slotProps={{htmlInput:{maxLength:4,inputMode:'numeric',autoComplete:'off'}}}/></Stack>}
       {emailForm&&<>
        <Stack direction="row" spacing={1} sx={{alignItems:'flex-start'}}>
-        <TextField label="验证码" required value={code} disabled={busy||!challenge} onChange={event=>setCode(event.target.value.replace(/\D/g,'').slice(0,6))} slotProps={{htmlInput:{maxLength:6,inputMode:'numeric',autoComplete:'one-time-code'}}}/>
+        <TextField label="邮箱验证码" required value={code} disabled={busy||!challenge} onChange={event=>setCode(event.target.value.replace(/\D/g,'').slice(0,codeLength))} slotProps={{htmlInput:{maxLength:codeLength,inputMode:'numeric',autoComplete:'one-time-code'}}}/>
         <Button variant="outlined" disabled={busy||!!waiting||!emailLocal.trim()||!emailEnabled} onClick={()=>void send()} sx={{height:56,flexShrink:0,whiteSpace:'nowrap',px:1.5}}>{sending?'发送中':waiting?waitLabel:'获取验证码'}</Button>
        </Stack>
-       <Typography variant="body2" color="text.secondary">{challenge?'5分钟内有效。没收到？检查垃圾邮件。':settingPassword?'适用于之前未设置密码的邮箱账号。':binding?'绑定后可用邮箱和原密码登录。':'验证邮箱后，使用密码登录。'}</Typography>
+       <Typography variant="body2" color="text.secondary">{challenge?'五分钟内有效。没收到？检查垃圾邮件。':settingPassword?'适用于之前未设置密码的邮箱账号。':binding?'绑定后可用邮箱和原密码登录。':'验证邮箱后，使用密码登录。'}</Typography>
       </>}
       {!binding&&<Stack direction="row" useFlexGap spacing={1.5} sx={{flexWrap:'wrap'}}>
-       <Button disabled={busy||mode==='login'&&!app.authOptions} onClick={()=>changeMode(registering||settingPassword?'login':'register')} sx={{px:0}}>{registering||settingPassword?'返回登录':'注册'}</Button>
+       <Button disabled={busy||mode==='login'&&!app.authOptions} onClick={()=>changeMode(registering||settingPassword?'login':'register')} sx={{px:0}}>{registering?'已有账户？直接登录':settingPassword?'返回登录':'没有账户？注册'}</Button>
        {mode==='login'&&emailEnabled&&<Button disabled={busy} onClick={()=>changeMode('password')} sx={{px:0,color:'text.secondary'}}>设置密码</Button>}
        {mode==='login'&&<Button disabled={busy} onClick={()=>{setLegacyLogin(!legacyLogin);setError('');}} sx={{px:0,color:'text.secondary'}}>{legacyLogin?'邮箱登录':'旧账号登录'}</Button>}
       </Stack>}
@@ -149,7 +150,7 @@ export function LoginDialog({open,app,onClose}:Props){
     </Stack>
    </Box>
   </DialogContent>
-  <DialogActions><Button disabled={busy} onClick={close}>{binding?'稍后':'取消'}</Button><Button type="submit" form="campus-login-form" variant="contained" disabled={busy||!app.auth||needsTransfer&&!transferApproved||emailForm&&!pendingSession&&(!emailEnabled||!challenge||code.length!==6)}>{working?'请稍候':pendingSession?'继续':binding?'绑定':settingPassword?'保存':registering?'注册':'登录'}</Button></DialogActions>
+  <DialogActions><Button disabled={busy} onClick={close}>{binding?'稍后':'取消'}</Button><Button type="submit" form="campus-login-form" variant="contained" disabled={busy||!app.auth||needsTransfer&&!transferApproved||emailForm&&!pendingSession&&(!emailEnabled||!challenge||code.length!==codeLength)}>{working?'请稍候':pendingSession?'继续':binding?'绑定':settingPassword?'保存':registering?'注册':'登录'}</Button></DialogActions>
  </Dialog>;
 }
 export default LoginDialog;

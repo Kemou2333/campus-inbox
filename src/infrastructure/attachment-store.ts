@@ -83,7 +83,7 @@ export async function removeFiles(ids: readonly string[]): Promise<void> {
 }
 
 /** Call after undo expires; include drafts or pending results in protected notices. */
-export async function cleanupFiles(ids: readonly string[], notices: readonly Notice[]): Promise<void> {
+export async function cleanupFiles(ids: readonly string[], notices: readonly Pick<Notice,'attachments'>[]): Promise<void> {
   const used = new Set(notices.flatMap(notice => notice.attachments));
   await removeFiles(ids.filter(id => !used.has(id)));
 }
@@ -111,14 +111,31 @@ export async function exportFiles(notices: readonly Notice[]): Promise<BackupAtt
   return files;
 }
 
-/** Imported files use new ids so restoring a backup cannot overwrite an existing file. */
-export async function restoreFiles(attachments: unknown, notices: Notice[]): Promise<{ notices: Notice[]; ids: string[] }> {
+export interface RestoredFiles {
+  notices: Notice[];
+  /** Only files created by this operation; reused files must never be rolled back. */
+  ids: string[];
+  mapping: ReadonlyMap<string,string>;
+  files: ReadonlyMap<string,StoredAttachment>;
+}
+
+async function contentFingerprint(blob:Blob):Promise<string>{
+  // In-memory only: the v1 database and existing backup format stay unchanged.
+  if(!globalThis.crypto?.subtle)return encode(blob);
+  const digest=await crypto.subtle.digest('SHA-256',await blob.arrayBuffer());
+  return Array.from(new Uint8Array(digest),value=>value.toString(16).padStart(2,'0')).join('');
+}
+const fileIdentity=(file:Pick<StoredAttachment,'name'|'type'|'size'>)=>JSON.stringify([file.name,file.type,file.size]);
+
+/** Restore under fresh IDs or reuse explicitly referenced, byte-identical local
+ * candidates. Never replace an existing file, including another tab's files. */
+export async function restoreFiles(attachments: unknown, notices: Notice[], reuseIDs:readonly string[]=[]): Promise<RestoredFiles> {
   const required = new Set(notices.flatMap(notice => notice.attachments));
   if (!required.size) {
     if (attachments !== undefined && (!Array.isArray(attachments) || attachments.length)) {
       throw new Error('备份包含未关联的附件。');
     }
-    return { notices, ids: [] };
+    return { notices, ids: [], mapping:new Map(),files:new Map() };
   }
   if (!Array.isArray(attachments) || attachments.length > MAX_NOTICES * MAX_NOTICE_FILES) {
     throw new Error('备份缺少附件或附件数量过多。');
@@ -148,10 +165,24 @@ export async function restoreFiles(attachments: unknown, notices: Notice[]): Pro
   }
   if (mapping.size !== required.size) throw new Error('备份中有附件缺失。');
   for (const notice of notices) validateFiles(notice.attachments.map(id => records.get(id)!));
-  await write(store => { for (const record of records.values()) store.put(record); });
+  const metadata=new Set([...records.values()].map(fileIdentity)),fingerprints=new Map<string,StoredAttachment>();
+  const fingerprint=async(file:StoredAttachment)=>fileIdentity(file)+':'+await contentFingerprint(file.blob);
+  for(const id of new Set(reuseIDs)){
+    const file=await getFile(id);
+    if(file&&metadata.has(fileIdentity(file))&&file.blob.size===file.size){
+      const key=await fingerprint(file);if(!fingerprints.has(key))fingerprints.set(key,file);
+    }
+  }
+  const created:StoredAttachment[]=[],resolved=new Map<string,StoredAttachment>();
+  for(const [original,file] of records){
+    const key=await fingerprint(file),existing=fingerprints.get(key),chosen=existing??file;
+    if(!existing){fingerprints.set(key,file);created.push(file);}
+    mapping.set(original,chosen.id);resolved.set(chosen.id,chosen);
+  }
+  if(created.length)await write(store=>{for(const file of created)store.add(file);});
   return {
-    notices: notices.map(notice => ({ ...notice, attachments: notice.attachments.map(id => mapping.get(id)!) })),
-    ids: [...mapping.values()],
+    notices: notices.map(notice => ({ ...notice, attachments: [...new Set(notice.attachments.map(id => mapping.get(id)!))] })),
+    ids: created.map(file=>file.id),mapping,files:resolved,
   };
 }
 

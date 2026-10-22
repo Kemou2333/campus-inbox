@@ -6,7 +6,7 @@ export interface AuthStatus { username: string; expiresAt: string; email?: strin
 export interface AuthOptions { emailEnabled: boolean; inviteEnabled: boolean; domains: string[]; imageCaptchaEnabled?:boolean }
 export interface AuthCaptcha {id:string;answer:string}
 export interface AuthImageChallenge {id:string;image:string;expiresAt:string;retryAfterSeconds:number}
-export interface EmailChallenge { challengeId: string; retryAfterSeconds: number; expiresAt: string }
+export interface EmailChallenge { challengeId: string; retryAfterSeconds: number; expiresAt: string; codeLength: 4 | 6 }
 export type EmailPurpose = 'login' | 'bind' | 'register' | 'password';
 interface AuthErrorDetails { code?: string; retryAfterSeconds?: number; username?: string }
 export class AuthError extends Error {
@@ -84,7 +84,7 @@ export class AuthClient {
   private verification(challengeId: string, code: string): { challengeId: string; code: string } {
     if (!keyPattern.test(challengeId)) throw new AuthError('验证码已失效，请重新获取。', { code: 'EMAIL_CODE_INVALID' });
     const trimmed = code.trim();
-    if (!/^\d{6}$/.test(trimmed)) throw new AuthError('请填写邮件中的 6 位数字验证码。', { code: 'EMAIL_CODE_INVALID' });
+    if (!/^(?:\d{4}|\d{6})$/.test(trimmed)) throw new AuthError('请完整填写邮件中的数字验证码。', { code: 'EMAIL_CODE_INVALID' });
     return { challengeId, code: trimmed };
   }
   async imageChallenge(purpose:'login'|'register'|'email'):Promise<AuthImageChallenge>{
@@ -117,10 +117,12 @@ export class AuthClient {
     if (!['login', 'bind', 'register', 'password'].includes(purpose)) throw new AuthError('请选择注册或绑定邮箱。');
     if (purpose === 'bind' && !key) throw new AuthError('请先登录原账号，再绑定邮箱。', { code: 'AUTH_REQUIRED' });
     const address=emailValue(email,['register','bind'].includes(purpose));
-    const value = await this.request('email/request', { email: address, purpose,...(captcha?{captcha}:{}) }, key);
+    const value = await this.request('email/request', { email: address, purpose, codeLength:4,...(captcha?{captcha}:{}) }, key);
     if (!value || typeof value.challengeId !== 'string' || !keyPattern.test(value.challengeId) || !validExpiry(value.expiresAt)
-      || !Number.isSafeInteger(value.retryAfterSeconds) || Number(value.retryAfterSeconds) < 0 || Number(value.retryAfterSeconds) > 86400) throw formatError();
-    return { challengeId: value.challengeId, retryAfterSeconds: Number(value.retryAfterSeconds), expiresAt: value.expiresAt };
+      || !Number.isSafeInteger(value.retryAfterSeconds) || Number(value.retryAfterSeconds) < 0 || Number(value.retryAfterSeconds) > 86400
+      || value.codeLength !== undefined && value.codeLength !== 4 && value.codeLength !== 6) throw formatError();
+    // Older backends send six digits without a length field during rolling updates.
+    return { challengeId: value.challengeId, retryAfterSeconds: Number(value.retryAfterSeconds), expiresAt: value.expiresAt, codeLength: value.codeLength === 4 ? 4 : 6 };
   }
   async verifyEmail(challengeId: string, code: string): Promise<AuthSession> {
     return this.session(await this.request('email/verify', this.verification(challengeId, code)));

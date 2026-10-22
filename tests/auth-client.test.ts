@@ -17,26 +17,26 @@ function clientWith(responder: (url: string, body: Record<string, unknown>) => R
 test('auth options and email request use the shared mailbox normalization without extra credentials', async () => {
   const { client, calls } = clientWith(url => Response.json(url.endsWith('/options')
     ? { emailEnabled: true, inviteEnabled: true, domains: ['qq.com', 'gmail.com'] }
-    : { challengeId, retryAfterSeconds: 60, expiresAt }));
+    : { challengeId, retryAfterSeconds: 60, expiresAt, codeLength: 4 }));
   expect(await client.options()).toEqual({ emailEnabled: true, inviteEnabled: true, domains: ['qq.com', 'gmail.com'] });
-  expect(await client.requestEmail(' Re.View+school@gmail.com ')).toEqual({ challengeId, retryAfterSeconds: 60, expiresAt });
+  expect(await client.requestEmail(' Re.View+school@gmail.com ')).toEqual({ challengeId, retryAfterSeconds: 60, expiresAt, codeLength: 4 });
   expect(calls.map(call => ({ url: call.url, body: call.body, authorization: call.authorization }))).toEqual([
     { url: 'https://example.test/auth/options', body: {}, authorization: null },
-    { url: 'https://example.test/auth/email/request', body: { email: 'review@gmail.com', purpose: 'login' }, authorization: null },
+    { url: 'https://example.test/auth/email/request', body: { email: 'review@gmail.com', purpose: 'login', codeLength: 4 }, authorization: null },
   ]);
   expect(calls.every(call => call.init.credentials === 'omit' && call.init.redirect === 'error' && call.init.referrerPolicy === 'no-referrer')).toBe(true);
 });
 
 test('email login and binding distinguish session replies from status and send the old session only in headers', async () => {
   const { client, calls } = clientWith(url => Response.json(url.endsWith('/request')
-    ? { challengeId, retryAfterSeconds: 60, expiresAt }
+    ? { challengeId, retryAfterSeconds: 60, expiresAt, codeLength: 4 }
     : session));
-  expect(await client.verifyEmail(challengeId, ' 123456 ')).toEqual(session);
+  expect(await client.verifyEmail(challengeId, ' 0123 ')).toEqual(session);
   await client.requestEmail('review@gmail.com', 'bind', key);
-  expect(await client.bindEmail(challengeId, '654321', key)).toEqual({ username: session.username, expiresAt, email: session.email });
-  expect(calls[0].body).toEqual({ challengeId, code: '123456' }); expect(calls[0].authorization).toBeNull();
-  expect(calls[1].body).toEqual({ email: 'review@gmail.com', purpose: 'bind' });
-  expect(calls[2].body).toEqual({ challengeId, code: '654321' });
+  expect(await client.bindEmail(challengeId, '9876', key)).toEqual({ username: session.username, expiresAt, email: session.email });
+  expect(calls[0].body).toEqual({ challengeId, code: '0123' }); expect(calls[0].authorization).toBeNull();
+  expect(calls[1].body).toEqual({ email: 'review@gmail.com', purpose: 'bind', codeLength: 4 });
+  expect(calls[2].body).toEqual({ challengeId, code: '9876' });
   expect(calls.slice(1).every(call => call.authorization === `Bearer ${key}` && !Object.hasOwn(call.body, 'key'))).toBe(true);
 });
 
@@ -54,16 +54,16 @@ test('expired email codes preserve their API error and status 401 remains null e
   const { client } = clientWith(url => url.endsWith('/status') ? new Response('gateway content', { status: 401 })
     : Response.json({ error: '验证码无效或已过期，请重新获取。', code: 'EMAIL_CODE_INVALID' }, { status: 400 }));
   expect(await client.status(key)).toBeNull();
-  await expect(client.verifyEmail(challengeId, '123456')).rejects.toMatchObject({ code: 'EMAIL_CODE_INVALID' });
+  await expect(client.verifyEmail(challengeId, '0123')).rejects.toMatchObject({ code: 'EMAIL_CODE_INVALID' });
 });
 
 test('malformed mailbox, code, challenge and session are rejected before requesting', async () => {
   const { client, calls } = clientWith(() => Response.json(session));
   await expect(client.requestEmail('user@unsupported.test','register')).rejects.toBeInstanceOf(AuthError);
-  await expect(client.verifyEmail('not-a-challenge', '123456')).rejects.toMatchObject({ code: 'EMAIL_CODE_INVALID' });
+  await expect(client.verifyEmail('not-a-challenge', '0123')).rejects.toMatchObject({ code: 'EMAIL_CODE_INVALID' });
   await expect(client.verifyEmail(challengeId, '12345x')).rejects.toMatchObject({ code: 'EMAIL_CODE_INVALID' });
   await expect(client.requestEmail('review@163.com', 'bind')).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
-  await expect(client.bindEmail(challengeId, '123456', 'unsafe\r\nAuthorization')).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+  await expect(client.bindEmail(challengeId, '0123', 'unsafe\r\nAuthorization')).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
   await expect(client.status('wrong-session')).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
   await expect(client.logout('')).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
   expect(calls).toHaveLength(0);
@@ -77,7 +77,7 @@ test('gateway text and malformed JSON replies use safe messages without exposing
     expect(error.message).not.toContain('private');
   }
   const malformed = clientWith(() => Response.json({ ...session, key: 'invalid' })).client;
-  await expect(malformed.verifyEmail(challengeId, '123456')).rejects.toThrow('返回格式不正确');
+  await expect(malformed.verifyEmail(challengeId, '0123')).rejects.toThrow('返回格式不正确');
   const unsafeOptions = clientWith(() => Response.json({ emailEnabled: true, inviteEnabled: true, domains: ['<script>'] })).client;
   await expect(unsafeOptions.options()).rejects.toThrow('返回格式不正确');
 });
@@ -106,24 +106,24 @@ test('legacy status may omit email and nullable email is retained without leakin
 });
 
 test('verified email registration sends credentials only on redemption, then ordinary login needs no new email', async () => {
- const {client,calls}=clientWith(url=>Response.json(url.endsWith('/request')?{challengeId,retryAfterSeconds:60,expiresAt}:session));
+ const {client,calls}=clientWith(url=>Response.json(url.endsWith('/request')?{challengeId,retryAfterSeconds:60,expiresAt,codeLength:4}:session));
  await client.requestEmail('review@gmail.com','register');
- expect(await client.registerEmail(challengeId,'123456','a simple password')).toEqual(session);
+ expect(await client.registerEmail(challengeId,'0123','a simple password')).toEqual(session);
  await client.login('review@gmail.com','a simple password');
  expect(calls.map(call=>call.body)).toEqual([
-  {email:'review@gmail.com',purpose:'register'},
-  {challengeId,code:'123456',password:'a simple password'},
+  {email:'review@gmail.com',purpose:'register',codeLength:4},
+  {challengeId,code:'0123',password:'a simple password'},
   {email:'review@gmail.com',password:'a simple password'},
  ]);
  expect(calls[2].url).toBe('https://example.test/auth/login');expect(calls.every(call=>call.authorization===null)).toBe(true);
 });
 
 test('legacy email password setup redeems a code once and rejects short passwords locally',async()=>{
- const {client,calls}=clientWith(url=>Response.json(url.endsWith('/request')?{challengeId,retryAfterSeconds:60,expiresAt}:session));
- await expect(client.setEmailPassword(challengeId,'123456','short')).rejects.toThrow('8–128');expect(calls).toHaveLength(0);
+ const {client,calls}=clientWith(url=>Response.json(url.endsWith('/request')?{challengeId,retryAfterSeconds:60,expiresAt,codeLength:4}:session));
+ await expect(client.setEmailPassword(challengeId,'0123','short')).rejects.toThrow('8–128');expect(calls).toHaveLength(0);
  await client.requestEmail('review@gmail.com','password');
- expect(await client.setEmailPassword(challengeId,'123456','new secure password')).toEqual(session);
- expect(calls[1].body).toEqual({challengeId,code:'123456',password:'new secure password'});
+ expect(await client.setEmailPassword(challengeId,'0123','new secure password')).toEqual(session);
+ expect(calls[1].body).toEqual({challengeId,code:'0123',password:'new secure password'});
 });
 
 
@@ -135,4 +135,29 @@ test('verified legacy email identities remain readable and password login does n
  await expect(client.requestEmail(old.email,'register')).rejects.toBeInstanceOf(AuthError);
  await expect(client.requestEmail(old.email,'bind',key)).rejects.toBeInstanceOf(AuthError);
  expect(calls).toHaveLength(1);
+});
+
+
+test('all current email purposes request four digits and accept the negotiated challenge length',async()=>{
+ const {client,calls}=clientWith(()=>Response.json({challengeId,retryAfterSeconds:60,expiresAt,codeLength:4}));
+ for(const purpose of ['login','register','password','bind'] as const){
+  const reply=await client.requestEmail('review@163.com',purpose,purpose==='bind'?key:undefined);
+  expect(reply.codeLength).toBe(4);expect(calls.at(-1)?.body).toEqual({email:'review@163.com',purpose,codeLength:4});
+ }
+});
+
+test('rolling backend upgrades keep old six-digit challenges usable without accepting malformed lengths',async()=>{
+ for(const reply of [{challengeId,retryAfterSeconds:60,expiresAt},{challengeId,retryAfterSeconds:60,expiresAt,codeLength:6}]){
+  const {client,calls}=clientWith(url=>Response.json(url.endsWith('/request')?reply:session));
+  expect((await client.requestEmail('review@163.com','register')).codeLength).toBe(6);
+  expect(await client.registerEmail(challengeId,'012345','a simple password')).toEqual(session);
+  expect(calls[1].body).toEqual({challengeId,code:'012345',password:'a simple password'});
+ }
+ for(const codeLength of [0,3,5,7,'4',null]){
+  const {client}=clientWith(()=>Response.json({challengeId,retryAfterSeconds:60,expiresAt,codeLength}));
+  await expect(client.requestEmail('review@163.com')).rejects.toThrow('返回格式不正确');
+ }
+ const {client,calls}=clientWith(()=>Response.json(session));
+ for(const code of ['123','12345','1234567','12a4'])await expect(client.verifyEmail(challengeId,code)).rejects.toMatchObject({code:'EMAIL_CODE_INVALID'});
+ expect(calls).toHaveLength(0);
 });

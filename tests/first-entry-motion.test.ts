@@ -1,5 +1,6 @@
 import {afterEach,expect,test,vi} from 'vitest';
 import {createFirstEntryMotion} from '../src/shared/first-entry-motion';
+import {MOTION_PREFERENCES_KEY} from '../src/shared/motion-preferences';
 
 function storage(initial:Record<string,string>={}){
  const values=new Map(Object.entries(initial));
@@ -14,16 +15,16 @@ function surface(key:string){
 function root(...elements:ReturnType<typeof surface>[]){return {querySelectorAll:()=>elements} as unknown as ParentNode;}
 afterEach(()=>vi.useRealTimers());
 
-test('all visible groups start hidden and enter slowly in interaction order after a pause',()=>{
+test('all visible groups start hidden and enter at the default 1.5 speed in interaction order',()=>{
  const saved=storage(),motion=createFirstEntryMotion(saved),settled=vi.fn();
  const feed=surface('feed-tools'),input=surface('composer-input'),organize=surface('composer-action');
  expect(motion.pending).toBe(true);
  const stop=motion.play(root(feed,organize,input),false,settled);
  expect(motion.pending).toBe(false);
  expect(input.animate.mock.calls[0]?.[0][0]).toEqual({opacity:0,transform:'translateY(8px) scale(.985)'});
- expect(input.animate.mock.calls[0]?.[1]).toMatchObject({delay:380,duration:1250,easing:'cubic-bezier(.35,0,.2,1)',fill:'backwards'});
- expect(organize.animate.mock.calls[0]?.[1]).toMatchObject({delay:660});
- expect(feed.animate.mock.calls[0]?.[1]).toMatchObject({delay:940});
+ expect(input.animate.mock.calls[0]?.[1]).toMatchObject({delay:253,duration:833,easing:'cubic-bezier(.35,0,.2,1)',fill:'backwards'});
+ expect(organize.animate.mock.calls[0]?.[1]).toMatchObject({delay:440});
+ expect(feed.animate.mock.calls[0]?.[1]).toMatchObject({delay:627});
  expect(saved.setItem).toHaveBeenCalledExactlyOnceWith('campus-inbox:first-entry:v1','seen');
  expect(settled).not.toHaveBeenCalled();
  stop();expect(feed.cancel).toHaveBeenCalledOnce();expect(settled).toHaveBeenCalledOnce();
@@ -38,6 +39,13 @@ test('a later mobile page, new group or reload cannot play a second entry',()=>{
  const reloaded=surface('composer-input'),restored=createFirstEntryMotion(saved);
  expect(restored.pending).toBe(false);restored.play(root(reloaded),false);
  expect(reloaded.animate).not.toHaveBeenCalled();stop();
+});
+test('first entry reads a saved entry speed directly before any settings hook mounts',()=>{
+ const raw=JSON.stringify({entry:2,notice:1.25}),saved=storage({[MOTION_PREFERENCES_KEY]:raw}),input=surface('composer-input'),action=surface('composer-action');
+ const stop=createFirstEntryMotion(saved).play(root(input,action),false);
+ expect(input.animate.mock.calls[0]?.[1]).toMatchObject({duration:625,delay:190});
+ expect(action.animate.mock.calls[0]?.[1]).toMatchObject({duration:625,delay:330});
+ expect(saved.values.get(MOTION_PREFERENCES_KEY)).toBe(raw);stop();
 });
 test('an explicit introduction can play its entrance even after an older tutorial was seen',()=>{
  const saved=storage({'campus-inbox:tutorial:v2':'seen','campus-inbox:first-entry:v1':'seen'}),element=surface('composer-input');
@@ -63,7 +71,7 @@ test('a WebView completion timeout releases the page even if finished never reso
  vi.useFakeTimers();
  const element=surface('composer-input'),settled=vi.fn();
  createFirstEntryMotion(storage()).play(root(element),false,settled);
- vi.advanceTimersByTime(1749);expect(settled).not.toHaveBeenCalled();
+ vi.advanceTimersByTime(1205);expect(settled).not.toHaveBeenCalled();
  vi.advanceTimersByTime(1);expect(element.cancel).toHaveBeenCalledOnce();expect(settled).toHaveBeenCalledOnce();
 });
 test('existing users, reduced motion and empty screens settle immediately without animation',()=>{

@@ -2,6 +2,7 @@ import './contracts/time.js';
 import './contracts/data.js';
 import {promptForInput} from '../worker/prompt.mjs';
 import {parseSourceRefs} from './contracts/source-evidence.js';
+import {ownSourceLinks} from './contracts/markdown-links.mjs';
 const D=globalThis.CampusData;
 const T=globalThis.CampusTime;
 const record=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -55,18 +56,6 @@ function checkContent(text){
   const illegal=/^(?:请(?:教我|帮我)?|麻烦|帮我|给我|教我|我想|我要|如何|怎么|怎样)\s*[^\r\n。！？]{0,12}(?:盗取(?:他人|别人)(?:的)?(?:账号|账户|密码)|入侵(?:他人|别人)(?:的)?(?:账号|账户|电脑|网站)|(?:制作|制造)(?:炸弹|毒品)|(?:编写|生成)(?:诈骗话术|钓鱼邮件)|(?:进行|操作|实施)洗钱)/u;
   const english=/^(?:please\s+)?(?:write|generate|create)\s+(?:an?\s+)?(?:explicit\s+)?(?:pornographic|erotic)\s+(?:story|novel|sex scene)\b/i;
   if(sexual.test(direct)||illegal.test(direct)||english.test(direct))throw contentBoundary();
-}
-function links(text){return text.match(/https?:\/\/[^\s<>"'`*()[\]{}（）【】“”，。！？；：、]+/giu)?.map(value=>value.replace(/[.,;!?]+$/,''))||[];}
-function ownSourceLinks(value,source){
-  const allowed=links(source);
-  // Unicode links must match completely. For an ASCII URL in the original,
-  // adjacent Chinese prose can form a word boundary without a separating space.
-  // Only allow an exact ASCII prefix followed by Han text; never shorten a
-  // Unicode hostname/path or infer, decode, normalize, or fetch a destination.
-  const matches=link=>allowed.some(original=>original===link||/^[\x21-\x7E]+$/.test(link)&&original.startsWith(link)&&/^\p{Script=Han}/u.test(original.slice(link.length)));
-  const walk=item=>typeof item==='string'?links(item).every(matches):
-    Array.isArray(item)?item.every(walk):item&&typeof item==='object'?Object.values(item).every(walk):true;
-  return walk(value);
 }
 function validationCode(error){
   // Persist only a finite category. Never retain the validator message, model

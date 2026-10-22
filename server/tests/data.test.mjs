@@ -4,6 +4,13 @@ import '../contracts/data.js';
 const D=globalThis.CampusData;
 const analysis={schemaVersion:4,kind:'task',title:'填写登记',summary:'需要登记的同学填写。',deadline:null,deadlineText:'明天中午前',tasks:[{text:'提交登记',assignee:'需要登记的同学',details:[],time:null,timeText:'明天中午前',location:null}],timeline:[],materials:[],warnings:[],reminders:[]};
 
+test('note colors stay optional in legacy backups and cannot be supplied by the model',()=>{
+ const record={...D.create(analysis,'原文'),note:'原笔记'};assert.equal(Object.hasOwn(D.notice(record),'noteColor'),false);
+ for(const noteColor of ['plain','sand','rose','mint','sky','lavender'])assert.equal(D.backup(D.exportBackup([{...record,noteColor}]))[0].noteColor,noteColor);
+ for(const noteColor of [null,'#fff','red',{},[],true])assert.throws(()=>D.notice({...record,noteColor}));
+ assert.throws(()=>D.analysis({...analysis,noteColor:'sky'},true));
+});
+
 test('calendar rejects impossible dates, times and offsets',()=>{
   for(const value of ['2026-02-29T10:00:00','2026-04-31T10:00:00','2026-10-01T24:00:00','2026-10-01T10:60:00','2026-10-01T10:00:60','2026-10-01T10:00:00+14:01','2026-10-01T10:00:00+15:00','10月7日17:00'])assert.throws(()=>D.date(value));
   for(const value of ['2028-02-29T10:00:00','2026-10-01T10:00:00+14:00','2026-10-01T10:00:00-08:00'])assert.equal(D.date(value),value);

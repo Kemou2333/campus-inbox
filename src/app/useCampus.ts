@@ -10,16 +10,18 @@ import {playOperationSound} from '../shared/operation-sounds';
 import {triggerOperationHaptic} from '../shared/operation-haptics';
 import {isNewCompletion} from '../features/notices/completion-feedback';
 import {createGuestDemoNotice,GUEST_DEMO_MARKER,nextGuestDemoSource,isGuestDemoDraft,waitForGuestDemo} from '../infrastructure/guest-demo';
-import {createCloudSync, type CloudSync, type SyncState} from '../infrastructure/sync-client';
+import {createCloudSync,recordHash,automaticConflictChoice, type CloudSync, type SyncState} from '../infrastructure/sync-client';
 import {installEventSync} from '../infrastructure/event-sync';
 import {createPendingJobPolling,type PendingJobPolling} from '../infrastructure/pending-job-polling';
 import {createAuthClient, type AuthClient, type AuthSession, type AuthOptions} from '../infrastructure/auth-client';
 import {AnalysisError,type AnalyzeOptions} from '../infrastructure/ai-client';
 import {askNoticeQuestion} from '../infrastructure/notice-question-client';
 import {AnalysisJobsClient,AnalysisJobJournal,submitAnalysisJob,withoutSubmittedDrafts,attachJobFiles,pendingAnalysisFiles,type AnalysisJob,type LocalAnalysisSubmission} from '../infrastructure/analysis-jobs';
-import {addFiles, cleanupFiles, exportFiles, getFile, restoreFiles, MAX_NOTICE_FILES, MAX_NOTICE_FILE_BYTES} from '../infrastructure/attachment-store';
-import {createNotice, exportBackup, exportTextBackup, newID, parseAnalysisBatch, parseBackup, parseNotices} from '../domain/notice';
+import {addFiles, cleanupFiles, exportFiles, getFile, MAX_NOTICE_FILES, MAX_NOTICE_FILE_BYTES} from '../infrastructure/attachment-store';
+import {importNoticeBackup} from '../infrastructure/backup-import';
+import {createNotice, exportBackup, exportTextBackup, newID, parseAnalysisBatch, parseNotices} from '../domain/notice';
 import {mergeExamples,selectExampleBatch,writeExamplesHidden} from '../domain/examples';
+import {createExampleCatalog} from '../infrastructure/example-catalog';
 import {planExampleReset} from '../domain/reset-examples';
 import {keepFirstPractice} from '../features/onboarding/keep-practice';
 import {MODEL_TEST_MODE_KEY,isModelTestNotice,parseModelTestCatalog} from '../domain/model-tests';
@@ -86,7 +88,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  const [modelTestFailureCount,setModelTestFailureCount]=useState(()=>{try{return Math.min(30,Math.max(0,Number(localStorage.getItem('campus-inbox:model-test-failures:v1'))||0));}catch{return 0;}});
  const [modelTestMode,setModelTestModeState]=useState(()=>{try{return localStorage.getItem(MODEL_TEST_MODE_KEY)==='shown';}catch{return false;}});
  function setModelTestMode(enabled:boolean){localStorage.setItem(MODEL_TEST_MODE_KEY,enabled?'shown':'hidden');setModelTestModeState(enabled);}
- const examplesRefreshing=useRef(new Set<string>());
+ const [exampleCatalog]=useState(createExampleCatalog);
  const [latestAddedID,setLatestAddedID]=useState<string|null>(null);
  const [analysisJobs,setAnalysisJobs]=useState<AnalysisJob[]>([]);
  const [unconfirmedSubmissions,setUnconfirmedSubmissions]=useState<LocalAnalysisSubmission[]>([]);
@@ -198,7 +200,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   let alive=true;
   void a.options().then(value=>{if(alive)setAuthOptions(value);}).catch(()=>{if(alive)setAuthOptions({emailEnabled:false,inviteEnabled:true,domains:[]});});
   const key=c.getKey();
-  if(key)void a.status(key).then(status=>{if(!alive||c.getKey()!==key)return;if(status){setUsername(status.username);setEmail(status.email??null);localStorage.setItem(USERNAME_KEY,status.username);activateJobAccount(status.username);void c.syncNow();}
+  if(key)void a.status(key).then(status=>{if(!alive||c.getKey()!==key)return;if(status){setUsername(status.username);setEmail(status.email??null);localStorage.setItem(USERNAME_KEY,status.username);activateJobAccount(status.username);void c.connect(key,status.username).catch(report);}
    else {activateJobAccount(null);c.disconnect();tell('登录已过期，请重新登录。');}
   }).catch(()=>{/* Offline work remains available; server authenticates every request. */});
   return()=>{alive=false;unsubscribe();};
@@ -220,7 +222,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   const reloadJobs=jobAccountRef.current===session.username;
   activateJobAccount(session.username);
   setUsername(session.username);setEmail(session.email??null);localStorage.setItem(USERNAME_KEY,session.username);
-  await cloud.connect(session.key);tell('已登录，有修改时会同步。');if(reloadJobs)void refreshAnalysisJobs();
+  await cloud.connect(session.key,session.username);tell('已登录，有修改时会同步。');if(reloadJobs)void refreshAnalysisJobs();
  }
  async function bindEmail(challengeId:string,code:string){
   const key=cloud?.getKey();if(!key||!auth)throw new Error('请先登录原账号。');
@@ -460,9 +462,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  async function exportLegacyWork(){const result=await platform.saveFile(new Blob([legacyWork.text],{type:'text/plain;charset=utf-8'}),'campus-inbox-old-drafts.txt');if(result.status!=='cancelled')tell('旧版草稿已导出');}
  async function loadExamples(limit=5,quiet=false){
   const scope=localDataScopeRef.current;
-  const response=await fetch('./examples.json',{cache:'no-store'});if(!response.ok)throw new Error('示例暂时无法载入。');
-  const records=parseBackup(await response.json());let registry:unknown=null;
-  try{const response=await fetch('./examples-legacy.json',{cache:'no-store',signal:AbortSignal.timeout(5000)});if(response.ok)registry=await response.json();}catch{/* Existing records stay intact when legacy fingerprints are unavailable. */}
+  const {records,registry}=await exampleCatalog.load();
   const current=repository.load(),batch=selectExampleBatch(current,records,limit),merged=await mergeExamples(current,batch.records,registry);
   // Hashing yields to other edits. Do not overwrite changes made while it ran.
   if(scope!==localDataScopeRef.current||JSON.stringify(repository.load())!==JSON.stringify(current))throw new Error('通知正在更新，请稍后再载入示例。');
@@ -484,8 +484,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  async function resetExamples(){
   if(busy)throw new Error('请等当前操作完成。');
   const scope=localDataScopeRef.current;
-  const response=await fetch('./examples.json',{cache:'no-store'});if(!response.ok)throw new Error('示例暂时无法载入。');
-  const catalog=parseBackup(await response.json());
+  const {records:catalog}=await exampleCatalog.load();
   if(scope!==localDataScopeRef.current)throw new Error('账号已切换，请重试。');
   const reset=planExampleReset(repository.load(),catalog,trashStore.list(scope));
   save(reset.notices);
@@ -493,15 +492,20 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   refreshLocalNoticeState(reset.notices);setRemainingExamples(reset.remaining);
   writeExamplesHidden(localStorage,false);tell('示例已恢复');
  }
- useEffect(()=>{const scope=localDataScope;if(examplesRefreshing.current.has(scope))return;examplesRefreshing.current.add(scope);void loadExamples(0,true).catch(()=>{/* A later explicit load can retry; user edits remain untouched. */});},[localDataScope]);
  useEffect(()=>{
   if(!cloud||!sync.connected||!username.trim()||username.normalize('NFKC').trim().toLowerCase()==='kemou')return;
-  const conflict=sync.conflicts.find(c=>!automaticConflicts.current.has(`${localDataScope}:${c.id}:${c.version}`));if(!conflict)return;
-  const token=cloud.getKey(),scope=localDataScopeRef.current,key=`${localDataScope}:${conflict.id}:${conflict.version}`;automaticConflicts.current.add(key);
+  const conflictKey=(c:SyncState['conflicts'][number])=>`${localDataScope}:${c.id}:${c.version}:${recordHash(c.local)}`;
+  const conflict=sync.conflicts.find(c=>!automaticConflicts.current.has(conflictKey(c)));if(!conflict)return;
+  const token=cloud.getKey(),scope=localDataScopeRef.current,key=conflictKey(conflict);automaticConflicts.current.add(key);
   void (async()=>{if(cloud.getKey()!==token||localDataScopeRef.current!==scope)return;
-   if(conflict.remote){trashStore.add(scope,conflict.remote,Math.max(0,repository.load().findIndex(n=>n.id===conflict.id)));refreshLocalNoticeState();}
-   await cloud.resolveConflict(conflict.id,'local');
-  })().catch(report);
+   const records=repository.load(),current=records.find(n=>n.id===conflict.id)??null,choice=automaticConflictChoice({...conflict,localChanged:conflict.localChanged||recordHash(current)!==recordHash(conflict.local)});
+   // A known new local edit retains the existing local-first policy. An old
+   // snapshot without a baseline is preserved in trash before accepting the
+   // current server version, including a deletion, rather than reviving it.
+   const preserved=choice==='local'?conflict.remote:current;
+   if(preserved){trashStore.add(scope,preserved,Math.max(0,records.findIndex(n=>n.id===conflict.id)));refreshLocalNoticeState();}
+   await cloud.resolveConflict(conflict.id,choice,{version:conflict.version,localHash:recordHash(current)});
+  })().catch(e=>{automaticConflicts.current.delete(key);report(e);});
  },[cloud,sync.connected,sync.conflicts,username,localDataScope]);
  async function backup(includeAttachments=true){
   const records=repository.load();const data=includeAttachments?exportBackup(records,await exportFiles(records)):exportTextBackup(records);
@@ -510,13 +514,9 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  }
  async function importBackup(file:File){
   if(file.size>70*1024*1024)throw new Error('备份超过 70 MB，无法导入。');
-  const data=JSON.parse(await file.text());let records=parseBackup(data);
-  const restored=await restoreFiles(data.attachments??[],records);records=restored.notices;
-  const current=repository.load();
-  // Preserve the current version when a backup contains an already-existing ID.
-  const added=records.filter(n=>!current.some(old=>old.id===n.id));
-  save([...current,...added]);await cleanupFiles(restored.ids,fileReferences());
-  tell(`已导入 ${added.length} 条通知，现有通知保留。`);
+  const generation=jobGeneration.current,scope=localDataScopeRef.current,key=cloud?.getKey();
+  const result=await importNoticeBackup(JSON.parse(await file.text()),{load:()=>repository.load(),save,references:()=>fileReferences(),isCurrent:()=>generation===jobGeneration.current&&scope===localDataScopeRef.current&&key===cloud?.getKey()});
+  tell(`已导入 ${result.added} 条通知，补回 ${result.linkedAttachments} 个附件；现有文字和进度保留。`);
  }
  async function receiveShare(){
   if(busy||receivingShare.current)return false;
@@ -537,6 +537,6 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   return result;
  }
  return {notices,drafts,remainingExamples,localDataScope,trashItems,restoreTrash,deleteTrashEntry,emptyTrash,unreadNoticeIDs,markNoticeRead,clearUnreadNotices,demoDraftID:drafts.some(d=>d.text.trim())&&drafts.filter(d=>d.text.trim()).every(isGuestDemoDraft)?drafts.find(isGuestDemoDraft)?.id??null:null,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,preferences,setPreferences,bootError:boot.error,
-  report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,fillDemoDraft,keepGuidePractice,attach,detach,removeDraft,analyze,analyzeDemo,askQuestion,cancel:()=>abort.current?.abort(),loadExamples,resetExamples,loadModelTests,modelTestMode,setModelTestMode,modelTestFailureCount,backup,importBackup,login,logout,bindEmail,receiveShare};
+  report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,fillDemoDraft,keepGuidePractice,attach,detach,removeDraft,analyze,analyzeDemo,askQuestion,cancel:()=>abort.current?.abort(),loadExamples,prefetchExamples:exampleCatalog.prefetch,resetExamples,loadModelTests,modelTestMode,setModelTestMode,modelTestFailureCount,backup,importBackup,login,logout,bindEmail,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;

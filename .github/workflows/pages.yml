@@ -2,7 +2,7 @@ name: Build and publish campus Inbox web
 on:
   push:
     branches: [main]
-    paths: ['src/**', 'public/**', 'server/contracts/email-policy.mjs', 'server/contracts/source-evidence.js', 'index.html', 'admin-preview.html', 'package.json', 'pnpm-lock.yaml', 'tsconfig*.json', 'vite.config.*', 'tests/**', 'ops/web/**', '.github/workflows/pages.yml']
+    paths: ['src/**', 'public/**', 'server/contracts/email-policy.mjs', 'server/contracts/source-evidence.js', 'server/contracts/safe-markdown-url.*', 'index.html', 'admin-preview.html', 'package.json', 'pnpm-lock.yaml', 'tsconfig*.json', 'vite.config.*', 'tests/**', 'ops/web/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 permissions:
   contents: read

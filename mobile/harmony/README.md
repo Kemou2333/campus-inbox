@@ -56,3 +56,5 @@ python3 scripts/toolchain.py --build --install-dependencies --output build-evide
 将来可在已配置官方工具的自有 runner 上，仅对手动发布任务执行同一脚本并上传产物；不要为普通 PR 开放带签名的自托管 runner。当前没有启用新的云构建或付费资源。
 
 代码采用仓库的 AGPL-3.0-only；内置原通知保留各自原权利。
+
+原生 HTTP 适配层统一声明 `Origin: https://appassets.androidplatform.net`，复用后端既有精确允许的原生客户端来源；验证码、登录、提交及读取任务共用该头。它只是来源合同，不代替账号认证。本次仅隔离合同检查，仍未做 SDK 编译或真机验证。

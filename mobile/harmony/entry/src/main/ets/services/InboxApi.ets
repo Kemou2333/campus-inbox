@@ -2,6 +2,8 @@ import { http } from '@kit.NetworkKit';
 import { AuthChallenge, ImageProof, Job, JobList, JobReply, ServiceFailure, Session, validID, validateRecord } from '../model/Models';
 
 export const API_ORIGIN = 'https://123.57.30.129';
+// Shared declared native-client origin; account credentials still authorize every operation.
+export const CLIENT_ORIGIN = 'https://appassets.androidplatform.net';
 export interface WireResponse { status: number; body: string }
 interface LoginBody { email: string; password: string; captcha: CaptchaBody }
 interface CaptchaBody { id: string; answer: string }
@@ -15,7 +17,7 @@ export class InboxApi {
     if (!/^\/(?:auth\/(?:challenge|login|logout)|analysis-jobs(?:\/[A-Za-z0-9_-]{1,150})?)$/.test(path)) throw new Error('请求地址不正确。');
     if (key && !/^[A-Za-z0-9_-]{43}$/.test(key)) throw new Error('请重新登录。');
     const connection = http.createHttp();
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const headers: Record<string, string> = { 'Content-Type': 'application/json', 'Origin': CLIENT_ORIGIN };
     if (key) headers['Authorization'] = `Bearer ${key}`;
     if (proof) headers['X-Campus-Proof'] = proof;
     try {

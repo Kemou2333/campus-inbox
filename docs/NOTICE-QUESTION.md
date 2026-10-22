@@ -24,8 +24,8 @@
 
 ## 费用、限制和恢复
 
-- 每账号每天最多 **5次问答**，按上海日期计；已接纳并开始处理的失败也计数。
-- 同时计入现有账号每日总次数、网络每日次数、全局每日次数与人民币预算；不另设独立资金池，不改变生产限额。
+- 问答与整理共享：账号滚动 **5小时5次、72小时20次**，IP滚动 **5小时5次**，全站上海自然日 **50次**；同时受原费用预算限制。已接纳的模型失败计一次，同请求ID重放不重复计数。
+- 不另设独立资金池；兼容字段 `remainingQuestions` 表示账号共享滚动额度当前余量（最多5），不代表独立的每日问答次数，也不承诺网络/全站额度或费用预算仍可用。
 - 整理与问答共用服务互斥、账号3分钟频率限制、网络频率限制与验证码。模型发送前先持久化完整负载的保守费用预留；有有效 usage 后按既有估价结算，无 usage 时保留预留。
 - 第3次高频操作仍可返回 `428 VERIFICATION_REQUIRED`，`challenge` 与整理接口相同。用同一请求体和 `X-Campus-Proof: {"token":"…","answer":"1234"}` 提交。验证不会免除日限额/总预算。
 - 相同账号、相同 `requestId`、相同原文和问题只发送一次模型请求。成功和安全失败结果持久化在现有 `sync.sqlite` 的 `notice_questions` 表；只保存输入哈希、请求编号和结果，不保存完整问题输入。不同账号隔离。
@@ -41,10 +41,10 @@
 | 400 `CAPTCHA_INCORRECT` / `INVALID_PROOF` | 沿用整理验证码提示 |
 | 409 `QUESTION_IN_PROGRESS` | 仍在处理；按 `retryAfterSeconds` 后由用户显式查询同编号 |
 | 409 `REQUEST_ID_CONFLICT` | 同编号内容变了；拒绝，不收费 |
-| 429 `QUESTION_DAILY_LIMIT` | 当天5问已用完 |
+| 429 `ACCOUNT_FIVE_HOUR_LIMIT` / `ACCOUNT_THREE_DAY_LIMIT` / `IP_FIVE_HOUR_LIMIT` | 对应滚动额度用完，按 `Retry-After` 等待 |
 | 429 `ACCOUNT_RATE_LIMIT` / `IP_RATE_LIMIT` | 遵循 `Retry-After` |
 | 429 `SERVICE_BUSY` | 整理或问答占用互斥，稍后重试原编号 |
-| 429 `DAILY_COST_LIMIT` / `DAILY_LIMIT` / `ACCOUNT_DAILY_LIMIT` / `IP_DAILY_LIMIT` | 既有预算或总次数上限 |
+| 429 `DAILY_COST_LIMIT` / `DAILY_LIMIT` | 既有费用预算或全站日次数上限 |
 | 502 `AI_FORMAT_INVALID` / `AI_INCOMPLETE` / `AI_TIMEOUT` / `QUESTION_FAILED` | 已接纳失败，同编号只重放失败，不发模型 |
 | 503 `QUESTION_INTERRUPTED` | 结果未知或重启中断，同编号不重新收费 |
 | 503 `SERVICE_UNAVAILABLE` | 门禁/记录暂不可用；仅显式查询原编号 |
