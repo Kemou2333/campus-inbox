@@ -52,6 +52,17 @@ describe('shared platform adapter', () => {
     api.dispose();
   });
 
+  it('accepts the owned HTTPS APK with an exact GitHub fallback and rejects either tampered channel',async()=>{
+    const aliyun='https://123.57.30.129/downloads/android-v2.28.0/campus-inbox-2.28.0.apk',github='https://github.com/Kemou2333/campus-inbox/releases/download/android-v2.28.0/campus-inbox-2.28.0.apk';
+    let response:Record<string,unknown>={status:'available',version:'2.28.0',download:aliyun,aliyun,github};
+    const {bridge}=host(request=>request.action==='capabilities'?{updates:true}:response),api=createAndroidPlatform(bridge);
+    expect(await api.checkForUpdate?.()).toMatchObject({status:'available',download:aliyun,aliyun,github});
+    for(const changes of [{download:aliyun+'?redirect=evil'},{aliyun:aliyun.replace('123.57.30.129','123.57.30.129.evil.test')},{github:github.replace('github.com','evil.test')},{version:'2.29.0'}]){
+      const old=response;response={...response,...changes};expect(await api.checkForUpdate?.()).toMatchObject({status:'error'});response=old;
+    }
+    api.dispose();
+  });
+
   it('keeps busy, throttled and failed checks distinct from being up to date', async () => {
     let status='busy';
     const {bridge}=host(request=>request.action==='capabilities'?{updates:true}:{status,currentVersion:'2.21.0'});

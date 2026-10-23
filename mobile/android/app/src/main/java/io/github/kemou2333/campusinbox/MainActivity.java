@@ -17,8 +17,6 @@ import android.os.SystemClock;
 import android.provider.CalendarContract;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
-import android.view.WindowInsets;
-import android.view.WindowInsetsController;
 import android.webkit.CookieManager;
 import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
@@ -30,6 +28,12 @@ import android.webkit.WebView;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 import android.window.OnBackInvokedDispatcher;
+
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import androidx.webkit.JavaScriptReplyProxy;
 import androidx.webkit.WebMessageCompat;
@@ -117,49 +121,40 @@ public final class MainActivity extends Activity {
         if (state == null || web.restoreState(state) == null) web.loadUrl(NativePolicy.HOME);
     }
 
-    @SuppressWarnings("deprecation")
     private void configureInsets(FrameLayout root) {
-        if (Build.VERSION.SDK_INT >= 30) {
-            getWindow().setDecorFitsSystemWindows(false);
-            root.setOnApplyWindowInsetsListener((view, insets) -> {
-                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
-                android.graphics.Insets keyboard = insets.getInsets(WindowInsets.Type.ime());
-                view.setPadding(bars.left, bars.top, bars.right, Math.max(bars.bottom, keyboard.bottom));
-                // WebView must not reapply already handled bars/cutout insets.
-                return WindowInsets.CONSUMED;
-            });
-            WindowInsetsController controller = getWindow().getInsetsController();
-            if (controller != null) controller.setSystemBarsAppearance(
-                    isDark() ? 0 : WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-                            | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
-                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-                            | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
-        } else {
-            root.setFitsSystemWindows(true);
-            getWindow().getDecorView().setSystemUiVisibility(isDark() ? 0 :
-                    View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
-        }
+        // Consistent edge-to-edge on Android 8+, including older three-button devices.
+        // The native container owns all safe areas; the bundled page keeps its
+        // Android CSS safe-area variables at zero rather than padding a second time.
+        WindowCompat.enableEdgeToEdge(getWindow());
+        ViewCompat.setOnApplyWindowInsetsListener(root, (view, insets) -> {
+            int handled = WindowInsetsCompat.Type.systemBars()
+                    | WindowInsetsCompat.Type.displayCutout() | WindowInsetsCompat.Type.ime();
+            // Union uses the greatest overlap per edge. The keyboard and navigation
+            // bar share space, so adding their heights would leave an extra gap.
+            Insets safe = insets.getInsets(handled);
+            view.setPadding(safe.left, safe.top, safe.right, safe.bottom);
+            // Keep delivering the zero update when bars/keyboard disappear. Fully
+            // consuming it can leave stale safe areas in newer Android WebViews.
+            return new WindowInsetsCompat.Builder(insets)
+                    .setInsets(handled, Insets.NONE)
+                    .setDisplayCutout(null)
+                    .build();
+        });
         applyAppearance(isDark());
-        root.requestApplyInsets();
+        ViewCompat.requestApplyInsets(root);
     }
 
-    @SuppressWarnings("deprecation")
     private void applyAppearance(boolean dark) {
-        int surface = Color.parseColor(dark ? "#111417" : "#F7F9FA");
+        // Match the shared page background behind the transparent system bars.
+        int surface = Color.parseColor(dark ? "#131821" : "#F6F8F7");
         root.setBackgroundColor(surface);
         web.setBackgroundColor(surface);
-        getWindow().setStatusBarColor(surface);
-        getWindow().setNavigationBarColor(surface);
-        if (Build.VERSION.SDK_INT >= 29) getWindow().setNavigationBarContrastEnforced(false);
-        if (Build.VERSION.SDK_INT >= 30) {
-            WindowInsetsController controller = getWindow().getInsetsController();
-            int light = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-                    | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
-            if (controller != null) controller.setSystemBarsAppearance(dark ? 0 : light, light);
-        } else {
-            getWindow().getDecorView().setSystemUiVisibility(dark ? 0 :
-                    View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
-        }
+        // Keep the system's contrast protection for three-button navigation.
+        // Gesture navigation remains transparent; no system bar is hidden.
+        if (Build.VERSION.SDK_INT >= 29) getWindow().setNavigationBarContrastEnforced(true);
+        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        controller.setAppearanceLightStatusBars(!dark);
+        controller.setAppearanceLightNavigationBars(!dark);
     }
 
     @SuppressWarnings("deprecation")
@@ -580,15 +575,20 @@ public final class MainActivity extends Activity {
                 updates.markPrompted(release);
                 updateOfferedThisEntry = true;
                 updateDialogShowing = true;
-                new AlertDialog.Builder(MainActivity.this).setTitle("发现新版本 " + release.version)
-                        .setMessage("前往 GitHub 下载更新，手机中的通知会保留。下载后仍需在系统安装界面确认。")
-                        .setPositiveButton("去下载", (dialog, which) -> {
-                            if (NativeUpdatePolicy.verifiedDownload(release.download, release.version)) {
+                AlertDialog.Builder prompt = new AlertDialog.Builder(MainActivity.this).setTitle("发现新版本 " + release.version)
+                        .setMessage((release.aliyun != null ? "优先从阿里云下载，GitHub 可作备用。" : "前往 GitHub 下载更新。")
+                                + "手机中的通知会保留，下载后仍需在系统安装界面确认。")
+                        .setPositiveButton(release.aliyun != null ? "阿里云下载" : "GitHub 下载", (dialog, which) -> {
+                            if (NativeUpdatePolicy.preferredDownload(release.version, release.github, release.aliyun) != null) {
                                 openExternal(release.download);
                             }
                         })
                         .setNegativeButton("暂不", null)
-                        .setOnDismissListener(dialog -> updateDialogShowing = false).show();
+                        .setOnDismissListener(dialog -> updateDialogShowing = false);
+                if (release.aliyun != null) prompt.setNeutralButton("GitHub 备用", (dialog, which) -> {
+                    if (NativeUpdatePolicy.verifiedDownload(release.github, release.version)) openExternal(release.github);
+                });
+                prompt.show();
             });
         });
     }
@@ -598,8 +598,10 @@ public final class MainActivity extends Activity {
             try {
                 JSONObject data = new JSONObject().put("status", result.status).put("currentVersion", BuildConfig.VERSION_NAME);
                 if ("available".equals(result.status) && result.release != null
-                        && NativeUpdatePolicy.verifiedDownload(result.release.download, result.release.version)) {
-                    data.put("version", result.release.version).put("download", result.release.download);
+                        && NativeUpdatePolicy.preferredDownload(result.release.version, result.release.github, result.release.aliyun) != null) {
+                    data.put("version", result.release.version).put("download", result.release.download)
+                            .put("github", result.release.github);
+                    if (result.release.aliyun != null) data.put("aliyun", result.release.aliyun);
                 }
                 respond(reply, id, data);
             } catch (JSONException ignored) { reject(reply, id, "暂时无法检查更新，请稍后再试。"); }
@@ -680,6 +682,13 @@ public final class MainActivity extends Activity {
 
     private void toast(String text) { Toast.makeText(this, text, Toast.LENGTH_SHORT).show(); }
 
+    @Override public void onConfigurationChanged(Configuration configuration) {
+        super.onConfigurationChanged(configuration);
+        // Rotation and multi-window can move a cutout or navigation bar sideways.
+        // Re-read geometry without changing the user's chosen light/dark mode.
+        if (root != null) ViewCompat.requestApplyInsets(root);
+    }
+
     @Override protected void onPause() {
         foreground = false;
         if (web != null) { web.removeCallbacks(updateCheck); web.onPause(); }
@@ -689,6 +698,7 @@ public final class MainActivity extends Activity {
         super.onResume();
         if (!foreground) updateOfferedThisEntry = false;
         foreground = true;
+        if (root != null) ViewCompat.requestApplyInsets(root);
         if (web != null) { web.onResume(); web.removeCallbacks(updateCheck); web.postDelayed(updateCheck, 1200); }
     }
 

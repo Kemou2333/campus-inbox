@@ -41,7 +41,7 @@ export function AndroidUpdateSettings({platform}:{platform:PlatformAPI}){
    '& .MuiAlert-message':{minWidth:0,overflowWrap:'anywhere'}}}>
    {message}
    {result.status==='available'&&result.download&&<>
-    <Button component="a" href={result.download} target="_blank" rel="noopener noreferrer" variant="contained" size="small" sx={{display:'flex',mt:1,fontSize:15}}>下载更新</Button>
+    <Stack direction="row" sx={{gap:1,mt:1,flexWrap:'wrap'}}><Button component="a" href={result.download} target="_blank" rel="noopener noreferrer" variant="contained" size="small" sx={{fontSize:15}}>{result.download===result.aliyun?'阿里云下载更新':'下载更新'}</Button>{result.github&&result.github!==result.download&&<Button component="a" href={result.github} target="_blank" rel="noopener noreferrer" variant="outlined" size="small">GitHub 备用</Button>}</Stack>
     <Typography sx={{fontSize:13,mt:1,lineHeight:1.7}}>下载后需在系统安装界面确认。</Typography>
    </>}
   </Alert>}
