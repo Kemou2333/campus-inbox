@@ -39,7 +39,7 @@ if(path.startsWith('/downloads/'))return handleAPK(req,res,verifiedIP);
 
 这个公开地址无查询参数时呈现中文HTML表单，无JavaScript要求。POST仅接受小于等于1024字节的URL编码表单，字段仅`challenge`和`answer`；Origin必须为固定服务来源，拒绝明确跨站POST。成功303跳转到同路径`?ticket=…`。不要把`ticket`查询参数写进代理访问日志；可以对该位置关闭访问日志或只记录不含参数的`$uri`。验证码数字只在绘制PNG时短暂存在，响应和HTML不包含明文答案、答案哈希或服务器密钥。
 
-所有响应禁止缓存、禁止被嵌入、禁止嗅探，设置no-referrer、CSP和精确表单来源；公开字符串统一HTML转义，APK响应使用attachment。验证码/ticket仅存在有界内存中，重启后需要重新验证；已花下载次数和字节不因重启恢复。
+所有响应禁止缓存、禁止被嵌入、禁止嗅探，设置CSP和精确表单来源。HTML表单页使用same-origin来源策略，确保浏览器POST保留本站Origin，同时不向GitHub发送来源；303凭证跳转和APK使用no-referrer。公开字符串统一HTML转义，APK响应使用attachment。验证码/ticket仅存在有界内存中，重启后需要重新验证；已花下载次数和字节不因重启恢复。
 
 ## 只读资产索引与发布
 
