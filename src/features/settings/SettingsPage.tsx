@@ -32,6 +32,7 @@ import {SettingsFAQ,SettingsUsageState} from './SettingsFAQ';
 import {AndroidDownloads} from '../../shared/ui/AndroidDownloads';
 import {AndroidUpdateSettings} from './AndroidUpdateSettings';
 import {friendlyErrorMessage} from '../../shared/error-message';
+import {AIPrivacyContent} from '../../shared/ui/AIPrivacy';
 import {InboxCharm} from '../../shared/ui/InboxCharm';
 import {MOTION_SPEEDS,setMotionSpeed,useMotionPreferences,type MotionKind,type MotionSpeed} from '../../shared/motion-preferences';
 
@@ -46,8 +47,8 @@ interface Props {
   onFilterNotices?: (enabled:boolean) => void;
   expandCampus?: boolean;
 }
-type Category='appearance'|'feedback'|'sync'|'tools'|'campus'|'faq'|'developer';
-const categoryTitles:Record<Category,string>={appearance:'外观与阅读',feedback:'操作反馈',sync:'账号与同步',tools:'工具与帮助',campus:'通知筛选',faq:'常见问题',developer:'开发者设置'};
+type Category='appearance'|'feedback'|'sync'|'tools'|'campus'|'faq'|'developer'|'privacy';
+const categoryTitles:Record<Category,string>={appearance:'外观与阅读',feedback:'操作反馈',sync:'账号与同步',tools:'工具与帮助',campus:'通知筛选',faq:'常见问题',developer:'开发者设置',privacy:'隐私说明'};
 const sectionStyle={borderRadius:'18px',overflow:'hidden'} as const;
 const rowStyle={alignItems:'center',gap:1.5,px:{xs:2,sm:2.5},py:2.25,borderTop:'1px solid',borderColor:'divider'} as const;
 
@@ -115,7 +116,7 @@ export function SettingsPage({ developerEnabled=false, app, onLogin, onHelp, onA
     if(!category)return;
     return app.platform.onBack(()=>{
       if(document.querySelector('[role="dialog"],dialog[open]'))return false;
-      setCategory(category==='campus'||category==='faq'||category==='developer'?'tools':null);return true;
+      setCategory(category==='campus'||category==='faq'||category==='developer'||category==='privacy'?'tools':null);return true;
     });
   },[app.platform,category]);
   function openCategory(next:Category|null){setError('');setCategory(next);window.scrollTo({top:0,behavior:'instant'});}
@@ -141,7 +142,7 @@ export function SettingsPage({ developerEnabled=false, app, onLogin, onHelp, onA
 
   return <Stack key={category??'main'} className="settings-page" spacing={2.5} sx={{animation:reducedMotion?'none':`settings-enter ${Math.round(340/motionPreferences.entry)}ms cubic-bezier(.22,1,.36,1)`,maxWidth:720,mx:'auto',pb:4,'& .MuiButton-root':{fontSize:15,minHeight:42}}}>
     <Box>
-      {category&&<Button color="inherit" startIcon={<ArrowBack sx={{fontSize:19}}/>} onClick={()=>openCategory(category==='campus'||category==='faq'||category==='developer'?'tools':null)} sx={{ml:-1,mb:1,color:'text.secondary'}}>返回{category==='campus'||category==='faq'||category==='developer'?'工具与帮助':'设置'}</Button>}
+      {category&&<Button color="inherit" startIcon={<ArrowBack sx={{fontSize:19}}/>} onClick={()=>openCategory(category==='campus'||category==='faq'||category==='developer'||category==='privacy'?'tools':null)} sx={{ml:-1,mb:1,color:'text.secondary'}}>返回{category==='campus'||category==='faq'||category==='developer'||category==='privacy'?'工具与帮助':'设置'}</Button>}
       <Typography ref={heading} tabIndex={-1} component="h1" sx={{fontSize:{xs:30,sm:34},lineHeight:1.3,fontWeight:760,outline:'none'}}>{category?categoryTitles[category]:'设置'}</Typography>
     </Box>
     {error && !logoutOpen && !conflict && !transferOpen && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
@@ -202,7 +203,8 @@ export function SettingsPage({ developerEnabled=false, app, onLogin, onHelp, onA
       <ToolRow icon={<PersonOutline/>} title="通知筛选" onClick={()=>openCategory('campus')}/>
       <ToolRow icon={<HelpOutline/>} title="常见问题" onClick={()=>openCategory('faq')}/>
       <ToolRow icon={<PlayCircleOutline/>} title="重看教程" onClick={onHelp}/>
-      <ToolRow icon={<InfoOutlined/>} title="关于拾笺 Inbox" onClick={onAbout}/>
+      <ToolRow icon={<InfoOutlined/>} title="隐私说明" onClick={()=>openCategory('privacy')}/>
+      <ToolRow icon={<InfoOutlined/>} title="关于拾笺 · Note Inbox" onClick={onAbout}/>
       {(developerEnabled||isOwner)&&<ToolRow icon={<CodeOutlined/>} title="开发者设置" onClick={()=>openCategory('developer')}/>}
     </Paper>}
     {category==='developer'&&(developerEnabled||isOwner)&&<><Paper variant="outlined" sx={{...sectionStyle,p:2.5}}><Typography sx={{fontSize:18,fontWeight:650,mb:.5}}>动效速率</Typography><Typography sx={{fontSize:14,color:'text.secondary',mb:2}}>倍速越大，动效越快；仅保存在本机。</Typography><Stack spacing={2.25}><MotionSpeedRow title="淡入与首次入场" value={motionPreferences.entry} onChange={value=>changeMotionSpeed('entry',value)}/><MotionSpeedRow title="通知展开" value={motionPreferences.notice} onChange={value=>changeMotionSpeed('notice',value)}/></Stack>{reducedMotion&&<Typography sx={{fontSize:13,color:'text.secondary',mt:1.5}}>系统已开启减少动画，动效保持静止。</Typography>}</Paper><Paper variant="outlined" sx={{...sectionStyle,p:2.5}}><Typography sx={{fontSize:18,fontWeight:650,mb:1}}>重新加载示例</Typography><Typography sx={{fontSize:14,color:'text.secondary',mb:2}}>恢复内置示例的进度与删除记录。</Typography><Button variant="outlined" disabled={busy} onClick={()=>void run('resetexamples',async()=>{await app.resetExamples();onShowNotices?.();})}>重新加载示例</Button></Paper><Paper variant="outlined" sx={{...sectionStyle,p:2.5}}><Typography sx={{fontSize:18,fontWeight:650,mb:1}}>真实测试结果</Typography><Typography sx={{fontSize:14,color:'text.secondary',mb:2}}>查看当前提示词真实调用的结果，暂时隐藏展示示例。</Typography><Stack direction="row" sx={{gap:1,flexWrap:'wrap'}}><Button variant="contained" disabled={busy} onClick={()=>void run('modeltests',async()=>{await app.loadModelTests();onShowNotices?.();})}>查看真实测试结果</Button>{app.modelTestMode&&<Button onClick={()=>{app.setModelTestMode(false);onShowNotices?.();}}>返回展示示例</Button>}</Stack></Paper><SettingsUsageState app={app}/></>}
@@ -210,6 +212,7 @@ export function SettingsPage({ developerEnabled=false, app, onLogin, onHelp, onA
       <CampusPreferencesPanel value={app.preferences} onSave={app.setPreferences} disabled={busy} initiallyExpanded={expandCampus} onApplyFilter={onFilterNotices}/>
       <TeachingWeekPanel value={app.preferences} onSave={app.setPreferences} disabled={busy}/>
     </Paper>}
+    {category==='privacy'&&<Paper variant="outlined" sx={{...sectionStyle,p:{xs:2,sm:2.5}}}><AIPrivacyContent/></Paper>}
     {category==='faq'&&<Paper variant="outlined" sx={sectionStyle}><SettingsFAQ/></Paper>}
     {!category&&<Box component="footer" sx={{textAlign:'center',pt:2,pb:1}}>
       <InboxCharm size={64} message="今天也少翻了几条群通知。"/>

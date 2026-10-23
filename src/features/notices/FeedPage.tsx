@@ -30,7 +30,6 @@ import DownloadOutlined from '@mui/icons-material/DownloadOutlined';
 import {ScrollBoundaryCue} from '../../shared/ui/ScrollBoundaryCue';
 import {useUiPreferences,type UiPreferences} from '../../shared/ui-preferences';
 import {BackToTop} from '../../shared/ui/BackToTop';
-import {AIPrivacyLink} from '../../shared/ui/AIPrivacy';
 
 export interface FeedViewState {tab:0|1|2;query:string;sort:SortOrder;expandedIDs:Set<string>;expandedTaskIDs:Set<string>;favoritesOnly?:boolean;relevantOnly?:boolean;manualPriorities?:ManualPriority[];pastSevenDaysOnly?:boolean}
 export const createFeedViewState=():FeedViewState=>({tab:0,query:'',sort:'priority',expandedIDs:new Set(),expandedTaskIDs:new Set(),favoritesOnly:false,relevantOnly:false,manualPriorities:[],pastSevenDaysOnly:false});
@@ -186,7 +185,7 @@ export function FeedPage({sampleNudge=false,onSamplesOpened,app,actions,onCompos
    <Box aria-hidden sx={{width:32,borderTop:'1px solid',borderColor:'divider',mx:'auto',mb:1.5}}/>
    <Typography color="text.secondary" sx={{fontSize:12.5,lineHeight:1.8,letterSpacing:'.01em'}}>内容由 AI 生成，请注意甄别。</Typography>
    <Typography color="text.secondary" sx={{fontSize:12,fontWeight:500,lineHeight:1.8,mt:.25}}>Kemou 制作</Typography>
-   <Stack direction="row" sx={{alignItems:'center',justifyContent:'center',gap:.5,mt:.5,flexWrap:'wrap'}}><AIPrivacyLink/><Button component="a" href="https://github.com/Kemou2333/campus-inbox" target="_blank" rel="noopener noreferrer" size="small" startIcon={<GitHub sx={{fontSize:15}}/>} sx={{fontSize:12.5,color:'text.secondary',minHeight:36}}>GitHub 仓库</Button>{app.platform.kind!=='android'&&onDownload&&<Button size="small" startIcon={<DownloadOutlined sx={{fontSize:15}}/>} onClick={onDownload} sx={{fontSize:12.5,minHeight:36}}>安卓版</Button>}</Stack>
+   <Stack direction="row" sx={{alignItems:'center',justifyContent:'center',gap:.5,mt:.5,flexWrap:'wrap'}}><Button component="a" href="https://github.com/Kemou2333/campus-inbox" target="_blank" rel="noopener noreferrer" size="small" startIcon={<GitHub sx={{fontSize:15}}/>} sx={{fontSize:12.5,color:'text.secondary',minHeight:36}}>GitHub 仓库</Button>{app.platform.kind!=='android'&&onDownload&&<Button size="small" startIcon={<DownloadOutlined sx={{fontSize:15}}/>} onClick={onDownload} sx={{fontSize:12.5,minHeight:36}}>安卓版</Button>}</Stack>
   </Box>
   <ScrollBoundaryCue anchor={searchResults}/>
   <BackToTop anchorRef={searchResults} focusRef={controls} embedded={embedded} scopeKey={scopeKey}/>

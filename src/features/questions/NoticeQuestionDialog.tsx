@@ -13,7 +13,6 @@ import {friendlyErrorMessage} from '../../shared/error-message';
 import {findReviewedExampleQuestion,type ReviewedExampleQuestion} from './reviewed-example-question';
 import {hasSeenFirstUseHint,markFirstUseHintSeen} from '../../shared/ui/first-use-hint';
 import {waitForGuestDemo} from '../../infrastructure/guest-demo';
-import {AIPrivacyLink} from '../../shared/ui/AIPrivacy';
 
 type DisplayedAnswer=Pick<NoticeQuestionAnswer,'answer'|'evidence'>&{origin:'provider'|'human-reviewed-example'};
 
@@ -56,7 +55,6 @@ export default function NoticeQuestionDialog({notice,app,onClose,onLogin}:{notic
   <DialogContent>{showHint&&<Alert severity="info" onClose={()=>setShowHint(false)} sx={{mb:2}}>只围绕当前通知提问，回答附原文依据。</Alert>}<Typography sx={{fontWeight:700,mb:.5}}>{notice?.title}</Typography><Typography variant="body2" color="text.secondary" sx={{mb:2}}>{sampleQuestion?'示例问答 · 可直接体验':'仅依据这条原文 · 五小时 5 问，三天 15 问'}</Typography>
    {!!notice&&notice.originalText.length>4000&&<Alert severity="info" sx={{mb:2}}>原文超过4,000字，暂不能提问。</Alert>}
    <TextField autoFocus multiline minRows={2} maxRows={5} label="想问什么？" placeholder="例如：我要交什么材料？" value={question} disabled={busy} onChange={e=>{setQuestion(e.target.value);setAnswer(null);setError('');}} slotProps={{htmlInput:{maxLength:240}}} helperText={question.length>=200?`${question.length}/240`:undefined}/>
-   {!sampleQuestion&&<Stack direction="row" sx={{alignItems:'center',gap:.25,flexWrap:'wrap',mt:.75}}><Typography sx={{fontSize:12.5,color:'text.secondary'}}>原文和问题会发给 DeepSeek 处理。</Typography><AIPrivacyLink/></Stack>}
    {busy&&<Stack role="status" direction="row" sx={{gap:1,alignItems:'center',mt:2}}><CircularProgress size={18}/><Typography>正在看原文…</Typography></Stack>}
    {error&&<Alert severity="warning" sx={{mt:2}}>{error}</Alert>}
    {answer&&<Box className="notice-question-answer" role="status" data-answer-origin={answer.origin} sx={{mt:2,p:2,bgcolor:'action.hover',borderLeft:'3px solid',borderColor:'primary.main',borderRadius:1,'& .rich-text > p + p':{mt:1.5},'& .rich-text li + li':{mt:.75}}}>{answer.origin==='human-reviewed-example'&&<Typography variant="caption" color="text.secondary" sx={{display:'block',fontWeight:700,mb:1}}>示例回答</Typography>}<RichText text={readableQuestionAnswer(answer.answer)}/>{!!answer.evidence.length&&<Box component="details" className="question-evidence" sx={{mt:2,pt:.75,borderTop:'1px solid',borderColor:'divider'}}><Box component="summary" sx={{color:'primary.main',fontSize:14,fontWeight:700,cursor:'pointer',py:.75}}>原文依据 {answer.evidence.length}</Box>{answer.evidence.map((quote,i)=><Typography key={i} component="blockquote" sx={{m:0,mt:1,fontSize:14,lineHeight:1.7,color:'text.secondary',whiteSpace:'pre-wrap'}}>{quote}</Typography>)}</Box>}</Box>}
