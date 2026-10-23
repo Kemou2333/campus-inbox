@@ -2,7 +2,7 @@ import {createHash,createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
 import {readFile,writeFile,rename} from 'node:fs/promises';
 import {analyze,answerNoticeQuestion,boundedText,ServiceError,modelInput,modelPayload,questionInput,questionPayload} from './analyze.mjs';
 import {createImageCaptcha,captchaAnswerHash} from './image-captcha.mjs';
-import {createRollingQuota,pruneRollingQuota,checkRollingQuota,reserveRollingQuota,remainingRollingAccount} from './ai-quota.mjs';
+import {createRollingQuota,pruneRollingQuota,checkRollingQuota,reserveRollingQuota,remainingRollingAccount,createSplitQuota} from './ai-quota.mjs';
 const D=globalThis.CampusData;
 const RATE_WINDOW_MS=180000,RATE_LIMIT=5,AUTHENTICATED_IP_RATE_LIMIT=20;
 // Peak list prices translated at a conservative 8 RMB/USD; cached input is
@@ -30,6 +30,8 @@ export async function createService(config,options={}){
   const cache=new Map(),rates=new Map(),challenges=new Map(),pendingJobs=new Set(),admissions=new Map();
   const dailyLimit=config.dailyLimit===undefined?50:config.dailyLimit;
   if(!Number.isSafeInteger(dailyLimit)||dailyLimit<1)throw new Error('Daily AI budget must be a positive integer');
+  const questionDailyLimit=config.questionDailyLimit===undefined?40:config.questionDailyLimit;
+  if(!Number.isSafeInteger(questionDailyLimit)||questionDailyLimit<1)throw new Error('Daily question limit must be a positive integer');
   const dailyBudgetRmb=config.dailyBudgetRmb===undefined?3:config.dailyBudgetRmb;
   const dailyBudgetMicro=Math.floor(dailyBudgetRmb*1_000_000);
   if(typeof dailyBudgetRmb!=='number'||!Number.isFinite(dailyBudgetRmb)||!Number.isSafeInteger(dailyBudgetMicro)||dailyBudgetMicro<1)throw new Error('Daily AI currency budget must be a positive number');
@@ -38,6 +40,7 @@ export async function createService(config,options={}){
   const ipLimit=Number.isInteger(config.ipDailyLimit)&&config.ipDailyLimit>0?config.ipDailyLimit:Infinity;
   const rollingLimit=(value,fallback)=>{const limit=value===undefined?fallback:value;if(!Number.isSafeInteger(limit)||limit<1)throw new Error('Rolling AI quota limits must be positive integers');return limit;};
   const rollingLimits={accountFiveHourLimit:rollingLimit(config.accountFiveHourLimit,5),accountThreeDayLimit:rollingLimit(config.accountThreeDayLimit,20),ipFiveHourLimit:rollingLimit(config.ipFiveHourLimit,5)};
+  const questionRollingLimits={accountFiveHourLimit:rollingLimit(config.questionAccountFiveHourLimit,5),accountThreeDayLimit:rollingLimit(config.questionAccountThreeDayLimit,15),ipFiveHourLimit:rollingLimit(config.questionIPFiveHourLimit,5)};
   const bits=16,sign=value=>createHmac('sha256',config.accessToken).update(value).digest('base64url');
   const day=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(now());
   let usage=null,busy=false,persistQueue=Promise.resolve(),currencyMigration=false;
@@ -54,12 +57,12 @@ export async function createService(config,options={}){
     if(usage.questionAccounts!==undefined&&(!validMap(usage.questionAccounts)||Object.entries(usage.questionAccounts).some(([k,v])=>!/^[-\w]{43}$/.test(k)||!Number.isSafeInteger(v)||v<0||v>5)))throw new Error('Invalid question quota state');
     if(usage.accountRates!==undefined&&(!validMap(usage.accountRates)||Object.entries(usage.accountRates).some(([k,v])=>!/^[-\w]{43}$/.test(k)||!validTimes(v,RATE_LIMIT))))throw new Error('Invalid account rate state');
   }catch(e){if(e.code!=='ENOENT')throw e;}}
-  if(usage){currencyMigration||=usage.rolling===undefined;usage.rolling=createRollingQuota(usage,now());}
+  if(usage){currencyMigration||=usage.rolling===undefined||usage.splitQuota===undefined;usage.rolling=createRollingQuota(usage,now());usage.splitQuota=createSplitQuota(usage,now());}
   const persist=()=>{if(!config.stateFile)return Promise.resolve();const snapshot=JSON.stringify(usage);const pending=persistQueue.catch(()=>{}).then(async()=>{await writeFile(config.stateFile+'.tmp',snapshot,{mode:0o600});await rename(config.stateFile+'.tmp',config.stateFile);});persistQueue=pending;return pending;};
   if(currencyMigration)await persist();
-  // Keep the legacy response field for old clients, now reporting the shared
-  // rolling account allowance rather than a separate question-only daily cap.
-  const remainingQuestionsFor=account=>Math.min(5,remainingRollingAccount(usage?.rolling,{...rollingLimits,time:now(),accountKey:sign('rolling:account:'+account.id),legacyAccountKey:usage?.rolling?.legacy?sign(usage.rolling.legacy.day+':account:'+account.id):null}));
+  // Compatible response field, now reflecting only this account's independent
+  // question windows. Network/site/currency limits can still stop admissions.
+  const remainingQuestionsFor=account=>remainingRollingAccount(usage?.splitQuota?.questionRolling,{...questionRollingLimits,time:now(),accountKey:sign('rolling:account:'+account.id),legacyAccountKey:usage?.splitQuota?.questionRolling?.legacy?sign(usage.splitQuota.questionRolling.legacy.day+':account:'+account.id):null});
   const authorized=header=>timingSafeEqual(createHash('sha256').update(header||'').digest(),createHash('sha256').update('Bearer '+config.accessToken).digest());
   const verify=(proof,ipKey,hash,origin,t,accountKey)=>{
     try{
@@ -162,17 +165,22 @@ export async function createService(config,options={}){
     // Questions reuse only their durable request ID, never another account's
     // response or a different paid request's allowance.
     const saved=questionRoute?undefined:cache.get(hash);
-    if(busy&&!saved)return reply({error:'正在整理另一条通知，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
-    if(busy&&usage?.day!==day())return reply({error:'正在整理另一条通知，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
-    if(!usage||usage.day!==day())usage={day:day(),requests:0,input:0,output:0,reasoning:0,costMicro:0,rolling:createRollingQuota(usage,t),...(publicMode?{clients:{}}:{})};
-    pruneRollingQuota(usage.rolling,t);
+    if(busy&&!saved)return reply({error:'AI 正在处理另一条请求，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
+    if(busy&&usage?.day!==day())return reply({error:'AI 正在处理另一条请求，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
+    if(!usage||usage.day!==day()){
+      const rolling=createRollingQuota(usage,t),splitQuota=createSplitQuota(usage,t);
+      usage={day:day(),requests:0,input:0,output:0,reasoning:0,costMicro:0,rolling,
+        splitQuota:{...splitQuota,organizeRequests:0,questionRequests:0},...(publicMode?{clients:{}}:{})};
+    }
+    pruneRollingQuota(usage.rolling,t);pruneRollingQuota(usage.splitQuota.questionRolling,t);
+    const routeRolling=questionRoute?usage.splitQuota.questionRolling:usage.rolling,routeLimits=questionRoute?questionRollingLimits:rollingLimits;
     const requestUsage=usage;
     const accountKey=account?sign(usage.day+':account:'+account.id):null;
     const accountLimit=Number.isInteger(config.accountDailyLimit)&&config.accountDailyLimit>0?config.accountDailyLimit:Infinity;
     const rollingKeys={accountKey:account?sign('rolling:account:'+account.id):null,ipKey:sign('rolling:ip:'+ip),
-      legacyAccountKey:account&&usage.rolling.legacy?sign(usage.rolling.legacy.day+':account:'+account.id):null,
-      legacyIPKey:usage.rolling.legacy?sign(usage.rolling.legacy.day+':'+ip):null};
-    const rollingLimited=()=>{if(!publicMode)return null;const blocked=checkRollingQuota(usage.rolling,{...rollingKeys,...rollingLimits,time:now()});return blocked?reply(blocked,429,{'Retry-After':String(blocked.retryAfterSeconds)}):null;};
+      legacyAccountKey:account&&routeRolling.legacy?sign(routeRolling.legacy.day+':account:'+account.id):null,
+      legacyIPKey:routeRolling.legacy?sign(routeRolling.legacy.day+':'+ip):null};
+    const rollingLimited=()=>{if(!publicMode)return null;const blocked=checkRollingQuota(routeRolling,{...rollingKeys,...routeLimits,activity:questionRoute?'提问':'整理',time:now()});return blocked?reply(blocked,429,{'Retry-After':String(blocked.retryAfterSeconds)}):null;};
     if(publicMode)usage.clients??={};const ipKey=sign(usage.day+':'+ip),client=usage.clients?.[ipKey]||{requests:0,times:[]};
     const entries=(publicMode?client.times:(rates.get(ip)||[])).filter(v=>t-v<RATE_WINDOW_MS);
     const networkRateLimit=accountKey?AUTHENTICATED_IP_RATE_LIMIT:RATE_LIMIT;
@@ -191,8 +199,8 @@ export async function createService(config,options={}){
       }
     }
     else if(!recentImages.length||(accountEntries||entries).length<3){
-      if(accountEntries?.length>=RATE_LIMIT){const seconds=Math.max(1,Math.ceil((accountEntries[0]+RATE_WINDOW_MS-t)/1000));return reply({error:`每个账号每 3 分钟最多整理 ${RATE_LIMIT} 次，请 ${seconds} 秒后再试。`,code:'ACCOUNT_RATE_LIMIT',retryAfterSeconds:seconds},429,{'Retry-After':String(seconds)});}
-      if(entries.length>=networkRateLimit){const seconds=Math.max(1,Math.ceil((entries[0]+RATE_WINDOW_MS-t)/1000));return reply({error:`此网络每 3 分钟最多整理 ${networkRateLimit} 次，请 ${seconds} 秒后再试。`,code:'IP_RATE_LIMIT',retryAfterSeconds:seconds},429,{'Retry-After':String(seconds)});}
+      if(accountEntries?.length>=RATE_LIMIT){const seconds=Math.max(1,Math.ceil((accountEntries[0]+RATE_WINDOW_MS-t)/1000));return reply({error:`每个账号每 3 分钟最多发起 ${RATE_LIMIT} 次 AI 请求，请 ${seconds} 秒后再试。`,code:'ACCOUNT_RATE_LIMIT',retryAfterSeconds:seconds},429,{'Retry-After':String(seconds)});}
+      if(entries.length>=networkRateLimit){const seconds=Math.max(1,Math.ceil((entries[0]+RATE_WINDOW_MS-t)/1000));return reply({error:`此网络每 3 分钟最多发起 ${networkRateLimit} 次 AI 请求，请 ${seconds} 秒后再试。`,code:'IP_RATE_LIMIT',retryAfterSeconds:seconds},429,{'Retry-After':String(seconds)});}
       entries.push(t);
       if(accountEntries){accountEntries.push(t);usage.accountRates[accountKey]=accountEntries;}
       if(publicMode){client.times=entries;}
@@ -205,9 +213,14 @@ export async function createService(config,options={}){
     const payload=saved?null:questionRoute?questionPayload(notice,config):modelPayload(notice,config);
     const reservedCostMicro=payload?tokenCostMicro(Buffer.byteLength(JSON.stringify(payload),'utf8')+1024,payload.max_tokens):0;
     const currencyLimited=()=>limited('今日 AI 服务预算已用完，明天再试。','DAILY_COST_LIMIT');
-    // Paid failures also consume both caps. Cache reuse does not spend the budget.
+    const dailyLimited=()=>{
+      if(questionRoute&&usage.splitQuota.questionRequests>=questionDailyLimit)return limited('今日全站提问次数已达上限，明天再试。','QUESTION_DAILY_LIMIT');
+      if(!questionRoute&&usage.splitQuota.organizeRequests>=dailyLimit)return limited('今日全站整理次数已达上限，明天再试。','DAILY_LIMIT');
+      return null;
+    };
+    // Paid failures consume their route's count and the shared currency budget. Cache reuse is free.
     if(!saved&&usage.costMicro>dailyBudgetMicro-reservedCostMicro)return currencyLimited();
-    if(!saved&&usage.requests>=dailyLimit)return limited('今日整理次数已达上限，明天再试。','DAILY_LIMIT');
+    if(!saved){const blocked=dailyLimited();if(blocked)return blocked;}
     if(publicMode&&!saved&&client.requests>=ipLimit)return limited('此网络今日整理次数已达上限，明天再试。','IP_DAILY_LIMIT');
     if(accountKey&&!saved&&(usage.accounts?.[accountKey]||0)>=accountLimit)return limited('此账号今日整理次数已达上限，明天再试。','ACCOUNT_DAILY_LIMIT');
     if(!saved){const blocked=rollingLimited();if(blocked)return blocked;}
@@ -252,8 +265,8 @@ export async function createService(config,options={}){
       return reply({code:'VERIFICATION_REQUIRED',challenge:publicChallenge},428);
     }
     // Recheck after asynchronous persistence; two arrivals must never start two model calls.
-    if(busy)return reply({error:'正在整理另一条通知，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
-    if(usage.requests>=dailyLimit)return limited('今日整理次数已达上限，明天再试。','DAILY_LIMIT');
+    if(busy)return reply({error:'AI 正在处理另一条请求，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
+    {const blocked=dailyLimited();if(blocked)return blocked;}
     if(usage.costMicro>dailyBudgetMicro-reservedCostMicro)return currencyLimited();
     if(publicMode&&client.requests>=ipLimit)return limited('此网络今日整理次数已达上限，明天再试。','IP_DAILY_LIMIT');
     if(accountKey&&(usage.accounts?.[accountKey]||0)>=accountLimit)return limited('此账号今日整理次数已达上限，明天再试。','ACCOUNT_DAILY_LIMIT');
@@ -275,7 +288,7 @@ export async function createService(config,options={}){
       // or budget persistence later fails. No provider runs before both stores.
       if(jobRoute)acceptedJob=options.jobs.accept(account,requestID,hash,notice.sources);
       if(questionRoute){options.questions.accept(account,requestID,hash);acceptedQuestion=true;}
-      admittedUsage.costMicro+=reservedCostMicro;admittedUsage.requests++;if(publicMode){client.requests++;reserveRollingQuota(admittedUsage.rolling,{...rollingKeys,time:now()});}if(accountKey){admittedUsage.accounts??={};admittedUsage.accounts[accountKey]=(admittedUsage.accounts[accountKey]||0)+1;}await persist();
+      admittedUsage.costMicro+=reservedCostMicro;admittedUsage.requests++;admittedUsage.splitQuota[questionRoute?'questionRequests':'organizeRequests']++;if(publicMode){client.requests++;reserveRollingQuota(routeRolling,{...rollingKeys,time:now()});}if(accountKey){admittedUsage.accounts??={};admittedUsage.accounts[accountKey]=(admittedUsage.accounts[accountKey]||0)+1;}await persist();
       if(questionRoute){
         // Once admitted, finish independently of the browser connection so a
         // lost response can be recovered with the same ID without a new charge.
@@ -344,6 +357,6 @@ export async function createService(config,options={}){
     }
   };
   handle.drain=()=>Promise.allSettled([...pendingJobs]);
-  handle.adminSummary=()=>({day:usage?.day||day(),requests:usage?.requests||0,inputTokens:usage?.input||0,outputTokens:usage?.output||0,reasoningTokens:usage?.reasoning||0,estimatedCostRmb:(usage?.costMicro||0)/1_000_000,costIsEstimate:true,dailyRequestLimit:dailyLimit,dailyBudgetRmb,...rollingLimits,processing:busy});
+  handle.adminSummary=()=>({day:usage?.day||day(),requests:usage?.requests||0,inputTokens:usage?.input||0,outputTokens:usage?.output||0,reasoningTokens:usage?.reasoning||0,estimatedCostRmb:(usage?.costMicro||0)/1_000_000,costIsEstimate:true,dailyRequestLimit:dailyLimit,dailyQuestionLimit:questionDailyLimit,organizingRequests:usage?.splitQuota?.organizeRequests||0,questionRequests:usage?.splitQuota?.questionRequests||0,dailyBudgetRmb,...rollingLimits,questionAccountFiveHourLimit:questionRollingLimits.accountFiveHourLimit,questionAccountThreeDayLimit:questionRollingLimits.accountThreeDayLimit,questionIPFiveHourLimit:questionRollingLimits.ipFiveHourLimit,processing:busy});
   return handle;
 }

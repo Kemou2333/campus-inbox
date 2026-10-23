@@ -6,7 +6,7 @@ html{scroll-padding-top:76px}body{min-width:280px}.rich-text{min-width:0}
 .workspace-pane{scrollbar-gutter:stable;overscroll-behavior:contain;scroll-padding-top:12px}
 .workspace-pane::-webkit-scrollbar{width:10px}.workspace-pane::-webkit-scrollbar-thumb{background:var(--scroll-thumb,#89939c);border-radius:8px;border:2px solid var(--scroll-track,#e6eaee)}.workspace-pane::-webkit-scrollbar-track{background:var(--scroll-track,#e6eaee);border-radius:8px}
 button:focus-visible,a:focus-visible{outline:3px solid #629e96;outline-offset:3px}
-@media(max-width:359px){.notice-actions{gap:4px}.notice-actions .MuiButton-root{padding-left:10px;padding-right:10px}.notice-actions .MuiButton-root:not(.notice-dismiss) .MuiButton-startIcon{display:none}.notice-actions .MuiIconButton-root:not(.notice-complete){width:48px}}
+@media(max-width:359px){.notice-actions{gap:4px}.notice-actions .MuiButton-root{padding-left:10px;padding-right:10px}.notice-actions .MuiButton-root:not(.notice-dismiss) .MuiButton-startIcon{display:none}.notice-actions .MuiIconButton-root:not(.notice-complete){width:44px}}
 @media(max-height:500px) and (min-width:600px){.MuiToolbar-root{min-height:48px!important}.notice-card{scroll-margin-top:60px}}
 
 html[data-theme="dark"]{--scroll-thumb:#8491A2;--scroll-track:#252D38}
@@ -40,3 +40,11 @@ button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 
 @media(prefers-reduced-motion:no-preference){.sample-entry[data-practice-nudge="true"]{animation:practice-invitation 2100ms cubic-bezier(.22,1,.36,1) 650ms 1}}
 @keyframes practice-invitation{0%,100%{transform:scale(1) rotate(0)}22%{transform:scale(1.085) rotate(-1.5deg)}38%{transform:scale(1.015) rotate(1deg)}57%{transform:scale(1.065) rotate(-.7deg)}76%{transform:scale(.99) rotate(0)}}
+
+/* Compact tutorial captions leave room for the real controls on phone screens. */
+@media(max-height:600px){
+ .in-product-guide .guide-caption-progress{margin-bottom:4px}
+ .in-product-guide .guide-caption-title{font-size:19px;margin-bottom:4px}
+ .in-product-guide .guide-caption-description{font-size:14px;line-height:1.45}
+ .in-product-guide .guide-caption-actions{margin-top:8px}
+}

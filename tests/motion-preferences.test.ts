@@ -5,12 +5,12 @@ import {withNoticeMotion} from '../src/features/notices/notice-motion';
 
 afterEach(()=>vi.unstubAllGlobals());
 const storage=(raw:string|null)=>({getItem:()=>raw});
-test('each local rate accepts only the supported choices and otherwise defaults to 1.5',()=>{
- expect(readMotionPreferences(storage(null))).toEqual({entry:1.5,notice:1.5});
+test('each local rate accepts only the supported choices and otherwise keeps the entry 1.5 and expansion 1.25 defaults',()=>{
+ expect(readMotionPreferences(storage(null))).toEqual({entry:1.5,notice:1.25});
  expect(readMotionPreferences(storage('{"entry":2,"notice":1.25}'))).toEqual({entry:2,notice:1.25});
  expect(readMotionPreferences(storage('{"entry":0,"notice":1.75}'))).toEqual({entry:1.5,notice:1.75});
- expect(readMotionPreferences(storage('not json'))).toEqual({entry:1.5,notice:1.5});
- expect(readMotionPreferences({getItem:()=>{throw new Error('blocked');}})).toEqual({entry:1.5,notice:1.5});
+ expect(readMotionPreferences(storage('not json'))).toEqual({entry:1.5,notice:1.25});
+ expect(readMotionPreferences({getItem:()=>{throw new Error('blocked');}})).toEqual({entry:1.5,notice:1.25});
 });
 test('changing one rate preserves the other and applies local fade speed immediately',()=>{
  const values=new Map([[MOTION_PREFERENCES_KEY,'{"entry":1.5,"notice":1.75}']]),css=vi.fn(),window=new EventTarget(),changed=vi.fn();

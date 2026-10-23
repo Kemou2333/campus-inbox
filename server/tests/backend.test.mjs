@@ -66,9 +66,10 @@ test('paid incomplete or invalid responses retain metering without exposing mode
       const state=JSON.parse(await readFile(file,'utf8'));
       assert.equal(state.requests,1);assert.equal(state.input,91);assert.equal(state.output,640);assert.equal(state.reasoning,600);
       assert.equal(state.lastFinishReason,item.reason==='private-unexpected-finish-reason'?'unknown':item.reason);
-      const expectedKeys=['costMicro','day','input','lastFinishReason','output','reasoning','requests','rolling'];if(item.reason==='stop')expectedKeys.push('lastFailureCode');assert.deepEqual(Object.keys(state).sort(),expectedKeys.sort());if(item.reason==='stop')assert.equal(state.lastFailureCode,item.content.startsWith('{invalid')?'INVALID_JSON':'TASK_FIELDS');
+      const expectedKeys=['costMicro','day','input','lastFinishReason','output','reasoning','requests','rolling','splitQuota'];if(item.reason==='stop')expectedKeys.push('lastFailureCode');assert.deepEqual(Object.keys(state).sort(),expectedKeys.sort());if(item.reason==='stop')assert.equal(state.lastFailureCode,item.content.startsWith('{invalid')?'INVALID_JSON':'TASK_FIELDS');
       assert.equal(state.rolling.version,1);assert.deepEqual(Object.keys(state.rolling).sort(),['accounts','ips','version']);
       assert.deepEqual(state.rolling.accounts,{});assert.deepEqual(state.rolling.ips,{});
+      assert.equal(state.splitQuota.version,1);assert.equal(state.splitQuota.organizeRequests,1);assert.equal(state.splitQuota.questionRequests,0);assert.deepEqual(state.splitQuota.questionRolling,{version:1,accounts:{},ips:{}});
       assert.ok(!JSON.stringify({state,body}).includes('private-'));assert.equal(calls,1);
       const restarted=await createService(config,{modelFetch});
       assert.equal((await restarted(request('private-original-notice'))).status,429);assert.equal(calls,1);

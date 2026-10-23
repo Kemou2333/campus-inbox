@@ -4,6 +4,9 @@ import {parseNotice} from '../domain/notice';
 import {LOCAL_DEMO_ID_PREFIX} from '../domain/local-demo';
 
 const reviewedDemos=[primaryDemo,...extraDemos];
+function reviewedDemoForSource(source:string){
+ return reviewedDemos.find(demo=>demo.notice.originalText===source||demo.legacyOriginalTexts.some(previous=>previous.text===source));
+}
 export const GUEST_DEMO_SOURCES=reviewedDemos.map(demo=>demo.notice.originalText);
 export const GUEST_DEMO_SOURCE=GUEST_DEMO_SOURCES[0];
 export const GUEST_DEMO_DELAY_MS=3_000;
@@ -46,10 +49,13 @@ export function nextGuestDemoSource(storage:RotationStorage=localStorage,random:
 export interface GuestDemoDraft {text:string;attachments:string[];demo?:typeof GUEST_DEMO_MARKER}
 /** Never match arbitrary user text to a canned answer. Filling the sample is explicit. */
 export function isGuestDemoDraft(draft:GuestDemoDraft):boolean{
- return draft.demo===GUEST_DEMO_MARKER&&GUEST_DEMO_SOURCES.includes(draft.text)&&draft.attachments.length===0;
+ return draft.demo===GUEST_DEMO_MARKER&&!!reviewedDemoForSource(draft.text)&&draft.attachments.length===0;
 }
 export function createGuestDemoNotice(draftID:string=crypto.randomUUID(),source=GUEST_DEMO_SOURCE){
- const fixture=reviewedDemos.find(demo=>demo.notice.originalText===source);
+ // Previously filled, exact built-in text stays a free sample after a release.
+ // Only the known sample alias upgrades to the current curated display; any
+ // personal edit or attachment still fails the explicit demo check above.
+ const fixture=reviewedDemoForSource(source);
  if(!fixture)throw new Error('示例已修改，请重新填入。');
  const notice=parseNotice(fixture.notice),now=new Date().toISOString();
  return {...notice,id:`${LOCAL_DEMO_ID_PREFIX}${draftID}`,createdAt:now,updatedAt:now,

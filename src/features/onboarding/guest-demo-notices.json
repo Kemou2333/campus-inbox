@@ -14,9 +14,7 @@
           "assignee": "2026级新同学",
           "scope": "conditional",
           "condition": "2026级新同学，男女均可，有篮球爱好",
-          "details": [
-            "男女赛制不同。"
-          ],
+          "details": [],
           "steps": [
             {
               "text": "加入纳新群",
@@ -48,7 +46,9 @@
         }
       ],
       "materials": [],
-      "warnings": [],
+      "warnings": [
+        "男女均可参加，**赛制不同**；可先入群咨询。"
+      ],
       "reminders": [],
       "deadlineSpec": {
         "type": "partial",
@@ -61,9 +61,9 @@
       },
       "reminderTitles": [],
       "id": "example-reading-v211-1",
-      "originalText": "【本科生院团委文体部】\n2026重大杯本科生院篮球队招募令\n\n🏀2026级新同学，大学新篇伊始，想找一支一起出汗、一起进步的队伍吗？本科生院篮球队诚挚邀请你的加入。这里有球友，有赛场，也有你的舞台。别被\"院队\"二字吓退，我们欢迎每颗热爱篮球的心。一起训练，一起上场，一起把胜利攥在手里，等你加入！[表情]\n报名流程\n1. 首先加入纳新QQ群：1234XXXX\n2. 再填写【腾讯文档】重大杯本科生院篮球队预选信息收集表\nwww.example.com/forms/basketball-signup\n\n‼重要提醒\n报名截止时间10 月14日23:59，请各位同学抓紧时间，在截止时间前完成报名操作。\n男女同学赛制不同，均可参与。\n加入本科生院篮球队吧，让我们一起在球场上绽放青春光彩✨，共同书写属于2026级的篮球传奇🏀！期待你的参与！\n@全体成员 有这方面爱好的男女同学可以入群询问！，注意时间⚠️⚠️⚠️。",
+      "originalText": "【2026重大杯本科生院篮球队招新】\n面向2026级有篮球爱好的新同学，男女均可参加，赛制不同。\n\n报名步骤：\n1. 加入纳新QQ群：1234XXXX，可先入群咨询。\n2. 填写“重大杯本科生院篮球队预选信息收集表”：\nwww.example.com/forms/basketball-signup\n\n截止时间：10 月14日23:59。请在截止前完成报名。",
       "createdAt": "2026-10-12T06:08:05.588Z",
-      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "updatedAt": "2026-10-23T00:00:00.000Z",
       "completed": false,
       "dismissed": false,
       "note": "",
@@ -89,8 +89,8 @@
       "manualIdentityReview": true,
       "manualContentCorrections": false,
       "privacyPreparation": "The browser submitted the existing manually-redacted public original. Every returned field was manually checked; no additional semantic or privacy wording edits were needed.",
-      "publishedOriginalSha256": "ee612cb808a9daa2de5b4ab18757b5fb31a34aefd7e251d841ca722fe7f1bc17",
-      "publishedRecordSha256": "24852eac57be7e8b312c139166980a46268e9b21d62b7909848fdd04a38f48dc",
+      "publishedOriginalSha256": "5b4c056f59ef4a2a62beeb29e0a5fbda3b8303aa1ec345d40c311279dd49655a",
+      "publishedRecordSha256": "98c6af0ba13215f22d096d0fcad4078a39d6ba1caad9050a0a6a7503e138b312",
       "providerCalled": true,
       "cacheReuse": false,
       "realProviderCalls": 1,
@@ -115,11 +115,22 @@
         "Browser completion includes polling and sync delay; it differs from server/provider elapsed time."
       ],
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-21-final-public-cards",
-      "presentationEditScope": "Human-only final presentation: title/summary distinction and removal of repeated action/eligibility wording. Original text, deadlines, factual requirements, contacts, scores, exceptions and conflicting entrypoints remain intact.",
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
       "privacyRevision": "2026-10-21-natural-placeholders",
-      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired."
-    }
+      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": true,
+      "previousPublishedOriginalSha256": "ee612cb808a9daa2de5b4ab18757b5fb31a34aefd7e251d841ca722fe7f1bc17"
+    },
+    "legacyOriginalTexts": [
+      {
+        "text": "【本科生院团委文体部】\n2026重大杯本科生院篮球队招募令\n\n🏀2026级新同学，大学新篇伊始，想找一支一起出汗、一起进步的队伍吗？本科生院篮球队诚挚邀请你的加入。这里有球友，有赛场，也有你的舞台。别被\"院队\"二字吓退，我们欢迎每颗热爱篮球的心。一起训练，一起上场，一起把胜利攥在手里，等你加入！[表情]\n报名流程\n1. 首先加入纳新QQ群：1234XXXX\n2. 再填写【腾讯文档】重大杯本科生院篮球队预选信息收集表\nwww.example.com/forms/basketball-signup\n\n‼重要提醒\n报名截止时间10 月14日23:59，请各位同学抓紧时间，在截止时间前完成报名操作。\n男女同学赛制不同，均可参与。\n加入本科生院篮球队吧，让我们一起在球场上绽放青春光彩✨，共同书写属于2026级的篮球传奇🏀！期待你的参与！\n@全体成员 有这方面爱好的男女同学可以入群询问！，注意时间⚠️⚠️⚠️。",
+        "sha256": "ee612cb808a9daa2de5b4ab18757b5fb31a34aefd7e251d841ca722fe7f1bc17",
+        "manualPrivacyReview": true,
+        "reviewedAt": "2026-10-23"
+      }
+    ]
   },
   {
     "notice": {
@@ -153,8 +164,7 @@
       ],
       "materials": [],
       "warnings": [
-        "通知入口需使用**校园网**。",
-        "结题可获**2个创新学分**，满足毕业创新学分要求。",
+        "通知入口需用**校园网**；结题可获**2个创新学分**，满足毕业创新学分要求。",
         "原则上完成校级SRTP后，大二才可申报国家级、市级大创。"
       ],
       "reminders": [
@@ -174,9 +184,9 @@
         "rawText": "2026年10月20日24:00"
       },
       "id": "example-reading-v25-2",
-      "originalText": "各位同学好，2026级大学生科研训练计划（SRTP）项目申报已经正式启动！@全体成员\n\n《关于组织申报2026级“大学生科研训练计划”（SRTP）项目的通知》\nwww.example.com/notices/srtp-2026\n（需使用校园网访问）\n\n📌 参与SRTP的作用\n1. 项目结题后可获得 2个创新学分，直接满足毕业要求的创新学分；\n2. 获得基础的科研训练经历，为后续竞赛、保研、进课题组打基础；\n3. 原则上完成校级SRTP后，大二才有资格申报国家级、市级大创项目。\n\n📌 申报方式\n两种方式二选一即可：\n- 选择老师发布的现有项目，自行找队友组队参加；\n- 自己拟定题目，联系心仪的老师担任指导老师，招募队友组队。\n\n⚠️ 关键时间与平台\n1. 申报平台：新版重庆大学大学生创新创业项目管理平台\nwww.example.com/projects/srtp\n2. 截止时间：2026年10月20日24:00",
+      "originalText": "【2026级SRTP项目申报】\n申报已启动，截止：2026年10月20日24:00。\n通知：www.example.com/notices/srtp-2026（需校园网）\n平台：新版重庆大学大学生创新创业项目管理平台\nwww.example.com/projects/srtp\n\n组队方式二选一：选老师发布的现有项目，自找队友；或自己拟题、联系指导老师并招募队友。\n\n结题可获2个创新学分，满足毕业创新学分要求。科研训练可为竞赛、保研和进课题组打基础；原则上完成校级SRTP后，大二才有资格申报国家级、市级大创。",
       "createdAt": "2026-10-08T16:16:56.211Z",
-      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "updatedAt": "2026-10-23T00:00:00.000Z",
       "completed": false,
       "dismissed": false,
       "note": "",
@@ -202,15 +212,26 @@
       "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
-      "publishedOriginalSha256": "3e97f2f9fcf9b84b57e18b7436cf532c9a9223f2645308b6b4c2d75a7fca3f66",
-      "publishedRecordSha256": "e819d1a5161fdf7a4ff8efce7dd1ff7bc31191f773cceb8b3c8e9c8a8c23f314",
+      "publishedOriginalSha256": "7412540aa2f1f92b55d958a580b9f7802032670d224c783d525375d1d345c8bc",
+      "publishedRecordSha256": "0960e823169449520b9bcdc4b0797706599a99eaa7444d567cd985af3bc6fc20",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies.",
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
       "privacyRevision": "2026-10-21-natural-placeholders",
-      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired."
-    }
+      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": true,
+      "previousPublishedOriginalSha256": "3e97f2f9fcf9b84b57e18b7436cf532c9a9223f2645308b6b4c2d75a7fca3f66"
+    },
+    "legacyOriginalTexts": [
+      {
+        "text": "各位同学好，2026级大学生科研训练计划（SRTP）项目申报已经正式启动！@全体成员\n\n《关于组织申报2026级“大学生科研训练计划”（SRTP）项目的通知》\nwww.example.com/notices/srtp-2026\n（需使用校园网访问）\n\n📌 参与SRTP的作用\n1. 项目结题后可获得 2个创新学分，直接满足毕业要求的创新学分；\n2. 获得基础的科研训练经历，为后续竞赛、保研、进课题组打基础；\n3. 原则上完成校级SRTP后，大二才有资格申报国家级、市级大创项目。\n\n📌 申报方式\n两种方式二选一即可：\n- 选择老师发布的现有项目，自行找队友组队参加；\n- 自己拟定题目，联系心仪的老师担任指导老师，招募队友组队。\n\n⚠️ 关键时间与平台\n1. 申报平台：新版重庆大学大学生创新创业项目管理平台\nwww.example.com/projects/srtp\n2. 截止时间：2026年10月20日24:00",
+        "sha256": "3e97f2f9fcf9b84b57e18b7436cf532c9a9223f2645308b6b4c2d75a7fca3f66",
+        "manualPrivacyReview": true,
+        "reviewedAt": "2026-10-23"
+      }
+    ]
   },
   {
     "notice": {
@@ -232,19 +253,19 @@
         },
         {
           "id": "9d02a2e6-431c-453b-8ae3-514142713374",
-          "text": "反锁宿舍门，关闭并锁好窗户；低层宿舍尤其注意。",
+          "text": "反锁门、锁好窗；低层宿舍尤其注意。",
           "note": ""
         },
         {
           "id": "3e2f1f90-c8b6-4af4-b68e-e2301bd87aed",
-          "text": "贵重物品和证件随身带，清理易变质食品，整理好其余物品。",
+          "text": "贵重物品和证件随身带；清理易变质食品，其余物品有序收纳。",
           "note": ""
         }
       ],
       "id": "example-reading-v25-4",
-      "originalText": "【军训期间宿舍安全提醒】\n\n各位同学好：\n由于军训期间宿舍长期无人，为杜绝安全隐患、保障财产安全，请做好以下安全事项：\n\n1.断水电：关闭排插电源，拔掉电器插头；关紧水龙头等阀门。\n2.锁门窗：反锁宿舍门，关闭并锁好所有窗户，低层宿舍尤其注意。\n3.妥置物：贵重物品、证件随身携带；清理易变质食品，物品有序收纳。\n\n请大家高度重视，共同守护宿舍安全![表情][表情][表情][表情]",
+      "originalText": "【军训期间宿舍安全提醒】\n宿舍长期无人，离开前请检查：\n1. 关闭排插、拔掉电器插头，关紧水龙头等阀门。\n2. 反锁门、锁好窗，低层宿舍尤其注意。\n3. 贵重物品和证件随身带，清理易变质食品，其余物品有序收纳。",
       "createdAt": "2026-10-08T16:16:59.589Z",
-      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "updatedAt": "2026-10-23T00:00:00.000Z",
       "completed": false,
       "dismissed": false,
       "note": "",
@@ -272,13 +293,24 @@
       "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
-      "publishedOriginalSha256": "9e7b5853ccadc824ae4f3353d9677c9bb92db82986ba8001a60e09f8f8ae8e40",
-      "publishedRecordSha256": "c734d68c554a5836f368d5c8539412dec30be246cfbb5a443ec66b7ece319992",
+      "publishedOriginalSha256": "eb28c0ccedd119610fddd9a8c221ea311534e85526e6f8d9967bd2b9a07d19f6",
+      "publishedRecordSha256": "81a98aeaf6528b6259a053f5b6ce475bf60da36524329f1822ff4ba10cedad11",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
-    }
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": true,
+      "previousPublishedOriginalSha256": "9e7b5853ccadc824ae4f3353d9677c9bb92db82986ba8001a60e09f8f8ae8e40"
+    },
+    "legacyOriginalTexts": [
+      {
+        "text": "【军训期间宿舍安全提醒】\n\n各位同学好：\n由于军训期间宿舍长期无人，为杜绝安全隐患、保障财产安全，请做好以下安全事项：\n\n1.断水电：关闭排插电源，拔掉电器插头；关紧水龙头等阀门。\n2.锁门窗：反锁宿舍门，关闭并锁好所有窗户，低层宿舍尤其注意。\n3.妥置物：贵重物品、证件随身携带；清理易变质食品，物品有序收纳。\n\n请大家高度重视，共同守护宿舍安全![表情][表情][表情][表情]",
+        "sha256": "9e7b5853ccadc824ae4f3353d9677c9bb92db82986ba8001a60e09f8f8ae8e40",
+        "manualPrivacyReview": true,
+        "reviewedAt": "2026-10-23"
+      }
+    ]
   },
   {
     "notice": {
@@ -308,14 +340,14 @@
       "tasks": [],
       "materials": [],
       "warnings": [
-        "到账短信**不等于学费已缴**；处理中仍显示欠费属正常情况。入账时会一并结算本科生新增学分学费。",
-        "回执录入后又自行缴费，可能形成重复缴费；处理完成后，财务处统一退到学生财务系统绑定的银行卡。"
+        "到账短信**不等于学费已缴**，处理中显示欠费属正常；入账时一并结算新增学分学费。",
+        "回执录入后又自行缴纳学费或住宿费造成重复缴费的，入账完成后统一退至财务系统绑定银行卡。"
       ],
       "reminders": [],
       "id": "example-reading-v25-3",
-      "originalText": "@全体成员 【转发资助中心消息】\n当前，国家开发银行生源地助学贷款正陆续发放，学生也将陆续收到短信提醒。\n同学们：\n贷款到账短信不等于学费已缴。学校将贷款资金转为学费入账需要一定处理时间，因此学生收到短信后仍显示欠费属于正常情况。学校预计于十月中旬完成入账处理（届时本科生选课新增学分学费将一并结算）。\n此外，部分学生在学校录入回执后，又自行缴纳了学费或住宿费，贷款放款后便造成二次缴费。财务处将在入账处理完毕后，统一退还至学生财务系统绑定的银行卡中。",
+      "originalText": "【生源地助学贷款入账】\n国家开发银行贷款陆续发放。到账短信不等于学费已缴，仍显示欠费属正常情况。\n学校预计十月中旬完成入账，并一并结算本科生新增学分学费。\n\n若学校录入回执后又自行缴纳学费或住宿费，可能重复缴费。财务处将在入账完成后，统一退还至学生财务系统绑定的银行卡。",
       "createdAt": "2026-10-08T16:16:59.589Z",
-      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "updatedAt": "2026-10-23T00:00:00.000Z",
       "completed": false,
       "dismissed": false,
       "note": "",
@@ -338,13 +370,24 @@
       "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
-      "publishedOriginalSha256": "6ba802cc228eb97fb93e1d73d66823d4e47629903caa8d367c732d869b0b8d69",
-      "publishedRecordSha256": "c1f24ddde449b5b7399d88752f1123d66e41029bfd2726e276c4a5f5fcb6ff0c",
+      "publishedOriginalSha256": "9b20a6669bb1c4064c5d46b3f559dc90d31fcf6ee09f6d6d35ccb6889e07298e",
+      "publishedRecordSha256": "c8c1195983b67b355ab1285fdd14c1729e77d683c45a802090fbc9dd744d096d",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
-    }
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": true,
+      "previousPublishedOriginalSha256": "6ba802cc228eb97fb93e1d73d66823d4e47629903caa8d367c732d869b0b8d69"
+    },
+    "legacyOriginalTexts": [
+      {
+        "text": "@全体成员 【转发资助中心消息】\n当前，国家开发银行生源地助学贷款正陆续发放，学生也将陆续收到短信提醒。\n同学们：\n贷款到账短信不等于学费已缴。学校将贷款资金转为学费入账需要一定处理时间，因此学生收到短信后仍显示欠费属于正常情况。学校预计于十月中旬完成入账处理（届时本科生选课新增学分学费将一并结算）。\n此外，部分学生在学校录入回执后，又自行缴纳了学费或住宿费，贷款放款后便造成二次缴费。财务处将在入账处理完毕后，统一退还至学生财务系统绑定的银行卡中。",
+        "sha256": "6ba802cc228eb97fb93e1d73d66823d4e47629903caa8d367c732d869b0b8d69",
+        "manualPrivacyReview": true,
+        "reviewedAt": "2026-10-23"
+      }
+    ]
   },
   {
     "notice": {
@@ -363,7 +406,7 @@
           "condition": "面向所有大一新生以及对操作系统课程感兴趣的其他专业高年级同学",
           "details": [
             "主办：“101计划”操作系统课程虚拟教研室、全国大学生计算机系统能力大赛操作系统设计赛技术委员会。",
-            "特别欢迎**大一、大二**，不限计算机专业，为国赛和区域赛储备力量。"
+            "特别欢迎**大一、大二**，不限计算机专业；为国赛和区域赛储备力量。"
           ],
           "steps": [],
           "time": null,
@@ -380,9 +423,9 @@
       "warnings": [],
       "reminders": [],
       "id": "example-reading-v211-3",
-      "originalText": "“101计划”操作系统课程虚拟教研室及全国大学生计算机系统能力大赛操作系统设计赛技术委员会联合举办2026年操作系统基础训练营，欢迎同学们报名参加。训练营面向所有大一新生以及对操作系统课程感兴趣的其他专业高年级同学。\n\n特别欢迎一年级新生、二年级同学（不限于计算机专业）参加，为国赛和区域赛储备后备力量。@全体成员",
+      "originalText": "【2026年操作系统基础训练营】\n“101计划”操作系统课程虚拟教研室与全国大学生计算机系统能力大赛操作系统设计赛技术委员会联合举办，欢迎报名。\n\n面向所有大一新生，以及对操作系统感兴趣的其他专业高年级同学；特别欢迎大一、大二，不限计算机专业，为国赛和区域赛储备力量。",
       "createdAt": "2026-10-12T06:08:52.961Z",
-      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "updatedAt": "2026-10-23T00:00:00.000Z",
       "completed": false,
       "dismissed": false,
       "note": "",
@@ -405,8 +448,8 @@
       "manualWordEdits": true,
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
-      "publishedOriginalSha256": "a3ccf48794db1252c9d6576fd9390cdbaae51e2fdf57ad6b181d5eb6115d8cda",
-      "publishedRecordSha256": "11461816487f335fab0ab92723703b08746e7c9ea627dce5ced8a402a94d2e67",
+      "publishedOriginalSha256": "0b608ee419b86e196add0752db4f095a0472207436c48ca22d8e954a4bd2badc",
+      "publishedRecordSha256": "b5243791c0e5dc5cd55fa77754504304472a5d78763061e6f21cf60019e49288",
       "firstResponseValidation": "accepted_by_backend; offline revalidated without provider request",
       "providerElapsedMs": 11104,
       "tokens": {
@@ -419,9 +462,20 @@
       "costBasis": "conservative estimate, not supplier invoice",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
-    }
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": true,
+      "previousPublishedOriginalSha256": "a3ccf48794db1252c9d6576fd9390cdbaae51e2fdf57ad6b181d5eb6115d8cda"
+    },
+    "legacyOriginalTexts": [
+      {
+        "text": "“101计划”操作系统课程虚拟教研室及全国大学生计算机系统能力大赛操作系统设计赛技术委员会联合举办2026年操作系统基础训练营，欢迎同学们报名参加。训练营面向所有大一新生以及对操作系统课程感兴趣的其他专业高年级同学。\n\n特别欢迎一年级新生、二年级同学（不限于计算机专业）参加，为国赛和区域赛储备后备力量。@全体成员",
+        "sha256": "a3ccf48794db1252c9d6576fd9390cdbaae51e2fdf57ad6b181d5eb6115d8cda",
+        "manualPrivacyReview": true,
+        "reviewedAt": "2026-10-23"
+      }
+    ]
   },
   {
     "notice": {
@@ -439,7 +493,7 @@
           "scope": "conditional",
           "condition": "2026级示例专业1-10班参与班干部竞选的同学",
           "details": [
-            "无领导小组讨论（群面）；提前准备**1分钟以内**的自我介绍。"
+            "无领导小组讨论（群面）；准备**1分钟以内**自我介绍。"
           ],
           "steps": [
             {
@@ -486,9 +540,9 @@
       ],
       "reminders": [],
       "id": "example-reading-v25-11",
-      "originalText": "@全体成员 【20260922通知1】【关于年级学生干部选拔面试的通知2】\n各位参与2026级示例专业1-10班班干部竞选的同学：\n为顺利完成新一届班干部选拔工作，综合考察竞选同学的综合能力，现正式开展班干部竞选面试工作，结合前期签到报名情况，现将具体面试安排通知如下，请各位同学认真阅读、准时参与：\n一、面试时间\n2026年9月23日 18:00-21:00\n⚠️ 请所有竞选同学提前5分钟到场完成候场签到，逾期未到视为自动放弃竞选资格。\n二、面试地点\n重庆大学沙坪坝校区八教\n候场教室： A8211\n面试教室：A8213、A8214\n【具体分组和教室安排如下】[图片]三、面试形式\n本次班干部竞选面试采用无领导小组讨论（群面）的形式开展，重点考察同学们的沟通表达、团队协作、组织统筹、临场应变等综合素养。\n四、准备要求\n所有竞选同学需提前准备1分钟以内的自我介绍，内容简洁精炼，能快速让大家了解记住你。\n五、温馨提示\n1. 请各位同学提前规划出行时间，熟悉校区场地，准时到场，严格遵守现场秩序。\n2. 面试过程中保持从容自信、文明礼貌，展现自身最佳状态。\n3. 本次面试为班干部选拔核心环节，请所有参选同学务必重视，无故缺席视为自动放弃竞选。\n\n预祝各位同学面试顺利，成功入选！",
+      "originalText": "【2026级示例专业1–10班班干部竞选面试】\n时间：2026年9月23日18:00–21:00。\n地点：重庆大学沙坪坝校区八教；候场A8211，面试A8213、A8214，具体分组见图片。\n\n请提前5分钟到候场教室签到，准备1分钟以内的自我介绍。面试采用无领导小组讨论，考察表达、协作、组织统筹与应变能力。\n\n提前规划出行、熟悉场地，遵守秩序、文明礼貌。逾期未到或无故缺席视为自动放弃竞选。",
       "createdAt": "2026-10-08T16:19:09.046Z",
-      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "updatedAt": "2026-10-23T00:00:00.000Z",
       "completed": false,
       "dismissed": false,
       "note": "",
@@ -511,20 +565,31 @@
       "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
-      "publishedOriginalSha256": "f0dc35b9ed053ecfa6b631c6d942038cfdceb00f2fe49804fb7dd54b60129d97",
-      "publishedRecordSha256": "290b8cdaf0a3046d67d7c72f08aeb12966816177fc9106940bf223b117e896be",
+      "publishedOriginalSha256": "c4a9b23b9f4d66b8449d281f4adf15d92282f06d91f248e05b1f80129b9cbcf7",
+      "publishedRecordSha256": "f5755c26fe5a930bc60ffe69bb208a2b878db4e854edb10a0f89b97775835230",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
-    }
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": true,
+      "previousPublishedOriginalSha256": "f0dc35b9ed053ecfa6b631c6d942038cfdceb00f2fe49804fb7dd54b60129d97"
+    },
+    "legacyOriginalTexts": [
+      {
+        "text": "@全体成员 【20260922通知1】【关于年级学生干部选拔面试的通知2】\n各位参与2026级示例专业1-10班班干部竞选的同学：\n为顺利完成新一届班干部选拔工作，综合考察竞选同学的综合能力，现正式开展班干部竞选面试工作，结合前期签到报名情况，现将具体面试安排通知如下，请各位同学认真阅读、准时参与：\n一、面试时间\n2026年9月23日 18:00-21:00\n⚠️ 请所有竞选同学提前5分钟到场完成候场签到，逾期未到视为自动放弃竞选资格。\n二、面试地点\n重庆大学沙坪坝校区八教\n候场教室： A8211\n面试教室：A8213、A8214\n【具体分组和教室安排如下】[图片]三、面试形式\n本次班干部竞选面试采用无领导小组讨论（群面）的形式开展，重点考察同学们的沟通表达、团队协作、组织统筹、临场应变等综合素养。\n四、准备要求\n所有竞选同学需提前准备1分钟以内的自我介绍，内容简洁精炼，能快速让大家了解记住你。\n五、温馨提示\n1. 请各位同学提前规划出行时间，熟悉校区场地，准时到场，严格遵守现场秩序。\n2. 面试过程中保持从容自信、文明礼貌，展现自身最佳状态。\n3. 本次面试为班干部选拔核心环节，请所有参选同学务必重视，无故缺席视为自动放弃竞选。\n\n预祝各位同学面试顺利，成功入选！",
+        "sha256": "f0dc35b9ed053ecfa6b631c6d942038cfdceb00f2fe49804fb7dd54b60129d97",
+        "manualPrivacyReview": true,
+        "reviewedAt": "2026-10-23"
+      }
+    ]
   },
   {
     "notice": {
       "schemaVersion": 5,
       "kind": "task",
       "title": "高数II-1网课",
-      "summary": "**两个平台**的线上学习，完成情况计入**平时成绩**。",
+      "summary": "高数双平台网课的任务与计分安排。",
       "deadline": null,
       "deadlineText": "第16周周日24:00",
       "timeline": [
@@ -551,15 +616,15 @@
           "scope": "conditional",
           "condition": "普通班学生",
           "details": [
-            "两平台都要完成。报到时核对学校、姓名、学号和**三位数字教学班号**。"
+            "报到时核对学校、姓名、学号和**三位数字教学班号**。"
           ],
           "steps": [
             {
               "text": "完成学堂在线",
               "details": [
-                "电脑用 www.example.com/platforms/xuetangx，手机用学堂在线 APP；进入重庆大学《高等数学II-1》。",
-                "观看**前5章各第1个教学视频**，提交**1个**高数素材。",
-                "素材可选学习视频、音频、完整解答的高数题，或**50字以上**学习感悟与评价；教师审核通过后计分。"
+                "电脑用 www.example.com/platforms/xuetangx，手机用学堂在线 APP，进入重庆大学《高等数学II-1》。",
+                "观看**前5章各第1个视频**，提交**1个**高数素材，经教师审核通过计分。",
+                "可交视频、音频、完整题解，或**50字以上**学习感悟与评价。"
               ],
               "id": "example-reading-v213-0-task-0-step-0",
               "completed": false,
@@ -569,8 +634,8 @@
               "text": "完成智慧树检测",
               "details": [
                 "检索《高等数学II-1（高等数学上册）》并报到，进入“作业考试”。",
-                "**12套检测任选5套**完成，系统自动判分。",
-                "原文的平台网址、手机 APP 名称有两种写法，请在课程平台核实入口。"
+                "**12套检测任选5套**提交，系统判分。",
+                "原通知的网址和 APP 有两种写法，请在课程平台**核实入口**。"
               ],
               "id": "example-reading-v213-0-task-0-step-1",
               "completed": false,
@@ -596,12 +661,12 @@
       "reminders": [
         {
           "id": "example-reading-v213-0-reminder-0",
-          "text": "两平台各按百分制计分，综合折算为平时作业的**5分**。学堂在线按要求完成并通过审核得**100分**；智慧树每合格单元**20分**，完成5个得**100分**。",
+          "text": "两平台分别按百分制计分，综合折算为平时作业中的**5分**。学堂在线任务通过审核得**100分**；智慧树每合格单元**20分**，5个得**100分**。",
           "note": ""
         },
         {
           "id": "example-reading-v213-0-reminder-1",
-          "text": "课程最终成绩：普通班考勤**10%**+平时作业**15%**（含线上学习5分）+半期**20%**+期末**55%**；（单开）重修班考勤**10%**+平时作业**10%**+期末**80%**。",
+          "text": "普通班：考勤**10%**＋平时作业**15%**（含线上5分）＋半期**20%**＋期末**55%**。\n\n单开重修班：考勤**10%**＋平时作业**10%**＋期末**80%**。",
           "note": ""
         },
         {
@@ -625,14 +690,14 @@
         "rawText": "第16周周日24:00"
       },
       "id": "example-reading-v213-0",
-      "originalText": "高等数学II-1 线上网课学习任务通知（学生正式版）\n\n(一句话：“两平台，三任务：观看5视频，提交1素材，自测5套题”)\n\n各位同学：\n为规范本学期《高等数学II-1（高等数学上册）》线上学习管理，现将学堂在线、智慧树双平台网课学习任务、计分规则、起止时间统一通知如下。线上网课学习任务合计5分，纳入平时作业板块，请全体普通班同学按时完成。（单开）重修班学生无需完成任何线上网课任务，不计该部分分数。\n\n一、统一学习起止时间\n线上任务自第5周（2026年10月9日）正式开放，第16周周日24:00统一截止，到期平台自动关闭，不再接受补交。\n\n二、线上任务总体要求\n本学期线上学习分为学堂在线和智慧树两个独立平台，两边分数单独统计，两项任务均需要完成，平台内分数为百分制，完成情况综合折算为平时作业板块内的5分。\n\n三、线上学习任务说明\n1. 线上任务周期：第5周（2026年10月9日）开放，至第16周周日24:00截止，逾期不补交。一句话：“两平台，三任务：观看5视频，提交1素材，自测5套题”。\n2. 学堂在线：www.example.com/platforms/xuetangx，手机端可使用学堂在线APP。学生任务：必须观看前5章第一个教学视频，其它视频自选+提交1个高数素材（视频、音频、文字等合规合法合情合理的有理高等数学学习的素材，鼓励自己制作），素材需符合课程统一标准，经教师审核通过后方计分。可提交材料包括：高数相关学习视频、带完整步骤解答的高数题目、50字以上高等数学学习感悟与评价（合法合规合情合理，禁止敷衍了事、粗造滥制、滥竽充数）。重要提示：提交素材须为本人原创，严禁抄袭、搬运网络内容；抄袭、侵权内容不予计分。\n3. 智慧树：电脑端网址：www.example.com/platforms/xuetangx，手机端可使用学堂在线APP。课程提供12套单元检测，学生任选5套完成作答，其正误由系统自动判分。\n4. 计分规则：学堂在线、智慧树独立计分，均采用百分制。两项平台成绩综合折算，该网上学习5分纳入平时作业板块。普通班学生两项任务均需完成；（单开）重修班学生免做全部线上任务，不计该部分分数。\n5. 线上任务服务商对接：请与平台确认全部功能，有疑问及时沟通；平台需配套提供学生操作演示视频。\n\n✅学堂在线操作流程：\n1. 电脑端网址：www.example.com/platforms/xuetangx，手机端可使用学堂在线APP；\n2. 登录学堂在线，检索并进入重庆大学《高等数学II-1》课程。\n3. 完善个人信息：学校填写重庆大学（四个字）、姓名、学号、教学班号（三位数字）。\n4. 在平台内完成任务交互，必须观看前5章第一个教学视频以及提交1个学习素材,即可拿到学堂在线100分。\n5. 在个人成绩页面查看实时百分制得分。\n✅智慧树操作流程：\n1. 电脑端网址：www.example.com/platforms/zhihuishu，手机端下载【知到】APP；\n2. 登录知到APP/智慧树网页端，检索进入重庆大学《高等数学II-1（高等数学上册）》课程；\n3. 完成课程报到，核对学校名称(重庆大学)(四个字)、姓名、学号、教学班号（三位数字）信息；\n4. 进入【作业考试】板块，选择单元检测（章测试）；\n5. 在平台内完成答题交互，在全部12套单元检测中任意挑选5个单元完成答题提交，其正误由系统自动判分。网上学习计分规则：每完成1个合格单元检测对应百分制20分，完成5个单元检测即可获得智慧树100分。在成绩页面可查看个人百分制累计得分。\n\n五、课程最终成绩构成\n普通班：考勤10% + 平时作业15%（含线上学习5分） + 半期20% + 期末55%\n（单开）重修班：考勤10% + 平时作业10% + 期末80%（免做线上学习任务，无网课对应分数）\n\n六、重要温馨提示\n1. 学堂在线、智慧树两项任务均为必做过程性学习任务，完成情况折算计入平时作业板块（占课程总成绩5分）；\n2. 所有提交内容必须积极正向、合规合法，严禁提交无关、违规内容；提交素材严禁抄袭搬运；\n3. 平台将提供双平台操作演示视频，同学们可对照视频完成学习；\n4. 请大家提前分批完成，切勿截止前集中突击，避免平台卡顿、逾期无法提交。\n5. 二维码说明：平台登录二维码可在课程页面内获取，请通过平台官方渠道扫码登录，请勿使用非官方来源二维码。\n\n6. 如有疑问，请及时联系本班助教或主讲教师。@全体成员",
+      "originalText": "【高等数学II-1双平台网课】\n普通班须完成学堂在线、智慧树两平台任务，合计折算为平时作业中的5分；单开重修班免做，不计该部分分数。\n\n时间：第5周（2026年10月9日）开放，第16周周日24:00统一截止，逾期关闭、不补交。\n\n一、学堂在线\n电脑入口：www.example.com/platforms/xuetangx；手机使用学堂在线APP，搜索重庆大学《高等数学II-1》。\n观看前5章各章第1个教学视频，并提交1个本人原创、合规的高数素材，经教师审核通过后得100分；其他视频自选。\n素材可选学习视频、音频、带完整步骤的高数题解，或50字以上学习感悟与评价。禁止抄袭、搬运、侵权、无关内容或敷衍制作。\n\n二、智慧树\n操作说明入口：www.example.com/platforms/zhihuishu；手机使用知到APP，搜索《高等数学II-1（高等数学上册）》，报到后进入“作业考试”。\n从12套单元检测任选5套提交，系统判分；每个合格单元20分，完成5个得100分。\n原通知在任务总述中也将智慧树入口写成了学堂在线网址和APP，与操作说明有两种写法，请核实入口。\n\n两平台分别统计百分制成绩。报到时核对学校“重庆大学”、姓名、学号和三位数字教学班号；成绩页可查看实时得分。\n\n课程成绩：普通班考勤10%＋平时作业15%（含线上5分）＋半期20%＋期末55%；单开重修班考勤10%＋平时作业10%＋期末80%。\n平台须确认功能、提供操作演示视频，登录二维码从官方课程页获取。建议提前分批完成，避免临近截止卡顿；疑问联系本班助教或主讲教师。",
       "createdAt": "2026-10-15T00:19:14.232Z",
       "completed": false,
       "note": "",
       "localDeadline": null,
       "audienceOverride": "",
       "attachments": [],
-      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "updatedAt": "2026-10-23T00:00:00.000Z",
       "dismissed": false
     },
     "provenance": {
@@ -664,16 +729,16 @@
       "sourceRefCompatibility": "Accepted naturally on the paid first response with one card per original input source and selective task-heading/important-caution evidence.",
       "associatedPaths": 7,
       "unassociatedAfterPrivacy": [],
-      "publishedOriginalSha256": "081f86adf8f7c1ba38e8015ce184b144ee66ad4bc93d943f5267365021fa66cf",
-      "publishedRecordSha256": "6140b4cf4ed6172d4cf1761926fe493be3bd73b36b74f80aaaf3a702ea5fb2eb",
+      "publishedOriginalSha256": "fa7094c3ef9fb808ff06ec30a6d959ab5792435b5c4626795f1f151f82b8e6a9",
+      "publishedRecordSha256": "cec4d8b2a8456960f51cefde86266eebb2a4800d71b935f194e95ce4b92c62cd",
       "semanticLimitations": [
         "The source has contradictory Zhihuishu platform entrypoints; this response chooses the operating-guide entrypoint without retaining the explicit conflict warning.",
         "The XueTangX task no longer explicitly restates that completing the required videos and material yields 100 platform points.",
         "Originality requirements still recur in both task material details and cautions; the selected response is not a promise of zero repetition."
       ],
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-21-final-public-cards",
-      "presentationEditScope": "Human-only final presentation: title/summary distinction and removal of repeated action/eligibility wording. Original text, deadlines, factual requirements, contacts, scores, exceptions and conflicting entrypoints remain intact.",
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
       "currentGeneration": {
         "version": "2.24.0",
         "snapshotKind": "first-authenticated-production-service-record",
@@ -697,7 +762,18 @@
         "providerInvoiceVerified": false
       },
       "privacyRevision": "2026-10-21-natural-placeholders",
-      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired."
-    }
+      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": true,
+      "previousPublishedOriginalSha256": "081f86adf8f7c1ba38e8015ce184b144ee66ad4bc93d943f5267365021fa66cf"
+    },
+    "legacyOriginalTexts": [
+      {
+        "text": "高等数学II-1 线上网课学习任务通知（学生正式版）\n\n(一句话：“两平台，三任务：观看5视频，提交1素材，自测5套题”)\n\n各位同学：\n为规范本学期《高等数学II-1（高等数学上册）》线上学习管理，现将学堂在线、智慧树双平台网课学习任务、计分规则、起止时间统一通知如下。线上网课学习任务合计5分，纳入平时作业板块，请全体普通班同学按时完成。（单开）重修班学生无需完成任何线上网课任务，不计该部分分数。\n\n一、统一学习起止时间\n线上任务自第5周（2026年10月9日）正式开放，第16周周日24:00统一截止，到期平台自动关闭，不再接受补交。\n\n二、线上任务总体要求\n本学期线上学习分为学堂在线和智慧树两个独立平台，两边分数单独统计，两项任务均需要完成，平台内分数为百分制，完成情况综合折算为平时作业板块内的5分。\n\n三、线上学习任务说明\n1. 线上任务周期：第5周（2026年10月9日）开放，至第16周周日24:00截止，逾期不补交。一句话：“两平台，三任务：观看5视频，提交1素材，自测5套题”。\n2. 学堂在线：www.example.com/platforms/xuetangx，手机端可使用学堂在线APP。学生任务：必须观看前5章第一个教学视频，其它视频自选+提交1个高数素材（视频、音频、文字等合规合法合情合理的有理高等数学学习的素材，鼓励自己制作），素材需符合课程统一标准，经教师审核通过后方计分。可提交材料包括：高数相关学习视频、带完整步骤解答的高数题目、50字以上高等数学学习感悟与评价（合法合规合情合理，禁止敷衍了事、粗造滥制、滥竽充数）。重要提示：提交素材须为本人原创，严禁抄袭、搬运网络内容；抄袭、侵权内容不予计分。\n3. 智慧树：电脑端网址：www.example.com/platforms/xuetangx，手机端可使用学堂在线APP。课程提供12套单元检测，学生任选5套完成作答，其正误由系统自动判分。\n4. 计分规则：学堂在线、智慧树独立计分，均采用百分制。两项平台成绩综合折算，该网上学习5分纳入平时作业板块。普通班学生两项任务均需完成；（单开）重修班学生免做全部线上任务，不计该部分分数。\n5. 线上任务服务商对接：请与平台确认全部功能，有疑问及时沟通；平台需配套提供学生操作演示视频。\n\n✅学堂在线操作流程：\n1. 电脑端网址：www.example.com/platforms/xuetangx，手机端可使用学堂在线APP；\n2. 登录学堂在线，检索并进入重庆大学《高等数学II-1》课程。\n3. 完善个人信息：学校填写重庆大学（四个字）、姓名、学号、教学班号（三位数字）。\n4. 在平台内完成任务交互，必须观看前5章第一个教学视频以及提交1个学习素材,即可拿到学堂在线100分。\n5. 在个人成绩页面查看实时百分制得分。\n✅智慧树操作流程：\n1. 电脑端网址：www.example.com/platforms/zhihuishu，手机端下载【知到】APP；\n2. 登录知到APP/智慧树网页端，检索进入重庆大学《高等数学II-1（高等数学上册）》课程；\n3. 完成课程报到，核对学校名称(重庆大学)(四个字)、姓名、学号、教学班号（三位数字）信息；\n4. 进入【作业考试】板块，选择单元检测（章测试）；\n5. 在平台内完成答题交互，在全部12套单元检测中任意挑选5个单元完成答题提交，其正误由系统自动判分。网上学习计分规则：每完成1个合格单元检测对应百分制20分，完成5个单元检测即可获得智慧树100分。在成绩页面可查看个人百分制累计得分。\n\n五、课程最终成绩构成\n普通班：考勤10% + 平时作业15%（含线上学习5分） + 半期20% + 期末55%\n（单开）重修班：考勤10% + 平时作业10% + 期末80%（免做线上学习任务，无网课对应分数）\n\n六、重要温馨提示\n1. 学堂在线、智慧树两项任务均为必做过程性学习任务，完成情况折算计入平时作业板块（占课程总成绩5分）；\n2. 所有提交内容必须积极正向、合规合法，严禁提交无关、违规内容；提交素材严禁抄袭搬运；\n3. 平台将提供双平台操作演示视频，同学们可对照视频完成学习；\n4. 请大家提前分批完成，切勿截止前集中突击，避免平台卡顿、逾期无法提交。\n5. 二维码说明：平台登录二维码可在课程页面内获取，请通过平台官方渠道扫码登录，请勿使用非官方来源二维码。\n\n6. 如有疑问，请及时联系本班助教或主讲教师。@全体成员",
+        "sha256": "081f86adf8f7c1ba38e8015ce184b144ee66ad4bc93d943f5267365021fa66cf",
+        "manualPrivacyReview": true,
+        "reviewedAt": "2026-10-23"
+      }
+    ]
   }
 ]

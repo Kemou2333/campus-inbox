@@ -59,7 +59,7 @@ export default function App(){
   let active=true,pause:ReturnType<typeof setTimeout>|undefined;
   playOperationSound('welcome');
   const stop=firstEntry.current?.play(document,reducedMotion,()=>{
-   if(active)pause=setTimeout(()=>{if(active){setLaunchStage('idle');setHelp(true);}},reducedMotion?0:650);
+   if(active)pause=setTimeout(()=>{if(active){setLaunchStage('idle');setHelp(true);}},reducedMotion?0:120);
   });
   return()=>{active=false;if(pause)clearTimeout(pause);stop?.();};
  },[launchStage,reducedMotion]);
@@ -129,7 +129,7 @@ export default function App(){
  },[app.notices,app.platform]);
  async function rescue(){const raw:Object=Object.fromEntries(Object.keys(localStorage).filter(k=>k.startsWith('campus-inbox:notices')).map(k=>[k,localStorage.getItem(k)]));await app.platform.saveFile(new Blob([JSON.stringify(raw,null,2)],{type:'application/json'}),'campus-inbox-original-data.json');}
  return <ThemeProvider theme={theme}><CssBaseline/>
-  <Box data-first-entry-shell data-guide-shell inert={launchStage==='entry'||undefined} aria-hidden={launchStage==='intro'||launchStage==='leaving'||undefined} sx={{minHeight:'100dvh',visibility:launchStage==='intro'||launchStage==='leaving'?'hidden':'visible','& main':help?{pb:'calc(80px + var(--guide-bottom-space, 230px))!important'}:undefined,'& .workspace-pane':help?{pb:'var(--guide-bottom-space, 230px)'}:undefined}}>
+  <Box data-first-entry-shell data-guide-shell inert={launchStage==='entry'||undefined} aria-hidden={launchStage==='intro'||launchStage==='leaving'||undefined} sx={{minHeight:'100dvh',visibility:launchStage==='intro'||launchStage==='leaving'?'hidden':'visible','& .composer-actions':help?{position:'static'}:undefined}}>
   <AppBar data-first-entry="masthead" position="sticky" color="inherit" elevation={0} sx={{borderBottom:'1px solid',borderColor:'divider',pt:'var(--safe-top)',bgcolor:'background.default'}}>
    <Toolbar sx={{maxWidth:1240,width:'100%',mx:'auto',gap:{xs:.5,sm:1},minHeight:{xs:56,sm:64},px:{xs:1.5,sm:3}}}>
     <Tooltip title="了解拾笺 Inbox"><Button aria-label="关于拾笺 Inbox" onClick={()=>setAbout(true)} endIcon={<InfoOutlined sx={{fontSize:16,color:'text.secondary'}}/>} sx={{px:.5,minWidth:0,color:'text.primary',gap:.75,whiteSpace:'nowrap','& .MuiButton-endIcon':{ml:0}}}><Box component="img" src="./icon.svg" width={32} height={32} alt=""/><Typography sx={{fontWeight:700,fontSize:'1.125rem',lineHeight:1.4}}>拾笺 Inbox</Typography></Button></Tooltip>
@@ -138,7 +138,7 @@ export default function App(){
     <Tooltip title="重新查看教程"><Button aria-label="重看教程" onClick={showWelcome} sx={{minWidth:58,px:.5,py:.5,flexDirection:'column',gap:.25,color:'text.secondary',lineHeight:1.2}}><HelpOutline sx={{fontSize:24}}/><Typography component="span" sx={{fontSize:11,lineHeight:1.2}}>重看教程</Typography></Button></Tooltip>
    </Toolbar>
   </AppBar>
-  <Container maxWidth={false} component="main" sx={{maxWidth:split&&page!==2?1240:900,px:{xs:1,sm:3},pt:{xs:1.5,sm:3},pb:split&&page!==2?0:wide?3:'calc(80px + var(--safe-bottom))',...(split&&page!==2?{display:'flex',flexDirection:'column',height:'calc(100dvh - 77px - var(--safe-top))',minHeight:0,'@media (max-height:500px)':{height:'calc(100dvh - 61px - var(--safe-top))'}}:{})}}>
+  <Container maxWidth={false} component="main" sx={{maxWidth:split&&page!==2?1240:900,px:{xs:1,sm:3},pt:{xs:1.5,sm:3},pb:split&&page!==2?0:help?'max(var(--guide-bottom-space, 0px), calc(80px + var(--safe-bottom)))':wide?3:'calc(80px + var(--safe-bottom))',...(split&&page!==2?{display:'flex',flexDirection:'column',height:'calc(100dvh - 77px - var(--safe-top))',minHeight:0,'@media (max-height:500px)':{height:'calc(100dvh - 61px - var(--safe-top))'}}:{})}}>
    {!help&&launchStage==='idle'&&<AnalysisJobStatus app={app} onRestore={()=>navigate(1)}/>}
    {!help&&launchStage==='idle'&&!!unreadReminders.length&&<Alert className="new-reminders-prompt" severity="info" role="status" action={<Stack direction="row" sx={{alignItems:'center',gap:.25}}><Button onClick={viewNewReminders} sx={{whiteSpace:'nowrap'}}>查看</Button><IconButton aria-label="清除未读提醒" onClick={clearNewReminders} sx={{width:40,height:40}}><Close fontSize="small"/></IconButton></Stack>} sx={{mb:2,flexShrink:0}}>未读提醒 {unreadReminders.length}</Alert>}
    {app.bootError?<Alert severity="error" action={<Button onClick={()=>void rescue().catch(app.report)}>保存原始数据</Button>}>原来的通知无法读取：{app.bootError}。数据仍在本机，暂未覆盖。</Alert>:
@@ -164,7 +164,7 @@ export default function App(){
   <HumanVerificationDialog request={verification.request} onComplete={verification.complete} onCancel={()=>{app.cancel();verification.cancel();}}/>
   <HelpDialog dismissible={!tutorialRequired} open={help} onClose={closeHelp} step={guideStep} onStep={changeGuideStep} progress={guideProgress} expanded={!!guide.state.notice&&feedView.expandedIDs.has(guide.state.notice.id)} onFinished={finishHelp}/><AboutDialog dismissible={!tutorialRequired} onDeveloperUnlock={unlockDeveloper} open={about||launchStage==='intro'} introduction={launchStage==='intro'||launchStage==='leaving'} onStart={startWelcome} onExited={()=>{if(launchStage==='leaving')setLaunchStage('entry');}} onClose={()=>{setAbout(false);if(launchStage==='intro')setLaunchStage('idle');}}/>
   <Dialog open={downloadsOpen} onClose={()=>setDownloadsOpen(false)} maxWidth="xs" fullWidth><DialogTitle>安卓手机版</DialogTitle><DialogContent><AndroidDownloads compact/></DialogContent><DialogActions><Button onClick={()=>setDownloadsOpen(false)}>关闭</Button></DialogActions></Dialog>
-  <Snackbar open={!!app.toast} key={app.toast?.id} autoHideDuration={6500} onClose={(_,reason)=>{if(reason!=='clickaway')app.setToast(null);}} message={app.toast?.text} action={app.toast?.undo?<Button color="inherit" onClick={()=>{const undo=app.toast?.undo;app.setToast(null);undo?.();}}>撤销</Button>:undefined} anchorOrigin={{vertical:'bottom',horizontal:'center'}} sx={{bottom:wide?24:84}}/>
+  <Snackbar open={!!app.toast&&!help&&launchStage==='idle'} key={app.toast?.id} autoHideDuration={app.toast?.undo?6500:2400} onClose={(_,reason)=>{if(reason!=='clickaway')app.setToast(null);}} message={app.toast?.text} action={app.toast?.undo?<Button color="inherit" onClick={()=>{const undo=app.toast?.undo;app.setToast(null);undo?.();}}>撤销</Button>:undefined} anchorOrigin={{vertical:split?'bottom':'top',horizontal:'center'}} sx={{...(split?{bottom:24}:{top:{xs:'calc(64px + var(--safe-top))',sm:'calc(64px + var(--safe-top))'},bottom:'auto'}),...(!app.toast?.undo?{pointerEvents:'none',left:{xs:'50%',sm:'50%'},right:'auto',transform:'translateX(-50%)',width:'max-content',maxWidth:'calc(100% - 24px)','& .MuiSnackbarContent-root':{minWidth:0,borderRadius:'24px',py:.25,'& .MuiSnackbarContent-message':{py:.5}}}:{})}}/>
   <Snackbar open={!!app.error} onClose={()=>app.setError('')} anchorOrigin={{vertical:'top',horizontal:'center'}}><Alert severity="error" onClose={()=>app.setError('')} variant="filled" sx={{maxWidth:560}}>{app.error}</Alert></Snackbar>
   {celebration&&<CompletionCelebration point={celebration} reducedMotion={reducedMotion}/>}
  </ThemeProvider>;

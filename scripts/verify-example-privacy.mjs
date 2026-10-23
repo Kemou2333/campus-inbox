@@ -65,6 +65,7 @@ export function auditPublicExamples(backup,provenance){
     if(notice.originalText?.startsWith('【脱敏示例】'))add(`${path}.originalText`,'redundant_body_disclosure');
     if(source?.manualPrivacyEdits!==true||source.manualWordEdits!==true||source.manualContentCorrections!==false)add(path,'undisclosed_privacy_edits');
     if(source?.manualIdentityReview!==true)add(path,'missing_record_identity_review');
+    if(source?.sourceKind!=='human-curated-public-example')add(path,'missing_curated_source_disclosure');
     if(!source||source.publishedOriginalSha256!==createHash('sha256').update(notice.originalText??'').digest('hex')||source.publishedRecordSha256!==publicExampleHash(notice))add(path,'reviewed_content_changed');
   });
   return findings;
@@ -91,14 +92,24 @@ async function main(){
   const provenance=JSON.parse(await readFile(new URL('examples-provenance.json',publicRoot),'utf8'));
   const findings=auditPublicExamples(backup,provenance);
   const demo=JSON.parse(await readFile(new URL('../src/features/onboarding/demo-notice.json',import.meta.url),'utf8'));
+  function auditLegacyFillInSources(fixture,path){
+    if(!Array.isArray(fixture.legacyOriginalTexts))return [{path,category:'missing_legacy_fill_in_review'}];
+    return fixture.legacyOriginalTexts.flatMap((entry,index)=>{
+      const location=`${path}[${index}]`,issues=auditPublicExampleText(entry.text??'',location,provenance.privacyReview.approvedPseudonyms);
+      if(entry.manualPrivacyReview!==true||!/^\d{4}-\d{2}-\d{2}$/.test(entry.reviewedAt??'')||typeof entry.text!=='string'||!entry.text.trim()||entry.sha256!==createHash('sha256').update(entry.text??'').digest('hex'))issues.push({path:location,category:'reviewed_legacy_fill_in_changed'});
+      return issues;
+    });
+  }
   const catalogNotice=backup.notices.find(notice=>notice.id===demo?.notice?.id);
   if(!catalogNotice||publicExampleHash(catalogNotice)!==publicExampleHash(demo.notice))findings.push({path:'onboarding.notice',category:'demo_must_match_reviewed_catalog'});
   findings.push(...auditPublicExamples({notices:[demo.notice]},{privacyReview:provenance.privacyReview,results:[demo.provenance]}).map(finding=>({...finding,path:'onboarding.'+finding.path})));
+  findings.push(...auditLegacyFillInSources(demo,'onboarding.legacyOriginalTexts'));
   const guestDemos=JSON.parse(await readFile(new URL('../src/features/onboarding/guest-demo-notices.json',import.meta.url),'utf8'));
   for(const [index,guestDemo] of guestDemos.entries()){
     const catalogNotice=backup.notices.find(notice=>notice.id===guestDemo?.notice?.id);
     if(!catalogNotice||publicExampleHash(catalogNotice)!==publicExampleHash(guestDemo.notice))findings.push({path:`guestDemos[${index}].notice`,category:'demo_must_match_reviewed_catalog'});
     findings.push(...auditPublicExamples({notices:[guestDemo.notice]},{privacyReview:provenance.privacyReview,results:[guestDemo.provenance]}).map(finding=>({...finding,path:`guestDemos[${index}].`+finding.path})));
+    findings.push(...auditLegacyFillInSources(guestDemo,`guestDemos[${index}].legacyOriginalTexts`));
   }
   const questions=JSON.parse(await readFile(new URL('../src/features/questions/reviewed-example-questions.json',import.meta.url),'utf8'));
   if(!Array.isArray(questions)||questions.length!==backup.notices.length||new Set(questions.map(entry=>entry.catalogId)).size!==backup.notices.length)findings.push({path:'questions',category:'reviewed_question_count_mismatch'});

@@ -3,13 +3,13 @@
   "thinking": "mixed",
   "paidCallsForLatestResults": 17,
   "sourceCount": 18,
-  "generationMethod": "The catalog retains 24 reviewed public copies originating from historical mixed-mode provider responses and one authenticated first-server snapshot. Provider prompt/source/response hashes and first-attempt limitations identify those historical results. On 2026-10-20 all display copies were manually shortened for readability; this is a human presentation refinement, not a new model response or a claim that all facts were extracted perfectly. Original source text and provider provenance stay unchanged. Raw inputs and first provider responses remain private. The current extraction prompt no longer requests source associations.",
+  "generationMethod": "This catalog contains 24 human-curated public display samples based on historical real notices and first provider responses. On 2026-10-23 all records were manually reviewed for presentation, privacy and source meaning; eight fill-in sources were shortened and repeated display information was consolidated. This human presentation refinement is not a new model run, raw first response, extraction benchmark or claim of perfect model extraction. Historical provider/source hashes and recorded limitations remain unchanged; private raw inputs and provider responses are not published. Developer real-test results remain separate and unedited.",
   "limitations": [
     "AI can still omit or misclassify facts. Return-vs-leave applicability may overlap; check the original.",
     "Exam schedules may be classified as reminders.",
-    "Public examples are privacy-redacted demonstrations; hidden links and contacts cannot be used to sign up. Consult your own original notice.",
+    "Public examples are privacy-redacted demonstrations; fictional links and contacts cannot be used to sign up. Consult your own original notice.",
     "The selected math response omits audio as a permitted material format; this omission is preserved rather than silently corrected.",
-    "Math platform URLs use consistent A/B privacy placeholders to keep the source conflict visible without publishing the URLs.",
+    "Math platform URLs use distinct reserved example.com paths; the original conflicting platform descriptions remain explicitly identified.",
     "The selected r17 math output still omits audio as an allowed material; the original and this limitation are retained.",
     "Two selected first responses originally failed the then-current reference contract; free compatibility validation is explicitly distinguished from paid first-response acceptance.",
     "The r21 selected math first response preserves audio as an allowed material and fits one card, but omits the original conflicting Zhihuishu entrypoint warning and the explicit XueTangX 100-point completion statement.",
@@ -33,12 +33,15 @@
       "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
-      "publishedOriginalSha256": "2427577d4c6eec8bd1595742ff0518b4ccfcf85cff6d66d4b334a9db1364817b",
-      "publishedRecordSha256": "90ec0b7c2c74d962b30a0585a508b63a1effac05dd1a3451b3b3b1148d3000ae",
+      "publishedOriginalSha256": "07ea43798eb595f66afa711fb6fba7eba3aed393b1b1cc2713174b21798d638e",
+      "publishedRecordSha256": "4c2e3a2b858fed0ebdb6ae19de6838e722a3d725b17aafb309f85afa1f65fc4d",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2.24.1-first-impression",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": true,
+      "previousPublishedOriginalSha256": "2427577d4c6eec8bd1595742ff0518b4ccfcf85cff6d66d4b334a9db1364817b"
     },
     {
       "exampleId": "example-reading-v211-1",
@@ -58,8 +61,8 @@
       "manualIdentityReview": true,
       "manualContentCorrections": false,
       "privacyPreparation": "The browser submitted the existing manually-redacted public original. Every returned field was manually checked; no additional semantic or privacy wording edits were needed.",
-      "publishedOriginalSha256": "ee612cb808a9daa2de5b4ab18757b5fb31a34aefd7e251d841ca722fe7f1bc17",
-      "publishedRecordSha256": "24852eac57be7e8b312c139166980a46268e9b21d62b7909848fdd04a38f48dc",
+      "publishedOriginalSha256": "5b4c056f59ef4a2a62beeb29e0a5fbda3b8303aa1ec345d40c311279dd49655a",
+      "publishedRecordSha256": "98c6af0ba13215f22d096d0fcad4078a39d6ba1caad9050a0a6a7503e138b312",
       "providerCalled": true,
       "cacheReuse": false,
       "realProviderCalls": 1,
@@ -84,10 +87,13 @@
         "Browser completion includes polling and sync delay; it differs from server/provider elapsed time."
       ],
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-21-final-public-cards",
-      "presentationEditScope": "Human-only final presentation: title/summary distinction and removal of repeated action/eligibility wording. Original text, deadlines, factual requirements, contacts, scores, exceptions and conflicting entrypoints remain intact.",
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
       "privacyRevision": "2026-10-21-natural-placeholders",
-      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired."
+      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": true,
+      "previousPublishedOriginalSha256": "ee612cb808a9daa2de5b4ab18757b5fb31a34aefd7e251d841ca722fe7f1bc17"
     },
     {
       "exampleId": "example-reading-v213-0",
@@ -118,16 +124,16 @@
       "sourceRefCompatibility": "Accepted naturally on the paid first response with one card per original input source and selective task-heading/important-caution evidence.",
       "associatedPaths": 7,
       "unassociatedAfterPrivacy": [],
-      "publishedOriginalSha256": "081f86adf8f7c1ba38e8015ce184b144ee66ad4bc93d943f5267365021fa66cf",
-      "publishedRecordSha256": "6140b4cf4ed6172d4cf1761926fe493be3bd73b36b74f80aaaf3a702ea5fb2eb",
+      "publishedOriginalSha256": "fa7094c3ef9fb808ff06ec30a6d959ab5792435b5c4626795f1f151f82b8e6a9",
+      "publishedRecordSha256": "cec4d8b2a8456960f51cefde86266eebb2a4800d71b935f194e95ce4b92c62cd",
       "semanticLimitations": [
         "The source has contradictory Zhihuishu platform entrypoints; this response chooses the operating-guide entrypoint without retaining the explicit conflict warning.",
         "The XueTangX task no longer explicitly restates that completing the required videos and material yields 100 platform points.",
         "Originality requirements still recur in both task material details and cautions; the selected response is not a promise of zero repetition."
       ],
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-21-final-public-cards",
-      "presentationEditScope": "Human-only final presentation: title/summary distinction and removal of repeated action/eligibility wording. Original text, deadlines, factual requirements, contacts, scores, exceptions and conflicting entrypoints remain intact.",
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
       "currentGeneration": {
         "version": "2.24.0",
         "snapshotKind": "first-authenticated-production-service-record",
@@ -151,7 +157,10 @@
         "providerInvoiceVerified": false
       },
       "privacyRevision": "2026-10-21-natural-placeholders",
-      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired."
+      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": true,
+      "previousPublishedOriginalSha256": "081f86adf8f7c1ba38e8015ce184b144ee66ad4bc93d943f5267365021fa66cf"
     },
     {
       "exampleId": "example-reading-v25-4",
@@ -168,12 +177,15 @@
       "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
-      "publishedOriginalSha256": "9e7b5853ccadc824ae4f3353d9677c9bb92db82986ba8001a60e09f8f8ae8e40",
-      "publishedRecordSha256": "c734d68c554a5836f368d5c8539412dec30be246cfbb5a443ec66b7ece319992",
+      "publishedOriginalSha256": "eb28c0ccedd119610fddd9a8c221ea311534e85526e6f8d9967bd2b9a07d19f6",
+      "publishedRecordSha256": "81a98aeaf6528b6259a053f5b6ce475bf60da36524329f1822ff4ba10cedad11",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": true,
+      "previousPublishedOriginalSha256": "9e7b5853ccadc824ae4f3353d9677c9bb92db82986ba8001a60e09f8f8ae8e40"
     },
     {
       "exampleId": "example-reading-v212-0",
@@ -203,7 +215,7 @@
       "associatedPaths": 14,
       "unassociatedAfterPrivacy": [],
       "publishedOriginalSha256": "2bfd3fb334135dfc00caf6bff61d23081b482c94df5e2a8292bce4e3e23dfa56",
-      "publishedRecordSha256": "1cf059002a1a8cca4f3c054f2994cabff71f280685956aa4843af724a26d8b51",
+      "publishedRecordSha256": "4742861f0266f41c5b37a3d312f92fe05d07715ba2144d659f335067346be017",
       "semanticLimitations": [
         "Midterm information occurs in two sections.",
         "Contact uses first-person wording, not the named course assistant.",
@@ -211,10 +223,12 @@
       ],
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies.",
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
       "privacyRevision": "2026-10-21-natural-placeholders",
-      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired."
+      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": false
     },
     {
       "exampleId": "example-reading-v25-0",
@@ -232,13 +246,15 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "8d5087654f37630585a7a73322a9baf77d72f98ace77f857bc400d6f4cb87597",
-      "publishedRecordSha256": "f49bae4b29511aaf60718f3409aa81f21b887970d805fd99f1d141394c3b9df2",
+      "publishedRecordSha256": "3b08bb4228958774b6583e897ccbbae01e4ccb21be43cc7ffec12d77079edcee",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies.",
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
       "privacyRevision": "2026-10-21-natural-placeholders",
-      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired."
+      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": false
     },
     {
       "exampleId": "example-reading-v25-1",
@@ -256,11 +272,13 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "c69e50b1c29544c2b525fd313f5c664295c934e3c8ceebb3aa4645855ade869c",
-      "publishedRecordSha256": "b68c3463a37520b0a778b8861155d56c07e64ce3ca851ff14195da0789a07300",
+      "publishedRecordSha256": "5d52ab223d40ae6edbfb5ba892cc3e0ba264c9e3cfd3668ccd1ef27dcef3c539",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": false
     },
     {
       "exampleId": "example-reading-v25-2",
@@ -277,14 +295,17 @@
       "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
-      "publishedOriginalSha256": "3e97f2f9fcf9b84b57e18b7436cf532c9a9223f2645308b6b4c2d75a7fca3f66",
-      "publishedRecordSha256": "e819d1a5161fdf7a4ff8efce7dd1ff7bc31191f773cceb8b3c8e9c8a8c23f314",
+      "publishedOriginalSha256": "7412540aa2f1f92b55d958a580b9f7802032670d224c783d525375d1d345c8bc",
+      "publishedRecordSha256": "0960e823169449520b9bcdc4b0797706599a99eaa7444d567cd985af3bc6fc20",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies.",
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
       "privacyRevision": "2026-10-21-natural-placeholders",
-      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired."
+      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": true,
+      "previousPublishedOriginalSha256": "3e97f2f9fcf9b84b57e18b7436cf532c9a9223f2645308b6b4c2d75a7fca3f66"
     },
     {
       "exampleId": "example-reading-v25-3",
@@ -301,12 +322,15 @@
       "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
-      "publishedOriginalSha256": "6ba802cc228eb97fb93e1d73d66823d4e47629903caa8d367c732d869b0b8d69",
-      "publishedRecordSha256": "c1f24ddde449b5b7399d88752f1123d66e41029bfd2726e276c4a5f5fcb6ff0c",
+      "publishedOriginalSha256": "9b20a6669bb1c4064c5d46b3f559dc90d31fcf6ee09f6d6d35ccb6889e07298e",
+      "publishedRecordSha256": "c8c1195983b67b355ab1285fdd14c1729e77d683c45a802090fbc9dd744d096d",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": true,
+      "previousPublishedOriginalSha256": "6ba802cc228eb97fb93e1d73d66823d4e47629903caa8d367c732d869b0b8d69"
     },
     {
       "exampleId": "example-reading-v25-6",
@@ -324,11 +348,13 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "b53f6f7efdca5f9e6ce327fcefa3d61ddaff718ca3e28adb2d671826c1a605a4",
-      "publishedRecordSha256": "f996db305306ad81e426ac3680784190066758f7ae12f8e105c8fa50690de2ed",
+      "publishedRecordSha256": "a0aad66419c90e4cede545387777cb758cf772698ef255228784a5260943a890",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": false
     },
     {
       "exampleId": "example-reading-v25-7",
@@ -346,11 +372,13 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "7b45eca477f1aa27791c7239ae6aa735bcc48a2e97171b0d6b8a5bdedd0f12cd",
-      "publishedRecordSha256": "ce393f9f3efca5ec06500e53d96366a6952805e02e34ca9a21634588e9d6084a",
+      "publishedRecordSha256": "c389691a87b5d0194a96949b5952c444860e97ee7e9385da79420e3dccf4f010",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": false
     },
     {
       "exampleId": "example-reading-v25-8",
@@ -368,13 +396,15 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "4aa4b5a5ac2dca6948e6aee048bf0c1b724b390962ebda6bb8d5e4ca44ce9948",
-      "publishedRecordSha256": "edd1fe319b3b0250adbc5f88f6f3e109143d9252d893d096a9870078ea45dad1",
+      "publishedRecordSha256": "70fb217239352c272bca65bbde720ab6bf175b314ddf0126ed9a164d22e285d9",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies.",
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
       "privacyRevision": "2026-10-21-natural-placeholders",
-      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired."
+      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": false
     },
     {
       "exampleId": "example-reading-v25-9",
@@ -392,13 +422,15 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "4aa4b5a5ac2dca6948e6aee048bf0c1b724b390962ebda6bb8d5e4ca44ce9948",
-      "publishedRecordSha256": "f8f32af5ae41b4f69c948bf95e3c3efeaf969dacff3490ff586bfa7408591136",
+      "publishedRecordSha256": "76a83c73631f36ce75703a247a29df09448b638dd5d21584c0d289bb7c95faf2",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies.",
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
       "privacyRevision": "2026-10-21-natural-placeholders",
-      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired."
+      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": false
     },
     {
       "exampleId": "example-reading-v25-10",
@@ -416,13 +448,15 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "4aa4b5a5ac2dca6948e6aee048bf0c1b724b390962ebda6bb8d5e4ca44ce9948",
-      "publishedRecordSha256": "e3d187c84f6b1a6332255d64afa006f91d92821051964b62dde2425e8c5d0ab5",
+      "publishedRecordSha256": "c47ab05ecf0a75960aec4acc115c471c6e7cb7890a0fffc9aa209cdf3af86b61",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies.",
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
       "privacyRevision": "2026-10-21-natural-placeholders",
-      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired."
+      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": false
     },
     {
       "exampleId": "example-reading-v25-11",
@@ -439,12 +473,15 @@
       "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
-      "publishedOriginalSha256": "f0dc35b9ed053ecfa6b631c6d942038cfdceb00f2fe49804fb7dd54b60129d97",
-      "publishedRecordSha256": "290b8cdaf0a3046d67d7c72f08aeb12966816177fc9106940bf223b117e896be",
+      "publishedOriginalSha256": "c4a9b23b9f4d66b8449d281f4adf15d92282f06d91f248e05b1f80129b9cbcf7",
+      "publishedRecordSha256": "f5755c26fe5a930bc60ffe69bb208a2b878db4e854edb10a0f89b97775835230",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": true,
+      "previousPublishedOriginalSha256": "f0dc35b9ed053ecfa6b631c6d942038cfdceb00f2fe49804fb7dd54b60129d97"
     },
     {
       "exampleId": "example-reading-v26-12",
@@ -462,11 +499,11 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "cbc1f7980f8210deb62d65ae5dcd524b35de654b1183a08fc0331213671d0f0f",
-      "publishedRecordSha256": "b6401a4da98756ba07c08757a46c9428159c6212490a941f11d147c63e560a3c",
+      "publishedRecordSha256": "a38073dc2fd87de9f01ce645996570edba8152f6d530a8db3909d4b7e31fed82",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2.24.0-first-service-result-reviewed",
-      "presentationEditScope": "Current presentation starts from the new first service snapshot, then human-shortens and groups details. Original source and historical provider provenance stay intact. Restored source details are explicitly manual.",
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
       "currentGeneration": {
         "version": "2.24.0",
         "snapshotKind": "first-authenticated-production-service-record",
@@ -492,7 +529,9 @@
         "providerInvoiceVerified": false
       },
       "privacyRevision": "2026-10-21-natural-placeholders",
-      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired."
+      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": false
     },
     {
       "exampleId": "example-reading-v211-0",
@@ -509,8 +548,8 @@
       "manualWordEdits": true,
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
-      "publishedOriginalSha256": "081f86adf8f7c1ba38e8015ce184b144ee66ad4bc93d943f5267365021fa66cf",
-      "publishedRecordSha256": "634584b8045fb48b85629c3605159cf06f8195d5474b9d58840375e2113e3e3f",
+      "publishedOriginalSha256": "fa7094c3ef9fb808ff06ec30a6d959ab5792435b5c4626795f1f151f82b8e6a9",
+      "publishedRecordSha256": "78b21b5e4fa0a735f095a10d25e3c72db76399a6e69ef0706ae95d093c3d2ef4",
       "firstResponseValidation": "initially rejected by prior five-detail limit; same first response passes bounded twenty-detail contract offline",
       "originalFirstStatus": "failed",
       "originalFailureCode": "AI_FORMAT_INVALID",
@@ -531,8 +570,8 @@
       ],
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2.24.0-first-service-result-reviewed",
-      "presentationEditScope": "Current presentation starts from the new first service snapshot, then human-shortens and groups details. Original source and historical provider provenance stay intact. Restored source details are explicitly manual.",
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
       "currentGeneration": {
         "version": "2.24.0",
         "snapshotKind": "first-authenticated-production-service-record",
@@ -556,7 +595,10 @@
         "providerInvoiceVerified": false
       },
       "privacyRevision": "2026-10-21-natural-placeholders",
-      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired."
+      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": true,
+      "previousPublishedOriginalSha256": "081f86adf8f7c1ba38e8015ce184b144ee66ad4bc93d943f5267365021fa66cf"
     },
     {
       "exampleId": "example-reading-v211-2",
@@ -574,7 +616,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "976f88e1a2d02adaa043937da92e35c41f107e7aa121fc08415611a6aee6bd77",
-      "publishedRecordSha256": "09aa6898fe9982742ff3f13127b307936c661394653dc6870f2ea1286baac687",
+      "publishedRecordSha256": "3a3f3bc45de16db08343fc2928fca023b3351c58bb2fbc3e8c4aacc2b6210a31",
       "firstResponseValidation": "accepted_by_backend; offline revalidated without provider request",
       "providerElapsedMs": 29960,
       "tokens": {
@@ -587,8 +629,10 @@
       "costBasis": "conservative estimate, not supplier invoice",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": false
     },
     {
       "exampleId": "example-reading-v211-3",
@@ -605,8 +649,8 @@
       "manualWordEdits": true,
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
-      "publishedOriginalSha256": "a3ccf48794db1252c9d6576fd9390cdbaae51e2fdf57ad6b181d5eb6115d8cda",
-      "publishedRecordSha256": "11461816487f335fab0ab92723703b08746e7c9ea627dce5ced8a402a94d2e67",
+      "publishedOriginalSha256": "0b608ee419b86e196add0752db4f095a0472207436c48ca22d8e954a4bd2badc",
+      "publishedRecordSha256": "b5243791c0e5dc5cd55fa77754504304472a5d78763061e6f21cf60019e49288",
       "firstResponseValidation": "accepted_by_backend; offline revalidated without provider request",
       "providerElapsedMs": 11104,
       "tokens": {
@@ -619,8 +663,11 @@
       "costBasis": "conservative estimate, not supplier invoice",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": true,
+      "previousPublishedOriginalSha256": "a3ccf48794db1252c9d6576fd9390cdbaae51e2fdf57ad6b181d5eb6115d8cda"
     },
     {
       "exampleId": "example-reading-v211-4",
@@ -638,7 +685,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "62133a717d602a280b49a82fc8c2afd2839276dc3c9ed6a73fff808f9d26976c",
-      "publishedRecordSha256": "29231d3d81fe8578f969a39624a2fd83b7a046b0aec6e482614cb99a31338c31",
+      "publishedRecordSha256": "6be72eaff60d06aed637e74f01d543d1c406231747a28b8334f8544dae02fe1e",
       "firstResponseValidation": "accepted_by_backend; offline revalidated without provider request",
       "providerElapsedMs": 26609,
       "tokens": {
@@ -651,8 +698,10 @@
       "costBasis": "conservative estimate, not supplier invoice",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": false
     },
     {
       "exampleId": "example-reading-v211-5",
@@ -670,7 +719,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "1975dc6d9dd9c8bb489352bdbd45220e8bd3f5469ca7e5cb5660f7af0f2d410d",
-      "publishedRecordSha256": "6f6e818a431bea1f236fa7da234f46f06a4a44ba70722d1c721cecbb43a74b2c",
+      "publishedRecordSha256": "6a2fe445a860969e15ed2ea4954b00c038fce064e31f752dd23899d0418f6e97",
       "firstResponseValidation": "accepted_by_backend; offline revalidated without provider request",
       "providerElapsedMs": 13310,
       "tokens": {
@@ -683,10 +732,12 @@
       "costBasis": "conservative estimate, not supplier invoice",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies.",
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
       "privacyRevision": "2026-10-21-natural-placeholders",
-      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired."
+      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": false
     },
     {
       "exampleId": "example-reading-v212-1",
@@ -715,8 +766,8 @@
       "sourceRefCompatibility": "Initial nested-step-group rejection; exact first response revalidated offline with explicitly bounded task/step/timeline group support.",
       "associatedPaths": 39,
       "unassociatedAfterPrivacy": [],
-      "publishedOriginalSha256": "081f86adf8f7c1ba38e8015ce184b144ee66ad4bc93d943f5267365021fa66cf",
-      "publishedRecordSha256": "77127b19c33ba5fad6c3f5b09b5178c6d8eb2f66c167f2010906b88c005dd186",
+      "publishedOriginalSha256": "fa7094c3ef9fb808ff06ec30a6d959ab5792435b5c4626795f1f151f82b8e6a9",
+      "publishedRecordSha256": "faa6108186105334597df5a55d79afce5b49b599ac8e69f3dba7e4c157b5b7f3",
       "semanticLimitations": [
         "Audio is still omitted as an allowed material format in the structured result.",
         "Ten warnings repeat some deadline and originality facts.",
@@ -724,8 +775,8 @@
       ],
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2.24.0-first-service-result-reviewed",
-      "presentationEditScope": "Current presentation starts from the new first service snapshot, then human-shortens and groups details. Original source and historical provider provenance stay intact. Restored source details are explicitly manual.",
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
       "currentGeneration": {
         "version": "2.24.0",
         "snapshotKind": "first-authenticated-production-service-record",
@@ -749,7 +800,10 @@
         "providerInvoiceVerified": false
       },
       "privacyRevision": "2026-10-21-natural-placeholders",
-      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired."
+      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": true,
+      "previousPublishedOriginalSha256": "081f86adf8f7c1ba38e8015ce184b144ee66ad4bc93d943f5267365021fa66cf"
     },
     {
       "exampleId": "example-reading-v212-2",
@@ -779,14 +833,16 @@
       "associatedPaths": 14,
       "unassociatedAfterPrivacy": [],
       "publishedOriginalSha256": "976f88e1a2d02adaa043937da92e35c41f107e7aa121fc08415611a6aee6bd77",
-      "publishedRecordSha256": "3d8cf7aad2d2b083f532572f05b85b2bd04611a5b5a1dd7bb2bbc39e9c9856ba",
+      "publishedRecordSha256": "60510ae890b81eadcb00157f502b58d3e0fc2e7694302be2a30ac2e99191c13f",
       "semanticLimitations": [
         "The eligibility section says submit separately from the next section explaining pending approval; summary/current-state section retain the prerequisite."
       ],
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-20-short-cards",
-      "presentationEditScope": "Human-shortened titles, summaries, action labels and repeated display text. No change to originalText, provider hashes, eligibility, numeric requirements or time precision. Extraction citation maps removed from public display copies."
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": false
     },
     {
       "exampleId": "example-reading-v213-1",
@@ -818,15 +874,15 @@
       "associatedPaths": 10,
       "unassociatedAfterPrivacy": [],
       "publishedOriginalSha256": "cbc1f7980f8210deb62d65ae5dcd524b35de654b1183a08fc0331213671d0f0f",
-      "publishedRecordSha256": "5f9ecc86199208059c98a41442507eea537ec61c238cc883dff42e081f8b1241",
+      "publishedRecordSha256": "39cdd141035560d8a6220a276b9a86204290e0ba4e221839ce424369d56cea81",
       "semanticLimitations": [
         "The response aggregates signup and group joining into one shared task; event-specific information remains inside its details rather than separate signup tasks.",
         "The comprehensive-ability and written-translation exam-format descriptions are not retained as explicit structured details.",
         "The original includes broader background and some process subcases that are summarized; users should inspect the original for full wording."
       ],
       "manualPresentationEdits": true,
-      "presentationRevision": "2.24.0-first-service-result-reviewed",
-      "presentationEditScope": "Current presentation starts from the new first service snapshot, then human-shortens and groups details. Original source and historical provider provenance stay intact. Restored source details are explicitly manual.",
+      "presentationRevision": "2026-10-23-polished-examples",
+      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
       "currentGeneration": {
         "version": "2.24.0",
         "snapshotKind": "first-authenticated-production-service-record",
@@ -852,7 +908,9 @@
         "providerInvoiceVerified": false
       },
       "privacyRevision": "2026-10-21-natural-placeholders",
-      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired."
+      "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
+      "sourceKind": "human-curated-public-example",
+      "manualSourcePresentationEdits": false
     }
   ],
   "promptRevisions": [
@@ -867,7 +925,7 @@
   ],
   "privacyReview": {
     "policyVersion": 2,
-    "reviewedAt": "2026-10-21",
+    "reviewedAt": "2026-10-23",
     "manualReview": true,
     "disclosure": "公开示例已脱敏：使用常见化名、含X的号码和example.com示例网址；这些联系方式与入口不能用于报名。正文不重复解释隐私处理。",
     "redactedCategories": [
@@ -881,8 +939,8 @@
     "untouchedLegacyPolicy": "Only complete fingerprint matches are replaced. User notes, progress, attachments and edits remain intact.",
     "reviewedNotices": 24,
     "manualSourceRefReanchoring": false,
-    "unchangedLegacyRecordsReviewed": 11,
-    "newReviewedRecords": 13,
+    "unchangedLegacyRecordsReviewed": 0,
+    "newReviewedRecords": 24,
     "manualIdentityReview": true,
     "identityCategoriesReviewed": [
       "personal_names",
@@ -892,8 +950,8 @@
       "private_links",
       "indirect_identification"
     ],
-    "identityReviewedAt": "2026-10-21",
-    "latestReviewScope": "All 24 original/display records, all 8 fill-in demos and all 24 fixed questions manually reviewed. Privacy placeholders now use fictional names, X-masked numbers and only reserved example.com addresses; distinct forms/platform entrypoints remain distinct. Body text contains no privacy declaration. Original dates, numeric requirements, omissions and source conflicts are retained.",
+    "identityReviewedAt": "2026-10-23",
+    "latestReviewScope": "All 24 catalog records, 8 shortened fill-in sources, 8 exact legacy fill-in aliases, 1 tutorial fixture and 24 grounded fixed questions were manually reviewed. Only approved fictional names, X-masked numbers and reserved example.com paths are used; requirements, dates, roles, ambiguities and business distinctions are retained. Eight old fill-in aliases reuse exact previously approved public text and never match personal edits.",
     "approvedPseudonyms": [
       "李华",
       "李老师",
@@ -1222,5 +1280,21 @@
     "originalTextUnchanged": true,
     "manualPresentationEdits": true,
     "scope": "Final human refinements to basketball and math display copies only. The tested provider output was used as a reference, never copied over the full manually curated notice."
+  },
+  "manualPresentationRefinement20261023": {
+    "date": "2026-10-23",
+    "reviewedRecords": 24,
+    "reviewedFillInSources": 8,
+    "reviewedLegacyFillInAliases": 8,
+    "reviewedFixedQuestions": 24,
+    "providerCalls": 0,
+    "manualPresentationEdits": true,
+    "originalTextUnchanged": false,
+    "sourceMeaningPreserved": true,
+    "changedSourceRecords": 10,
+    "purpose": "Shorten sample input, remove repeated detail and unify polished display copies without altering developer real-test responses.",
+    "trueModelResultsChanged": false,
+    "sourceKind": "human-curated-public-example",
+    "legacyUpgrade": "Only complete normalized untouched built-in fingerprints may upgrade; personal records, notes, progress, favorites, priorities, attachments and edits are retained."
   }
 }

@@ -5,7 +5,7 @@ export type MotionSpeed=typeof MOTION_SPEEDS[number];
 export type MotionKind='entry'|'notice';
 export interface MotionPreferences {entry:MotionSpeed;notice:MotionSpeed}
 export const MOTION_PREFERENCES_KEY='campus-inbox:motion-preferences:v1';
-export const defaultMotionPreferences:MotionPreferences={entry:1.5,notice:1.5};
+export const defaultMotionPreferences:MotionPreferences={entry:1.5,notice:1.25};
 const changed='campus-inbox:motion-preferences-changed';
 type MotionStorage=Pick<Storage,'getItem'>;
 let lastStorage:MotionStorage|null|undefined,lastRaw:string|null|undefined,lastValue=defaultMotionPreferences;
@@ -17,7 +17,7 @@ export function readMotionPreferences(storage:MotionStorage|null=browserStorage(
  let raw:string|null=null;try{raw=storage?.getItem(MOTION_PREFERENCES_KEY)??null;}catch{return defaultMotionPreferences;}
  if(storage===lastStorage&&raw===lastRaw)return lastValue;
  lastStorage=storage;lastRaw=raw;
- try{const input=JSON.parse(raw??'{}');lastValue={entry:valid(input?.entry)?input.entry:1.5,notice:valid(input?.notice)?input.notice:1.5};}
+ try{const input=JSON.parse(raw??'{}');lastValue={entry:valid(input?.entry)?input.entry:1.5,notice:valid(input?.notice)?input.notice:defaultMotionPreferences.notice};}
  catch{lastValue=defaultMotionPreferences;}
  return lastValue;
 }

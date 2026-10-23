@@ -37,13 +37,13 @@ function waitSeconds(times,legacyCount,legacyTime,limit,window,time){
   for(const [at,count] of groups){remaining-=count;if(remaining<limit)return Math.max(1,Math.ceil((at+window-time)/1000));}
   return 0;
 }
-export function checkRollingQuota(state,{accountKey,ipKey,legacyAccountKey,legacyIPKey,time,accountFiveHourLimit,accountThreeDayLimit,ipFiveHourLimit}){
+export function checkRollingQuota(state,{accountKey,ipKey,legacyAccountKey,legacyIPKey,time,accountFiveHourLimit,accountThreeDayLimit,ipFiveHourLimit,activity='使用 AI'}){
   const legacy=state.legacy,accountTimes=accountKey?state.accounts[accountKey]||[]:[],ipTimes=state.ips[ipKey]||[];
   const oldAccount=legacy?.accounts[legacyAccountKey]||0,oldIP=legacy?.ips[legacyIPKey]||0;
   const limits=[
-    ...(accountKey?[[accountTimes,oldAccount,accountFiveHourLimit,FIVE_HOURS_MS,'ACCOUNT_FIVE_HOUR_LIMIT',`此账号每 5 小时最多使用 AI ${accountFiveHourLimit} 次。`],
-      [accountTimes,oldAccount,accountThreeDayLimit,THREE_DAYS_MS,'ACCOUNT_THREE_DAY_LIMIT',`此账号每 3 天最多使用 AI ${accountThreeDayLimit} 次。`]]:[]),
-    [ipTimes,oldIP,ipFiveHourLimit,FIVE_HOURS_MS,'IP_FIVE_HOUR_LIMIT',`此网络每 5 小时最多使用 AI ${ipFiveHourLimit} 次。`]
+    ...(accountKey?[[accountTimes,oldAccount,accountFiveHourLimit,FIVE_HOURS_MS,'ACCOUNT_FIVE_HOUR_LIMIT',`此账号每 5 小时最多${activity} ${accountFiveHourLimit} 次。`],
+      [accountTimes,oldAccount,accountThreeDayLimit,THREE_DAYS_MS,'ACCOUNT_THREE_DAY_LIMIT',`此账号每 3 天最多${activity} ${accountThreeDayLimit} 次。`]]:[]),
+    [ipTimes,oldIP,ipFiveHourLimit,FIVE_HOURS_MS,'IP_FIVE_HOUR_LIMIT',`此网络每 5 小时最多${activity} ${ipFiveHourLimit} 次。`]
   ];
   for(const [times,count,limit,window,code,error] of limits){const seconds=waitSeconds(times,count,legacy?.at,limit,window,time);if(seconds)return {code,error,retryAfterSeconds:seconds};}
   return null;
@@ -56,4 +56,20 @@ export function remainingRollingAccount(state,{accountKey,legacyAccountKey,time,
   const times=state?.accounts[accountKey]||[],legacy=state?.legacy,old=legacy?.accounts[legacyAccountKey]||0;
   const used=window=>times.filter(at=>time-at<window).length+(legacy&&time-legacy.at<window?old:0);
   return Math.max(0,Math.min(accountFiveHourLimit-used(FIVE_HOURS_MS),accountThreeDayLimit-used(THREE_DAYS_MS)));
+}
+
+// Daily totals continue to account for every paid call and the shared currency
+// budget. Admissions have separate organizing/question pools from this version.
+export function createSplitQuota(usage,time){
+  if(usage?.splitQuota!==undefined){
+    const state=usage.splitQuota;
+    if(!state||state.version!==1||!Number.isSafeInteger(state.organizeRequests)||state.organizeRequests<0
+      ||!Number.isSafeInteger(state.questionRequests)||state.questionRequests<0)throw new Error('Invalid split AI quota state');
+    validateRollingQuota(state.questionRolling);return state;
+  }
+  // Old paid events cannot be attributed reliably to a route. Charge the known
+  // history to both pools once, conservatively; exact rolling dates still
+  // expire normally. Never guess an account, clear usage, or expose identifiers.
+  return {version:1,organizeRequests:usage?.requests||0,questionRequests:usage?.requests||0,
+    questionRolling:structuredClone(createRollingQuota(usage,time))};
 }

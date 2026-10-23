@@ -209,14 +209,14 @@ describe('safe built-in example upgrades',()=>{
 
 });
 
-test('five-at-a-time refresh never removes unrelated legacy records or overwrites priority edits',async()=>{
+test('seven-at-a-time refresh never removes unrelated legacy records or overwrites priority edits',async()=>{
  const original=old(),unrelated={...old(),id:'example-reading-v25-1',originalText:'另一条旧示例'},replacement=fresh();
  const protectedRecord={...fresh('第三条','example-reading-v25-2'),manualPriority:'important' as const};
  const fingerprints=[...await registry(original),...await registry(unrelated)];
  const result=await mergeExamples([original,unrelated,protectedRecord],[replacement],fingerprints);
  expect(result.notices).toContainEqual(unrelated);expect(result.notices).toContainEqual(protectedRecord);expect(result.notices).toContainEqual(replacement);
  const catalog=Array.from({length:12},(_,i)=>fresh('source'+i,'example-reading-v25-'+i));
- const first=selectExampleBatch([],catalog);expect(first.records).toHaveLength(5);expect(first.remaining).toBe(7);
- const second=selectExampleBatch(first.records,catalog);expect(second.records).toHaveLength(10);expect(second.remaining).toBe(2);
+ const first=selectExampleBatch([],catalog);expect(first.records).toHaveLength(7);expect(first.remaining).toBe(5);
+ const second=selectExampleBatch(first.records,catalog);expect(second.records).toHaveLength(12);expect(second.remaining).toBe(0);
  expect(selectExampleBatch(first.records,catalog,0).records).toEqual(first.records);
 });
