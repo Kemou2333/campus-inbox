@@ -53,6 +53,8 @@ export type AppUpdateResult = {
   currentVersion?: string;
   version?: string;
   download?: string;
+  github?: string;
+  aliyun?: string;
 };
 
 export interface PlatformAPI {

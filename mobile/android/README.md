@@ -14,8 +14,21 @@
 - 创建提醒可选择「应用通知」或「日历」。应用通知由手机系统 AlarmManager 定时发送，无需后台常驻或额外注册，在 Android 13 及以上仅用户点击设置时申请通知权限。使用非精确闹钟，系统节电可能延迟；强行停止应用会暂停，重新打开后恢复未来提醒，不申请特殊精确闹钟权限。重启、同签名升级后恢复未来提醒；已错过不超过24小时的已知计划在恢复时补发，更早的已知过期计划清理，不改通知正文或未知提醒记录。通知权限关闭时保留待发记录，允许后再次打开可在24小时窗口内补发。提醒计划仅本机，不包含服务器推送、小组件或静默日历写入。
 - 每个任务有独立通知编号，设置第二个任务不会覆盖第一个。完成单个任务仅取消对应提醒；删除或完成整条通知时取消其所有本机子提醒和已显示的通知。
 - 默认外观跟随系统，已有手动深浅色选择仍保留。Manifest 未拦截 `uiMode`，系统切换深浅色时按默认方式重建 Activity 并重新取得能力/动态色；Android 12 起动态取色，较旧系统使用内置配色。
-- 启动或回到应用后会在后台检查更新，每天至多请求一次现有 GitHub Release 渠道，失败也不会反复请求。设置→工具→「检查更新」显示当前安装版本，可以手动检查并查看结果；手动请求间隔至少30秒，30秒内成功结果直接复用，遇到正在进行的自动检查会等待同一次结果。检查不影响使用；有新版时先提示，点击「去下载」才打开该仓库的 HTTPS APK 地址，不自动下载或安装。网络不可用时保留本机通知；已有对话框期间暂缓提示，恢复应用后可再次提示缓存的新版本。
+- 启动或回到前台后按需检查更新，五秒内重复的生命周期回调合并；空闲时不轮询。设置→工具→「检查更新」显示当前安装版本，可以手动检查并查看结果；手动请求间隔至少30秒，30秒内成功结果直接复用，遇到正在进行的自动检查会等待同一次结果。检查不影响使用；有新版时先提示，点击「去下载」才打开该仓库的 HTTPS APK 地址，不自动下载或安装。网络不可用时保留本机通知；已有对话框期间暂缓提示，恢复应用后可再次提示缓存的新版本。
 - 网页滚到顶部或底部时关闭 WebView 自带的拉伸回弹，滚动、手势和页面内容照常使用。
+
+## 系统栏、安全区与键盘
+
+原有 Android 11 及以上宿主已经使用边到边窗口；此次补齐 Android 8–10 的一致处理，并修正 WebView 安全区分发。窗口背景延伸至系统栏下方，正文、顶栏按钮和底部导航仍留在安全范围内，不隐藏状态栏或导航栏。
+
+- 使用固定的 AndroidX Core 1.17.0 `WindowCompat.enableEdgeToEdge`，保留 SDK 36。由原生容器统一处理系统栏、刘海和键盘的边距，同一侧取最大遮挡值，不能把键盘与导航栏高度相加。横屏、多窗口和返回应用时重新取得边距。
+- 已由容器处理的 inset 类型置零后继续传给 WebView，键盘关闭时也传零更新；不再整体返回 `CONSUMED`。这样不依赖 WebView 版本自行补相同边距。内置网页的 Android `--safe-top` / `--safe-bottom` 继续为零；不要再给网页叠一层系统安全区。
+- `adjustResize` 保留，WebView 可用高度随输入区域变化；没有主动隐藏键盘、清空输入或移除焦点。原生背景与网页默认背景一致。系统栏图标按网页发来的深浅色更新，切换外观不覆盖旧系统的布局 flags；Android 10 起保留系统三键导航的对比保护，手势导航仍使用透明系统栏。
+- 当前只完成源码合同审查；完整 Android 编译由发布 CI 完成。手势/三键导航、横屏刘海、多窗口、键盘反复开关及实际设备的主题切换仍待真机验收，纯 Java 边界检查或 APK 编译不能替代这些结果。
+
+真机最小检查：在手势与三键导航各打开一次；旋转到横屏确认左右按钮不压刘海/导航键；输入并连续开关键盘确认输入和底部操作可见且不残留空白；分别切深浅色确认状态栏及导航键可读；返回前台确认布局和已有通知保持。
+
+依据：[Android edge-to-edge 指南](https://developer.android.com/develop/ui/views/layout/edge-to-edge)、[WebView inset 处理](https://developer.android.com/develop/ui/views/layout/webapps/understand-window-insets)、[Android 16 的强制边到边行为](https://developer.android.com/about/versions/16/behavior-changes-16#edge-to-edge)、[WindowCompat API](https://developer.android.com/reference/androidx/core/view/WindowCompat)、[Core 1.17.0 固定版本](https://developer.android.com/jetpack/androidx/releases/core#1.17.0)。Core 1.18 起需要更高的 compileSdk，本次不顺带升级。
 
 ## 项目与构建
 
@@ -38,7 +51,7 @@ AGP 固定为 8.11.1，AndroidX WebKit 固定为 1.16.0。发布 APK 要用本�
 | action | payload | 成功的 data |
 | --- | --- | --- |
 | `capabilities` | `{}` | `{ calendar, fileSave, shareText, localReminders, appearance, haptics, updates, appVersion, theme }` |
-| `checkUpdate` | `{}` | `{ status: "current" \| "available" \| "busy" \| "cooldown" \| "error", currentVersion, version?, download? }`；只检查元数据，下载需另点按钮 |
+| `checkUpdate` | `{}` | `{ status: "current" \| "available" \| "busy" \| "cooldown" \| "error", currentVersion, version?, download?, github?, aliyun? }`；只检查元数据，下载需另点按钮 |
 | `consumeShare` | `{}` | `{ text: string \| null, remaining }`；每条分享只取出一次 |
 | `calendar` | `{ title, description?, location?, startMillis, endMillis?, allDay? }` | `{ status: "opened", saved: false }`，仅表示日历界面已打开 |
 | `saveBegin` | `{ name, mime, size }` | `{ token }` |
@@ -63,7 +76,11 @@ AGP 固定为 8.11.1，AndroidX WebKit 固定为 1.16.0。发布 APK 要用本�
 
 `checks/NativeHostChecks.java` 是免费、无模型调用的纯 Java 边界检查，验证来源、链接、时间范围、导出令牌、大小和数据完整性。它不替代真实手机对文件选择器、键盘、安全区域、系统日历和安装升级的检查。
 
-更新检查只请求固定的 GitHub 元数据端点，最多读取512 KiB，连接和读取各最多6秒，不跟随重定向；使用 ETag 和本机元数据缓存。仅接受该仓库稳定 Android 版本及版本号一致的已上传 APK，精确核对 HTTPS、域名、仓库路径和文件名；不会把网页或通知里的链接当作更新地址。更新检查沿用已有联网权限，未增加服务或安装权限；`checkUpdate`桥动作只检查固定的公开元数据。离线、限流、无效元数据不会被误报为“已是最新版”：自动检查静默等待下一周期，手动检查显示简短失败提示。纯 Java 检查同时编译 `NativeUpdatePolicy.java`。
+更新检查优先读取固定的 `https://123.57.30.129/android-download.json`（最多32 KiB），不可用、无效或明显旧于已安装/已知版本时，才回退固定的 GitHub Releases API（最多512 KiB）。两端点都不跟随重定向，连接及单次读取各最多3秒，并共用约14秒截止期限；保留系统 HTTPS 验证。ETag 按来源绑定，版本及下载通道一起保存，旧 GitHub 缓存兼容读取。
+
+清单必须提供同版本的精确 GitHub APK 地址。可选 `aliyun` 只接受 `https://123.57.30.129/downloads/android-v{版本}/campus-inbox-{版本}.apk` 原样路径，不接受显式端口、userinfo、query/hash、编码或路径别名；提供了无效通道会拒绝该清单并回退固定 API。缺少 `aliyun` 时维持 GitHub 下载；有效时原生弹窗显示“阿里云下载”和“GitHub 备用”，都需用户点击，再由系统界面确认安装。清单解析代码不会创建阿里云下载路由或发布文件；实际提供了哪个通道以已验证发布的清单为准。
+
+更新检查沿用已有联网权限，未增加服务或安装权限，不下载或自动安装 APK；`checkUpdate` 桥动作只检查上述固定公开元数据。离线、限流、无效元数据不会被误报为“已是最新版”：自动检查静默等待下次进入，手动检查显示简短失败提示。纯 Java 检查同时编译 `NativeUpdatePolicy.java`，覆盖通道精确地址与同版本约束。
 
 本地提醒的授权、节电延迟、重启恢复、通知点击跳转，以及回弹关闭、升级提示和同签名覆盖安装仍需要真实手机验证，不以编译成功代替这些实际结果。
 

@@ -13,6 +13,12 @@ describe('public Android download choices',()=>{
  it('keeps a direct GitHub fallback when no mirror is published yet',()=>{
   expect(parseAndroidDownload(fallbackAndroidDownload)).toEqual(fallbackAndroidDownload);
  });
+ it('accepts only the exact HTTPS application-server APK for the same release',()=>{
+  const aliyun=`https://123.57.30.129/downloads/android-v${fallbackAndroidDownload.version}/campus-inbox-${fallbackAndroidDownload.version}.apk`;
+  expect(parseAndroidDownload({...fallbackAndroidDownload,aliyun})).toEqual({...fallbackAndroidDownload,aliyun});
+  for(const value of [aliyun.replace('https:','http:'),aliyun.replace('123.57.30.129','123.57.30.129.evil.test'),aliyun.replace('https://','https://user@'),aliyun+'?redirect=https://evil.test',aliyun+'#hash',aliyun.replace('.apk','%2eapk'),aliyun.replace('/downloads/','/sync/'),'https://123.57.30.129/downloads/android-v1.0.0/campus-inbox-1.0.0.apk',true,42])expect(parseAndroidDownload({...fallbackAndroidDownload,aliyun:value})).toBeNull();
+  expect(parseAndroidDownload({...fallbackAndroidDownload,aliyun:null})).toEqual(fallbackAndroidDownload);
+ });
  it('keeps a visible public extraction code only with a validated mirror',()=>{
   const value={...fallbackAndroidDownload,lanzou:'https://kemou.lanzouv.com/i6sUw4cfl11a',extractionCode:'1234'};
   expect(parseAndroidDownload(value)).toEqual(value);

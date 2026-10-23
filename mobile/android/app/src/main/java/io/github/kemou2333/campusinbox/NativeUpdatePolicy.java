@@ -5,10 +5,14 @@ import java.net.URISyntaxException;
 
 /** Fixed public release channel; never accepts a download host supplied by a page. */
 final class NativeUpdatePolicy {
+    static final String MANIFEST_URL = "https://123.57.30.129/android-download.json";
     static final String RELEASE_API = "https://api.github.com/repos/Kemou2333/campus-inbox/releases/latest";
     static final long CHECK_DEBOUNCE = 5_000;
     static final long MANUAL_INTERVAL = 30_000;
     static final int MAX_RESPONSE_BYTES = 512 * 1024;
+    static final int MAX_MANIFEST_BYTES = 32 * 1024;
+    static final int NETWORK_TIMEOUT_MS = 3_000;
+    static final long CHECK_TIMEOUT_MS = 14_000;
 
     private NativeUpdatePolicy() {}
 
@@ -36,6 +40,22 @@ final class NativeUpdatePolicy {
             if (difference != 0) return difference > 0;
         }
         return false;
+    }
+
+    static boolean verifiedAliyunDownload(String value, String version) {
+        if (releaseVersion("android-v" + version) == null) return false;
+        // Exact spelling also rejects userinfo, alternate ports, query/hash and
+        // encoded path aliases before any browser or network handoff.
+        return ("https://123.57.30.129/downloads/android-v" + version
+                + "/campus-inbox-" + version + ".apk").equals(value);
+    }
+
+    static String preferredDownload(String version, String github, String aliyun) {
+        // The independent GitHub backup must agree with the same version even
+        // when a valid Aliyun primary has been advertised.
+        if (!verifiedDownload(github, version)
+                || aliyun != null && !verifiedAliyunDownload(aliyun, version)) return null;
+        return aliyun != null ? aliyun : github;
     }
 
     static boolean verifiedDownload(String value, String version) {

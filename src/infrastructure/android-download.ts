@@ -1,6 +1,6 @@
 import {version} from '../../package.json';
 
-export interface AndroidDownload {version:string; github:string; lanzou:string|null; extractionCode?:string; sizeBytes?:number}
+export interface AndroidDownload {version:string; github:string; aliyun?:string; lanzou:string|null; extractionCode?:string; sizeBytes?:number}
 export const fallbackAndroidDownload:AndroidDownload={version,github:`https://github.com/Kemou2333/campus-inbox/releases/download/android-v${version}/campus-inbox-${version}.apk`,lanzou:null};
 export function parseAndroidDownload(value:unknown):AndroidDownload|null{
  if(!value||typeof value!=='object')return null;
@@ -10,13 +10,15 @@ export function parseAndroidDownload(value:unknown):AndroidDownload|null{
  for(let i=0;i<3;i++){if(parts[i]>current[i])break;if(parts[i]<current[i])return null;}
  const github=`https://github.com/Kemou2333/campus-inbox/releases/download/android-v${v.version}/campus-inbox-${v.version}.apk`;
  if(v.github!==github)return null;
+ const aliyun=`https://123.57.30.129/downloads/android-v${v.version}/campus-inbox-${v.version}.apk`;
+ if(v.aliyun!==null&&v.aliyun!==undefined&&v.aliyun!==aliyun)return null;
  let lanzou:string|null=null;
  if(v.lanzou!==null&&v.lanzou!==undefined){
   if(typeof v.lanzou!=='string')return null;
   try{const url=new URL(v.lanzou);if(url.protocol!=='https:'||url.hostname!=='kemou.lanzouv.com'||url.port||url.username||url.password||!/^\/i[a-zA-Z0-9]+$/.test(url.pathname)||url.search||url.hash)return null;lanzou=url.href;}catch{return null;}
  }
  if(v.extractionCode!==undefined&&(typeof v.extractionCode!=='string'||!/^[a-zA-Z0-9]{4}$/.test(v.extractionCode)||!lanzou))return null;
- return {version:v.version,github,lanzou,...(v.extractionCode?{extractionCode:v.extractionCode as string}:{}),...(Number.isInteger(v.sizeBytes)&&Number(v.sizeBytes)>0?{sizeBytes:Number(v.sizeBytes)}:{})};
+ return {version:v.version,github,lanzou,...(v.aliyun?{aliyun}:{}),...(v.extractionCode?{extractionCode:v.extractionCode as string}:{}),...(Number.isInteger(v.sizeBytes)&&Number(v.sizeBytes)>0?{sizeBytes:Number(v.sizeBytes)}:{})};
 }
 
 /** Small public manifest only; no account, session, original text or device identity. */
