@@ -53,7 +53,7 @@ export async function renderShareImages(notice:Notice,details:boolean,generatedA
     }
    }
    const footer=page.height-88;ctx.strokeStyle='#d5e2e3';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(60,footer-22);ctx.lineTo(SHARE_IMAGE_WIDTH-60,footer-22);ctx.stroke();
-   productIcon(ctx,60,footer,44);ctx.fillStyle='#245E59';ctx.font='750 28px system-ui, sans-serif';ctx.fillText('拾笺 Inbox',118,footer+5);
+   productIcon(ctx,60,footer,44);ctx.fillStyle='#245E59';ctx.font='750 28px system-ui, sans-serif';ctx.fillText('拾笺 · Note Inbox',118,footer+5);
    ctx.textAlign='right';ctx.fillStyle='#5d6f7b';ctx.font='23px system-ui, sans-serif';ctx.fillText(stamp,SHARE_IMAGE_WIDTH-60,footer+9);ctx.textAlign='left';
    const blob=await png(canvas);check(signal);result.push({blob,width:canvas.width,height:canvas.height});
   }

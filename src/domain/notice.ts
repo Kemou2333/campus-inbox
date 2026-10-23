@@ -210,7 +210,7 @@ export function createNotice(value: unknown, originalText: string, now = new Dat
 
 export function parseBackup(value: unknown): Notice[] {
   const o = object(value, '备份');
-  if (o.app !== 'campus-inbox' || ![1, 2, 3, 4, 5].includes(Number(o.version)) || typeof o.version !== 'number') throw new Error('请选择拾笺 Inbox 或校园 Inbox 导出的 JSON 备份');
+  if (o.app !== 'campus-inbox' || ![1, 2, 3, 4, 5].includes(Number(o.version)) || typeof o.version !== 'number') throw new Error('请选择拾笺 · Note Inbox 或校园 Inbox 导出的 JSON 备份');
   return parseNotices(o.notices);
 }
 export function exportBackup(notices: Notice[], attachments?: BackupAttachment[]): Backup {

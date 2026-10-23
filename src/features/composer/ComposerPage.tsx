@@ -7,14 +7,13 @@ import AutoAwesomeOutlined from '@mui/icons-material/AutoAwesomeOutlined';
 import type {CampusController,Draft,DraftSelection} from '../../app/useCampus';
 import {AttachmentList} from '../attachments/AttachmentList';
 import {readTransfer,type ClipboardImport} from '../../infrastructure/clipboard-import';
-import {AIPrivacyLink,AI_PRIVACY_FIRST_USE} from '../../shared/ui/AIPrivacy';
 
 export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusController;onDone:()=>void;onLogin:()=>void;embedded?:boolean}){
  const compactWeb=app.platform.kind==='browser';
  const input=useRef<HTMLInputElement>(null);const [target,setTarget]=useState<string|null>(null);const [adding,setAdding]=useState(false);
  const importLock=useRef(false);const [dragTarget,setDragTarget]=useState<string|null>(null);
  const [importWarnings,setImportWarnings]=useState<Record<string,string>>({});
- const [aiNotice,setAiNotice]=useState(false),[shortNotice,setShortNotice]=useState(false);
+ const [shortNotice,setShortNotice]=useState(false);
  const shortApproval=useRef<string|null>(null);
  const draftSignature=JSON.stringify(app.drafts.map(d=>[d.id,d.text]));
  const hasShortNotice=app.drafts.some(d=>!d.demo&&d.text.trim()&&Array.from(d.text.replace(/\s/g,'')).length<=20);
@@ -49,9 +48,8 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
  const retryText=retrySeconds>3600?'稍后再试':retrySeconds>=60?`${Math.ceil(retrySeconds/60)} 分钟后`:`${retrySeconds} 秒后`;
  const total=app.drafts.reduce((n,d)=>n+d.text.length,0);const hasContent=app.drafts.some(d=>d.text.trim());
  async function analyze(){try{if(await app.analyze())onDone();}catch(e){app.report(e);}}
- async function submit(){if(app.demoDraftID){try{if(await app.analyzeDemo())onDone();}catch(e){app.report(e);}return;}if(hasShortNotice&&shortApproval.current!==draftSignature){setShortNotice(true);return;}if(!app.cloud?.getKey()){onLogin();return;}if(localStorage.getItem('campus-inbox:ai-notice:v1')!=='seen'){setAiNotice(true);return;}await analyze();}
+ async function submit(){if(app.demoDraftID){try{if(await app.analyzeDemo())onDone();}catch(e){app.report(e);}return;}if(hasShortNotice&&shortApproval.current!==draftSignature){setShortNotice(true);return;}if(!app.cloud?.getKey()){onLogin();return;}await analyze();}
  function fillDemo(draftID:string,replaceShort=false){const id=app.fillDemoDraft(draftID,replaceShort);if(id)requestAnimationFrame(()=>{const element=draftElements.current.get(id);element?.scrollIntoView({block:'nearest',behavior:reducedMotion?'instant':'smooth'});element?.querySelector<HTMLTextAreaElement>('textarea:not([aria-hidden="true"])')?.focus({preventScroll:true});});}
- function acknowledge(){localStorage.setItem('campus-inbox:ai-notice:v1','seen');setAiNotice(false);void analyze();}
  async function picked(files:FileList|null){const id=target;if(!files||!id||importLock.current)return;importLock.current=true;setAdding(true);try{await app.attach(id,Array.from(files));setImportWarnings(old=>({...old,[id]:''}));}catch(e){app.report(e);}finally{importLock.current=false;setAdding(false);if(input.current)input.current.value='';}}
  async function importContent(id:string,read:()=>Promise<ClipboardImport>,selection?:DraftSelection){
   if(importLock.current||app.busy)return;importLock.current=true;setAdding(true);
@@ -123,9 +121,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
      <Button data-guide="organize" fullWidth variant="contained" startIcon={!app.busy&&(app.demoDraftID||!retrySeconds)?<AutoAwesomeOutlined/>:undefined} sx={{whiteSpace:'nowrap',minHeight:{xs:compactWeb?48:52,sm:52},borderRadius:'12px',fontSize:{xs:compactWeb?16:17,sm:17},fontWeight:700}} disabled={app.busy||adding||!hasContent||total>4000||!app.demoDraftID&&(!!retrySeconds||total>4000||app.pending||!!app.legacyRecords.length||!!app.unconfirmedSubmissions.length||!app.config)} onClick={()=>void submit()}>{app.busy?app.stage:!app.demoDraftID&&retrySeconds?retryText:'AI 整理'}</Button>
      {app.busy&&<Button sx={{flexShrink:0,whiteSpace:'nowrap'}} onClick={app.cancel}>停止等待</Button>}
    </Stack>
-   <Stack direction="row" sx={{alignItems:'center',justifyContent:'center',gap:.25,flexWrap:'wrap',mt:.5}}><Typography sx={{fontSize:12.5,color:'text.secondary',lineHeight:1.6}}>{app.demoDraftID?'示例体验不调用模型。':'原文由第三方模型 DeepSeek 处理。'}</Typography><AIPrivacyLink/></Stack>
   </Box>
   <Dialog open={shortNotice} onClose={()=>{shortApproval.current=draftSignature;setShortNotice(false);}} aria-labelledby="short-notice-heading"><DialogTitle id="short-notice-heading">试试一条完整通知？</DialogTitle><DialogContent><Typography>班群里的长通知，整理后更直观。</Typography></DialogContent><DialogActions><Button onClick={()=>{shortApproval.current=draftSignature;setShortNotice(false);}}>返回编辑</Button><Button variant="contained" onClick={()=>{const draft=app.drafts.find(d=>!d.demo&&d.text.trim()&&Array.from(d.text.replace(/\s/g,'')).length<=20);setShortNotice(false);if(draft)fillDemo(draft.id,true);}}>填入示例</Button></DialogActions></Dialog>
-  <Dialog open={aiNotice} onClose={()=>setAiNotice(false)} aria-labelledby="ai-notice-heading"><DialogTitle id="ai-notice-heading">整理前请留意</DialogTitle><DialogContent><Typography>{AI_PRIVACY_FIRST_USE}</Typography><Typography color="text.secondary" sx={{mt:1.5}}>附件本身不会发送给模型。AI 可能出错，重要信息请核对原文。</Typography><AIPrivacyLink/></DialogContent><DialogActions><Button onClick={()=>setAiNotice(false)}>取消</Button><Button variant="contained" onClick={acknowledge}>开始整理</Button></DialogActions></Dialog>
  </Stack>;
 }

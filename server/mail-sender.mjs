@@ -5,7 +5,7 @@ import {mkdir,open,rename,unlink} from 'node:fs/promises';
 import {dirname,isAbsolute,normalize} from 'node:path';
 import {randomBytes} from 'node:crypto';
 
-const APP_NAME='校园 Inbox',SEND_TIMEOUT=10000,TOKEN_TIMEOUT=4000;
+const APP_NAME='拾笺 · Note Inbox',SEND_TIMEOUT=10000,TOKEN_TIMEOUT=4000;
 const MICROSOFT_TOKEN_URL='https://login.microsoftonline.com/consumers/oauth2/v2.0/token';
 const MICROSOFT_SCOPE='https://outlook.office.com/SMTP.Send offline_access';
 const MAIL_ERROR='验证码发送失败，请稍后再试。';

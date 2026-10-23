@@ -27,7 +27,7 @@ describe('local Canvas share rendering',()=>{
   expect(drawn.find(item=>item.text==='提交报名')?.font).toContain('36px');
   expect(drawn.find(item=>item.text==='截止：10月20日24:00')?.color).toBe('#205d94');
   expect(drawn.find(item=>item.text==='提醒')?.color).toBe('#68478c');expect(drawn.find(item=>item.text==='注意')?.color).toBe('#815109');
-  expect(drawn.some(item=>item.text==='拾笺 Inbox')).toBe(true);expect(drawn.some(item=>item.text==='10月17日 00:01')).toBe(true);
+  expect(drawn.some(item=>item.text==='拾笺 · Note Inbox')).toBe(true);expect(drawn.some(item=>item.text==='10月17日 00:01')).toBe(true);
   expect(ctx.fillRect).toHaveBeenCalledWith(19,17,26,30);expect(ctx.lineTo).toHaveBeenCalledWith(41,33);
   expect(drawn.some(item=>/不得导出/.test(item.text))).toBe(false);expect(canvas.width).toBe(1);expect(canvas.height).toBe(1);
   expect(drawn.some(item=>/^\d+ \/ \d+$/.test(item.text))).toBe(false);

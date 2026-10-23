@@ -41,7 +41,7 @@ test('only one canonical recipient and a four-digit text code with an unambiguou
   const message=mock.received[0],config=mock.configurations[0];
   assert.deepEqual(message.envelope,{from:PASSWORD_ENV.SMTP_USER,to:['studentname@gmail.com']});
   assert.deepEqual(message.to,{address:'studentname@gmail.com'});assert.equal(message.from.address,PASSWORD_ENV.SMTP_USER);
-  assert.match(message.text,/\n\n0123\n\n/);assert.match(message.text,/五分钟/);assert.deepEqual(message.text.match(/\d+/g),['0123']);assert.match(message.text,/校园 Inbox/);
+  assert.match(message.text,/\n\n0123\n\n/);assert.match(message.text,/五分钟/);assert.deepEqual(message.text.match(/\d+/g),['0123']);assert.match(message.text,/拾笺 · Note Inbox/);
   assert.equal(message.html,undefined);assert.equal(message.attachments,undefined);assert.equal(message.headers,undefined);assert.doesNotMatch(message.text,/https?:\/\//);
   assert.equal(config.secure,true);assert.equal(config.port,465);assert.equal(config.tls.rejectUnauthorized,true);
   assert.equal(config.debug,false);assert.equal(config.logger,false);assert.equal(config.ignoreTLS,false);assert.equal(config.opportunisticTLS,false);
@@ -97,7 +97,7 @@ test('the vendored full Nodemailer bundle composes mail offline without node_mod
 test('registration, binding and password setup mails accurately name their operation',async()=>{
  const mock=mockSMTP(),sender=createMailSender(PASSWORD_ENV,mock);
  for(const [purpose,label] of [['register','注册'],['bind','绑定邮箱'],['password','设置密码']]){
-  await sender({...MESSAGE,purpose});assert.equal(mock.received.at(-1).subject,`校园 Inbox ${label}验证码`);assert.ok(mock.received.at(-1).text.includes(`${label}验证码`));
+  await sender({...MESSAGE,purpose});assert.equal(mock.received.at(-1).subject,`拾笺 · Note Inbox ${label}验证码`);assert.ok(mock.received.at(-1).text.includes(`${label}验证码`));
  }
  await assert.rejects(sender({...MESSAGE,purpose:'unsafe purpose'}));assert.equal(mock.received.length,3);
 });
