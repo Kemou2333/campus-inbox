@@ -4,7 +4,7 @@
 
 把通知粘进来，点「AI 整理」，就能看到简短说明、时间和待办步骤。办完打个勾，需要时还能提问、记笔记，或存成一张长图。
 
-**[打开网页](https://123.57.30.129/)** · [Note Inbox 网页](https://kemou2333.github.io/note-inbox/) · [旧网址](https://kemou2333.github.io/campus-inbox/) · [安卓下载](https://123.57.30.129/downloads/android-v2.28.0/campus-inbox-2.28.0.apk) · [GitHub 备用下载](https://github.com/Kemou2333/campus-inbox/releases/latest)
+**[打开网页](https://123.57.30.129/)** · [Note Inbox 网页](https://kemou2333.github.io/note-inbox/) · [旧网址](https://kemou2333.github.io/campus-inbox/) · [安卓下载](https://123.57.30.129/downloads/android-v2.28.1/campus-inbox-2.28.1.apk) · [GitHub 备用下载](https://github.com/Kemou2333/campus-inbox/releases/latest)
 
 ## 看一眼怎么用
 
