@@ -45,6 +45,27 @@ public final class NativeHostChecks {
         check(!NativeUpdatePolicy.newer("2.15.2", "2.15.2"), "installed version is not offered");
         check(!NativeUpdatePolicy.newer("2.14.0", "2.15.2"), "downgrade is not offered");
         check(!NativeUpdatePolicy.newer("999999999999.0.0", "2.15.2"), "oversized version rejected safely");
+        check(NativeUpdatePolicy.newer("2.28.0", "2.25.1"), "one update can skip all intermediate releases");
+        check(NativeUpdatePolicy.currentMetadata("2.28.0", "2.25.1", "2.26.0"), "fresh final metadata supersedes the old intermediate cache");
+        check(NativeUpdatePolicy.currentMetadata("2.28.0", "2.28.0", "2.28.0"), "same installed latest release is a verified current result");
+        check(!NativeUpdatePolicy.currentMetadata("2.26.0", "2.25.1", "2.28.0"), "trusted metadata cannot regress below the known release");
+        check(!NativeUpdatePolicy.currentMetadata("2.27.1", "2.28.0", null), "trusted metadata older than installed cannot mean current");
+        check(!NativeUpdatePolicy.currentMetadata("2.28.0-beta", "2.25.1", null), "preview candidate never becomes a stable update");
+        check(!NativeUpdatePolicy.currentMetadata(null, "2.25.1", null), "missing metadata is not a current result");
+        check(NativeUpdatePolicy.reusableValidator("2.28.0", "2.25.1", NativeUpdatePolicy.CACHE_POLICY_VERSION,
+                "2.25.1", NativeUpdatePolicy.MANIFEST_URL, NativeUpdatePolicy.MANIFEST_URL), "304 can reuse an exact endpoint validator checked by this installed build");
+        check(!NativeUpdatePolicy.reusableValidator("2.26.0", "2.25.1", 0,
+                "2.25.1", NativeUpdatePolicy.RELEASE_API, NativeUpdatePolicy.RELEASE_API), "legacy cache requires a fresh network validation");
+        check(!NativeUpdatePolicy.reusableValidator("2.28.0", "2.27.1", NativeUpdatePolicy.CACHE_POLICY_VERSION,
+                "2.26.0", NativeUpdatePolicy.MANIFEST_URL, NativeUpdatePolicy.MANIFEST_URL), "installing another app version invalidates conditional cache reuse");
+        check(!NativeUpdatePolicy.reusableValidator("2.28.0", "2.25.1", NativeUpdatePolicy.CACHE_POLICY_VERSION,
+                "2.25.1", "https://123.57.30.129/android-download.json", NativeUpdatePolicy.MANIFEST_URL), "old static manifest ETag cannot validate the independent latest endpoint");
+        check(!NativeUpdatePolicy.reusableValidator("2.28.0", "2.25.1", NativeUpdatePolicy.CACHE_POLICY_VERSION,
+                "2.25.1", NativeUpdatePolicy.RELEASE_API, NativeUpdatePolicy.MANIFEST_URL), "GitHub ETag cannot validate Aliyun metadata");
+        check(!NativeUpdatePolicy.reusableValidator("2.26.0", "2.28.0", NativeUpdatePolicy.CACHE_POLICY_VERSION,
+                "2.28.0", NativeUpdatePolicy.RELEASE_API, NativeUpdatePolicy.RELEASE_API), "old cached release below the installed version cannot be reused on 304");
+        check(!NativeUpdatePolicy.reusableValidator("2.28.0", "2.25.1", NativeUpdatePolicy.CACHE_POLICY_VERSION,
+                "2.25.1", "https://example.com/latest.json", "https://example.com/latest.json"), "arbitrary metadata endpoints remain forbidden");
         String download = "https://github.com/Kemou2333/campus-inbox/releases/download/android-v2.16.0/campus-inbox-2.16.0.apk";
         check(NativeUpdatePolicy.verifiedDownload(download, "2.16.0"), "exact repository APK URL accepted");
         check(!NativeUpdatePolicy.verifiedDownload(download.replace("https:", "http:"), "2.16.0"), "cleartext update URL rejected");

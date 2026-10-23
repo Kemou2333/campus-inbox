@@ -2,12 +2,14 @@ import primaryDemo from '../features/onboarding/demo-notice.json';
 import extraDemos from '../features/onboarding/guest-demo-notices.json';
 import {parseNotice} from '../domain/notice';
 import {LOCAL_DEMO_ID_PREFIX} from '../domain/local-demo';
+import {TUTORIAL_EXAMPLE_ID} from '../domain/examples';
 
 const reviewedDemos=[primaryDemo,...extraDemos];
+const selectableIndices=reviewedDemos.flatMap((demo,index)=>demo.notice.id===TUTORIAL_EXAMPLE_ID?[]:[index]);
 function reviewedDemoForSource(source:string){
  return reviewedDemos.find(demo=>demo.notice.originalText===source||demo.legacyOriginalTexts.some(previous=>previous.text===source));
 }
-export const GUEST_DEMO_SOURCES=reviewedDemos.map(demo=>demo.notice.originalText);
+export const GUEST_DEMO_SOURCES=selectableIndices.map(index=>reviewedDemos[index].notice.originalText);
 export const GUEST_DEMO_SOURCE=GUEST_DEMO_SOURCES[0];
 export const GUEST_DEMO_DELAY_MS=3_000;
 export const GUEST_DEMO_MARKER='prebuilt-v1' as const;
@@ -26,25 +28,26 @@ function readCycle(storage:RotationStorage):DemoCycle|null {
   const raw=storage.getItem(rotationKey);if(!raw)return null;
   const value=JSON.parse(raw) as DemoCycle;
   if(!value||!Array.isArray(value.remaining)||value.remaining.length>reviewedDemos.length||new Set(value.remaining).size!==value.remaining.length||value.remaining.some(index=>!Number.isSafeInteger(index)||index<0||index>=reviewedDemos.length)||value.last!==null&&(!Number.isSafeInteger(value.last)||value.last<0||value.last>=reviewedDemos.length))return null;
-  return {remaining:[...value.remaining],last:value.last};
+  return {remaining:value.remaining.filter(index=>selectableIndices.includes(index)),last:value.last};
  }catch{return null;}
 }
-/** A device-only shuffled deck, with no repeat until every sample was used.
- * The first new visitor still receives the familiar useful evaluation sample. */
+/** New fills avoid the tutorial's exact sample; all eight old filled sources
+ * and reviewed aliases above remain valid free demonstrations. */
 export function nextGuestDemoSource(storage:RotationStorage=localStorage,random:()=>number=Math.random):string{
  let cycle=readCycle(storage)??fallbackCycles.get(storage);
  if(!cycle){
-  let first=0;
+  let first=selectableIndices[0];
   try{const legacy=storage.getItem(legacyRotationKey);if(legacy!==null&&Number.isSafeInteger(Number(legacy))&&Number(legacy)>=0)first=Number(legacy)%Math.min(3,reviewedDemos.length);}catch{/* Preserve the first-use default. */}
-  cycle={remaining:[first,...shuffled(reviewedDemos.map((_,i)=>i).filter(i=>i!==first),random)],last:null};
+  if(!selectableIndices.includes(first))first=selectableIndices[0];
+  cycle={remaining:[first,...shuffled(selectableIndices.filter(i=>i!==first),random)],last:null};
  }
  if(!cycle.remaining.length){
-  cycle.remaining=shuffled(reviewedDemos.map((_,i)=>i),random);
+  cycle.remaining=shuffled(selectableIndices,random);
   if(cycle.remaining.length>1&&cycle.remaining[0]===cycle.last){const swap=cycle.remaining.findIndex(i=>i!==cycle.last);[cycle.remaining[0],cycle.remaining[swap]]=[cycle.remaining[swap],cycle.remaining[0]];}
  }
  const index=cycle.remaining.shift()!;cycle.last=index;fallbackCycles.set(storage,cycle);
  try{storage.setItem(rotationKey,JSON.stringify(cycle));}catch{/* Filling stays available when local storage is restricted. */}
- return GUEST_DEMO_SOURCES[index];
+ return reviewedDemos[index].notice.originalText;
 }
 export interface GuestDemoDraft {text:string;attachments:string[];demo?:typeof GUEST_DEMO_MARKER}
 /** Never match arbitrary user text to a canned answer. Filling the sample is explicit. */

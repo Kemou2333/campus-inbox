@@ -1,0 +1,11 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@android:id/background" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="14dp" android:background="@drawable/home_widget_background" android:importantForAccessibility="yes">
+ <LinearLayout android:layout_width="match_parent" android:layout_height="22dp" android:orientation="horizontal" android:gravity="center_vertical" android:importantForAccessibility="noHideDescendants">
+  <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_launcher" android:contentDescription="@null" />
+  <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="7dp" android:text="@string/app_name" android:textSize="12sp" android:textColor="@color/widget_secondary" android:maxLines="1" />
+ </LinearLayout>
+ <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical" android:importantForAccessibility="noHideDescendants">
+  <TextView android:id="@+id/widget_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="—" android:textSize="36sp" android:textStyle="bold" android:textColor="@color/widget_accent" android:includeFontPadding="false" android:maxLines="1" />
+  <TextView android:id="@+id/widget_label" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="9dp" android:text="@string/widget_unknown" android:textSize="12sp" android:textColor="@color/widget_secondary" android:maxLines="1" android:ellipsize="end" />
+ </LinearLayout>
+ <TextView android:id="@+id/widget_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/widget_start" android:textSize="13sp" android:textColor="@color/widget_ink" android:maxLines="1" android:ellipsize="end" android:importantForAccessibility="no" />
+</LinearLayout>

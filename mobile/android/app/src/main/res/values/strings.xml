@@ -5,4 +5,14 @@
     <string name="no_browser">手机上暂时没有可打开此链接的应用</string>
     <string name="no_picker">手机上暂时没有可选择文件的应用</string>
     <string name="blob_download_hint">请使用页面内的保存按钮</string>
+    <string name="widget_name">拾笺 · 小小待办</string>
+    <string name="widget_description">本机待办和一件待办小事，轻点即可打开。</string>
+    <string name="widget_pending">件待办</string>
+    <string name="widget_unknown">等你开启</string>
+    <string name="widget_clear">暂时清空啦</string>
+    <string name="widget_start">打开拾笺，收好今天的小事</string>
+    <string name="widget_calm">松一口气，慢慢来 ☀</string>
+    <string name="widget_encourage">一件一件来，就很好</string>
+    <string name="widget_open">打开通知</string>
+    <string name="widget_accessible_count">%1$d 件待办</string>
 </resources>

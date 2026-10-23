@@ -5,7 +5,7 @@ describe('public Android download choices',()=>{
  it('accepts only the corresponding release and owned Bluecloud file',()=>{
   expect(parseAndroidDownload({...fallbackAndroidDownload,lanzou:'https://kemou.lanzouv.com/iu1f04cezzef'})).toEqual({...fallbackAndroidDownload,lanzou:'https://kemou.lanzouv.com/iu1f04cezzef'});
  });
- it('rejects changed hosts, credentials, redirect queries, stale releases and mismatched assets',()=>{
+ it('rejects changed hosts, credentials, redirect queries and mismatched release assets',()=>{
   for(const lanzou of ['http://kemou.lanzouv.com/iaaa','https://kemou.lanzouv.com.evil.test/iaaa','https://user@kemou.lanzouv.com/iaaa','https://kemou.lanzouv.com/iaaa?url=https://evil.test','javascript:alert(1)'])expect(parseAndroidDownload({...fallbackAndroidDownload,lanzou})).toBeNull();
   expect(parseAndroidDownload({...fallbackAndroidDownload,version:'1.0.0'})).toBeNull();
   expect(parseAndroidDownload({...fallbackAndroidDownload,github:'https://github.com/else/repo/releases/latest'})).toBeNull();
@@ -25,4 +25,10 @@ describe('public Android download choices',()=>{
   for(const extractionCode of ['123','12345','<img>',' 1234'])expect(parseAndroidDownload({...value,extractionCode})).toBeNull();
   expect(parseAndroidDownload({...value,lanzou:null})).toBeNull();
  });
+});
+
+it('a web build uses the approved published APK instead of requiring an unreleased same-version APK',()=>{
+ const approved={version:'2.27.1',github:'https://github.com/Kemou2333/campus-inbox/releases/download/android-v2.27.1/campus-inbox-2.27.1.apk',lanzou:null};
+ expect(parseAndroidDownload(approved)).toEqual(approved);
+ expect(parseAndroidDownload(fallbackAndroidDownload)).toEqual(fallbackAndroidDownload);
 });

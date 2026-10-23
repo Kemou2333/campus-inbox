@@ -43,7 +43,7 @@ if(path.startsWith('/downloads/'))return handleAPK(req,res,verifiedIP);
 
 ## 只读资产索引与发布
 
-资产目录必须位于网页静态发布目录之外，不创建Nginx文件alias，不开放第二条可绕过验证的APK路径。只允许维护者部署已审核的同签名APK与索引，不让网页请求写入目录。处理器不会从任意URL拉取文件。
+索引只能列已完成包名、既有签名及文件校验并正式发布的稳定版本，不得列草稿、预览或尚未发布的候选版本。资产目录必须位于网页静态发布目录之外，不创建Nginx文件alias，不开放第二条可绕过验证的APK路径。只允许维护者部署已审核的同签名APK与索引，不让网页请求写入目录。处理器不会从任意URL拉取文件。
 
 `releaseManifestFile`按请求重新安全读取，支持后续原子发布新版本而不重启AI后端。它是最多64 KiB、最多32个版本的普通非符号链接JSON文件，格式严格：
 
@@ -83,3 +83,10 @@ if(path.startsWith('/downloads/'))return handleAPK(req,res,verifiedIP);
 ## 免费验证范围
 
 `server/tests/apk-downloads.test.mjs`使用真实本机HTTP服务、临时小文件和本地固定验证码，不调用模型、邮箱、生产账号或公网下载。覆盖单次凭证/HEAD、五错及刷新/有效期、Origin/IP绑定、滚动一小时与重启、上海午夜、日字节最后一次并发竞争、每IP/全站并发、断开保留预留、按假单调时钟检查64 KiB流式节流、非法表单/路径/Range、资产摘要与符号链接、坏状态/索引及无重启新版本热读。它不等于生产Nginx限速、云厂商账单或Android真机验收。
+
+
+## 最新正式版本元数据
+
+`GET /downloads/android-latest.json`和HEAD从同一已批准只读索引中按三个数字部分比较，选择最高稳定版本，返回`version`、同版本`aliyun`/`github`、`lanzou:null`、`sizeBytes`和`sha256`。不按数组顺序、字符串排序或上一个已安装版本逐级推送。此端点不创建验证码、不读取或扣除下载用量；即使日额度耗尽或下载账本损坏也可读取元数据。索引缺失、为空、非法或混入预览版本时返回503，不编造“已是最新”。
+
+元数据禁止缓存，不支持查询参数与重定向，最多远低于客户端32 KiB读取上限。原生客户端固定使用此HTTPS端点，失败才回退固定GitHub最新正式Release API；网站原`android-download.json`仍是兼容的公开静态清单。原生更新检查行为及旧APK限制见[安卓最新版本检查](ANDROID-UPDATES.md)。

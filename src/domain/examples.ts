@@ -6,6 +6,10 @@ import {isLocalDemoNotice} from './local-demo';
 // corrections never change identity, and a similarly prefixed personal ID is
 // not treated as a built-in. The small registry contains no notice content.
 const exampleIDSet=new Set(exampleIDs);
+// This exact built-in is already used by the tutorial. Do not title-match or
+// remove saved copies: user edits and unrelated evaluation notices must stay.
+export const TUTORIAL_EXAMPLE_ID='example-reading-v25-5';
+export function selectableExamples<T extends Pick<Notice,'id'>>(catalog:T[]):T[]{return catalog.filter(notice=>notice.id!==TUTORIAL_EXAMPLE_ID);}
 export const EXAMPLES_HIDDEN_KEY='campus-inbox:examples-hidden:v1';
 export function isExampleNotice(notice:Pick<Notice,'id'>):boolean{return isLocalDemoNotice(notice)||exampleIDSet.has(notice.id);}
 export function groupExampleNotices<T extends Pick<Notice,'id'>>(notices:T[]):{personal:T[];examples:T[]}{
@@ -80,6 +84,7 @@ export async function mergeExamples(current:Notice[],incoming:Notice[],legacyReg
 
 /** Refresh only loaded built-ins and add a small batch; a partial catalog must never remove unrelated examples. */
 export function selectExampleBatch(current:Notice[],catalog:Notice[],limit=7){
+ catalog=selectableExamples(catalog);
  const catalogIDs=new Set(catalog.map(n=>n.id));
  const existing=current.filter(isExampleNotice);
  const ids=new Set(existing.map(n=>n.id));
