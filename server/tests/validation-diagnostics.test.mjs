@@ -56,7 +56,7 @@ test('valid exact text boundaries still pass without rewriting model wording',as
   assert.deepEqual(reply.result,value);assert.equal(reply.usageAvailable,true);
 });
 
-test('service persists only the new category and token totals after a failed paid response',async()=>{
+test('service persists only finite diagnostics, token totals and bounded quota metadata after a failed paid response',async()=>{
   const directory=await mkdtemp(join(tmpdir(),'campus-validation-diag-')),stateFile=join(directory,'usage.json');
   const origin='https://kemou2333.github.io',token='test-diagnostic-token-at-least-twenty';
   try{
@@ -69,8 +69,9 @@ test('service persists only the new category and token totals after a failed pai
     assert.equal(state.costMicro,1164,'usage cost uses output once, including reasoning');
     assert.equal(state.rolling.version,1);assert.deepEqual(Object.keys(state.rolling).sort(),['accounts','ips','version']);
     assert.deepEqual(state.rolling.accounts,{});assert.deepEqual(state.rolling.ips,{});
+    assert.deepEqual(state.splitQuota,{version:1,organizeRequests:1,questionRequests:0,questionRolling:{version:1,accounts:{},ips:{}}});
     assert(!JSON.stringify(state).includes('private-'));assert(!JSON.stringify(state).includes(token));
-    assert.deepEqual(Object.keys(state).sort(),['costMicro','day','input','lastFailureCode','lastFinishReason','output','reasoning','requests','rolling'].sort());
+    assert.deepEqual(Object.keys(state).sort(),['costMicro','day','input','lastFailureCode','lastFinishReason','output','reasoning','requests','rolling','splitQuota'].sort());
   }finally{await rm(directory,{recursive:true,force:true});}
 });
 
@@ -125,6 +126,7 @@ test('provider timeout returns a stable code, retains the reservation and never 
     assert.equal(state.requests,1);assert(state.costMicro>0);assert.equal(state.input,0);assert.equal(state.output,0);
     assert.equal(state.rolling.version,1);assert.deepEqual(Object.keys(state.rolling).sort(),['accounts','ips','version']);
     assert.deepEqual(state.rolling.accounts,{});assert.deepEqual(state.rolling.ips,{});
+    assert.deepEqual(state.splitQuota,{version:1,organizeRequests:1,questionRequests:0,questionRolling:{version:1,accounts:{},ips:{}}});
     assert(!JSON.stringify(state).includes('private-'));assert(!JSON.stringify(state).includes(token));
   }finally{await rm(directory,{recursive:true,force:true});}
 });
