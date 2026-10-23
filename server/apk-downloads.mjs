@@ -112,7 +112,9 @@ export async function createAPKDownloads(config,options={}){
   }
   function html(req,res,status,message,release,challenge,retry){
     for(const name of ['Content-Disposition','Accept-Ranges','X-Download-Options'])res.removeHeader(name);
-    const nonce=randomBytes(16).toString('base64');securityHeaders(res,nonce);res.statusCode=status;res.setHeader('Content-Type','text/html; charset=utf-8');if(retry)res.setHeader('Retry-After',String(retry));
+    // A navigation POST gets Origin:null under no-referrer in Chrome. Preserve the
+    // same-origin form source without sending referrers to the GitHub fallback.
+    const nonce=randomBytes(16).toString('base64');securityHeaders(res,nonce);res.setHeader('Referrer-Policy','same-origin');res.statusCode=status;res.setHeader('Content-Type','text/html; charset=utf-8');if(retry)res.setHeader('Retry-After',String(retry));
     const path=release?pathnameFor(release):'/downloads/',action=config.publicOrigin+path;
     const form=challenge?'<form method="post" action="'+htmlEscape(action)+'"><label for="answer">图中的四位数字</label><img src="'+htmlEscape(challenge.image)+'" width="240" height="88" alt="四位数字验证码"><input type="hidden" name="challenge" value="'+htmlEscape(tokenFor('challenge',challenge))+'"><input id="answer" name="answer" inputmode="numeric" autocomplete="off" maxlength="4" pattern="[0-9]{4}" required aria-label="四位数字验证码"><button type="submit">验证并下载</button></form>':'';
     const links=release?'<p><a href="'+htmlEscape(action)+'">'+(challenge?'换一张验证码':'重新获取验证码')+'</a><span class="muted"> · 换图需间隔30秒</span></p><p class="backup"><a href="'+htmlEscape(release.github)+'" rel="noopener noreferrer">GitHub 备用下载</a></p>':'';
