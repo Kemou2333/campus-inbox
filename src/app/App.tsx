@@ -32,6 +32,7 @@ import {installOperationSounds,playOperationSound} from '../shared/operation-sou
 import {createFirstEntryMotion} from '../shared/first-entry-motion';
 import {useGuideSession} from '../features/onboarding/useGuideSession';
 import {CompletionCelebration} from '../features/notices/CompletionCelebration';
+import {useHomeWidget} from '../features/widgets/useHomeWidget';
 
 const ShareImageDialog=lazy(()=>import('../features/sharing/ShareImageDialog'));
 const NoticeQuestionDialog=lazy(()=>import('../features/questions/NoticeQuestionDialog'));
@@ -40,6 +41,7 @@ const nav=[{label:'通知',icon:<Inbox/>},{label:'添加',icon:<AddCircleOutline
 export default function App(){
  useEffect(installOperationSounds,[]);
  const verification=useHumanVerification();const app=useCampus({onHumanVerification:verification.verify});const wide=useMediaQuery('(min-width:960px), (min-width:600px) and (max-height:500px)');const split=useMediaQuery('(min-width:960px)');const systemDark=useMediaQuery('(prefers-color-scheme:dark)');
+ useHomeWidget({platform:app.platform,notices:app.notices,localDataScope:app.localDataScope,bootError:app.bootError,ready:app.sync.status!=='syncing'});
  const exampleRequest=useRef(new URLSearchParams(location.search).get('examples')==='1'),exampleStarted=useRef(false);
  const [page,setPage]=useState(0);const [login,setLogin]=useState(false);const [help,setHelp]=useState(false);
  const [launchStage,setLaunchStage]=useState<'intro'|'leaving'|'entry'|'idle'>(()=>{try{return localStorage.getItem('campus-inbox:tutorial:v2')!=='seen'?'intro':'idle';}catch{return 'intro';}});
@@ -110,7 +112,8 @@ export default function App(){
  useEffect(()=>{
   const receive=()=>{if(modalRef.current||app.busy||document.querySelector('[role=\"dialog\"]'))return;void app.receiveShare().then(received=>{if(received)navigate(1);}).catch(app.report);};
   const openNotice=()=>{void app.platform.getOpenedNotice().then(id=>{if(id){setPage(0);setFocusID(id);}}).catch(app.report);};
-  const offShare=app.platform.onShare(receive);const offNotice=app.platform.onOpenNotice(openNotice);receive();openNotice();return()=>{offShare();offNotice();};
+  const openInbox=()=>{void app.platform.getOpenedInbox?.().then(opened=>{if(opened){setPage(0);setFocusID(null);setFeedView(createFeedViewState());}}).catch(app.report);};
+  const offShare=app.platform.onShare(receive);const offNotice=app.platform.onOpenNotice(openNotice);const offInbox=app.platform.onOpenInbox?.(openInbox);receive();openNotice();openInbox();return()=>{offShare();offNotice();offInbox?.();};
  },[app.platform,app.busy,login,help,about,note,details,calendar,settingsDialog,share]);
  useEffect(()=>app.platform.onBack(()=>{
   if(help){closeHelp();return true;}

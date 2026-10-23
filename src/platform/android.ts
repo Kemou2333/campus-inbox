@@ -52,12 +52,14 @@ export function createAndroidPlatform(bridge: NativeBridge): PlatformAPI {
   const shareListeners = new Set<() => void>();
   const backListeners = new Set<() => boolean>();
   const noticeListeners = new Set<() => void>();
+  const inboxListeners = new Set<() => void>();
   let sequence = 0;
   let disposed = false;
   let saving = false;
   let appearanceSupported = false;
   let hapticsSupported = false;
   let updatesSupported = false;
+  let widgetSupported = false;
 
   const receive = (event: { data: string }) => {
     let reply: NativeReply;
@@ -90,7 +92,7 @@ export function createAndroidPlatform(bridge: NativeBridge): PlatformAPI {
   };
 
   const ready: Promise<PlatformCapabilities> = call<Record<string, unknown>>('capabilities', {}, 10_000)
-    .then(value => { appearanceSupported=value.appearance===true;hapticsSupported=value.haptics===true;updatesSupported=value.updates===true;return {
+    .then(value => { appearanceSupported=value.appearance===true;hapticsSupported=value.haptics===true;updatesSupported=value.updates===true;widgetSupported=value.homeWidget===true;return {
       calendar: value.calendar === true,
       fileSave: value.fileSave === true,
       shareText: value.shareText === true,
@@ -100,6 +102,7 @@ export function createAndroidPlatform(bridge: NativeBridge): PlatformAPI {
     };});
 
   const share = () => { for (const listener of shareListeners) listener(); };
+  const openInbox = () => { for (const listener of inboxListeners) listener(); };
   const openNotice = () => { for (const listener of noticeListeners) listener(); };
   const back = (event: Event) => {
     for (const listener of [...backListeners].reverse()) {
@@ -109,6 +112,7 @@ export function createAndroidPlatform(bridge: NativeBridge): PlatformAPI {
   window.addEventListener('campus-native-share', share);
   window.addEventListener('campus-native-back', back);
   window.addEventListener('campus-native-open-notice', openNotice);
+  window.addEventListener('campus-native-open-inbox', openInbox);
 
   const api: PlatformAPI = {
     kind: 'android', ready,
@@ -126,6 +130,16 @@ export function createAndroidPlatform(bridge: NativeBridge): PlatformAPI {
       if(!updatesSupported)return {status:'unsupported'};
       return readUpdateResult(await call<unknown>('checkUpdate',{},20_000));
     },
+    async updateHomeWidget(summary) {
+      await ready;if(!widgetSupported)return;
+      if(summary===null){await call('updateHomeWidget',{available:false},5_000);return;}
+      if(!Number.isInteger(summary.pendingCount)||summary.pendingCount<0||summary.pendingCount>9999)throw new Error('小组件摘要无效。');
+      const payload=summary.pendingCount>0?{available:true,pendingCount:summary.pendingCount,title:summary.title,noticeId:summary.noticeId}:{available:true,pendingCount:0};
+      if(summary.pendingCount>0&&(typeof summary.title!=='string'||Array.from(summary.title).length>80||typeof summary.noticeId!=='string'||summary.noticeId.length>150))throw new Error('小组件摘要无效。');
+      await call('updateHomeWidget',payload,5_000);
+    },
+    async getOpenedInbox(){await ready;return widgetSupported&&(await call<{opened:boolean}>('consumeOpenedInbox')).opened===true;},
+    onOpenInbox(listener){inboxListeners.add(listener);return()=>inboxListeners.delete(listener);},
     async getSharedText() {
       if (!(await ready).shareText) return null;
       const value = await call<{ text: string | null }>('consumeShare');
@@ -187,9 +201,11 @@ export function createAndroidPlatform(bridge: NativeBridge): PlatformAPI {
       window.removeEventListener('campus-native-share', share);
       window.removeEventListener('campus-native-back', back);
       window.removeEventListener('campus-native-open-notice', openNotice);
+      window.removeEventListener('campus-native-open-inbox', openInbox);
       shareListeners.clear();
       backListeners.clear();
       noticeListeners.clear();
+      inboxListeners.clear();
       if (bridge.onmessage === receive) bridge.onmessage = null;
       for (const request of pending.values()) {
         clearTimeout(request.timer);

@@ -5,8 +5,9 @@ import java.net.URISyntaxException;
 
 /** Fixed public release channel; never accepts a download host supplied by a page. */
 final class NativeUpdatePolicy {
-    static final String MANIFEST_URL = "https://123.57.30.129/android-download.json";
+    static final String MANIFEST_URL = "https://123.57.30.129/downloads/android-latest.json";
     static final String RELEASE_API = "https://api.github.com/repos/Kemou2333/campus-inbox/releases/latest";
+    static final int CACHE_POLICY_VERSION = 2;
     static final long CHECK_DEBOUNCE = 5_000;
     static final long MANUAL_INTERVAL = 30_000;
     static final int MAX_RESPONSE_BYTES = 512 * 1024;
@@ -40,6 +41,20 @@ final class NativeUpdatePolicy {
             if (difference != 0) return difference > 0;
         }
         return false;
+    }
+
+    static boolean currentMetadata(String candidate, String installed, String known) {
+        if (releaseVersion("android-v" + candidate) == null || releaseVersion("android-v" + installed) == null) return false;
+        // A response older than the installed app or a previously validated
+        // release is stale, even if it came from an otherwise trusted endpoint.
+        return !newer(installed, candidate) && (releaseVersion("android-v" + known) == null || !newer(known, candidate));
+    }
+
+    static boolean reusableValidator(String candidate, String installed, int cachePolicy,
+                                     String verifiedBuild, String storedEndpoint, String requestedEndpoint) {
+        return cachePolicy == CACHE_POLICY_VERSION && installed != null && installed.equals(verifiedBuild)
+                && (MANIFEST_URL.equals(requestedEndpoint) || RELEASE_API.equals(requestedEndpoint))
+                && requestedEndpoint.equals(storedEndpoint) && currentMetadata(candidate, installed, candidate);
     }
 
     static boolean verifiedAliyunDownload(String value, String version) {

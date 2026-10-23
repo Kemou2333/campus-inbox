@@ -1,13 +1,16 @@
 import {version} from '../../package.json';
+import publishedDownload from '../../public/android-download.json';
 
 export interface AndroidDownload {version:string; github:string; aliyun?:string; lanzou:string|null; extractionCode?:string; sizeBytes?:number}
-export const fallbackAndroidDownload:AndroidDownload={version,github:`https://github.com/Kemou2333/campus-inbox/releases/download/android-v${version}/campus-inbox-${version}.apk`,lanzou:null};
+const approvedBundle=parseAndroidDownload(publishedDownload);
+// Web builds can precede an APK release. Keep a verified published APK fallback,
+// rather than inventing a download for the web package version. Native update
+// checks use their separate installed-version and latest-metadata policy.
+export const fallbackAndroidDownload:AndroidDownload=approvedBundle?{version:approvedBundle.version,github:approvedBundle.github,lanzou:null}:{version,github:`https://github.com/Kemou2333/campus-inbox/releases/download/android-v${version}/campus-inbox-${version}.apk`,lanzou:null};
 export function parseAndroidDownload(value:unknown):AndroidDownload|null{
  if(!value||typeof value!=='object')return null;
  const v=value as Record<string,unknown>;
  if(typeof v.version!=='string'||!/^\d+\.\d+\.\d+$/.test(v.version))return null;
- const parts=v.version.split('.').map(Number),current=version.split('.').map(Number);
- for(let i=0;i<3;i++){if(parts[i]>current[i])break;if(parts[i]<current[i])return null;}
  const github=`https://github.com/Kemou2333/campus-inbox/releases/download/android-v${v.version}/campus-inbox-${v.version}.apk`;
  if(v.github!==github)return null;
  const aliyun=`https://123.57.30.129/downloads/android-v${v.version}/campus-inbox-${v.version}.apk`;

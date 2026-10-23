@@ -57,6 +57,8 @@ export type AppUpdateResult = {
   aliyun?: string;
 };
 
+export interface HomeWidgetSummary {pendingCount:number;title?:string;noticeId?:string}
+
 export interface PlatformAPI {
   readonly kind: 'browser' | 'android';
   readonly ready: Promise<PlatformCapabilities>;
@@ -66,6 +68,10 @@ export interface PlatformAPI {
   hapticFeedback?(kind:OperationHaptic):Promise<void>;
   /** Public release metadata only; never downloads or installs an APK. */
   checkForUpdate?():Promise<AppUpdateResult>;
+  /** Local desktop summary only; null removes stale/private presentation data. */
+  updateHomeWidget?(summary:HomeWidgetSummary|null):Promise<void>;
+  getOpenedInbox?():Promise<boolean>;
+  onOpenInbox?(listener:()=>void):()=>void;
   /** Takes one item from the native queue. Never triggers AI or alters a draft. */
   getSharedText(): Promise<string | null>;
   onShare(listener: () => void): () => void;

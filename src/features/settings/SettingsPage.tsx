@@ -196,7 +196,7 @@ export function SettingsPage({ developerEnabled=false, app, onLogin, onHelp, onA
     </Paper>}
 
     {category==='tools'&&<Paper variant="outlined" sx={sectionStyle}>
-      {app.platform.kind!=='android'?<ToolRow icon={<DownloadOutlined/>} title="安卓下载" detail="蓝奏 / GitHub" onClick={()=>setDownloadsOpen(true)}/>:<AndroidUpdateSettings platform={app.platform}/>}
+      {app.platform.kind!=='android'?<ToolRow icon={<DownloadOutlined/>} title="安卓下载" detail="主下载 / 备用下载" onClick={()=>setDownloadsOpen(true)}/>:<AndroidUpdateSettings platform={app.platform}/>}
       <ToolRow icon={<Inventory2Outlined/>} title="导入与导出" disabled={busy} onClick={()=>setTransferOpen(true)}/>
       <ToolRow icon={<DeleteOutline/>} title="回收站" detail={app.trashItems.length?`${app.trashItems.length} 条通知`:undefined} disabled={busy} onClick={()=>setTrashOpen(true)}/>
       <ToolRow icon={<PersonOutline/>} title="通知筛选" onClick={()=>openCategory('campus')}/>

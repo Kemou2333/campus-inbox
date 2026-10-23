@@ -75,6 +75,7 @@ public final class MainActivity extends Activity {
     private long lastBack;
     private NativeReminders reminders;
     private String openedNotice;
+    private boolean openedInbox;
     private JavaScriptReplyProxy reminderPermissionReply;
     private JSONObject reminderPermissionPayload;
     private String reminderPermissionRequest;
@@ -98,6 +99,7 @@ public final class MainActivity extends Activity {
             if (saved != null) for (String text : saved) {
                 if (text != null && !text.isEmpty() && text.length() <= 20_000 && shareQueue.size() < 10) shareQueue.addLast(text);
             }
+            openedInbox = state.getBoolean("openedInbox", false);
             String notice = state.getString("openedNotice");
             if (NativePolicy.validNoticeId(notice)) openedNotice = notice;
         } else {
@@ -194,6 +196,7 @@ public final class MainActivity extends Activity {
                 if (!NativePolicy.isTrustedPage(url)) return;
                 if (!shareQueue.isEmpty()) signalShare();
                 if (openedNotice != null) signalOpenedNotice();
+                if (openedInbox) signalOpenedInbox();
             }
             @Override public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
                 handler.cancel();
@@ -279,9 +282,17 @@ public final class MainActivity extends Activity {
                 case "capabilities":
                     respond(reply, id, new JSONObject().put("calendar", calendarIntent().resolveActivity(getPackageManager()) != null)
                             .put("fileSave", exports != null).put("shareText", true).put("localReminders", true).put("appearance", true).put("haptics", true)
-                            .put("updates", true).put("appVersion", BuildConfig.VERSION_NAME).put("theme", theme()));
+                            .put("updates", true).put("homeWidget", true).put("appVersion", BuildConfig.VERSION_NAME).put("theme", theme()));
                     break;
                 case "checkUpdate": checkUpdate(reply, id); break;
+                case "updateHomeWidget":
+                    NativeHomeWidget.accept(this, payload);
+                    respond(reply, id, new JSONObject().put("updated", true));
+                    break;
+                case "consumeOpenedInbox":
+                    boolean inbox = openedInbox; openedInbox = false;
+                    respond(reply, id, new JSONObject().put("opened", inbox));
+                    break;
                 case "haptic":
                     respond(reply, id, new JSONObject().put("performed", performOperationHaptic(payload)));
                     break;
@@ -511,6 +522,7 @@ public final class MainActivity extends Activity {
         if (web != null && NativePolicy.isTrustedPage(web.getUrl())) {
             if (!shareQueue.isEmpty()) signalShare();
             if (openedNotice != null) signalOpenedNotice();
+            if (openedInbox) signalOpenedInbox();
         }
     }
 
@@ -519,9 +531,20 @@ public final class MainActivity extends Activity {
     }
 
     private void receiveOpenedNotice(Intent intent) {
-        if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction())) return;
+        if (intent == null) return;
+        if (HomeWidgetProvider.OPEN.equals(intent.getAction())) {
+            String widgetNotice = intent.getStringExtra("campusNoticeId");
+            openedNotice = NativePolicy.validNoticeId(widgetNotice) ? widgetNotice : null;
+            openedInbox = openedNotice == null;
+            return;
+        }
+        if (!Intent.ACTION_VIEW.equals(intent.getAction())) return;
         String id = intent.getStringExtra("campusNoticeId");
         if (NativePolicy.validNoticeId(id)) openedNotice = id;
+    }
+
+    private void signalOpenedInbox() {
+        web.evaluateJavascript("window.dispatchEvent(new CustomEvent('campus-native-open-inbox'));", null);
     }
 
     private void signalOpenedNotice() {
@@ -532,6 +555,7 @@ public final class MainActivity extends Activity {
         if (web != null) web.saveState(state);
         if (!shareQueue.isEmpty()) state.putStringArrayList("shareQueue", new ArrayList<>(shareQueue));
         if (openedNotice != null) state.putString("openedNotice", openedNotice);
+        state.putBoolean("openedInbox", openedInbox);
         super.onSaveInstanceState(state);
     }
 
@@ -568,7 +592,7 @@ public final class MainActivity extends Activity {
         runOnUiThread(() -> {
             if (!foreground || isFinishing() || isDestroyed() || web == null || updateDialogShowing || updateOfferedThisEntry
                     || !NativePolicy.isTrustedPage(web.getUrl()) || !updates.shouldPrompt(release)) return;
-            // Let onboarding and any current edit dialog finish; cached metadata can be offered on the next resume.
+            // Only this check's online-verified release is considered; deferred offers are rechecked on the next entry.
             web.evaluateJavascript("Boolean(document.querySelector('[role=\"dialog\"],dialog[open]'))", hasDialog -> {
                 if (!"false".equals(hasDialog) || !foreground || isFinishing() || isDestroyed()
                         || updateDialogShowing || updateOfferedThisEntry || !updates.shouldPrompt(release)) return;

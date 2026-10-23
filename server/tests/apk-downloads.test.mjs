@@ -142,3 +142,23 @@ test('an atomically replaced approved release index hot-loads a new version with
   const proof=await s.challenge('203.0.113.80',nextPath),verified=await s.verify(proof.token,'203.0.113.80','2468',nextPath);assert.equal(verified.status,303);
   const result=await s.request(verified.headers.location.slice(origin.length),{ip:'203.0.113.80'});assert.equal(result.status,200);assert.deepEqual(result.bytes,bytes);
 });
+
+
+test('latest metadata reads the highest numeric approved final version, HEAD is free and the index hot-updates',async t=>{
+  const s=await fixture();t.after(s.close);
+  const entry=version=>({...s.release,version,filename:'campus-inbox-'+version+'.apk',github:'https://github.com/Kemou2333/campus-inbox/releases/download/android-v'+version+'/campus-inbox-'+version+'.apk'});
+  await writeFile(s.releaseManifestFile,JSON.stringify({schemaVersion:1,releases:['2.9.100','2.10.0','2.9.99'].map(entry)}));
+  const url='/downloads/android-latest.json',response=await s.request(url);assert.equal(response.status,200);const body=JSON.parse(response.text);assert.equal(body.version,'2.10.0');assert.equal(body.aliyun,origin+'/downloads/android-v2.10.0/campus-inbox-2.10.0.apk');assert.equal(body.github,entry('2.10.0').github);assert.equal(body.sizeBytes,s.bytes.length);assert.equal(body.sha256,s.release.sha256);assert.equal(body.lanzou,null);assert.equal(response.headers['cache-control'],'no-store, private');assert.equal(response.headers.pragma,'no-cache');assert.equal(response.headers['content-type'],'application/json; charset=utf-8');assert(response.bytes.length<32768);
+  const head=await s.request(url,{method:'HEAD'});assert.equal(head.status,200);assert.equal(head.bytes.length,0);assert.equal(Number(head.headers['content-length']),response.bytes.length);await assert.rejects(readFile(s.stateFile),{code:'ENOENT'});
+  await writeFile(s.releaseManifestFile,JSON.stringify({schemaVersion:1,releases:['2.99.9999','3.0.0','2.100.0'].map(entry)}));assert.equal(JSON.parse((await s.request(url)).text).version,'3.0.0');
+  assert.equal((await s.request(url+'?version=old')).status,400);assert.equal((await s.request(url,{method:'POST'})).status,405);await assert.rejects(readFile(s.stateFile),{code:'ENOENT'});
+});
+
+test('latest metadata stays independent of exhausted/corrupt traffic state but fails closed for empty, preview or corrupt indexes',async t=>{
+  const s=await fixture({state:{version:1,day:'2026-10-23',reservedBytes:200_000_000,downloads:{},captchaRequests:{}}});t.after(s.close);const url='/downloads/android-latest.json',before=await readFile(s.stateFile,'utf8');assert.equal((await s.request(url)).status,200);assert.equal(await readFile(s.stateFile,'utf8'),before);
+  for(const value of [{schemaVersion:1,releases:[]},{schemaVersion:1,releases:[{...s.release,version:'2.28.0-beta'}]},'{broken']){
+    await writeFile(s.releaseManifestFile,typeof value==='string'?value:JSON.stringify(value));assert.equal((await s.request(url)).status,503);
+  }
+  await rename(s.releaseManifestFile,s.releaseManifestFile+'.missing');assert.equal((await s.request(url)).status,503);
+  const corrupt=await fixture({state:'{bad-state'});t.after(corrupt.close);assert.equal((await corrupt.request()).status,503);assert.equal(JSON.parse((await corrupt.request(url)).text).version,version);
+});

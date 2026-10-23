@@ -99,7 +99,17 @@ export async function createAPKDownloads(config,options={}){
     try{const file=await open(temporary,'wx',0o600);try{await file.writeFile(JSON.stringify(state));await file.sync();}finally{await file.close();}await rename(temporary,config.stateFile);const directory=await open(dirname(config.stateFile),constants.O_RDONLY);try{await directory.sync();}finally{await directory.close();}}catch(error){await unlink(temporary).catch(()=>{});unavailable=true;throw error;}
   }
   function ledger(action){const run=queue.catch(()=>{}).then(async()=>{if(unavailable||closed)throw new Error('APK downloads unavailable');prune(now());return action();});queue=run.catch(()=>{});return run;}
-  async function releaseFor(version){const releases=validateManifest(await readSmallJSON(config.releaseManifestFile,65536));return releases.get(version);}
+  async function releases(){return validateManifest(await readSmallJSON(config.releaseManifestFile,65536));}
+  async function releaseFor(version){return (await releases()).get(version);}
+  async function latest(req,res){
+    if(!['GET','HEAD'].includes(req.method)){res.setHeader('Allow','GET, HEAD');return html(req,res,405,'请使用浏览器读取更新信息。');}
+    try{
+      const approved=[...(await releases()).values()];
+      approved.sort((left,right)=>{const a=left.version.split('.').map(Number),b=right.version.split('.').map(Number);for(let i=0;i<3;i++)if(a[i]!==b[i])return b[i]-a[i];return 0;});
+      const release=approved[0],body=JSON.stringify({version:release.version,aliyun:config.publicOrigin+pathnameFor(release),github:release.github,lanzou:null,sizeBytes:release.size,sha256:release.sha256});
+      securityHeaders(res);res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Content-Length',Buffer.byteLength(body));res.end(req.method==='HEAD'?undefined:body);
+    }catch{html(req,res,503,'更新信息暂时不可用，请稍后再试。');}
+  }
   const tokenFor=(kind,value)=>value.id+'.'+sign('apk:'+kind+':'+value.id+':'+value.ipKey+':'+value.version+':'+value.expires);
   function tokenRecord(kind,token,map,ipKey,version){
     if(typeof token!=='string'||!tokenPattern.test(token))return null;
@@ -180,6 +190,10 @@ export async function createAPKDownloads(config,options={}){
   const handle=async(req,res,verifiedIP)=>{
     let release;
     try{
+      // Release discovery is public, bounded and independent of the download
+      // traffic ledger. It remains available after the day's bytes are spent.
+      if(req.url==='/downloads/android-latest.json')return await latest(req,res);
+      if(typeof req.url==='string'&&req.url.startsWith('/downloads/android-latest.json?'))return html(req,res,400,'更新信息地址不接受参数。');
       const ip=validIP(verifiedIP);if(!ip)return html(req,res,400,'无法确认下载网络，请稍后再试。');
       if(typeof req.url!=='string'||req.url.length>2048||!req.url.startsWith('/')||req.url.includes('#'))return html(req,res,404,'下载地址不存在。');
       const rawPath=req.url.split('?')[0],match=rawPath.match(routePattern);if(!match)return html(req,res,404,'下载地址不存在。');

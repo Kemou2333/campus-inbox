@@ -52,8 +52,6 @@ final class NativeUpdates {
 
     synchronized void checkOnEntry(Consumer<Release> available) {
         if (checking || !NativeUpdatePolicy.checkDue(System.currentTimeMillis(), preferences.getLong("lastAttempt", 0))) return;
-        Release cached = cachedRelease();
-        if (cached != null) available.accept(cached);
         checking = true;
         // Persist only a short debounce, so Activity recreation cannot start duplicate requests.
         preferences.edit().putLong("lastAttempt", System.currentTimeMillis()).apply();
@@ -68,11 +66,8 @@ final class NativeUpdates {
             return;
         }
         long now = System.currentTimeMillis();
-        // Reuse a successful check for 30 seconds, including the automatic check after resume.
-        Release cached = cachedMetadata();
-        if (cached != null && !NativeUpdatePolicy.manualCheckDue(now, preferences.getLong("lastSuccess", 0))) {
-            completed.accept(result(cached)); return;
-        }
+        // An explicit check validates the endpoint now; a previous successful
+        // result must not become an intermediate-version update dialog.
         if (!NativeUpdatePolicy.manualCheckDue(now, preferences.getLong("lastManualAttempt", 0))) {
             completed.accept(new CheckResult("cooldown", null)); return;
         }
@@ -117,11 +112,6 @@ final class NativeUpdates {
         if (cached != null && cached.acceptsDownload(download)) downloadOpenedVersion = cached.version;
     }
 
-    private Release cachedRelease() {
-        Release release = cachedMetadata();
-        return release != null && NativeUpdatePolicy.newer(release.version, BuildConfig.VERSION_NAME) ? release : null;
-    }
-
     private Release cachedMetadata() {
         String version = preferences.getString("version", "");
         // Existing installs stored their verified GitHub URL as download.
@@ -153,16 +143,21 @@ final class NativeUpdates {
         HttpURLConnection connection = (HttpURLConnection) new URL(endpoint).openConnection();
         try {
             connection.setInstanceFollowRedirects(false);
+            connection.setUseCaches(false);
+            connection.setRequestProperty("Cache-Control", "no-cache");
+            connection.setRequestProperty("Pragma", "no-cache");
             connection.setConnectTimeout(timeout(deadline));
             connection.setReadTimeout(timeout(deadline));
             connection.setRequestProperty("Accept", manifest ? "application/json" : "application/vnd.github+json");
             if (!manifest) connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
             connection.setRequestProperty("User-Agent", "Campus-Inbox-Android/" + BuildConfig.VERSION_NAME);
             Release cached = cachedMetadata();
-            // A 304 is meaningful only for the endpoint that supplied this cache.
-            boolean sameSource = source.equals(preferences.getString("metadataSource", "github"));
-            boolean reusable = cached != null && sameSource
-                    && (!manifest || !NativeUpdatePolicy.newer(BuildConfig.VERSION_NAME, cached.version));
+            // Never carry a legacy API/static-manifest validator into another
+            // endpoint or installed build. A 304 is accepted only after this
+            // cache format has validated that exact source in this app build.
+            boolean reusable = cached != null && NativeUpdatePolicy.reusableValidator(
+                    cached.version, BuildConfig.VERSION_NAME, preferences.getInt("cachePolicy", 0),
+                    preferences.getString("verifiedBuild", ""), preferences.getString("metadataEndpoint", ""), endpoint);
             String etag = preferences.getString("etag", "");
             if (reusable && validEtag(etag)) connection.setRequestProperty("If-None-Match", etag);
             int status = connection.getResponseCode();
@@ -188,8 +183,8 @@ final class NativeUpdates {
                 JSONObject body = new JSONObject(new String(bytes.toByteArray(), StandardCharsets.UTF_8));
                 Release release = manifest ? parseManifest(body) : parseRelease(body);
                 if (release == null) throw new IOException("No verified Android release");
-                if (manifest && (NativeUpdatePolicy.newer(BuildConfig.VERSION_NAME, release.version)
-                        || cached != null && NativeUpdatePolicy.newer(cached.version, release.version))) {
+                if (!NativeUpdatePolicy.currentMetadata(release.version, BuildConfig.VERSION_NAME,
+                        cached == null ? null : cached.version)) {
                     throw new IOException("Stale release manifest");
                 }
                 // Save all channels and their validator together, avoiding a
@@ -197,7 +192,8 @@ final class NativeUpdates {
                 SharedPreferences.Editor editor = preferences.edit();
                 editor.putString("version", release.version).putString("download", release.download)
                         .putString("github", release.github).putString("metadataSource", source)
-                        .putLong("lastSuccess", System.currentTimeMillis());
+                        .putString("metadataEndpoint", endpoint).putInt("cachePolicy", NativeUpdatePolicy.CACHE_POLICY_VERSION)
+                        .putString("verifiedBuild", BuildConfig.VERSION_NAME).putLong("lastSuccess", System.currentTimeMillis());
                 if (release.aliyun == null) editor.remove("aliyun"); else editor.putString("aliyun", release.aliyun);
                 String nextEtag = connection.getHeaderField("ETag");
                 if (validEtag(nextEtag)) editor.putString("etag", nextEtag); else editor.remove("etag");

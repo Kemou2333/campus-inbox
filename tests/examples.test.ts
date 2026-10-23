@@ -1,7 +1,7 @@
 import {describe,expect,test} from 'vitest';
 import {readFile} from 'node:fs/promises';
 import {auditPublicExamples} from '../scripts/verify-example-privacy.mjs';
-import {exampleFingerprint,mergeExamples,selectExampleBatch} from '../src/domain/examples';
+import {exampleFingerprint,mergeExamples,selectExampleBatch,TUTORIAL_EXAMPLE_ID} from '../src/domain/examples';
 import {createNotice,parseBackup} from '../src/domain/notice';
 import type {Notice,NoticeAnalysis} from '../src/domain/types';
 
@@ -216,7 +216,15 @@ test('seven-at-a-time refresh never removes unrelated legacy records or overwrit
  const result=await mergeExamples([original,unrelated,protectedRecord],[replacement],fingerprints);
  expect(result.notices).toContainEqual(unrelated);expect(result.notices).toContainEqual(protectedRecord);expect(result.notices).toContainEqual(replacement);
  const catalog=Array.from({length:12},(_,i)=>fresh('source'+i,'example-reading-v25-'+i));
- const first=selectExampleBatch([],catalog);expect(first.records).toHaveLength(7);expect(first.remaining).toBe(5);
- const second=selectExampleBatch(first.records,catalog);expect(second.records).toHaveLength(12);expect(second.remaining).toBe(0);
+ const first=selectExampleBatch([],catalog);expect(first.records).toHaveLength(7);expect(first.remaining).toBe(4);
+ const second=selectExampleBatch(first.records,catalog);expect(second.records).toHaveLength(11);expect(second.remaining).toBe(0);
  expect(selectExampleBatch(first.records,catalog,0).records).toEqual(first.records);
+});
+test('new catalog selections exclude only the tutorial ID while retaining saved evaluation records and personal edits',async()=>{
+ const catalog=parseBackup(JSON.parse(await readFile(new URL('../public/examples.json',import.meta.url),'utf8')));
+ const tutorial=catalog.find(n=>n.id===TUTORIAL_EXAMPLE_ID)!,edited={...tutorial,note:'我已保存的笔记',completed:true},personal={...tutorial,id:'personal-evaluation',note:'真实的评教通知'};
+ const first=selectExampleBatch([edited,personal],catalog);expect(first.records).toHaveLength(7);expect(first.records.some(n=>n.id===TUTORIAL_EXAMPLE_ID)).toBe(false);expect(first.remaining).toBe(catalog.length-1-7);
+ const merged=await mergeExamples([edited,personal],first.records,await registry(tutorial));
+ expect(merged.notices).toContain(edited);expect(merged.notices).toContain(personal);
+ const all=selectExampleBatch([],catalog,100);expect(all.records).toHaveLength(catalog.length-1);expect(all.records.some(n=>n.id===TUTORIAL_EXAMPLE_ID)).toBe(false);
 });
