@@ -79,7 +79,7 @@ export async function mergeExamples(current:Notice[],incoming:Notice[],legacyReg
 }
 
 /** Refresh only loaded built-ins and add a small batch; a partial catalog must never remove unrelated examples. */
-export function selectExampleBatch(current:Notice[],catalog:Notice[],limit=5){
+export function selectExampleBatch(current:Notice[],catalog:Notice[],limit=7){
  const catalogIDs=new Set(catalog.map(n=>n.id));
  const existing=current.filter(isExampleNotice);
  const ids=new Set(existing.map(n=>n.id));

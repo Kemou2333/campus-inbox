@@ -9,6 +9,7 @@ import {AttachmentList} from '../attachments/AttachmentList';
 import {readTransfer,type ClipboardImport} from '../../infrastructure/clipboard-import';
 
 export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusController;onDone:()=>void;onLogin:()=>void;embedded?:boolean}){
+ const compactWeb=app.platform.kind==='browser';
  const input=useRef<HTMLInputElement>(null);const [target,setTarget]=useState<string|null>(null);const [adding,setAdding]=useState(false);
  const importLock=useRef(false);const [dragTarget,setDragTarget]=useState<string|null>(null);
  const [importWarnings,setImportWarnings]=useState<Record<string,string>>({});
@@ -86,8 +87,8 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
    });
   });
  }
- return <Stack spacing={2} className="page-enter">
-  <Typography data-first-entry="composer-title" component={embedded?"h2":"h1"} sx={{fontSize:{xs:29,sm:32},fontWeight:800,lineHeight:1.3,letterSpacing:'-.6px'}}>添加</Typography>
+ return <Stack spacing={{xs:compactWeb?1.5:2,sm:2}} className="page-enter">
+  <Typography data-first-entry="composer-title" component={embedded?"h2":"h1"} sx={{fontSize:{xs:compactWeb?26:29,sm:32},fontWeight:800,lineHeight:1.3,letterSpacing:'-.6px'}}>添加</Typography>
   {app.pending&&<Alert severity="info" action={<Button onClick={app.recoverResult}>保存结果</Button>}>上次整理的结果还没保存，无需再次调用 AI。</Alert>}
   {!!app.legacyRecords.length&&<Alert severity="info" action={<Button onClick={app.recoverLegacyResult}>保存结果</Button>}>旧版有 {app.legacyRecords.length} 条整理结果未保存，无需重新调用 AI。</Alert>}
   {app.legacyMissingFiles&&<Alert severity="info" onClose={()=>app.setLegacyMissingFiles(false)}>旧版草稿文字已保留，草稿附件需要重新添加。</Alert>}
@@ -97,14 +98,14 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
    onDragLeave={event=>{if(!(event.relatedTarget instanceof Node)||!event.currentTarget.contains(event.relatedTarget))setDragTarget(null);}}
    onDrop={event=>{event.preventDefault();setDragTarget(null);if(app.busy||importLock.current)return;const content=readTransfer(event.dataTransfer);void importContent(draft.id,()=>content);}}
    sx={{position:'relative',p:{xs:1.5,sm:2},borderRadius:'16px',opacity:leaving?0:1,transition:reducedMotion?'none':'opacity 420ms cubic-bezier(.4,0,.2,1)',borderColor:dragTarget===draft.id?'primary.main':undefined,bgcolor:dragTarget===draft.id?'action.hover':undefined}}>
-   <Stack direction="row" sx={{alignItems:"center",justifyContent:"space-between",gap:1,mb:1.5}}>
+   <Stack direction="row" sx={{alignItems:"center",justifyContent:"space-between",gap:1,mb:{xs:compactWeb?1:1.5,sm:1.5}}}>
     <Typography variant="h6">通知 {index+1}</Typography>
     <Stack direction="row" sx={{gap:.5,alignItems:'center'}}>
-     <Button data-guide={index===0?"fill":undefined} size="small" variant="contained" startIcon={<AutoAwesomeOutlined sx={{fontSize:17}}/>} disabled={app.busy||adding} onClick={()=>fillDemo(draft.id)} sx={{minHeight:36,px:1.25,borderRadius:"10px",fontSize:14,fontWeight:700,whiteSpace:"nowrap",boxShadow:"none"}}>填入示例</Button>
+     <Button data-guide={index===0?"fill":undefined} size="small" variant="contained" startIcon={<AutoAwesomeOutlined sx={{fontSize:17}}/>} disabled={app.busy||adding} onClick={()=>fillDemo(draft.id)} sx={{minHeight:44,px:1.25,borderRadius:"10px",fontSize:14,fontWeight:700,whiteSpace:"nowrap",boxShadow:"none"}}>填入示例</Button>
      {(app.drafts.length>1||draft.text||draft.attachments.length>0)&&<IconButton aria-label={`移除通知${index+1}`} disabled={app.busy||adding||leaving} onClick={()=>removeDraft(draft,index)}><Close/></IconButton>}
     </Stack>
    </Stack>
-   <TextField className="composer-text" placeholder="粘贴通知，图片和文件会作为附件…" multiline minRows={5} maxRows={embedded?9:13} value={draft.text} disabled={app.busy||adding} onChange={e=>app.changeDraft(draft.id,e.target.value)} onPaste={event=>pasteEvent(draft.id,event)} slotProps={{htmlInput:{'aria-label':`通知${index+1}原文`}}} error={total>4000} helperText={!draft.text.trim()&&draft.attachments.length?'补充通知文字后可整理。':undefined}/>
+   <TextField className="composer-text" placeholder="粘贴通知，图片和文件会作为附件…" multiline minRows={compactWeb?4:5} maxRows={embedded?9:13} value={draft.text} disabled={app.busy||adding} onChange={e=>app.changeDraft(draft.id,e.target.value)} onPaste={event=>pasteEvent(draft.id,event)} slotProps={{htmlInput:{'aria-label':`通知${index+1}原文`}}} error={total>4000} helperText={!draft.text.trim()&&draft.attachments.length?'补充通知文字后可整理。':undefined}/>
    {importWarnings[draft.id]&&<Alert severity="warning" sx={{mt:1}} onClose={()=>setImportWarnings(old=>({...old,[draft.id]:''}))}>{importWarnings[draft.id]}</Alert>}
    <Stack direction="row" spacing={1} sx={{alignItems:"center",justifyContent:'space-between',mt:1}}>
     <Stack direction="row" sx={{alignItems:'center',gap:.5,minWidth:0}}><Tooltip title="添加附件 · 仅存本机"><span><IconButton sx={{width:40,height:40,borderRadius:'10px'}} aria-label={`给通知${index+1}添加附件`} disabled={app.busy||adding} onClick={()=>{setTarget(draft.id);input.current?.click();}}><AttachFile/></IconButton></span></Tooltip></Stack>
@@ -118,11 +119,11 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
    {app.busy&&<LinearProgress sx={{mb:1,borderRadius:1}}/>}
    {app.busy&&showWaitHint&&<Typography variant="body2" color="text.secondary" role="status" sx={{mb:1}}>正在确认提交，确认后可离开。</Typography>}
    <Stack direction="row" sx={{alignItems:'center',gap:1}}>
-     <Button data-guide="organize" fullWidth variant="contained" startIcon={!app.busy&&(app.demoDraftID||!retrySeconds)?<AutoAwesomeOutlined/>:undefined} sx={{whiteSpace:'nowrap',minHeight:52,borderRadius:'12px',fontSize:17,fontWeight:700}} disabled={app.busy||adding||!hasContent||total>4000||!app.demoDraftID&&(!!retrySeconds||total>4000||app.pending||!!app.legacyRecords.length||!!app.unconfirmedSubmissions.length||!app.config)} onClick={()=>void submit()}>{app.busy?app.stage:!app.demoDraftID&&retrySeconds?retryText:'AI 整理'}</Button>
+     <Button data-guide="organize" fullWidth variant="contained" startIcon={!app.busy&&(app.demoDraftID||!retrySeconds)?<AutoAwesomeOutlined/>:undefined} sx={{whiteSpace:'nowrap',minHeight:{xs:compactWeb?48:52,sm:52},borderRadius:'12px',fontSize:{xs:compactWeb?16:17,sm:17},fontWeight:700}} disabled={app.busy||adding||!hasContent||total>4000||!app.demoDraftID&&(!!retrySeconds||total>4000||app.pending||!!app.legacyRecords.length||!!app.unconfirmedSubmissions.length||!app.config)} onClick={()=>void submit()}>{app.busy?app.stage:!app.demoDraftID&&retrySeconds?retryText:'AI 整理'}</Button>
      {app.busy&&<Button sx={{flexShrink:0,whiteSpace:'nowrap'}} onClick={app.cancel}>停止等待</Button>}
    </Stack>
   </Box>
-  <Dialog open={shortNotice} onClose={()=>{shortApproval.current=draftSignature;setShortNotice(false);}} aria-labelledby="short-notice-heading"><DialogTitle id="short-notice-heading">试试一条完整通知？</DialogTitle><DialogContent><Typography>班群里的长通知，整理后更直观。</Typography></DialogContent><DialogActions><Button onClick={()=>{shortApproval.current=draftSignature;setShortNotice(false);}}>返回编辑</Button><Button variant="contained" onClick={()=>{const draft=app.drafts.find(d=>!d.demo&&d.text.trim()&&Array.from(d.text.replace(/\s/g,'')).length<=20);setShortNotice(false);if(draft)fillDemo(draft.id,true);}}>填入真实示例</Button></DialogActions></Dialog>
+  <Dialog open={shortNotice} onClose={()=>{shortApproval.current=draftSignature;setShortNotice(false);}} aria-labelledby="short-notice-heading"><DialogTitle id="short-notice-heading">试试一条完整通知？</DialogTitle><DialogContent><Typography>班群里的长通知，整理后更直观。</Typography></DialogContent><DialogActions><Button onClick={()=>{shortApproval.current=draftSignature;setShortNotice(false);}}>返回编辑</Button><Button variant="contained" onClick={()=>{const draft=app.drafts.find(d=>!d.demo&&d.text.trim()&&Array.from(d.text.replace(/\s/g,'')).length<=20);setShortNotice(false);if(draft)fillDemo(draft.id,true);}}>填入示例</Button></DialogActions></Dialog>
   <Dialog open={aiNotice} onClose={()=>setAiNotice(false)} aria-labelledby="ai-notice-heading"><DialogTitle id="ai-notice-heading">整理前请留意</DialogTitle><DialogContent><Typography>AI 可能出错，重要信息请核对原文。</Typography></DialogContent><DialogActions><Button onClick={()=>setAiNotice(false)}>取消</Button><Button variant="contained" onClick={acknowledge}>开始整理</Button></DialogActions></Dialog>
  </Stack>;
 }

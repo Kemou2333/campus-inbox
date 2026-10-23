@@ -110,7 +110,7 @@ test('legacy consent input is compatible without access gates; idempotency and p
   const repeated=await call(requestId,true);assert.equal((await repeated.json()).job.id,first.id);assert.equal(s.sync.adminReader.job(first.id).contentAvailable,true);
   const consented=await call(randomUUID(),true);assert.equal(consented.status,202);const second=(await consented.json()).job;assert.equal(s.sync.adminReader.job(second.id,{viewerSubject:s.auth.getIdentity(s.sessions[0].key).subject}).contentAvailable,true);
   assert.equal((await call(randomUUID(),'yes')).status,400);
-  const summary=(await s.request()).body;assert.equal(summary.knownProviderCalls,1);assert.equal(summary.knownCacheReuses,1);assert.equal(summary.unknownProviderCalls,0);assert.equal(summary.usage.requests,1);
+  const summary=(await s.request()).body;assert.equal(summary.knownProviderCalls,1);assert.equal(summary.knownCacheReuses,1);assert.equal(summary.unknownProviderCalls,0);assert.equal(summary.usage.requests,1);assert.equal(summary.usage.organizingRequests,1);assert.equal(summary.usage.questionRequests,0);assert.equal(summary.usage.dailyRequestLimit,50);assert.equal(summary.usage.dailyQuestionLimit,40);
   const firstRow=s.sync.adminReader.job(first.id,{viewerSubject:s.auth.getIdentity(key).subject});assert.deepEqual(firstRow.tokenUsage,{input:20,output:30,reasoning:10});
 });
 test('the login shell carries a nonce CSP, a single trusted product preview origin, no secrets and no dynamic HTML sinks',async t=>{

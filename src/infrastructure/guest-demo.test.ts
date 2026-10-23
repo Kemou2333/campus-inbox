@@ -4,6 +4,8 @@ import {LocalDemoRepository,LOCAL_DEMOS_KEY} from './local-demo-repository';
 import {LocalRepository} from './local-repository';
 import {CloudSync} from './sync-client';
 import {isLocalDemoNotice} from '../domain/local-demo';
+import primaryDemo from '../features/onboarding/demo-notice.json';
+import extraDemos from '../features/onboarding/guest-demo-notices.json';
 
 const memory=()=>{const values=new Map<string,string>();return {getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>{values.set(key,value);},removeItem:(key:string)=>{values.delete(key);}};};
 afterEach(()=>vi.useRealTimers());
@@ -27,6 +29,16 @@ describe('explicit guest sample',()=>{
    const result=createGuestDemoNotice(String(index),text);expect(result.originalText).toBe(text);return result.title;
   })).toEqual(['本科生评教','篮球队招新','SRTP项目申报','军训宿舍安全','助学贷款入账','操作系统训练营','班干部竞选面试','高数II-1网课']);
   expect(()=>createGuestDemoNotice('edited','已修改的示例')).toThrow('示例已修改');
+ });
+ test('exact previously filled samples remain free while personal edits and attachments do not match',()=>{
+  for(const fixture of [primaryDemo,...extraDemos])for(const old of fixture.legacyOriginalTexts){
+   const draft={text:old.text,attachments:[],demo:GUEST_DEMO_MARKER};
+   expect(isGuestDemoDraft(draft)).toBe(true);
+   expect(createGuestDemoNotice('old-draft',old.text).originalText).toBe(fixture.notice.originalText);
+   expect(isGuestDemoDraft({...draft,demo:undefined})).toBe(false);
+   expect(isGuestDemoDraft({...draft,text:old.text+' 我的补充'})).toBe(false);
+   expect(isGuestDemoDraft({...draft,attachments:['user-file']})).toBe(false);
+  }
  });
  test('persists its remaining deck, respects the old next sample, and works without storage',()=>{
   const storage=memory();storage.setItem('campus-inbox:guest-demo-next:v1','1');

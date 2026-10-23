@@ -8,7 +8,9 @@ afterEach(()=>vi.useRealTimers());
 test('practice only generates after the real fill action and can update its isolated notice',async()=>{
  vi.useFakeTimers();const changed=vi.fn(),session=createGuideSession(changed);
  expect(await session.organize()).toBe(false);expect(session.snapshot.notice).toBeNull();
- session.fill();expect(session.snapshot.draft.text.length).toBeGreaterThan(200);
+ session.fill();
+ expect(session.snapshot.draft.text.length).toBeLessThan(180);
+ for(const meaning of ['课程结束前','重庆大学服务号','功能 → 评教','统一认证号和密码','匿名'])expect(session.snapshot.draft.text).toContain(meaning);
  const generated=session.organize();expect(session.snapshot.busy).toBe(true);
  await vi.advanceTimersByTimeAsync(1800);expect(await generated).toBe(true);
  expect(session.snapshot.notice?.id).toBe(GUIDE_NOTICE_ID);
@@ -94,4 +96,13 @@ test('the generated-result reading step reveals the overview without the expand 
  expect(guideStepTarget(1,generated,false)).toBe('.notice-overview');
  expect(guideReadingTarget(1,generated)).toBe('.notice-overview');
  expect(guideStepTarget(2,generated,false)).toBe('.notice-expand');
+});
+
+
+test('the spotlight stops at the real scroll viewport instead of exposing a blank strip below it',()=>{
+ const context={x:500,y:220,width:760,height:1100};
+ const layout=guideLayout({width:1440,height:900,top:190,bottom:750},context,null,190);
+ expect(layout.side).toBe(true);
+ expect(layout.focus.y+layout.focus.height).toBe(750);
+ expect(layout.availableBottom).toBe(750);
 });

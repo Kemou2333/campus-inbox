@@ -1,7 +1,7 @@
 import {parseNotice} from '../../domain/notice';
 import fixture from './demo-notice.json';
 
-/** Previously generated, manually redacted real notice. No live AI call. */
+/** Human-curated, privacy-reviewed public sample. No live AI call or raw model result. */
 export const demoOriginal=fixture.notice.originalText;
 export function createDemoNotice(){
  const notice=parseNotice(fixture.notice),now=new Date().toISOString();

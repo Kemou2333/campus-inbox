@@ -18,10 +18,10 @@ test('developer reset restores completed and deleted catalog examples while pres
  expect(result.restored).toBe(2);
  expect(completed.note).toBe('演示笔记');
 });
-test('an empty library starts with five fresh examples and leaves the rest available',()=>{
+test('an empty library starts with seven fresh examples and leaves the rest available',()=>{
  const result=planExampleReset([],catalog,[],now);
- expect(result.notices).toHaveLength(5);
- expect(result.remaining).toBe(catalog.length-5);
+ expect(result.notices).toHaveLength(7);
+ expect(result.remaining).toBe(catalog.length-7);
  expect(result.notices[0]).not.toBe(catalog[0]);
  expect(result.notices[0].updatedAt).toBe(now);
 });

@@ -2,7 +2,7 @@ import {useEffect,useLayoutEffect,useRef,useState,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {Box,Paper,useMediaQuery} from '@mui/material';
 import {useTheme} from '@mui/material/styles';
-import {followGuideRect,guideLayout,guideRectOffset,type GuideLayout,type GuideRect} from './guide-layout';
+import {guideLayout,type GuideLayout,type GuideRect} from './guide-layout';
 import {installGuideModalGuard} from './guide-modal';
 
 const controls='button,input,textarea,select,a[href],[role="button"],[role="checkbox"],[tabindex]';
@@ -11,7 +11,6 @@ const rect=(element:Element):GuideRect=>{
  const r=element.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};
 };
 const sameLayout=(a:GuideLayout|null,b:GuideLayout)=>JSON.stringify(a)===JSON.stringify(b);
-const ease=(t:number)=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
 
 type GuideFocusProps={
  selector:string;readingSelector:string;active:boolean;children:ReactNode;onClose:()=>void;
@@ -40,8 +39,7 @@ export function GuideFocus({selector,readingSelector,active,children,onClose,blo
   if(!active)return;
   const shell=document.querySelector<HTMLElement>('[data-guide-shell]');
   if(!shell)return;
-  let frame=0,disposed=false,first=true,moveStarted=0,topRevealed=false;
-  let focusOffset:GuideRect|null=null,controlOffset:GuideRect|null=null;
+  let frame=0,disposed=false,topRevealed=false;
   let highlighted:HTMLElement|null=null,targetPulse:Animation|null=null;
   let modal:ReturnType<typeof installGuideModalGuard>|null=null;
   let readOnly:HTMLTextAreaElement|null=null,wasReadOnly=false;
@@ -82,37 +80,26 @@ export function GuideFocus({selector,readingSelector,active,children,onClose,blo
    }
    modal?.ensureFocus();
   }
-  function measure(now:number){
+  function measure(){
    if(disposed)return;
    const next=target(),reading=context();
    if(reading){
     const action=currentAction(),height=window.visualViewport?.height??window.innerHeight;
-    const width=window.visualViewport?.width??window.innerWidth,panelHeight=panel.current?.getBoundingClientRect().height??210;
-    const top=visibleTop(next);
-    const measured=guideLayout({width,height,top},rect(reading),action?rect(action):null,panelHeight);
-    if(first){
-     first=false;moveStarted=now;
-     const before=lastLayout.current;
-     // A newly generated card fades into focus where it actually appears.
-     // Do not fly the caption or stretch a hole from the bottom submit button.
-     if(before&&!reduced&&!returnToTop&&selector!=='.notice-card'&&selector!=='.notice-overview'){
-      focusOffset=guideRectOffset(before.focus,measured.focus);
-      if(before.control&&measured.control)controlOffset=guideRectOffset(before.control,measured.control);
-     }
-    }
-    const remaining=reduced?0:1-ease(Math.min(1,(now-moveStarted)/720));
-    // Scroll, resize and expanding content are measured on every frame. Only the
-    // one intentional focus move has a decaying offset; there is no CSS lag.
-    const displayed:GuideLayout={...measured,
-     focus:focusOffset?followGuideRect(measured.focus,focusOffset,remaining):measured.focus,
-     control:measured.control&&controlOffset?followGuideRect(measured.control,controlOffset,remaining):measured.control,
-     panel:measured.panel};
-    lastLayout.current=displayed;
-    setLayout(previous=>sameLayout(previous,displayed)?previous:displayed);
-    const space=measured.side?'0px':`${panelHeight+44}px`;
+    const width=window.visualViewport?.width??window.innerWidth,panelHeight=panel.current?.getBoundingClientRect().height??190;
+    const top=visibleTop(next),bottom=visibleBottom(next,height);
+    // Keep the hole on the actual rendered content. Moving between different
+    // controls must never leave a free-floating ring above unrelated buttons.
+    const measured=guideLayout({width,height,top,bottom},rect(reading),action?rect(action):null,panelHeight);
+    lastLayout.current=measured;
+    setLayout(previous=>sameLayout(previous,measured)?previous:measured);
+    const space=measured.side?'0px':`${panelHeight+30}px`;
     if(shell!.style.getPropertyValue('--guide-bottom-space')!==space)shell!.style.setProperty('--guide-bottom-space',space);
    }
    frame=requestAnimationFrame(measure);
+  }
+  function visibleBottom(next:HTMLElement|null,height:number){
+   const pane=next?.closest<HTMLElement>('.workspace-pane');
+   return Math.min(height-12,pane?.getBoundingClientRect().bottom??height-12);
   }
   function visibleTop(next:HTMLElement|null){
    const headerBottom=shell!.querySelector('header')?.getBoundingClientRect().bottom??62;
@@ -134,7 +121,7 @@ export function GuideFocus({selector,readingSelector,active,children,onClose,blo
     return;
    }
    const top=visibleTop(next);
-   const area=guideLayout({width,height,top},rect(reading),rect(next),panel.current?.getBoundingClientRect().height??210);
+   const area=guideLayout({width,height,top,bottom:visibleBottom(next,height)},rect(reading),rect(next),panel.current?.getBoundingClientRect().height??190);
    const bounds=next.getBoundingClientRect(),bottom=area.availableBottom-14;
    const delta=bounds.height>bottom-top?bounds.top-top:bounds.top<top?bounds.top-top:bounds.bottom>bottom?bounds.bottom-bottom:0;
    if(Math.abs(delta)>1){
@@ -151,9 +138,13 @@ export function GuideFocus({selector,readingSelector,active,children,onClose,blo
   },reading:context,viewport:()=>({top:visibleTop(target()),bottom:lastLayout.current?.availableBottom??window.innerHeight-12}),readOnly:()=>targetReadOnly,dismissible,onClose:()=>onCloseRef.current(),onBlocked:explain});
   frame=requestAnimationFrame(measure);
   const fade=(selector==='.notice-card'||selector==='.notice-overview')&&!reduced?panel.current?.animate([{opacity:0},{opacity:1}],{duration:320,easing:'ease-out'}):undefined;
-  const firstReveal=requestAnimationFrame(reveal),settled=setTimeout(reveal,reduced?0:760);
+  const firstReveal=requestAnimationFrame(reveal),settled=setTimeout(reveal,reduced?0:360);
+  const resize=()=>{reveal();};
+  window.addEventListener('resize',resize);window.visualViewport?.addEventListener('resize',resize);
+  const panelSize=new ResizeObserver(resize);if(panel.current)panelSize.observe(panel.current);
   return()=>{
    disposed=true;cancelAnimationFrame(frame);cancelAnimationFrame(firstReveal);clearTimeout(settled);
+   panelSize.disconnect();window.removeEventListener('resize',resize);window.visualViewport?.removeEventListener('resize',resize);
    mutation.disconnect();fade?.cancel();targetPulse?.cancel();highlighted?.classList.remove('guide-focus-target');
    modal?.dispose();
    for(const [control,state] of locked)restore(control,state);
@@ -166,8 +157,8 @@ export function GuideFocus({selector,readingSelector,active,children,onClose,blo
  const focus=arrived?layout?.focus:null,control=arrived?layout?.control:null;
  return createPortal(<Box className="in-product-guide" sx={{position:'fixed',inset:0,zIndex:theme.zIndex.modal+2,pointerEvents:'none',overflow:'hidden'}}>
   <Box aria-hidden="true" className="guide-page-hole" sx={{position:'absolute',left:focus?.x??'50%',top:focus?.y??'50%',width:focus?.width??0,height:focus?.height??0,borderRadius:focus?'16px':0,boxShadow:'0 0 0 150vmax rgba(4, 9, 16, .72), 0 0 28px 6px rgba(0, 0, 0, .26)',opacity:arrived?1:0,transition:reduced?'none':'opacity 240ms ease'}}/>
-  {control&&<Box aria-hidden="true" key={attempt} className="guide-action-ring" sx={{position:'absolute',left:control.x,top:control.y,width:control.width,height:control.height,border:'2px solid',borderColor:'primary.main',borderRadius:'12px',boxShadow:theme=>`0 0 0 4px ${theme.palette.background.paper}, 0 6px 24px rgba(0,0,0,.18)`,animation:!reduced&&attempt?'guide-attention 460ms ease-out':undefined,'@keyframes guide-attention':{'0%,100%':{transform:'scale(1)'},'45%':{transform:'scale(1.1)',boxShadow:'0 0 0 7px rgba(80,145,225,.24)'}}}}/>}
-  <Paper ref={panel} role="dialog" aria-modal="true" aria-label="快速上手" tabIndex={-1} elevation={16} sx={{position:'absolute',left:layout?.panel.x??12,top:layout?.panel.y??12,width:layout?.panel.width??'calc(100% - 24px)',maxWidth:320,maxHeight:'calc(100dvh - 24px)',overflowY:'auto',overscrollBehavior:'contain',pointerEvents:'auto',p:2,borderRadius:'18px',border:'1px solid',borderColor:'divider',outline:'none',opacity:layout?1:0}}>
+  {control&&<Box aria-hidden="true" key={attempt} className="guide-action-ring" sx={{position:'absolute',left:control.x,top:control.y,width:control.width,height:control.height,border:'2px solid',borderColor:'primary.main',borderRadius:'12px',boxShadow:'0 0 0 2px rgba(10,132,119,.14)',animation:!reduced&&attempt?'guide-attention 460ms ease-out':undefined,'@keyframes guide-attention':{'0%,100%':{transform:'scale(1)'},'45%':{transform:'scale(1.1)',boxShadow:'0 0 0 7px rgba(80,145,225,.24)'}}}}/>}
+  <Paper ref={panel} role="dialog" aria-modal="true" aria-label="快速上手" tabIndex={-1} elevation={16} sx={{position:'absolute',left:layout?.panel.x??12,top:layout?.panel.y??12,width:layout?.panel.width??'calc(100% - 24px)',maxWidth:320,maxHeight:'min(280px, calc(100dvh - 130px))',overflowY:'auto',overscrollBehavior:'contain',pointerEvents:'auto',p:{xs:1.5,sm:2},'@media (max-height:600px)':{p:1.25},borderRadius:'18px',border:'1px solid',borderColor:'divider',outline:'none',opacity:layout?1:0}}>
    {children}
    {hint&&<Box key={attempt} role="status" aria-live="polite" sx={{mt:1.5,px:1.25,py:1,borderRadius:1.5,bgcolor:'action.selected',color:'text.secondary',fontSize:14,lineHeight:1.6,animation:reduced?'none':'guide-hint 300ms ease-out','@keyframes guide-hint':{from:{opacity:.4,transform:'translateY(3px)'},to:{opacity:1,transform:'translateY(0)'}}}}>{hint}</Box>}
   </Paper>

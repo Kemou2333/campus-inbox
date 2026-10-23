@@ -460,7 +460,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  function recoverResult(){try{const raw=localStorage.getItem(RESULT_KEY);const value=resultRef.current||(raw?JSON.parse(raw):null);if(value)commitResult(value);}catch(e){report(e);}}
  function recoverLegacyResult(){try{const current=repository.load();save([...current,...legacyRecords.filter(n=>!current.some(old=>old.id===n.id))]);finishLegacyResult(localStorage,sessionStorage);setLegacyRecords([]);tell('旧版整理结果已保存');}catch(e){report(e);}}
  async function exportLegacyWork(){const result=await platform.saveFile(new Blob([legacyWork.text],{type:'text/plain;charset=utf-8'}),'campus-inbox-old-drafts.txt');if(result.status!=='cancelled')tell('旧版草稿已导出');}
- async function loadExamples(limit=5,quiet=false){
+ async function loadExamples(limit=7,quiet=false){
   const scope=localDataScopeRef.current;
   const {records,registry}=await exampleCatalog.load();
   const current=repository.load(),batch=selectExampleBatch(current,records,limit),merged=await mergeExamples(current,batch.records,registry);
