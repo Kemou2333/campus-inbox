@@ -52,14 +52,14 @@ test('captcha form, bound single-use ticket and HEAD deliver exact approved byte
   assert.equal((await s.request(url)).status,403);assert.equal((await s.request(url,{method:'HEAD'})).status,403);assert.equal((await s.state()).reservedBytes,s.bytes.length);
 });
 
-test('five guesses, 30-second refresh, hourly captcha issuance, expiry, origin and IP binding reject bypasses',async t=>{
+test('five guesses, 15-second refresh, hourly captcha issuance, expiry, origin and IP binding reject bypasses',async t=>{
   const s=await fixture();t.after(s.close);const {token}=await s.challenge();
   assert.equal((await s.challenge()).token,token,'reload within cooldown reuses the image');
   assert.equal((await s.verify(token,'203.0.113.8')).status,400);
   for(const headers of [{Origin:'https://untrusted.example', 'Content-Type':'application/x-www-form-urlencoded'},{'Content-Type':'application/x-www-form-urlencoded'},{Origin:origin,'Sec-Fetch-Site':'cross-site','Content-Type':'application/x-www-form-urlencoded'}])assert.equal((await s.request(path,{method:'POST',headers,body:new URLSearchParams({challenge:token,answer:'2468'}).toString()})).status,403);
   for(const answer of ['','12','12a4','9999','12345'])assert.equal((await s.verify(token,undefined,answer)).status,400);
-  assert.equal((await s.verify(token)).status,400);const cooldown=await s.request();assert.equal(cooldown.status,429);assert.equal(cooldown.headers['retry-after'],'30');
-  s.advance(29_999);assert.equal((await s.request()).headers['retry-after'],'1');s.advance(1);const replacement=await s.challenge();assert.notEqual(replacement.token,token);
+  assert.equal((await s.verify(token)).status,400);const cooldown=await s.request();assert.equal(cooldown.status,429);assert.equal(cooldown.headers['retry-after'],'15');
+  s.advance(14_999);assert.equal((await s.request()).headers['retry-after'],'1');s.advance(1);const replacement=await s.challenge();assert.notEqual(replacement.token,token);
   s.advance(300_000);assert.equal((await s.verify(replacement.token)).status,400);assert.equal((await s.state()).reservedBytes,0);
   const fresh=await s.challenge();const accepted=await s.verify(fresh.token);assert.equal(accepted.status,303);const url=accepted.headers.location.slice(origin.length);
   assert.equal((await s.request(url,{ip:'203.0.113.8'})).status,403);s.advance(120_000);assert.equal((await s.request(url)).status,403);

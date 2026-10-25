@@ -4,7 +4,7 @@ import {analyze,answerNoticeQuestion,boundedText,ServiceError,modelInput,modelPa
 import {createImageCaptcha,captchaAnswerHash} from './image-captcha.mjs';
 import {createRollingQuota,pruneRollingQuota,checkRollingQuota,reserveRollingQuota,remainingRollingAccount,createSplitQuota} from './ai-quota.mjs';
 const D=globalThis.CampusData;
-const RATE_WINDOW_MS=180000,RATE_LIMIT=5,AUTHENTICATED_IP_RATE_LIMIT=20;
+const RATE_WINDOW_MS=180000,RATE_LIMIT=5,AUTHENTICATED_IP_RATE_LIMIT=20,IMAGE_REFRESH_MS=15000;
 // Peak list prices translated at a conservative 8 RMB/USD; cached input is
 // deliberately priced as a miss. These estimates are not provider invoices.
 // Update both values when the provider's prices change.
@@ -188,7 +188,7 @@ export async function createService(config,options={}){
     const accountEntries=accountKey?(usage.accountRates[accountKey]||[]).filter(v=>t-v<RATE_WINDOW_MS):null;
     const proof=request.headers.get('X-Campus-Proof');
     const imageScopes=challenge=>challenge.type==='image'&&(challenge.network===rollingKeys.ipKey||account&&challenge.owner===rollingKeys.accountKey);
-    const findRecentImages=()=>publicMode&&!proof&&!saved&&verificationMode==='image'?[...challenges.values()].filter(challenge=>imageScopes(challenge)&&now()-challenge.created<30000&&challenge.expires>now()):[];
+    const findRecentImages=()=>publicMode&&!proof&&!saved&&verificationMode==='image'?[...challenges.values()].filter(challenge=>imageScopes(challenge)&&now()-challenge.created<IMAGE_REFRESH_MS&&challenge.expires>now()):[];
     let recentImages=findRecentImages();
     if(proof){
       const verified=publicMode?verify(proof,ipKey,hash,origin,t,accountKey):false;
@@ -250,8 +250,8 @@ export async function createService(config,options={}){
       if(recentImages.length){
         const existing=recentImages.find(challenge=>!challenge.exhausted&&challenge.hash===hash&&challenge.origin===origin&&challenge.account===accountKey&&challenge.ip===ipKey);
         if(existing&&recentImages.length===1)return reply({code:'VERIFICATION_REQUIRED',challenge:existing.publicChallenge},428);
-        const seconds=Math.max(1,Math.ceil((Math.max(...recentImages.map(challenge=>challenge.created))+30000-t)/1000));
-        return reply({error:`更换图形验证码需间隔 30 秒，请 ${seconds} 秒后再试。`,code:'CAPTCHA_REFRESH_LIMIT',retryAfterSeconds:seconds},429,{'Retry-After':String(seconds)});
+        const seconds=Math.max(1,Math.ceil((Math.max(...recentImages.map(challenge=>challenge.created))+IMAGE_REFRESH_MS-t)/1000));
+        return reply({error:`更换图形验证码需间隔 15 秒，请 ${seconds} 秒后再试。`,code:'CAPTCHA_REFRESH_LIMIT',retryAfterSeconds:seconds},429,{'Retry-After':String(seconds)});
       }
       if(verificationMode==='image')for(const [id,challenge] of challenges)if(imageScopes(challenge))challenges.delete(id);
       if(challenges.size>=2000)return reply({error:'服务繁忙，请稍后再试。'},503);

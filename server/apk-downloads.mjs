@@ -8,7 +8,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 import {createImageCaptcha,captchaAnswerHash} from './image-captcha.mjs';
 
 const DAILY_BYTES=200_000_000,BYTES_PER_SECOND=2_000_000,HOUR=3_600_000;
-const CAPTCHA_LIFETIME=300_000,TICKET_LIFETIME=120_000,REFRESH_INTERVAL=30_000;
+const CAPTCHA_LIFETIME=300_000,TICKET_LIFETIME=120_000,REFRESH_INTERVAL=15_000;
 const MAX_DOWNLOADS_PER_HOUR=5,MAX_ACTIVE=8,MAX_CAPTCHAS_PER_HOUR=20,CHUNK_BYTES=64*1024;
 const VERSION='(?:0|[1-9]\\d{0,3})\\.(?:0|[1-9]\\d{0,3})\\.(?:0|[1-9]\\d{0,3})';
 const routePattern=new RegExp('^/downloads/android-v('+VERSION+')/(campus-inbox-\\1\\.apk)$');
@@ -127,7 +127,7 @@ export async function createAPKDownloads(config,options={}){
     const nonce=randomBytes(16).toString('base64');securityHeaders(res,nonce);res.setHeader('Referrer-Policy','same-origin');res.statusCode=status;res.setHeader('Content-Type','text/html; charset=utf-8');if(retry)res.setHeader('Retry-After',String(retry));
     const path=release?pathnameFor(release):'/downloads/',action=config.publicOrigin+path;
     const form=challenge?'<form method="post" action="'+htmlEscape(action)+'"><label for="answer">图中的四位数字</label><img src="'+htmlEscape(challenge.image)+'" width="240" height="88" alt="四位数字验证码"><input type="hidden" name="challenge" value="'+htmlEscape(tokenFor('challenge',challenge))+'"><input id="answer" name="answer" inputmode="numeric" autocomplete="off" maxlength="4" pattern="[0-9]{4}" required aria-label="四位数字验证码"><button type="submit">验证并下载</button></form>':'';
-    const links=release?'<p><a href="'+htmlEscape(action)+'">'+(challenge?'换一张验证码':'重新获取验证码')+'</a><span class="muted"> · 换图需间隔30秒</span></p><p class="backup"><a href="'+htmlEscape(release.github)+'" rel="noopener noreferrer">GitHub 备用下载</a></p>':'';
+    const links=release?'<p><a href="'+htmlEscape(action)+'">'+(challenge?'换一张验证码':'重新获取验证码')+'</a><span class="muted"> · 换图需间隔15秒</span></p><p class="backup"><a href="'+htmlEscape(release.github)+'" rel="noopener noreferrer">GitHub 备用下载</a></p>':'';
     const body='<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>拾笺 · Note Inbox · 安卓下载</title><style nonce="'+nonce+'">*{box-sizing:border-box}body{margin:0;background:#f4f7f6;color:#193a37;font:16px/1.7 system-ui,sans-serif}main{max-width:480px;margin:32px auto;padding:24px;background:#fff;border:1px solid #dce8e4;border-radius:20px}h1{font-size:25px;line-height:1.3}p{overflow-wrap:anywhere}label{display:block;font-weight:600;margin-top:20px}img{display:block;max-width:100%;object-fit:contain;margin:8px 0}input,button{font:inherit;border-radius:12px;min-height:48px;padding:10px 14px}input:not([type=hidden]){width:100%;border:1px solid #a9c4bd;font-size:22px;letter-spacing:.3em}button{width:100%;margin-top:14px;border:0;background:#087f71;color:white;font-weight:600;cursor:pointer}a{color:#087f71;text-underline-offset:3px}.muted,small{color:#627b74;font-size:14px}.backup{border-top:1px solid #e1ebe7;padding-top:18px}@media(max-width:520px){main{margin:12px;padding:20px}}</style></head><body><main><h1>拾笺 · Note Inbox 安卓下载</h1>'+(release?'<p class="muted">版本 '+htmlEscape(release.version)+' · '+(release.size/1_000_000).toFixed(2)+' MB</p>':'')+'<p role="status">'+htmlEscape(message)+'</p>'+form+links+'<small>每次下载前验证。阿里云每日总量200 MB，每个网络每小时最多5次下载、同时1次；单条最高2 MB/s。额度用完时可选择GitHub备用下载。</small></main></body></html>';
     res.setHeader('Content-Length',Buffer.byteLength(body));res.end(req.method==='HEAD'?undefined:body);
   }

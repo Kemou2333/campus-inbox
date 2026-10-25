@@ -58,12 +58,12 @@ test('image refresh cooldown, per-client limits and counters survive restart',as
   const directory=await mkdtemp(join(tmpdir(),'campus-auth-image-'));t.after(()=>rm(directory,{recursive:true,force:true}));
   const f=await fixture(join(directory,'auth.sqlite'),{challengeClientMinute:1});t.after(f.close);const clientId=randomUUID();
   const captcha=await f.image('login','same-campus',clientId);
-  const early=await f.request('challenge',{purpose:'login',clientId});assert.equal(early.status,429);assert.equal(early.body.retryAfterSeconds,30);
+  const early=await f.request('challenge',{purpose:'login',clientId});assert.equal(early.status,429);assert.equal(early.body.retryAfterSeconds,15);
   // A consumed image cannot erase the durable refresh cooldown.
-  await f.request('login',{username:'missing-user',password,captcha});await f.restart();f.advance(29999);
+  await f.request('login',{username:'missing-user',password,captcha});await f.restart();f.advance(14999);
   const before=await f.request('challenge',{purpose:'login',clientId});assert.equal(before.status,429);assert.equal(before.body.retryAfterSeconds,1);
-  f.advance(1);const minute=await f.request('challenge',{purpose:'login',clientId});assert.equal(minute.status,429);assert.equal(minute.body.retryAfterSeconds,30);
-  f.advance(30000);await f.image('login','same-campus',clientId);
+  f.advance(1);const minute=await f.request('challenge',{purpose:'login',clientId});assert.equal(minute.status,429);assert.equal(minute.body.retryAfterSeconds,45);
+  f.advance(45000);await f.image('login','same-campus',clientId);
 });
 test('rolling password guessing caps cannot burst across a clock minute or rotate IPs',async t=>{
   const f=await fixture();t.after(f.close);await f.register();
@@ -84,9 +84,9 @@ test('unsolved image requests cannot exhaust a named account password budget fro
   const captcha=await f.image('login','real-user-network');assert.equal((await f.request('login',{username:'kemou',password,captcha},'real-user-network')).status,200);
 });
 
-test('default image refresh accepts a new image at exactly thirty seconds after a consumed challenge',async t=>{
+test('default image refresh accepts a new image at exactly fifteen seconds after a consumed challenge',async t=>{
   const f=await fixture();t.after(f.close);const clientId=randomUUID(),captcha=await f.image('login','same-campus',clientId);
-  await f.request('login',{username:'missing-user',password,captcha});f.advance(29999);
+  await f.request('login',{username:'missing-user',password,captcha});f.advance(14999);
   const early=await f.request('challenge',{purpose:'login',clientId});assert.equal(early.status,429);assert.equal(early.body.retryAfterSeconds,1);
-  f.advance(1);const ready=await f.request('challenge',{purpose:'login',clientId});assert.equal(ready.status,200);assert.equal(ready.body.retryAfterSeconds,30);
+  f.advance(1);const ready=await f.request('challenge',{purpose:'login',clientId});assert.equal(ready.status,200);assert.equal(ready.body.retryAfterSeconds,15);
 });

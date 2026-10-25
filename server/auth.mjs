@@ -8,7 +8,7 @@ import {createEmailAuth} from './email-auth.mjs';
 import {canonicalLoginEmail} from './contracts/email-policy.mjs';
 import {createImageCaptcha,captchaAnswerHash} from './image-captcha.mjs';
 
-const scrypt=promisify(derive),DAY=86400000,SESSION_TTL=30*DAY,IMAGE_REFRESH_MS=30000;
+const scrypt=promisify(derive),DAY=86400000,SESSION_TTL=30*DAY,IMAGE_REFRESH_MS=15000;
 const ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const validKey=key=>typeof key==='string'&&/^[A-Za-z0-9_-]{43}$/.test(key);

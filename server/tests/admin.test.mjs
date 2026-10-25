@@ -61,8 +61,8 @@ test('reviewed real test runs are administrator-only and never create user jobs 
   const rows=response.body.records;assert.equal(rows.length,3);assert.equal(new Set(rows.map(row=>row.id)).size,3);
   assert.deepEqual(rows.map(row=>row.sourceVersion),['2.16.0','2.16.1','2.16.1']);
   assert.deepEqual(rows.map(row=>row.elapsedMs),[8153,5463,10404]);
-  const first=JSON.parse(await readFile(new URL('../../docs/NOTICE-QUESTION-EXAMPLE.json',import.meta.url),'utf8'));
-  const next=JSON.parse(await readFile(new URL('../../docs/NOTICE-QUESTION-EXAMPLE-2.16.1.json',import.meta.url),'utf8'));
+  const first=JSON.parse(await readFile(new URL('../../docs/archive/examples/NOTICE-QUESTION-EXAMPLE.json',import.meta.url),'utf8'));
+  const next=JSON.parse(await readFile(new URL('../../docs/archive/examples/NOTICE-QUESTION-EXAMPLE-2.16.1.json',import.meta.url),'utf8'));
   for(const [index,original] of [first,...next.cases].entries()){assert.equal(rows[index].sourceText,original.sourceText);assert.equal(rows[index].question,original.question);assert.deepEqual({answer:rows[index].answer,evidence:rows[index].evidence},original.result||original.answer);assert.deepEqual(rows[index].usage,original.usage);assert.equal(rows[index].estimatedRmb,original.estimatedRmb);}
   for(const row of rows){assert.equal(row.origin,'direct-provider-test');assert.equal(row.realProviderCall,true);assert.equal(row.sourceAlreadyRedacted,true);assert.equal(row.automaticRetries,0);assert.equal(row.providerInvoiceVerified,false);assert(row.sourceText&&row.question&&row.answer&&row.evidence.length&&row.usage.input&&row.knownLimitations.length);assert(!Object.hasOwn(row,'ownerSubject'));}
   const copied=rows.find(row=>row.title==='本科生评教');assert(copied.sourceText.includes('\u0014\u0014\b'));assert.match(copied.answer,/\*\*现在做什么\*\*/);
