@@ -40,4 +40,4 @@ flowchart LR
 
 原文与提问会发给第三方 DeepSeek 处理，请勿输入身份证号、手机号等敏感信息。AI 可能漏读或理解有误，重要事项请核对原通知。工具不自动读群聊或代填表单；图片与附件通常留在本机。[隐私说明](docs/PRIVACY.md)。
 
-Kemou（Kemou）制作 · [AGPL-3.0-only](LICENSE)
+[AGPL-3.0-only](LICENSE)
