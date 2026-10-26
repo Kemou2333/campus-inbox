@@ -27,6 +27,15 @@ class ReleaseBoundary(unittest.TestCase):
         self.assertEqual(manifest['commit'], 'a' * 40)
         self.assertEqual(len(files), 5)
 
+    def test_packaged_video_stays_inside_static_asset_boundary(self):
+        root = self.build()
+        (root / 'assets/note-inbox-intro-v10.mp4').write_bytes(b'public-video')
+        files, _ = installer.read_release(packer.package(root, 'a' * 40))
+        self.assertEqual(files['assets/note-inbox-intro-v10.mp4'], b'public-video')
+        (root / 'unreviewed-video.mp4').write_bytes(b'other-video')
+        with self.assertRaises(ValueError):
+            installer.read_release(packer.package(root, 'a' * 40))
+
     def test_rejects_private_unexpected_build_file(self):
         root = self.build()
         (root / '.env').write_text('not-a-real-secret')

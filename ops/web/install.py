@@ -9,7 +9,7 @@ TOP = {'index.html', 'admin-preview.html', 'icon.svg', 'runtime-config.json',
        'android-download.json', 'examples.json', 'examples-legacy.json',
        'examples-legacy-2.4.json', 'examples-provenance.json', 'model-tests.json'}
 SUFFIXES = {'.html', '.js', '.css', '.json', '.svg', '.png', '.jpg', '.jpeg',
-            '.webp', '.woff2', '.ttf', '.pfb', '.bcmap', '.wasm', '.mp3', '.wav', '.ogg'}
+            '.webp', '.woff2', '.ttf', '.pfb', '.bcmap', '.wasm', '.mp3', '.wav', '.ogg', '.mp4'}
 
 def read_release(archive):
     if len(archive) > MAX_ARCHIVE:

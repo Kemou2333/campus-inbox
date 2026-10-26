@@ -8,6 +8,7 @@ import HelpOutline from '@mui/icons-material/HelpOutlineOutlined';
 import DownloadOutlined from '@mui/icons-material/DownloadOutlined';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import Close from '@mui/icons-material/Close';
+import PlayCircleOutline from '@mui/icons-material/PlayCircleOutlined';
 import {useCampus} from './useCampus';
 import {makeTheme} from './theme';
 import {FeedPage,createFeedViewState} from '../features/notices/FeedPage';
@@ -36,6 +37,7 @@ import {useHomeWidget} from '../features/widgets/useHomeWidget';
 
 const ShareImageDialog=lazy(()=>import('../features/sharing/ShareImageDialog'));
 const NoticeQuestionDialog=lazy(()=>import('../features/questions/NoticeQuestionDialog'));
+const PromoVideoDialog=lazy(()=>import('../shared/ui/PromoVideoDialog'));
 
 const nav=[{label:'通知',icon:<Inbox/>},{label:'添加',icon:<AddCircleOutline/>},{label:'设置',icon:<SettingsOutlined/>}];
 export default function App(){
@@ -52,6 +54,7 @@ export default function App(){
  const guide=useGuideSession(app,help||launchStage!=='idle'),viewApp=guide.controller;
  const [guideStep,setGuideStep]=useState(0);
  const [downloadsOpen,setDownloadsOpen]=useState(false);
+ const [promoOpen,setPromoOpen]=useState(false);
  const firstEntry=useRef<ReturnType<typeof createFirstEntryMotion>|null>(null);
  const reducedMotion=useMediaQuery('(prefers-reduced-motion: reduce)');
  // The page is concealed behind the introduction. Its single entrance finishes
@@ -92,7 +95,7 @@ export default function App(){
  useEffect(()=>{if(app.latestAddedID&&!help){setPage(0);setFocusID(app.latestAddedID);}},[app.latestAddedID]);
  const dark=app.theme==='system'?(app.capabilities?.theme?.dark??systemDark):app.theme==='dark';const theme=makeTheme(dark,app.capabilities?.theme??null);
  useEffect(()=>{document.documentElement.dataset.platform=app.platform.kind;document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.style.colorScheme=dark?'dark':'light';document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme.palette.background.default);if(app.platform.setAppearance)void app.platform.setAppearance(dark).catch(app.report);},[app.platform,dark]);
- const modalRef=useRef(false);modalRef.current=login||help||launchStage!=='idle'||about||downloadsOpen||!!note||!!details||!!calendar||!!correction||!!share||!!questionID||settingsDialog||!!verification.request;
+ const modalRef=useRef(false);modalRef.current=login||help||launchStage!=='idle'||about||downloadsOpen||promoOpen||!!note||!!details||!!calendar||!!correction||!!share||!!questionID||settingsDialog||!!verification.request;
  const lastNotices=useRef(app.notices);
  const unreadReminders=app.notices.filter(n=>app.unreadNoticeIDs.includes(n.id)&&getNoticeStatus(n)==='reminder');
  function clearNewReminders(){app.clearUnreadNotices(unreadReminders.map(n=>n.id));}
@@ -114,15 +117,16 @@ export default function App(){
   const openNotice=()=>{void app.platform.getOpenedNotice().then(id=>{if(id){setPage(0);setFocusID(id);}}).catch(app.report);};
   const openInbox=()=>{void app.platform.getOpenedInbox?.().then(opened=>{if(opened){setPage(0);setFocusID(null);setFeedView(createFeedViewState());}}).catch(app.report);};
   const offShare=app.platform.onShare(receive);const offNotice=app.platform.onOpenNotice(openNotice);const offInbox=app.platform.onOpenInbox?.(openInbox);receive();openNotice();openInbox();return()=>{offShare();offNotice();offInbox?.();};
- },[app.platform,app.busy,login,help,about,note,details,calendar,settingsDialog,share]);
+ },[app.platform,app.busy,login,help,about,note,details,calendar,settingsDialog,share,promoOpen]);
  useEffect(()=>app.platform.onBack(()=>{
   if(help){closeHelp();return true;}
+  if(promoOpen){setPromoOpen(false);return true;}
   const dialog=Array.from(document.querySelectorAll('[role="dialog"]')).at(-1);
   if(dialog){dialog.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',code:'Escape',bubbles:true}));return true;}
   if(correction){setCorrection(null);return true;}
   if(launchStage==='intro'){if(!tutorialRequired)setLaunchStage('idle');return true;}if(launchStage==='entry'||launchStage==='leaving')return true;
   if(page!==0){navigate(0);return true;}return false;
- }),[app.platform,page,correction,launchStage,help,tutorialRequired]);
+ }),[app.platform,page,correction,launchStage,help,tutorialRequired,promoOpen]);
  useEffect(()=>{if(details&&!app.notices.some(n=>n.id===details))setDetails(null);},[app.notices,details]);
  useEffect(()=>{if(correction&&!app.notices.some(n=>n.id===correction.noticeID))setCorrection(null);},[app.notices,correction]);
  useEffect(()=>{if(questionID&&!app.notices.some(n=>n.id===questionID))setQuestionID(null);},[app.notices,questionID]);
@@ -135,9 +139,10 @@ export default function App(){
   <Box data-first-entry-shell data-guide-shell inert={launchStage==='entry'||undefined} aria-hidden={launchStage==='intro'||launchStage==='leaving'||undefined} sx={{minHeight:'100dvh',visibility:launchStage==='intro'||launchStage==='leaving'?'hidden':'visible','& .composer-actions':help?{position:'static'}:undefined}}>
   <AppBar data-first-entry="masthead" position="sticky" color="inherit" elevation={0} sx={{borderBottom:'1px solid',borderColor:'divider',pt:'var(--safe-top)',bgcolor:'background.default'}}>
    <Toolbar sx={{maxWidth:1240,width:'100%',mx:'auto',gap:{xs:.5,sm:1},minHeight:{xs:56,sm:64},px:{xs:1.5,sm:3}}}>
-    <Tooltip title="了解拾笺 · Note Inbox"><Button aria-label="关于拾笺 · Note Inbox" onClick={()=>setAbout(true)} endIcon={<InfoOutlined sx={{fontSize:16,color:'text.secondary'}}/>} sx={{px:.5,minWidth:0,color:'text.primary',gap:.75,whiteSpace:'nowrap','& .MuiButton-endIcon':{ml:0}}}><Box component="img" src="./icon.svg" width={32} height={32} alt=""/><Typography sx={{fontWeight:700,fontSize:{xs:'1rem',sm:'1.125rem'},lineHeight:1.4}}>拾笺 · Note Inbox</Typography></Button></Tooltip>
+    <Tooltip title="了解拾笺 · Note Inbox"><Button aria-label="关于拾笺 · Note Inbox" onClick={()=>setAbout(true)} endIcon={<InfoOutlined sx={{fontSize:16,color:'text.secondary'}}/>} sx={{px:.5,minWidth:0,color:'text.primary',gap:.75,whiteSpace:'nowrap',overflow:'hidden','& .MuiButton-endIcon':{ml:0,flexShrink:0}}}><Box component="img" src="./icon.svg" width={32} height={32} alt="" sx={{flexShrink:0}}/><Typography sx={{fontWeight:700,fontSize:{xs:'1rem',sm:'1.125rem'},lineHeight:1.4,minWidth:0,overflow:'hidden',textOverflow:'ellipsis'}}>拾笺 · Note Inbox</Typography></Button></Tooltip>
     <Box sx={{flex:1}}/>
     {wide&&nav.map((item,i)=>split?i===1?null:<Button key={item.label} variant={(i===0?page!==2:page===2)?'contained':'text'} onClick={()=>navigate(i)} sx={{px:2}}>{item.label}</Button>:<Tooltip key={item.label} title={item.label}><IconButton aria-label={item.label} onClick={()=>navigate(i)} sx={{color:page===i?'primary.main':'text.secondary',bgcolor:page===i?'action.selected':undefined}}>{item.icon}</IconButton></Tooltip>)}
+    {app.platform.kind==='browser'&&<Tooltip title="观看介绍视频"><Button aria-label="观看介绍视频" onClick={()=>setPromoOpen(true)} startIcon={wide?<PlayCircleOutline/>:undefined} sx={wide?{px:1.5,flexShrink:0}:{minWidth:44,px:.25,py:.5,flexDirection:'column',gap:.25,color:'text.secondary',lineHeight:1.2,flexShrink:0}}>{!wide&&<PlayCircleOutline sx={{fontSize:24}}/>}<Typography component="span" sx={wide?{fontSize:14,fontWeight:600}:{fontSize:11,lineHeight:1.2}}>介绍</Typography></Button></Tooltip>}
     <Tooltip title="重新查看教程"><Button aria-label="重看教程" onClick={showWelcome} sx={{minWidth:58,px:.5,py:.5,flexDirection:'column',gap:.25,color:'text.secondary',lineHeight:1.2}}><HelpOutline sx={{fontSize:24}}/><Typography component="span" sx={{fontSize:11,lineHeight:1.2}}>重看教程</Typography></Button></Tooltip>
    </Toolbar>
   </AppBar>
@@ -167,6 +172,7 @@ export default function App(){
   <HumanVerificationDialog request={verification.request} onComplete={verification.complete} onCancel={()=>{app.cancel();verification.cancel();}}/>
   <HelpDialog dismissible={!tutorialRequired} open={help} onClose={closeHelp} step={guideStep} onStep={changeGuideStep} progress={guideProgress} expanded={!!guide.state.notice&&feedView.expandedIDs.has(guide.state.notice.id)} onFinished={finishHelp}/><AboutDialog firstUse={tutorialRequired} dismissible={!tutorialRequired} onDeveloperUnlock={unlockDeveloper} open={about||launchStage==='intro'} introduction={launchStage==='intro'||launchStage==='leaving'} onStart={startWelcome} onExited={()=>{if(launchStage==='leaving')setLaunchStage('entry');}} onClose={()=>{setAbout(false);if(launchStage==='intro')setLaunchStage('idle');}}/>
   <Dialog open={downloadsOpen} onClose={()=>setDownloadsOpen(false)} maxWidth="xs" fullWidth><DialogTitle>安卓手机版</DialogTitle><DialogContent><AndroidDownloads compact/></DialogContent><DialogActions><Button onClick={()=>setDownloadsOpen(false)}>关闭</Button></DialogActions></Dialog>
+  {promoOpen&&<Suspense fallback={<Dialog open onClose={()=>setPromoOpen(false)} maxWidth="sm" fullWidth aria-label="正在打开介绍视频"><DialogContent sx={{display:'flex',justifyContent:'center',py:5}}><CircularProgress size={28}/></DialogContent><DialogActions><Button onClick={()=>setPromoOpen(false)}>关闭</Button></DialogActions></Dialog>}><PromoVideoDialog onClose={()=>setPromoOpen(false)}/></Suspense>}
   <Snackbar open={!!app.toast&&!help&&launchStage==='idle'} key={app.toast?.id} autoHideDuration={app.toast?.undo?6500:2400} onClose={(_,reason)=>{if(reason!=='clickaway')app.setToast(null);}} message={app.toast?.text} action={app.toast?.undo?<Button color="inherit" onClick={()=>{const undo=app.toast?.undo;app.setToast(null);undo?.();}}>撤销</Button>:undefined} anchorOrigin={{vertical:split?'bottom':'top',horizontal:'center'}} sx={{...(split?{bottom:24}:{top:{xs:'calc(64px + var(--safe-top))',sm:'calc(64px + var(--safe-top))'},bottom:'auto'}),...(!app.toast?.undo?{pointerEvents:'none',left:{xs:'50%',sm:'50%'},right:'auto',transform:'translateX(-50%)',width:'max-content',maxWidth:'calc(100% - 24px)','& .MuiSnackbarContent-root':{minWidth:0,borderRadius:'24px',py:.25,'& .MuiSnackbarContent-message':{py:.5}}}:{})}}/>
   <Snackbar open={!!app.error} onClose={()=>app.setError('')} anchorOrigin={{vertical:'top',horizontal:'center'}}><Alert severity="error" onClose={()=>app.setError('')} variant="filled" sx={{maxWidth:560}}>{app.error}</Alert></Snackbar>
   {celebration&&<CompletionCelebration point={celebration} reducedMotion={reducedMotion}/>}

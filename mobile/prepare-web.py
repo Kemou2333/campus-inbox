@@ -14,5 +14,5 @@ if 'src="/assets/' in text or 'href="/assets/' in text:
     raise SystemExit("Android needs relative assets. Use Vite base='./' for this build.")
 if destination.exists():
     shutil.rmtree(destination)
-shutil.copytree(source, destination, ignore=shutil.ignore_patterns("*.apk", "downloads", "*.map", "android-download.json"))
+shutil.copytree(source, destination, ignore=shutil.ignore_patterns("*.apk", "downloads", "*.map", "android-download.json", "note-inbox-intro-*.mp4"))
 print("Shared web build packaged for Android.")
