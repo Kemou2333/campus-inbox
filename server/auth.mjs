@@ -9,6 +9,8 @@ import {canonicalLoginEmail} from './contracts/email-policy.mjs';
 import {createImageCaptcha,captchaAnswerHash} from './image-captcha.mjs';
 
 const scrypt=promisify(derive),DAY=86400000,SESSION_TTL=30*DAY,IMAGE_REFRESH_MS=15000;
+const IMAGE_LIFETIME_MS=5*60000,IMAGE_ATTEMPTS=5,IMAGE_MAX_PENDING=1000,HASH_CONCURRENT=4,AUTH_BODY_BYTES=4096,MAX_DEVICE_SESSIONS=20;
+export const AUTH_DEFAULT_LIMITS=Object.freeze({accountLimit:500,registerIPDay:5,registerIPMinute:5,loginIPMinute:10,loginUserMinute:5,loginIPHour:100,loginUserHour:20,challengeClientMinute:10,challengeIPMinute:60,challengeIPHour:300});
 const ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const validKey=key=>typeof key==='string'&&/^[A-Za-z0-9_-]{43}$/.test(key);
@@ -51,7 +53,7 @@ export async function createAuthService(config,options={}){
     insertSession:db.prepare('INSERT INTO invite_sessions(key_hash,user,created,expires) VALUES (?,?,?,?)'),
     renewSession:db.prepare('UPDATE invite_sessions SET expires=? WHERE key_hash=?'),
     deleteSession:db.prepare('DELETE FROM invite_sessions WHERE key_hash=?'),
-    pruneSessions:db.prepare('DELETE FROM invite_sessions WHERE user=? AND key_hash NOT IN (SELECT key_hash FROM invite_sessions WHERE user=? ORDER BY created DESC,rowid DESC LIMIT 20)'),
+    pruneSessions:db.prepare(`DELETE FROM invite_sessions WHERE user=? AND key_hash NOT IN (SELECT key_hash FROM invite_sessions WHERE user=? ORDER BY created DESC,rowid DESC LIMIT ${MAX_DEVICE_SESSIONS})`),
     usage:db.prepare('SELECT count FROM invite_usage WHERE bucket=? AND subject=? AND period=?'),
     rollingUsage:db.prepare('SELECT COALESCE(SUM(count),0) AS count,MIN(period) AS oldest FROM invite_usage WHERE bucket=? AND subject=? AND period>?'),
     countUsage:db.prepare('INSERT INTO invite_usage(bucket,subject,period,count,expires) VALUES (?,?,?,1,?) ON CONFLICT(bucket,subject,period) DO UPDATE SET count=count+1'),
@@ -64,16 +66,16 @@ export async function createAuthService(config,options={}){
     imageAttempt:db.prepare('UPDATE auth_image_challenges SET attempts=attempts+1 WHERE id=?'),
     imageRemove:db.prepare('DELETE FROM auth_image_challenges WHERE id=?'),
     imagePruneClient:db.prepare('DELETE FROM auth_image_challenges WHERE client=?'),
-    imageClean:db.prepare('DELETE FROM auth_image_challenges WHERE expires<=? OR attempts>=5'),
+    imageClean:db.prepare(`DELETE FROM auth_image_challenges WHERE expires<=? OR attempts>=${IMAGE_ATTEMPTS}`),
     publicUsers:db.prepare('SELECT id,username,created FROM invite_users ORDER BY created DESC,id DESC LIMIT ? OFFSET ?'),
   };
-  const now=options.now||Date.now,limits={accountLimit:500,registerIPDay:5,registerIPMinute:5,loginIPMinute:10,loginUserMinute:5,loginIPHour:100,loginUserHour:20,challengeClientMinute:10,challengeIPMinute:60,challengeIPHour:300,...options.limits};
+  const now=options.now||Date.now,limits={...AUTH_DEFAULT_LIMITS,...options.limits};
   const imageCaptchaEnabled=config.imageCaptcha!==false,imageCaptcha=options.imageCaptcha||createImageCaptcha;
   const transaction=operation=>{db.exec('BEGIN IMMEDIATE');try{const result=operation();db.exec('COMMIT');return result;}catch(error){db.exec('ROLLBACK');throw error;}};
   const hashSubject=value=>createHmac('sha256',config.signingSecret).update('invite-auth:'+value).digest('hex');
   let hashing=0;
   async function hashPassword(password,salt){
-    if(hashing>=4)throw new ServiceError('登录服务暂时繁忙，请稍后重试。',429);
+    if(hashing>=HASH_CONCURRENT)throw new ServiceError('登录服务暂时繁忙，请稍后重试。',429);
     hashing++;
     try{return await scrypt(password,salt,64,{N:8192,r:8,p:1,maxmem:16*1024*1024});}
     finally{hashing--;}
@@ -101,9 +103,9 @@ export async function createAuthService(config,options={}){
       rollingRate('image-client-minute',client,limits.challengeClientMinute,60000,'AUTH_CAPTCHA_RATE_LIMIT');
       rollingRate('image-ip-minute',network,limits.challengeIPMinute,60000,'AUTH_CAPTCHA_RATE_LIMIT');
       rollingRate('image-ip-hour',network,limits.challengeIPHour,3600000,'AUTH_CAPTCHA_RATE_LIMIT');
-      if(stmt.imageCount.get().count>=1000)throw new ServiceError('验证服务暂时繁忙，请稍后再试。',429);
+      if(stmt.imageCount.get().count>=IMAGE_MAX_PENDING)throw new ServiceError('验证服务暂时繁忙，请稍后再试。',429);
     });
-    const generated=imageCaptcha(id),expires=t+5*60000;
+    const generated=imageCaptcha(id),expires=t+IMAGE_LIFETIME_MS;
     transaction(()=>{stmt.imagePruneClient.run(client);stmt.imageCreate.run(id,client,network,origin,body.purpose,generated.answerHash,t,expires);});
     return {id,image:generated.image,expiresAt:new Date(expires).toISOString(),retryAfterSeconds:IMAGE_REFRESH_MS/1000};
   }
@@ -114,12 +116,12 @@ export async function createAuthService(config,options={}){
       const issue=new ServiceError('请填写图形验证码。',428);issue.code='AUTH_CAPTCHA_REQUIRED';throw issue;
     }
     const row=stmt.image.get(value.id),t=now();
-    const valid=!!row&&row.expires>t&&row.attempts<5&&row.network===hashSubject('image-ip:'+ip)&&row.origin===origin&&row.purpose===purpose;
+    const valid=!!row&&row.expires>t&&row.attempts<IMAGE_ATTEMPTS&&row.network===hashSubject('image-ip:'+ip)&&row.origin===origin&&row.purpose===purpose;
     const matches=valid&&typeof value.answer==='string'&&/^\d{4}$/.test(value.answer)&&timingSafeEqual(Buffer.from(captchaAnswerHash(value.id,value.answer),'hex'),Buffer.from(row.answer_hash,'hex'));
     // A successful answer is consumed before password hashing/email sending.
     // Incorrect guesses stay counted even when the login request then fails.
     if(matches){stmt.imageRemove.run(value.id);return;}
-    if(valid){stmt.imageAttempt.run(value.id);if(row.attempts>=4)stmt.imageRemove.run(value.id);}
+    if(valid){stmt.imageAttempt.run(value.id);if(row.attempts>=IMAGE_ATTEMPTS-1)stmt.imageRemove.run(value.id);}
     const issue=new ServiceError('图形验证码不正确或已过期。',400);issue.code='AUTH_CAPTCHA_INVALID';throw issue;
   }
   async function sessionFor(user,ip){
@@ -222,7 +224,7 @@ export async function createAuthService(config,options={}){
     if(request.method!=='POST')return reply({error:'请使用 POST 登录。'},405);
     if(!(request.headers.get('Content-Type')||'').toLowerCase().startsWith('application/json'))return reply({error:'登录请求必须使用 JSON。'},415);
     try{
-      let body;try{body=JSON.parse(await boundedText(request.body,4096));}catch(error){if(error.status===413)throw new ServiceError('登录请求内容过大。',413);throw new ServiceError('登录请求不是有效 JSON。',400);}
+      let body;try{body=JSON.parse(await boundedText(request.body,AUTH_BODY_BYTES));}catch(error){if(error.status===413)throw new ServiceError('登录请求内容过大。',413);throw new ServiceError('登录请求不是有效 JSON。',400);}
       if(!body||typeof body!=='object'||Array.isArray(body))throw new ServiceError('登录内容格式不正确。',400);
       if(path==='/auth/options')return reply({...emailAuth.options(),imageCaptchaEnabled});
       if(path==='/auth/challenge')return reply(challenge(body,ip,origin));
@@ -241,6 +243,6 @@ export async function createAuthService(config,options={}){
   // Internal administrator reader: verified email is the display credential;
   // password hashes and sessions never leave the auth service.
   const adminUsers=db.prepare('SELECT invite_users.id,username,created,email FROM invite_users LEFT JOIN email_identities ON invite_users.id=email_identities.user ORDER BY created DESC,invite_users.id DESC LIMIT ? OFFSET ?');
-  const adminReader={count:()=>stmt.count.get().count,list:({offset=0,limit=50}={})=>adminUsers.all(limit,offset).map(row=>({id:row.id,username:row.username,...(row.email?{email:row.email}:{}),createdAt:new Date(row.created).toISOString()}))};
+  const adminReader={limitSummary:()=>({...Object.fromEntries(Object.keys(AUTH_DEFAULT_LIMITS).map(key=>[key,limits[key]])),imageEnabled:imageCaptchaEnabled,imageRefreshMs:IMAGE_REFRESH_MS,imageLifetimeMs:IMAGE_LIFETIME_MS,imageAttempts:IMAGE_ATTEMPTS,imagePending:IMAGE_MAX_PENDING,hashConcurrent:HASH_CONCURRENT,bodyBytes:AUTH_BODY_BYTES,sessionLifetimeMs:SESSION_TTL,deviceSessions:MAX_DEVICE_SESSIONS,email:emailAuth.limitSummary()}),count:()=>stmt.count.get().count,list:({offset=0,limit=50}={})=>adminUsers.all(limit,offset).map(row=>({id:row.id,username:row.username,...(row.email?{email:row.email}:{}),createdAt:new Date(row.created).toISOString()}))};
   return {handle,getIdentity,issueInvites,adminReader,close:()=>db.close()};
 }

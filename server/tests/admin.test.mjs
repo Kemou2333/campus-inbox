@@ -212,3 +212,30 @@ test('only the authorized backend shows a verified email while record selections
  const denied=await s.request('/admin/accounts',s.sessions[1]);assert.equal(denied.status,403);assert(!JSON.stringify(denied.body).includes(address));
  const html=(await s.request('/admin',null,origin,'GET')).body;assert(html.includes('function accountLabel(account)'));assert(!html.includes('[account.username,dates'));
 });
+
+test('limits are administrator-only, read-only and use active service values without exposing deployment secrets',async t=>{
+  const s=await setup();t.after(s.close);
+  assert.equal((await s.request('/admin/limits',null)).status,401);
+  assert.equal((await s.request('/admin/limits',s.sessions[1])).status,403);
+  assert.equal((await s.request('/admin/limits',s.sessions[0],'https://attacker.test')).status,403);
+  assert.equal((await s.request('/admin/limits',s.sessions[0],origin,'POST',{dailyLimit:999})).status,400);
+  const result=await s.request('/admin/limits');assert.equal(result.status,200);assert.equal(result.headers.get('Cache-Control'),'no-store');assert.equal(result.body.readOnly,true);
+  assert.equal(result.body.status,'effective');assert(result.body.groups.length>=6);
+  assert.equal(result.body.effective.ai.dailyOrganize,s.ai.adminSummary().dailyRequestLimit);
+  assert.equal(result.body.effective.download.dailyBytes,200000000);
+  assert.equal(result.body.effective.auth.imageRefreshMs,15000);
+  assert.equal(result.body.effective.auth.email.emailSendDay,6);
+  const text=JSON.stringify(result.body);
+  for(const secretValue of [secret,'fake-provider-key',s.sessions[0].key,'password_hash','signingSecret','private-original-sentinel'])assert.equal(text.includes(secretValue),false);
+  const customAI=await createService({apiKey:'not-for-export-provider-secret',accessToken:secret,requireAccess:false,dailyLimit:12,questionDailyLimit:11,dailyBudgetRmb:1.25,accountFiveHourLimit:2,thinkingMode:'low',timeoutMs:12345});
+  const custom=createAdminService({usernames:['kemou'],allowedOrigins:[origin]},{auth:s.auth,sync:s.sync,ai:customAI});
+  const response=await custom(new Request('https://api.example.test/admin/limits',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',Authorization:'Bearer '+s.sessions[0].key},body:'{}'}));
+  const data=await response.json();assert.equal(response.status,200);assert.equal(data.effective.ai.dailyOrganize,12);assert.equal(data.effective.ai.dailyQuestions,11);assert.equal(data.effective.ai.dailyBudgetRmb,1.25);assert.equal(data.effective.ai.organizeAccountFiveHours,2);assert.equal(data.effective.ai.modelTimeoutMs,12345);assert.equal(data.effective.ai.organizeOutputTokens,32768);
+  assert(!JSON.stringify(data).includes('not-for-export-provider-secret'));
+});
+
+test('administrator page offers the limits view and its inline script remains syntactically valid',async t=>{
+  const s=await setup();t.after(s.close);const response=await s.request('/admin',null,origin,'GET');
+  assert.equal(response.status,200);assert.match(response.body,/data-view="limits"/);assert.match(response.body,/下载限额清单 JSON/);
+  const script=response.body.match(/<script nonce="[^"]+">([\s\S]+)<\/script>/)?.[1];assert(script);const {Script}=await import('node:vm');assert.doesNotThrow(()=>new Script(script));
+});

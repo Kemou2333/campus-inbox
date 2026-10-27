@@ -6,13 +6,14 @@ const approvedBundle=parseAndroidDownload(publishedDownload);
 // Web builds can precede an APK release. Keep a verified published APK fallback,
 // rather than inventing a download for the web package version. Native update
 // checks use their separate installed-version and latest-metadata policy.
-export const fallbackAndroidDownload:AndroidDownload=approvedBundle?{version:approvedBundle.version,github:approvedBundle.github,lanzou:null}:{version,github:`https://github.com/Kemou2333/campus-inbox/releases/download/android-v${version}/campus-inbox-${version}.apk`,lanzou:null};
+export const fallbackAndroidDownload:AndroidDownload=approvedBundle?{version:approvedBundle.version,github:approvedBundle.github,lanzou:null}:{version,github:`https://github.com/Kemou2333/note-inbox/releases/download/android-v${version}/campus-inbox-${version}.apk`,lanzou:null};
 export function parseAndroidDownload(value:unknown):AndroidDownload|null{
  if(!value||typeof value!=='object')return null;
  const v=value as Record<string,unknown>;
  if(typeof v.version!=='string'||!/^\d+\.\d+\.\d+$/.test(v.version))return null;
- const github=`https://github.com/Kemou2333/campus-inbox/releases/download/android-v${v.version}/campus-inbox-${v.version}.apk`;
- if(v.github!==github)return null;
+ const allowedGithub=['note-inbox','campus-inbox'].map(repo=>`https://github.com/Kemou2333/${repo}/releases/download/android-v${v.version}/campus-inbox-${v.version}.apk`);
+ if(typeof v.github!=='string'||!allowedGithub.includes(v.github))return null;
+ const github=v.github;
  const aliyun=`https://123.57.30.129/downloads/android-v${v.version}/campus-inbox-${v.version}.apk`;
  if(v.aliyun!==null&&v.aliyun!==undefined&&v.aliyun!==aliyun)return null;
  const primaryPath=`/downloads/android-v${v.version}/campus-inbox-${v.version}.apk`;
@@ -28,6 +29,6 @@ export function parseAndroidDownload(value:unknown):AndroidDownload|null{
 
 /** Small public manifest only; no account, session, original text or device identity. */
 export async function loadAndroidDownload(fetcher:typeof fetch=fetch):Promise<AndroidDownload>{
- const endpoint=window.CampusNative?.postMessage?'https://kemou2333.github.io/campus-inbox/android-download.json':`${import.meta.env.BASE_URL}android-download.json`;
+ const endpoint=window.CampusNative?.postMessage?'https://kemou2333.github.io/note-inbox/android-download.json':`${import.meta.env.BASE_URL}android-download.json`;
  try{const response=await fetcher(endpoint,{cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(4000)});if(!response.ok)return fallbackAndroidDownload;return parseAndroidDownload(await response.json())??fallbackAndroidDownload;}catch{return fallbackAndroidDownload;}
 }

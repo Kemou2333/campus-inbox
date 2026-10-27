@@ -6,7 +6,7 @@ import java.net.URISyntaxException;
 /** Fixed public release channel; never accepts a download host supplied by a page. */
 final class NativeUpdatePolicy {
     static final String MANIFEST_URL = "https://123.57.30.129/downloads/android-latest.json";
-    static final String RELEASE_API = "https://api.github.com/repos/Kemou2333/campus-inbox/releases/latest";
+    static final String RELEASE_API = "https://api.github.com/repos/Kemou2333/note-inbox/releases/latest";
     static final int CACHE_POLICY_VERSION = 2;
     static final long CHECK_DEBOUNCE = 5_000;
     static final long MANUAL_INTERVAL = 30_000;
@@ -79,8 +79,10 @@ final class NativeUpdatePolicy {
             URI uri = new URI(value);
             return "https".equals(uri.getScheme()) && "github.com".equals(uri.getHost())
                     && (uri.getPort() == -1 || uri.getPort() == 443) && uri.getRawUserInfo() == null
-                    && ("/Kemou2333/campus-inbox/releases/download/android-v" + version
+                    && (("/Kemou2333/campus-inbox/releases/download/android-v" + version
                     + "/campus-inbox-" + version + ".apk").equals(uri.getRawPath())
+                    || ("/Kemou2333/note-inbox/releases/download/android-v" + version
+                    + "/campus-inbox-" + version + ".apk").equals(uri.getRawPath()))
                     && uri.getRawQuery() == null && uri.getRawFragment() == null;
         } catch (URISyntaxException | NullPointerException ignored) {
             return false;

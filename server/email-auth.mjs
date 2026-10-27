@@ -2,8 +2,9 @@ import {createHmac,randomBytes,randomInt,timingSafeEqual} from 'node:crypto';
 import {ALLOWED_EMAIL_DOMAINS,canonicalEmail,canonicalLoginEmail} from './contracts/email-policy.mjs';
 import {ServiceError} from './analyze.mjs';
 
-const MINUTE=60000,HOUR=60*MINUTE,DAY=24*HOUR,CODE_TTL=5*MINUTE;
-const DEFAULT_LIMITS={emailSendHour:3,emailSendDay:6,emailSendIPHour:20,emailSendIPDay:40,emailSendGlobalDay:50,emailSendFailureDay:5,emailVerifyIPMinute:10,emailSendConcurrency:2,emailRegisterIPMinute:5,emailRegisterIPDay:10,emailRegisterGlobalDay:20};
+const MINUTE=60000,HOUR=60*MINUTE,DAY=24*HOUR,CODE_TTL=5*MINUTE,CODE_ATTEMPTS=5;
+export const EMAIL_CODE_LIMITS=Object.freeze({lifetimeMs:CODE_TTL,resendMs:MINUTE,attempts:CODE_ATTEMPTS,newClientDigits:4,legacyDigits:6});
+export const EMAIL_DEFAULT_LIMITS=Object.freeze({emailSendHour:3,emailSendDay:6,emailSendIPHour:20,emailSendIPDay:40,emailSendGlobalDay:50,emailSendFailureDay:5,emailVerifyIPMinute:10,emailSendConcurrency:2,emailRegisterIPMinute:5,emailRegisterIPDay:10,emailRegisterGlobalDay:20});
 
 /** Email is another credential for the existing account UUID, never a new cloud owner. */
 export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCode,getIdentity,sessionFor,createUser,prepareCredentials,setPassword}){
@@ -16,7 +17,7 @@ export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCod
     CREATE INDEX IF NOT EXISTS email_challenges_email ON email_challenges(email,created);
     CREATE TABLE IF NOT EXISTS email_send_pauses(bucket TEXT NOT NULL,subject TEXT NOT NULL,until INTEGER NOT NULL,PRIMARY KEY(bucket,subject));
   `);
-  const caps={...DEFAULT_LIMITS,...limits};
+  const caps={...EMAIL_DEFAULT_LIMITS,...limits};
   const enabled=typeof sendCode==='function';
   const stmt={
     identity:db.prepare('SELECT invite_users.* FROM email_identities JOIN invite_users ON invite_users.id=email_identities.user WHERE email=?'),
@@ -146,7 +147,7 @@ export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCod
     // expiry during hashing cannot create or overwrite an account.
     const preview=typeof challengeId==='string'&&/^[A-Za-z0-9_-]{43}$/.test(challengeId)?stmt.challenge.get(challengeId):null;
     let credentials;
-    if(preview&&['register','password'].includes(preview.purpose)&&preview.state==='sent'&&preview.attempts<5&&preview.expires>now()
+    if(preview&&['register','password'].includes(preview.purpose)&&preview.state==='sent'&&preview.attempts<CODE_ATTEMPTS&&preview.expires>now()
       &&typeof body.code==='string'&&/^(?:\d{4}|\d{6})$/.test(body.code)&&timingSafeEqual(Buffer.from(preview.code_hash,'hex'),Buffer.from(hashCode(preview,body.code),'hex'))){
       if(preview.purpose==='register')emailValue(preview.email);
       const existing=userForEmail(preview.email);
@@ -166,7 +167,7 @@ export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCod
         return {error:issue};
       };
       const challenge=typeof challengeId==='string'&&/^[A-Za-z0-9_-]{43}$/.test(challengeId)?stmt.challenge.get(challengeId):null;
-      if(!challenge||challenge.state!=='sent'||challenge.attempts>=5)return rejected(error('验证码无效或已过期，请重新获取。',400,'EMAIL_CODE_INVALID'));
+      if(!challenge||challenge.state!=='sent'||challenge.attempts>=CODE_ATTEMPTS)return rejected(error('验证码无效或已过期，请重新获取。',400,'EMAIL_CODE_INVALID'));
       if(challenge.expires<=now()){
         stmt.state.run('expired',challengeId,'sent');
         return rejected(error('验证码无效或已过期，请重新获取。',400,'EMAIL_CODE_INVALID'));
@@ -177,8 +178,8 @@ export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCod
       const matches=typeof body.code==='string'&&/^(?:\d{4}|\d{6})$/.test(body.code)
         &&timingSafeEqual(Buffer.from(challenge.code_hash,'hex'),Buffer.from(hashCode(challenge,body.code),'hex'));
       if(!matches){
-        stmt.attempt.run(attempts,attempts>=5?'failed':'sent',challengeId);
-        return rejected(error(attempts>=5?'验证码尝试次数已用完，请重新获取。':'验证码不正确，请再试一次。',400,'EMAIL_CODE_INVALID'));
+        stmt.attempt.run(attempts,attempts>=CODE_ATTEMPTS?'failed':'sent',challengeId);
+        return rejected(error(attempts>=CODE_ATTEMPTS?'验证码尝试次数已用完，请重新获取。':'验证码不正确，请再试一次。',400,'EMAIL_CODE_INVALID'));
       }
       let user=stmt.identity.get(challenge.email),created=false;
       if(identity){
@@ -220,5 +221,5 @@ export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCod
     try{return {...await sessionFor(result.user,ip),email:result.email};}
     catch(issue){throw error(credentials?'邮箱已验证，密码已保存。请稍后使用密码登录。':'邮箱已验证，账号已保留。请稍后重新获取验证码登录。',issue.status||503,result.created?'ACCOUNT_CREATED_LOGIN_PENDING':'EMAIL_LOGIN_PENDING');}
   }
-  return {options,emailValue,userForEmail,emailForUser,request,verify};
+  return {options,emailValue,userForEmail,emailForUser,request,verify,limitSummary:()=>({...Object.fromEntries(Object.keys(EMAIL_DEFAULT_LIMITS).map(key=>[key,caps[key]])),...EMAIL_CODE_LIMITS,enabled})};
 }

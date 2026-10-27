@@ -85,7 +85,7 @@ AI 外部输入、备份导入、原生桥、密钥和付费限额处保留边�
 - 现有备份是 `{app:'campus-inbox', version:4, notices, attachments}`，附件数据为 base64；兼容版本 1–4。
 - 原有 task/reminder 没有稳定 ID，迁移一次生成并持久保存；已有 step ID 保留。不要每次打开随机重新编号。
 - 只有迁移事务成功后才写迁移完成标记。保留旧数据作为回滚来源，避免第二次打开重复导入。
-- 维持 `https://kemou2333.github.io/campus-inbox/`。不同域名无法直接读取旧浏览器数据；相同域名路径可以迁移，不代表跨浏览器同步。
+- 维持 `https://kemou2333.github.io/note-inbox/`。不同域名无法直接读取旧浏览器数据；相同域名路径可以迁移，不代表跨浏览器同步。
 
 ### Android 升级
 

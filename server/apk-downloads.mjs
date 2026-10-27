@@ -10,6 +10,7 @@ import {createImageCaptcha,captchaAnswerHash} from './image-captcha.mjs';
 const DAILY_BYTES=200_000_000,BYTES_PER_SECOND=2_000_000,HOUR=3_600_000;
 const CAPTCHA_LIFETIME=300_000,TICKET_LIFETIME=120_000,REFRESH_INTERVAL=15_000;
 const MAX_DOWNLOADS_PER_HOUR=5,MAX_ACTIVE=8,MAX_CAPTCHAS_PER_HOUR=20,CHUNK_BYTES=64*1024;
+export const APK_DOWNLOAD_LIMITS=Object.freeze({dailyBytes:DAILY_BYTES,bytesPerSecond:BYTES_PER_SECOND,hourMs:HOUR,captchaLifetimeMs:CAPTCHA_LIFETIME,ticketLifetimeMs:TICKET_LIFETIME,captchaRefreshMs:REFRESH_INTERVAL,ipDownloadsPerHour:MAX_DOWNLOADS_PER_HOUR,globalConcurrent:MAX_ACTIVE,ipConcurrent:1,captchasPerIPHour:MAX_CAPTCHAS_PER_HOUR,captchaAttempts:5});
 const VERSION='(?:0|[1-9]\\d{0,3})\\.(?:0|[1-9]\\d{0,3})\\.(?:0|[1-9]\\d{0,3})';
 const routePattern=new RegExp('^/downloads/android-v('+VERSION+')/(campus-inbox-\\1\\.apk)$');
 const hashPattern=/^[a-f0-9]{64}$/,keyPattern=/^[A-Za-z0-9_-]{43}$/;
@@ -20,6 +21,9 @@ const htmlEscape=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<'
 const shanghaiDay=time=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(time);
 const midnightWait=time=>Math.max(1,Math.ceil((86_400_000-((time+8*3_600_000)%86_400_000))/1000));
 const githubFor=version=>'https://github.com/Kemou2333/campus-inbox/releases/download/android-v'+version+'/campus-inbox-'+version+'.apk';
+const canonicalGithubFor=version=>githubFor(version).replace('/Kemou2333/campus-inbox/','/Kemou2333/note-inbox/');
+// Preserve the fixed legacy metadata contract for installed APKs.
+const githubForOrigin=(version,publicOrigin)=>new URL(publicOrigin).hostname==='kemou.top'?canonicalGithubFor(version):githubFor(version);
 const pathnameFor=release=>'/downloads/android-v'+release.version+'/'+release.filename;
 function publicOriginsFor(config){
   const aliases=config.publicOriginAliases??[];
@@ -53,7 +57,7 @@ function validateManifest(value){
   for(const release of value.releases){
     if(!exactKeys(release,['version','filename','sha256','size','github'])||typeof release.version!=='string'||!new RegExp('^'+VERSION+'$').test(release.version)
       ||release.filename!=='campus-inbox-'+release.version+'.apk'||typeof release.sha256!=='string'||!hashPattern.test(release.sha256)
-      ||!Number.isSafeInteger(release.size)||release.size<1||release.size>DAILY_BYTES||release.github!==githubFor(release.version)||releases.has(release.version))throw new Error('Invalid APK release entry');
+      ||!Number.isSafeInteger(release.size)||release.size<1||release.size>DAILY_BYTES||![githubFor(release.version),canonicalGithubFor(release.version)].includes(release.github)||releases.has(release.version))throw new Error('Invalid APK release entry');
     releases.set(release.version,release);
   }
   return releases;
@@ -128,7 +132,7 @@ export async function createAPKDownloads(config,options={}){
     try{
       const approved=[...(await releases()).values()];
       approved.sort((left,right)=>{const a=left.version.split('.').map(Number),b=right.version.split('.').map(Number);for(let i=0;i<3;i++)if(a[i]!==b[i])return b[i]-a[i];return 0;});
-      const release=approved[0],body=JSON.stringify({version:release.version,aliyun:publicOrigin+pathnameFor(release),github:release.github,lanzou:null,sizeBytes:release.size,sha256:release.sha256});
+      const release=approved[0],body=JSON.stringify({version:release.version,aliyun:publicOrigin+pathnameFor(release),github:githubForOrigin(release.version,publicOrigin),lanzou:null,sizeBytes:release.size,sha256:release.sha256});
       securityHeaders(res,undefined,publicOrigin);res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Content-Length',Buffer.byteLength(body));res.end(req.method==='HEAD'?undefined:body);
     }catch{html(req,res,503,'更新信息暂时不可用，请稍后再试。');}
   }
@@ -150,8 +154,8 @@ export async function createAPKDownloads(config,options={}){
     const nonce=randomBytes(16).toString('base64');securityHeaders(res,nonce,publicOrigin);res.setHeader('Referrer-Policy','same-origin');res.statusCode=status;res.setHeader('Content-Type','text/html; charset=utf-8');if(retry)res.setHeader('Retry-After',String(retry));
     const path=release?pathnameFor(release):'/downloads/',action=publicOrigin+path;
     const form=challenge?'<form method="post" action="'+htmlEscape(action)+'"><label for="answer">图中的四位数字</label><img src="'+htmlEscape(challenge.image)+'" width="240" height="88" alt="四位数字验证码"><input type="hidden" name="challenge" value="'+htmlEscape(tokenFor('challenge',challenge))+'"><input id="answer" name="answer" inputmode="numeric" autocomplete="off" maxlength="4" pattern="[0-9]{4}" required aria-label="四位数字验证码"><button type="submit">验证并下载</button></form>':'';
-    const links=release?'<p><a href="'+htmlEscape(action)+'">'+(challenge?'换一张验证码':'重新获取验证码')+'</a><span class="muted"> · 换图需间隔15秒</span></p><p class="backup"><a href="'+htmlEscape(release.github)+'" rel="noopener noreferrer">GitHub 备用下载</a></p>':'';
-    const body='<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>拾笺 · Note Inbox · 安卓下载</title><style nonce="'+nonce+'">*{box-sizing:border-box}body{margin:0;background:#f4f7f6;color:#193a37;font:16px/1.7 system-ui,sans-serif}main{max-width:480px;margin:32px auto;padding:24px;background:#fff;border:1px solid #dce8e4;border-radius:20px}h1{font-size:25px;line-height:1.3}p{overflow-wrap:anywhere}label{display:block;font-weight:600;margin-top:20px}img{display:block;max-width:100%;object-fit:contain;margin:8px 0}input,button{font:inherit;border-radius:12px;min-height:48px;padding:10px 14px}input:not([type=hidden]){width:100%;border:1px solid #a9c4bd;font-size:22px;letter-spacing:.3em}button{width:100%;margin-top:14px;border:0;background:#087f71;color:white;font-weight:600;cursor:pointer}a{color:#087f71;text-underline-offset:3px}.muted,small{color:#627b74;font-size:14px}.backup{border-top:1px solid #e1ebe7;padding-top:18px}@media(max-width:520px){main{margin:12px;padding:20px}}</style></head><body><main><h1>拾笺 · Note Inbox 安卓下载</h1>'+(release?'<p class="muted">版本 '+htmlEscape(release.version)+' · '+(release.size/1_000_000).toFixed(2)+' MB</p>':'')+'<p role="status">'+htmlEscape(message)+'</p>'+form+links+'<small>每次下载前验证。阿里云每日总量200 MB，每个网络每小时最多5次下载、同时1次；单条最高2 MB/s。额度用完时可选择GitHub备用下载。</small></main></body></html>';
+    const links=release?'<p><a href="'+htmlEscape(action)+'">'+(challenge?'换一张验证码':'重新获取验证码')+'</a><span class="muted"> · 换图需间隔15秒</span></p><p class="backup"><a href="'+htmlEscape(githubForOrigin(release.version,publicOrigin))+'" rel="noopener noreferrer">GitHub 备用下载</a></p>':'';
+    const body='<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>拾笺 · Note Inbox · 安卓下载</title><style nonce="'+nonce+'">*{box-sizing:border-box}body{margin:0;background:#f4f7f6;color:#193a37;font:16px/1.7 system-ui,sans-serif}main{max-width:480px;margin:32px auto;padding:24px;background:#fff;border:1px solid #dce8e4;border-radius:20px}h1{font-size:25px;line-height:1.3}p{overflow-wrap:anywhere}label{display:block;font-weight:600;margin-top:20px}img{display:block;max-width:100%;object-fit:contain;margin:8px 0}input,button{font:inherit;border-radius:12px;min-height:48px;padding:10px 14px}input:not([type=hidden]){width:100%;border:1px solid #a9c4bd;font-size:22px;letter-spacing:.3em}button{width:100%;margin-top:14px;border:0;background:#087f71;color:white;font-weight:600;cursor:pointer}a{color:#087f71;text-underline-offset:3px}.muted,small{color:#627b74;font-size:14px}.backup{border-top:1px solid #e1ebe7;padding-top:18px}@media(max-width:520px){main{margin:12px;padding:20px}}</style></head><body><main><h1>拾笺 · Note Inbox 安卓下载</h1>'+(release?'<p class="muted">版本 '+htmlEscape(release.version)+' · '+(release.size/1_000_000).toFixed(2)+' MB</p>':'')+'<p role="status">'+htmlEscape(message)+'</p>'+form+links+'<small>每次下载前验证。主下载每日总量200 MB，每个网络每小时最多5次下载、同时1次；单条最高2 MB/s。额度用完时可选择GitHub备用下载。</small></main></body></html>';
     res.setHeader('Content-Length',Buffer.byteLength(body));res.end(req.method==='HEAD'?undefined:body);
   }
   function apkHeaders(res,release,publicOrigin){securityHeaders(res,undefined,publicOrigin);res.statusCode=200;res.setHeader('Content-Type','application/vnd.android.package-archive');res.setHeader('Content-Disposition','attachment; filename="'+release.filename+'"');res.setHeader('Content-Length',String(release.size));res.setHeader('Accept-Ranges','none');res.setHeader('X-Download-Options','noopen');}
@@ -159,7 +163,7 @@ export async function createAPKDownloads(config,options={}){
     return ledger(async()=>{
       const time=now(),times=state.captchaRequests[ipKey]||[],previous=[...challenges.values()].find(value=>value.ipKey===ipKey);
       if(times.length&&time-times.at(-1)<REFRESH_INTERVAL){
-        if(previous?.version===version&&previous.publicOrigin===publicOrigin&&previous.attempts<5)return {challenge:previous};
+        if(previous?.version===version&&previous.publicOrigin===publicOrigin&&previous.attempts<APK_DOWNLOAD_LIMITS.captchaAttempts)return {challenge:previous};
         return {status:429,message:'请稍候再更换验证码。',retry:Math.max(1,Math.ceil((times.at(-1)+REFRESH_INTERVAL-time)/1000))};
       }
       if(times.length>=MAX_CAPTCHAS_PER_HOUR)return {status:429,message:'验证码请求较多，请稍后再试，或使用GitHub备用下载。',retry:Math.max(1,Math.ceil((times[0]+HOUR-time)/1000))};
@@ -192,7 +196,7 @@ export async function createAPKDownloads(config,options={}){
       const admitted=await ledger(async()=>{
         const time=now(),times=state.downloads[ipKey]||[];
         if(times.length>=MAX_DOWNLOADS_PER_HOUR)return {status:429,message:'此网络一小时内已下载5次，请稍后再试。',retry:Math.max(1,Math.ceil((times[0]+HOUR-time)/1000))};
-        if(state.reservedBytes>DAILY_BYTES-release.size)return {status:429,message:'阿里云今日下载额度已用完，请明天再试，或使用GitHub备用下载。',retry:midnightWait(time)};
+        if(state.reservedBytes>DAILY_BYTES-release.size)return {status:429,message:'主下载今日额度已用完，请明天再试，或使用GitHub备用下载。',retry:midnightWait(time)};
         if(!state.downloads[ipKey]&&Object.keys(state.downloads).length>=2000)return {status:503,message:'下载服务暂时繁忙，请稍后再试。'};
         state.reservedBytes+=release.size;state.downloads[ipKey]=[...times,time];await persist();return null;
       });
@@ -236,9 +240,9 @@ export async function createAPKDownloads(config,options={}){
         const length=req.headers['content-length'];if(length!==undefined&&(!/^\d+$/.test(length)||Number(length)>1024)){res.setHeader('Connection','close');html(req,res,413,'验证内容过长，请重新打开下载页。',release);res.once('finish',()=>req.destroy());return;}
         let form;try{form=await parseForm(req);}catch(error){res.setHeader('Connection','close');html(req,res,error.status||400,'验证内容不正确，请重新打开下载页。',release);res.once('finish',()=>req.destroy());return;}
         const value=tokenRecord('challenge',form.token,challenges,ipKey,release.version,publicOrigin);
-        if(!value||value.attempts>=5)return html(req,res,400,'验证码已失效，请重新获取。',release);
+        if(!value||value.attempts>=APK_DOWNLOAD_LIMITS.captchaAttempts)return html(req,res,400,'验证码已失效，请重新获取。',release);
         value.attempts++;
-        if(typeof form.answer!=='string'||!/^\d{4}$/.test(form.answer)||!timingSafeEqual(Buffer.from(captchaAnswerHash(value.id,form.answer),'hex'),Buffer.from(value.answerHash,'hex')))return html(req,res,400,value.attempts>=5?'验证码尝试次数已用完，请稍后换一张。':'数字不正确，请再试一次。',release,value.attempts<5?value:null);
+        if(typeof form.answer!=='string'||!/^\d{4}$/.test(form.answer)||!timingSafeEqual(Buffer.from(captchaAnswerHash(value.id,form.answer),'hex'),Buffer.from(value.answerHash,'hex')))return html(req,res,400,value.attempts>=APK_DOWNLOAD_LIMITS.captchaAttempts?'验证码尝试次数已用完，请稍后换一张。':'数字不正确，请再试一次。',release,value.attempts<5?value:null);
         challenges.delete(value.id);
         if(tickets.size>=256)return html(req,res,503,'下载验证暂时繁忙，请稍后再试。',release);
         for(const [id,previous] of tickets)if(previous.ipKey===ipKey&&previous.version===release.version)tickets.delete(id);

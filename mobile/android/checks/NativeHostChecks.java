@@ -68,6 +68,8 @@ public final class NativeHostChecks {
                 "2.25.1", "https://example.com/latest.json", "https://example.com/latest.json"), "arbitrary metadata endpoints remain forbidden");
         String download = "https://github.com/Kemou2333/campus-inbox/releases/download/android-v2.16.0/campus-inbox-2.16.0.apk";
         check(NativeUpdatePolicy.verifiedDownload(download, "2.16.0"), "exact repository APK URL accepted");
+        check(NativeUpdatePolicy.verifiedDownload(download.replace("/campus-inbox/", "/note-inbox/"), "2.16.0"), "canonical Note Inbox APK URL accepted");
+        check(!NativeUpdatePolicy.verifiedDownload(download.replace("/campus-inbox/", "/note-inbox-copy/"), "2.16.0"), "lookalike Note Inbox repository rejected");
         check(!NativeUpdatePolicy.verifiedDownload(download.replace("https:", "http:"), "2.16.0"), "cleartext update URL rejected");
         check(!NativeUpdatePolicy.verifiedDownload(download.replace("github.com", "github.com.evil.test"), "2.16.0"), "lookalike update host rejected");
         check(!NativeUpdatePolicy.verifiedDownload(download.replace("github.com/", "github.com:444/"), "2.16.0"), "alternate update port rejected");

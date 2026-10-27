@@ -14,7 +14,7 @@ const DIGITS=[
   ['01110','10001','10001','01110','10001','10001','01110'],
   ['01110','10001','10001','01111','00001','00001','01110']
 ];
-const WIDTH=240,HEIGHT=88,SCALE=7;
+const WIDTH=240,HEIGHT=88;
 const crcTable=Array.from({length:256},(_,index)=>{
   let value=index;for(let bit=0;bit<8;bit++)value=value&1?0xedb88320^(value>>>1):value>>>1;return value>>>0;
 });
@@ -35,18 +35,36 @@ export function createImageCaptcha(id,randomNumber=randomInt){
     const offset=(y*WIDTH+x)*3;for(let channel=0;channel<3;channel++)pixels[offset+channel]=color[channel];
   };
   for(let y=0;y<HEIGHT;y++)for(let x=0;x<WIDTH;x++)pixel(x,y,[247,249,250]);
-  // Light noise and small vertical/shear variations; avoid hard-to-read puzzles.
-  for(let count=0;count<130;count++)pixel(randomInt(WIDTH),randomInt(HEIGHT),[166,192,191]);
+  // Low-contrast texture stays behind the digits; it is not another puzzle to solve.
+  for(let count=0;count<250;count++)pixel(randomInt(WIDTH),randomInt(HEIGHT),[166,192,191]);
   for(let line=0;line<6;line++){
     const start=randomInt(HEIGHT),slope=(randomInt(13)-6)/30;
     for(let x=0;x<WIDTH;x++)pixel(x,Math.round(start+x*slope),[203,219,219]);
   }
   for(let index=0;index<answer.length;index++){
-    const font=DIGITS[Number(answer[index])],top=18+randomInt(-4,5),shear=randomInt(-1,2);
-    const color=index%2?[32,74,79]:[35,59,68];
-    for(let row=0;row<7;row++)for(let column=0;column<5;column++)if(font[row][column]==='1'){
-      const left=22+index*50+column*SCALE+shear*(row-3);
-      for(let y=0;y<SCALE-1;y++)for(let x=0;x<SCALE-1;x++)pixel(left+x,top+row*SCALE+y,color);
+    const font=DIGITS[Number(answer[index])],centerX=40+index*51+randomInt(-3,4),centerY=44+randomInt(-5,6);
+    const scaleX=randomInt(65,75)/10,scaleY=randomInt(64,73)/10;
+    const angle=randomInt(-10,11)*Math.PI/180,cos=Math.cos(angle),sin=Math.sin(angle);
+    const shear=randomInt(-8,9)/100,wave=randomInt(10,19)/10,phase=randomInt(628)/100;
+    const color=[randomInt(30,49),randomInt(60,80),randomInt(65,85)];
+    // Sample each independently rotated and gently warped glyph backwards so
+    // strokes stay solid, rather than leaving holes from forward pixel rotation.
+    for(let y=Math.floor(centerY-32);y<=Math.ceil(centerY+32);y++)for(let x=Math.floor(centerX-28);x<=Math.ceil(centerX+28);x++){
+      const dx=x-centerX,dy=y-centerY,localY=-dx*sin+dy*cos;
+      const localX=dx*cos+dy*sin-shear*localY-wave*Math.sin(localY/13+phase);
+      const row=localY/scaleY+3.5,column=localX/scaleX+2.5;
+      if(row<0||row>=7||column<0||column>=5)continue;
+      if(font[Math.floor(row)][Math.floor(column)]==='1'&&row%1<.96&&column%1<.95)pixel(x,y,color);
+    }
+  }
+  // Two thin, lighter curves cross the strokes without hiding a whole digit.
+  for(let line=0;line<2;line++){
+    const start=randomInt(23,66),slope=randomInt(-9,10)/100,phase=randomInt(628)/100;
+    const amplitude=randomInt(6,12),period=randomInt(28,46);
+    for(let x=7;x<WIDTH-7;x++){
+      const y=Math.round(start+slope*(x-WIDTH/2)+amplitude*Math.sin(x/period+phase));
+      pixel(x,y,[137,165,164]);
+      if(x%3===0)pixel(x,y+1,[177,196,195]);
     }
   }
   const scanlines=Buffer.alloc(HEIGHT*(WIDTH*3+1));

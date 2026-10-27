@@ -1,10 +1,12 @@
 import {createHash,createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
 import {readFile,writeFile,rename} from 'node:fs/promises';
-import {analyze,answerNoticeQuestion,boundedText,ServiceError,modelInput,modelPayload,questionInput,questionPayload} from './analyze.mjs';
+import {analyze,answerNoticeQuestion,boundedText,ServiceError,modelInput,modelPayload,questionInput,questionPayload,ANALYSIS_LIMITS} from './analyze.mjs';
 import {createImageCaptcha,captchaAnswerHash} from './image-captcha.mjs';
 import {createRollingQuota,pruneRollingQuota,checkRollingQuota,reserveRollingQuota,remainingRollingAccount,createSplitQuota} from './ai-quota.mjs';
 const D=globalThis.CampusData;
 const RATE_WINDOW_MS=180000,RATE_LIMIT=5,AUTHENTICATED_IP_RATE_LIMIT=20,IMAGE_REFRESH_MS=15000;
+const AI_BODY_BYTES=64000,AI_CACHE_TTL_MS=15*60000,AI_CACHE_SIZE=50,AI_IMAGE_TTL_MS=120000,AI_IMAGE_ATTEMPTS=5,AI_IMAGE_THRESHOLD=3;
+export const AI_OPERATION_LIMITS=Object.freeze({rateWindowMs:RATE_WINDOW_MS,accountBurst:RATE_LIMIT,authenticatedIPBurst:AUTHENTICATED_IP_RATE_LIMIT,anonymousIPBurst:RATE_LIMIT,imageRefreshMs:IMAGE_REFRESH_MS,imageLifetimeMs:AI_IMAGE_TTL_MS,imageAttempts:AI_IMAGE_ATTEMPTS,imageRequestThreshold:AI_IMAGE_THRESHOLD,bodyBytes:AI_BODY_BYTES,cacheTTLms:AI_CACHE_TTL_MS,cacheEntries:AI_CACHE_SIZE,modelConcurrent:1});
 // Peak list prices translated at a conservative 8 RMB/USD; cached input is
 // deliberately priced as a miss. These estimates are not provider invoices.
 // Update both values when the provider's prices change.
@@ -78,7 +80,7 @@ export async function createService(config,options={}){
         challenge.attempts++;
         const matches=typeof p.answer==='string'&&/^\d{4}$/.test(p.answer)
           &&timingSafeEqual(Buffer.from(captchaAnswerHash(value.id,p.answer),'hex'),Buffer.from(challenge.answerHash,'hex'));
-        if(!matches){if(challenge.attempts>=5)challenge.exhausted=true;return {remainingAttempts:Math.max(0,5-challenge.attempts)};}
+        if(!matches){if(challenge.attempts>=AI_IMAGE_ATTEMPTS)challenge.exhausted=true;return {remainingAttempts:Math.max(0,AI_IMAGE_ATTEMPTS-challenge.attempts)};}
         // Synchronous consume happens before any persistence/model await, including simultaneous submissions.
         challenges.delete(value.id);return true;
       }
@@ -131,7 +133,7 @@ export async function createService(config,options={}){
     if(request.signal.aborted)return reply({error:'整理已取消，请重新提交。',code:'CANCELLED'},499);
     if(!(request.headers.get('Content-Type')||'').toLowerCase().startsWith('application/json'))return reply({error:'请求必须使用 JSON。'},415);
     let notice,requestID;
-    try{const body=JSON.parse(await boundedText(request.body,64000));if(!body||typeof body!=='object'||Array.isArray(body))throw new Error();
+    try{const body=JSON.parse(await boundedText(request.body,AI_BODY_BYTES));if(!body||typeof body!=='object'||Array.isArray(body))throw new Error();
       if(questionRoute){if(Object.keys(body).length!==3||typeof body.requestId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{15,99}$/.test(body.requestId))throw new Error();requestID=body.requestId;notice=questionInput({sourceText:body.sourceText,question:body.question});}
       else{
         if(jobRoute){if(Object.keys(body).some(key=>!['sources','requestId','maintenanceReviewConsent'].includes(key))||!Object.hasOwn(body,'sources')||typeof body.requestId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{15,99}$/.test(body.requestId)||Object.hasOwn(body,'maintenanceReviewConsent')&&typeof body.maintenanceReviewConsent!=='boolean')throw new Error();requestID=body.requestId;notice={sources:body.sources};}
@@ -161,7 +163,7 @@ export async function createService(config,options={}){
       admissionDone=response=>{admissions.delete(key);resolve(response);admissionDone=undefined;};
     }
     try{
-    for(const [k,v] of cache)if(t-v.created>15*60000)cache.delete(k);
+    for(const [k,v] of cache)if(t-v.created>AI_CACHE_TTL_MS)cache.delete(k);
     // Questions reuse only their durable request ID, never another account's
     // response or a different paid request's allowance.
     const saved=questionRoute?undefined:cache.get(hash);
@@ -242,7 +244,7 @@ export async function createService(config,options={}){
       try{job=options.jobs.accept(account,requestID,hash,notice.sources);options.jobs.metrics?.(account,job.id,{providerCalled:false,cacheReuse:true});options.jobs.stage(account,job.id,saved.result);return reply({job:options.jobs.complete(account,job.id)},202);}
       catch(error){if(job){try{options.jobs.fail(account,job.id,'JOB_SAVE_FAILED');}catch{}}return reply({error:error instanceof ServiceError?error.message:'整理结果暂时无法保存。'},error.status||503);}
     }
-    if(publicMode&&!proof&&(accountEntries||entries).length>=3){
+    if(publicMode&&!proof&&(accountEntries||entries).length>=AI_IMAGE_THRESHOLD){
       for(const [id,challenge] of challenges)if(challenge.expires<=t)challenges.delete(id);
       // Persistence above yields: another arrival may have created a challenge
       // in the meantime. Recheck synchronously before generating a replacement.
@@ -255,7 +257,7 @@ export async function createService(config,options={}){
       }
       if(verificationMode==='image')for(const [id,challenge] of challenges)if(imageScopes(challenge))challenges.delete(id);
       if(challenges.size>=2000)return reply({error:'服务繁忙，请稍后再试。'},503);
-      const id=randomBytes(16).toString('hex'),expires=t+120000,type=verificationMode;
+      const id=randomBytes(16).toString('hex'),expires=t+AI_IMAGE_TTL_MS,type=verificationMode;
       const image=type==='image'?imageCaptcha(id):null;
       const payload=Buffer.from(JSON.stringify({id,ip:ipKey,hash,origin,expires,account:accountKey,type,
         ...(type==='pow'?{bits}:{})})).toString('base64url');
@@ -323,7 +325,7 @@ export async function createService(config,options={}){
             options.jobs.stage(account,job.id,output.result);
             options.jobs.complete(account,job.id);
             await recordTokens(output.usage,output.finishReason,undefined,output.usageAvailable);
-            if(cache.size>=50)cache.delete(cache.keys().next().value);cache.set(hash,{created:now(),result:output.result});
+            if(cache.size>=AI_CACHE_SIZE)cache.delete(cache.keys().next().value);cache.set(hash,{created:now(),result:output.result});
           }catch(error){
             if(error instanceof ServiceError&&error.usage){try{options.jobs.metrics?.(account,job.id,{providerCalled:true,cacheReuse:false,usage:error.usage});}catch{}}
             if(modelOutput&&!tokensRecorded){try{await recordTokens(modelOutput.usage,modelOutput.finishReason,undefined,modelOutput.usageAvailable);}catch{}}
@@ -338,7 +340,7 @@ export async function createService(config,options={}){
       if(request.signal.aborted)throw new ServiceError('整理已取消，请重新提交。',499);
       const output=await analyze(notice,config,modelFetch,request.signal);await recordTokens(output.usage,output.finishReason,undefined,output.usageAvailable);
       if(request.signal.aborted)throw new ServiceError('整理已取消，请重新提交。',499);
-      if(cache.size>=50)cache.delete(cache.keys().next().value);cache.set(hash,{created:now(),result:output.result});return reply(output.result);
+      if(cache.size>=AI_CACHE_SIZE)cache.delete(cache.keys().next().value);cache.set(hash,{created:now(),result:output.result});return reply(output.result);
     }catch(e){
       if(acceptedJob){try{options.jobs.fail(account,acceptedJob.id,'SERVICE_UNAVAILABLE');}catch{}}
       if(e instanceof ServiceError&&e.usage&&!tokensRecorded){try{await recordTokens(e.usage,e.finishReason,e.failureCode,e.usageAvailable);}catch{e=new ServiceError('AI 用量暂时无法保存，请稍后用同一请求编号查询。',503);}}
@@ -356,6 +358,7 @@ export async function createService(config,options={}){
       return reply({error:error instanceof ServiceError?error.message:'整理服务暂时不可用，请稍后重试。'},error.status||503);
     }
   };
+  handle.limitSummary=()=>({...AI_OPERATION_LIMITS,captchaMode:verificationMode,thinkingMode:config.thinkingMode==='low'?'low':'none',modelTimeoutMs:config.timeoutMs||(config.thinkingMode==='low'?ANALYSIS_LIMITS.lowTimeoutMs:ANALYSIS_LIMITS.fastTimeoutMs),organizeOutputTokens:config.thinkingMode==='low'?ANALYSIS_LIMITS.lowTokens:ANALYSIS_LIMITS.fastTokens});
   handle.drain=()=>Promise.allSettled([...pendingJobs]);
   handle.adminSummary=()=>({day:usage?.day||day(),requests:usage?.requests||0,inputTokens:usage?.input||0,outputTokens:usage?.output||0,reasoningTokens:usage?.reasoning||0,estimatedCostRmb:(usage?.costMicro||0)/1_000_000,costIsEstimate:true,dailyRequestLimit:dailyLimit,dailyQuestionLimit:questionDailyLimit,organizingRequests:usage?.splitQuota?.organizeRequests||0,questionRequests:usage?.splitQuota?.questionRequests||0,dailyBudgetRmb,...rollingLimits,questionAccountFiveHourLimit:questionRollingLimits.accountFiveHourLimit,questionAccountThreeDayLimit:questionRollingLimits.accountThreeDayLimit,questionIPFiveHourLimit:questionRollingLimits.ipFiveHourLimit,processing:busy});
   return handle;

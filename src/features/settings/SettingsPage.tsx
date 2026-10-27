@@ -219,7 +219,7 @@ export function SettingsPage({ developerEnabled=false, app, onLogin, onHelp, onA
       <Typography sx={{fontSize:14,color:'text.secondary',mt:.5}}>慢慢来，一件一件就好。</Typography>
       <Stack direction="row" sx={{justifyContent:'center',gap:1,mt:1,flexWrap:'wrap'}}>
         {app.platform.kind!=='android'&&<Button startIcon={<DownloadOutlined sx={{fontSize:18}}/>} onClick={()=>setDownloadsOpen(true)} sx={{color:'text.secondary'}}>安卓下载</Button>}
-        <Button component="a" href="https://github.com/Kemou2333/campus-inbox" target="_blank" rel="noopener noreferrer" startIcon={<GitHub sx={{fontSize:18}}/>} sx={{color:'text.secondary'}}>GitHub 仓库</Button>
+        <Button component="a" href="https://github.com/Kemou2333/note-inbox" target="_blank" rel="noopener noreferrer" startIcon={<GitHub sx={{fontSize:18}}/>} sx={{color:'text.secondary'}}>GitHub 仓库</Button>
       </Stack>
     </Box>}
     <input ref={picker} type="file" accept="application/json,.json" hidden aria-label="选择通知备份" onChange={event=>{const file=event.target.files?.[0];event.target.value='';if(file){setTransferOpen(false);void run('import',()=>app.importBackup(file));}}}/>

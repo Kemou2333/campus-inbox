@@ -252,3 +252,18 @@ test('one active IP slot and the rolling hourly limit stay shared across aliases
   s.advance(15_000);const blocked=await aliasTicket(s,origin,ip);assert.equal((await s.request(blocked,{ip,headers:aliasHeaders(origin)})).status,429);
   assert.equal((await s.state()).reservedBytes,s.bytes.length*5);assert.equal(Object.values((await s.state()).downloads)[0].length,5);
 });
+
+
+test('canonical Note Inbox metadata remains compatible with old Aliyun clients',async t=>{
+ const japan='https://kemou.top:88',s=await fixture({config:{publicOriginAliases:[japan]}});t.after(s.close);
+ const old=JSON.parse((await s.request('/downloads/android-latest.json')).text);
+ const latest=JSON.parse((await s.request('/downloads/android-latest.json',{headers:{Host:'kemou.top:88'}})).text);
+ assert.equal(old.github,github);assert.equal(latest.github,github.replace('/campus-inbox/','/note-inbox/'));
+ const page=await s.request(path,{headers:{Host:'kemou.top:88'}});assert(page.text.includes(latest.github));
+ // An already approved asset index may use either exact owned repo path.
+ await writeFile(s.releaseManifestFile,JSON.stringify({schemaVersion:1,releases:[{...s.release,github:latest.github}]}));
+ assert.equal((await s.request('/downloads/android-latest.json')).status,200);
+ const bad={...s.release,github:latest.github.replace('/note-inbox/','/note-inbox-untrusted/')};
+ await writeFile(s.releaseManifestFile,JSON.stringify({schemaVersion:1,releases:[bad]}));
+ assert.equal((await s.request('/downloads/android-latest.json')).status,503);
+});

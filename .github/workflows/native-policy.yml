@@ -1,0 +1,22 @@
+name: Check native update compatibility
+on:
+  push:
+    branches: [main]
+    paths: ['mobile/android/app/src/main/java/io/github/kemou2333/campusinbox/NativePolicy.java', 'mobile/android/app/src/main/java/io/github/kemou2333/campusinbox/NativeUpdatePolicy.java', 'mobile/android/app/src/main/java/io/github/kemou2333/campusinbox/NativeExport.java', 'mobile/android/checks/NativeHostChecks.java', '.github/workflows/native-policy.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Check fixed download and update policies
+        run: |
+          javac -d /tmp/note-native-checks mobile/android/app/src/main/java/io/github/kemou2333/campusinbox/NativePolicy.java mobile/android/app/src/main/java/io/github/kemou2333/campusinbox/NativeUpdatePolicy.java mobile/android/app/src/main/java/io/github/kemou2333/campusinbox/NativeExport.java mobile/android/checks/NativeHostChecks.java
+          java -cp /tmp/note-native-checks io.github.kemou2333.campusinbox.NativeHostChecks

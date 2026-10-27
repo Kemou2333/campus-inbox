@@ -41,3 +41,13 @@ it('accepts the approved domain mirror only for the same exact release asset',()
  }
  for(const primary of ['http://kemou.top'+path,'https://kemou.top.evil.test'+path,'https://user@kemou.top'+path,'https://kemou.top:4433'+path,'https://kemou.top'+path+'?redirect=x','https://kemou.top'+path+'#x','https://kemou.top'+path.replace('downloads','sync')])expect(parseAndroidDownload({...fallbackAndroidDownload,primary})).toBeNull();
 });
+
+it('accepts canonical Note Inbox and legacy release URLs only for the exact APK',()=>{
+ const version='2.28.2',filename=`campus-inbox-${version}.apk`;
+ for(const repo of ['note-inbox','campus-inbox']){
+  const value={version,github:`https://github.com/Kemou2333/${repo}/releases/download/android-v${version}/${filename}`,lanzou:null};
+  expect(parseAndroidDownload(value)).toEqual(value);
+ }
+ const base=`https://github.com/Kemou2333/note-inbox/releases/download/android-v${version}/${filename}`;
+ for(const github of [base+'?redirect=x',base.replace('/note-inbox/','/note-inbox-copy/'),base.replace('github.com','github.com.evil.test'),base.replace('https://','https://user@')])expect(parseAndroidDownload({version,github,lanzou:null})).toBeNull();
+});

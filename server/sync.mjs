@@ -8,6 +8,8 @@ const D=globalThis.CampusData;
 const BODY_LIMIT=1024*1024,RECORD_LIMIT=64*1024,ACCOUNT_BYTES=5*1024*1024,GLOBAL_BYTES=256*1024*1024;
 const LIVE_LIMIT=1000,HISTORY_LIMIT=5000,ACCOUNT_LIMIT=500,PAGE_LIMIT=100,PAGE_BYTES=512*1024;
 const JOB_BYTES=512*1024,ACCOUNT_JOB_BYTES=10*1024*1024,GLOBAL_JOB_BYTES=256*1024*1024,JOB_LIMIT=1000;
+const SYNC_REQUESTS_PER_MINUTE=60,SYNC_DEVICE_SESSIONS=20,SYNC_CREATE_IP_DAY=10,SYNC_CREATE_GLOBAL_DAY=50,SYNC_CHANGES=100;
+export const SYNC_LIMITS=Object.freeze({bodyBytes:BODY_LIMIT,recordBytes:RECORD_LIMIT,accountBytes:ACCOUNT_BYTES,globalBytes:GLOBAL_BYTES,liveRecords:LIVE_LIMIT,historyRecords:HISTORY_LIMIT,accounts:ACCOUNT_LIMIT,pageRecords:PAGE_LIMIT,pageBytes:PAGE_BYTES,jobBytes:JOB_BYTES,accountJobBytes:ACCOUNT_JOB_BYTES,globalJobBytes:GLOBAL_JOB_BYTES,accountJobs:JOB_LIMIT,requestsPerMinute:SYNC_REQUESTS_PER_MINUTE,deviceSessions:SYNC_DEVICE_SESSIONS,createPerIPDay:SYNC_CREATE_IP_DAY,createGlobalDay:SYNC_CREATE_GLOBAL_DAY,changesPerRequest:SYNC_CHANGES});
 const JOB_ERRORS={AI_FORMAT_INVALID:'AI 没能整理好这次通知，可恢复原文后重新提交。',AI_INCOMPLETE:'AI 只返回了部分内容，可恢复原文、减少本次数量后再提交。',AI_TIMEOUT:'等待 AI 回复超时，可恢复原文后稍后再提交。',CONTENT_BOUNDARY:'这里只能整理校园通知，请提供原通知中的事项、安全提醒或学习信息。',SERVICE_RESTARTED:'服务刚刚重启，这次整理未能完成，可恢复原文后重新提交。',JOB_SAVE_FAILED:'结果未能保存到云端，可恢复原文后重新提交。',SERVICE_UNAVAILABLE:'暂时无法连接整理服务，可恢复原文后稍后再提交。'};
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const isObject=value=>value&&typeof value==='object'&&!Array.isArray(value);
@@ -71,7 +73,7 @@ export async function createSyncService(config,options={}){
     accountCount:db.prepare('SELECT COUNT(*) AS count FROM accounts'),
     insertAccount:db.prepare('INSERT INTO accounts(identity) VALUES (?)'),
     insertSession:db.prepare('INSERT INTO sessions(key_hash,account,created) VALUES (?,?,?)'),
-    pruneSessions:db.prepare('DELETE FROM sessions WHERE account=? AND key_hash NOT IN (SELECT key_hash FROM sessions WHERE account=? ORDER BY created DESC,rowid DESC LIMIT 20)'),
+    pruneSessions:db.prepare(`DELETE FROM sessions WHERE account=? AND key_hash NOT IN (SELECT key_hash FROM sessions WHERE account=? ORDER BY created DESC,rowid DESC LIMIT ${SYNC_DEVICE_SESSIONS})`),
     account:db.prepare('SELECT revision FROM accounts WHERE id=?'),
     setRevision:db.prepare('UPDATE accounts SET revision=? WHERE id=?'),
     get:db.prepare('SELECT version,json,bytes FROM records WHERE account=? AND id=?'),
@@ -113,7 +115,7 @@ export async function createSyncService(config,options={}){
     return transaction(()=>{
       let account=stmt.findIdentity.get(owner);
       if(!account){
-        if((stmt.creation.get(day,network)?.count||0)>=10||(stmt.creation.get(day,'global')?.count||0)>=50)throw new ServiceError('今日同步空间创建次数已达上限，请明天再试。',429);
+        if((stmt.creation.get(day,network)?.count||0)>=SYNC_CREATE_IP_DAY||(stmt.creation.get(day,'global')?.count||0)>=SYNC_CREATE_GLOBAL_DAY)throw new ServiceError('今日同步空间创建次数已达上限，请明天再试。',429);
         if(stmt.accountCount.get().count>=ACCOUNT_LIMIT)throw new ServiceError('同步服务容量已满，请联系维护者。',507);
         const result=stmt.insertAccount.run(owner);account={id:Number(result.lastInsertRowid)};
         stmt.countCreation.run(day,network);stmt.countCreation.run(day,'global');stmt.pruneCreation.run(day);
@@ -125,7 +127,7 @@ export async function createSyncService(config,options={}){
   }
   function exchange(account,body){
     shape(body,['cursor','changes']);integer(body.cursor);
-    if(!Array.isArray(body.changes)||body.changes.length>100)throw new ServiceError('每次最多同步100条变更。',400);
+    if(!Array.isArray(body.changes)||body.changes.length>SYNC_CHANGES)throw new ServiceError('每次最多同步100条变更。',400);
     unique(body.changes.map(change=>id(change?.id)));
     const changes=body.changes.map(change=>{
       shape(change,['id','baseVersion','record']);integer(change.baseVersion);
@@ -317,7 +319,7 @@ export async function createSyncService(config,options={}){
         if(account&&account.identity!=='invite:'+identity.subject)account=null;
         if(!account)return reply({error:'登录状态已失效，请重新登录后同步。'},401);
         const t=now(),times=(rates.get(account.id)||[]).filter(time=>t-time<60000);
-        if(times.length>=60)return reply({error:'同步过于频繁，请稍后再试。'},429,{'Retry-After':String(Math.max(1,Math.ceil((times[0]+60000-t)/1000)))});
+        if(times.length>=SYNC_REQUESTS_PER_MINUTE)return reply({error:'同步过于频繁，请稍后再试。'},429,{'Retry-After':String(Math.max(1,Math.ceil((times[0]+60000-t)/1000)))});
         times.push(t);rates.set(account.id,times);
         for(const [id,entries] of rates)if(!entries.some(time=>t-time<60000))rates.delete(id);
       }

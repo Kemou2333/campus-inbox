@@ -34,9 +34,11 @@ function readUpdateResult(value: unknown): AppUpdateResult {
   if(result.status!=='available')return {status:result.status,currentVersion};
   if(typeof result.version!=='string'||!versionPattern.test(result.version))return {status:'error',currentVersion};
   const expected=`https://github.com/Kemou2333/campus-inbox/releases/download/android-v${result.version}/campus-inbox-${result.version}.apk`;
+  const canonical=expected.replace('/Kemou2333/campus-inbox/','/Kemou2333/note-inbox/');
+  const acceptedGithub=[expected,canonical];
   const aliyun=`https://123.57.30.129/downloads/android-v${result.version}/campus-inbox-${result.version}.apk`;
-  if(result.download!==expected&&result.download!==aliyun||result.github!==undefined&&result.github!==expected||result.aliyun!==undefined&&result.aliyun!==aliyun)return {status:'error',currentVersion};
-  return {status:'available',currentVersion,version:result.version,download:result.download,...(result.github!==undefined||result.download===aliyun?{github:expected}:{}),...(result.aliyun!==undefined||result.download===aliyun?{aliyun}: {})};
+  if(!acceptedGithub.includes(result.download??'')&&result.download!==aliyun||result.github!==undefined&&!acceptedGithub.includes(result.github)||result.aliyun!==undefined&&result.aliyun!==aliyun)return {status:'error',currentVersion};
+  return {status:'available',currentVersion,version:result.version,download:result.download,...(result.github!==undefined||result.download===aliyun?{github:result.github??(result.download===canonical?canonical:expected)}:{}),...(result.aliyun!==undefined||result.download===aliyun?{aliyun}: {})};
 }
 
 function base64(bytes: Uint8Array): string {

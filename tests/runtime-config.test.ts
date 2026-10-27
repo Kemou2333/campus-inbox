@@ -6,7 +6,7 @@ afterEach(()=>vi.unstubAllGlobals());
 const config={apiEndpoint:`${API_ORIGINS[0]}/analyze`,syncEndpoint:`${API_ORIGINS[0]}/sync`};
 test('native remote configuration comes from the exact trusted origin allowed by production CSP',async()=>{
  const fetcher=vi.fn(async(_url:RequestInfo|URL,_init?:RequestInit)=>Response.json(config));vi.stubGlobal('fetch',fetcher);
- expect(await loadConfig(true)).toEqual(config);expect(fetcher.mock.calls[0][0]).toBe(`${CONFIG_ORIGIN}/campus-inbox/runtime-config.json`);
+ expect(await loadConfig(true)).toEqual(config);expect(fetcher.mock.calls[0][0]).toBe(`${CONFIG_ORIGIN}/note-inbox/runtime-config.json`);
  expect(CONNECT_SOURCES.split(' ')).toContain(CONFIG_ORIGIN);
 });
 test('untrusted API origins and URL credentials are refused rather than outgrowing CSP',async()=>{
