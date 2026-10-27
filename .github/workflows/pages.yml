@@ -53,3 +53,15 @@ jobs:
           chmod 600 ~/.ssh/campus-deploy ~/.ssh/known_hosts
           python3 ops/web/package.py dist "$GITHUB_SHA" > web-release.tar.gz
           ssh -i ~/.ssh/campus-deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes -p "$SERVER_PORT" "campus-deploy@$SERVER_HOST" deploy-campus-inbox-web < web-release.tar.gz
+      - name: Publish the same build to the domain entry
+        env:
+          JP_SERVER_HOST: ${{ secrets.JP_SERVER_HOST }}
+          JP_SERVER_PORT: ${{ secrets.JP_SERVER_PORT }}
+          JP_SSH_PRIVATE_KEY: ${{ secrets.JP_DEPLOY_SSH_PRIVATE_KEY }}
+          JP_SSH_KNOWN_HOSTS: ${{ secrets.JP_SSH_KNOWN_HOSTS }}
+        run: |
+          set -eu
+          printf '%s\n' "$JP_SSH_PRIVATE_KEY" > ~/.ssh/note-web-deploy
+          printf '%s\n' "$JP_SSH_KNOWN_HOSTS" > ~/.ssh/jp-known-hosts
+          chmod 600 ~/.ssh/note-web-deploy ~/.ssh/jp-known-hosts
+          ssh -i ~/.ssh/note-web-deploy -o UserKnownHostsFile=~/.ssh/jp-known-hosts -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes -p "$JP_SERVER_PORT" "note-web@$JP_SERVER_HOST" deploy-note-inbox-web < web-release.tar.gz
