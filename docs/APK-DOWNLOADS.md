@@ -1,6 +1,6 @@
-# 阿里云安卓主下载
+# 安卓主下载
 
-本模块只保护安装包下载，与账号、邮箱和AI额度完全独立。阿里云作为主下载；GitHub精确版本链接作为备用。验证码不是账号注册或邮件验证，不需要登录。
+本模块只保护安装包下载，与账号、邮箱和AI额度完全独立。当前主入口为 `https://kemou.top:88/downloads/…`，原阿里云地址继续兼容；各入口转到阿里云同一个门禁和账本，GitHub精确版本链接作为备用。验证码不是账号注册或邮件验证，不需要登录。
 
 ## 固定规则
 
@@ -21,13 +21,16 @@ const handleAPK=await createAPKDownloads({
   releaseManifestFile:'/var/lib/campus-inbox-downloads/releases.json',
   stateFile:'/var/lib/campus-inbox/apk-download-usage.json',
   signingSecret:existingStrongPrivateSecret,
-  publicOrigin:'https://123.57.30.129'
+  publicOrigin:'https://123.57.30.129',
+  publicOriginAliases:['https://kemou.top:88','https://kemou.top:8443']
 });
 // 先于普通Request/Response缓冲适配分流；verifiedIP使用同一可信代理边界。
 if(path.startsWith('/downloads/'))return handleAPK(req,res,verifiedIP);
 ```
 
-`createAPKDownloads`返回异步Node请求处理函数，并提供`await handleAPK.close()`供正常停止时中止下载。配置路径必须为绝对路径；`publicOrigin`为固定、精确HTTPS来源（仅本机测试另允许`http://127.0.0.1`）。处理器不读取Host来生成跳转，也不自行相信`X-Real-IP`或`X-Forwarded-For`。传入的IP必须已由公共入口核实。IPv4映射IPv6统一为IPv4，普通IPv6按规范形式归一，不根据IP推断用户所在地。
+`createAPKDownloads`返回异步Node请求处理函数，并提供`await handleAPK.close()`供正常停止时中止下载。配置路径必须为绝对路径；`publicOrigin`与可选别名均为精确HTTPS来源（仅本机测试的主地址另允许`http://127.0.0.1`）。请求Host只能选择已配置的来源，禁止任意Host或转发头生成跳转；POST、验证码和票据绑定同一个来源，不能跨入口复用。环境字段为 `APK_DOWNLOAD_PUBLIC_ORIGIN` 与逗号分隔的 `APK_DOWNLOAD_PUBLIC_ORIGIN_ALIASES`。
+
+处理器不自行相信`X-Real-IP`或`X-Forwarded-For`。日本节点重写客户端IP，并以固定来源和私密认证连接阿里云；阿里云仅在验证通过后恢复IP及精确批准的公开Host。各入口共用一份额度与并发状态。IPv4映射IPv6统一为IPv4，普通IPv6按规范形式归一，不根据IP推断用户所在地。
 
 处理器必须在`Response.arrayBuffer()`等整体缓冲适配之前接管原生`req/res`。反向代理的`/downloads/`应关闭响应缓冲与临时文件缓存，并保留正确客户端断开；建议由代理同时限制该真实IP的活动连接，保证浏览器到代理这一段慢连接也不能并行占用下载。模块的活动槽持续到Node响应完成或关闭。
 

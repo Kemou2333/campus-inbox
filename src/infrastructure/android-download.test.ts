@@ -32,3 +32,12 @@ it('a web build uses the approved published APK instead of requiring an unreleas
  expect(parseAndroidDownload(approved)).toEqual(approved);
  expect(parseAndroidDownload(fallbackAndroidDownload)).toEqual(fallbackAndroidDownload);
 });
+
+
+it('accepts the approved domain mirror only for the same exact release asset',()=>{
+ const path=`/downloads/android-v${fallbackAndroidDownload.version}/campus-inbox-${fallbackAndroidDownload.version}.apk`;
+ for(const origin of ['https://kemou.top:88','https://kemou.top:8443']){
+  const primary=origin+path;expect(parseAndroidDownload({...fallbackAndroidDownload,primary})).toEqual({...fallbackAndroidDownload,primary});
+ }
+ for(const primary of ['http://kemou.top'+path,'https://kemou.top.evil.test'+path,'https://user@kemou.top'+path,'https://kemou.top:4433'+path,'https://kemou.top'+path+'?redirect=x','https://kemou.top'+path+'#x','https://kemou.top'+path.replace('downloads','sync')])expect(parseAndroidDownload({...fallbackAndroidDownload,primary})).toBeNull();
+});

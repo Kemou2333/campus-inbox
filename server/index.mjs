@@ -29,7 +29,9 @@ const handleAI=await createService({apiKey:env.DEEPSEEK_API_KEY,accessToken:env.
 const handleAdmin=createAdminService({usernames:(env.ADMIN_USERNAMES||'').split(',').map(name=>name.trim()).filter(Boolean),userIDs:(env.ADMIN_USER_IDS||'').split(',').map(id=>id.trim()).filter(Boolean),allowedOrigins,backupStateFile:env.BACKUP_STATUS_FILE||join(stateDirectory,'backups/status.json')},{auth,sync,ai:handleAI});
 const handleTransfer=createSiteTransfer({directory:join(stateDirectory,'site-transfers')});
 const downloadDirectory=env.APK_DOWNLOAD_DIRECTORY||'/var/lib/campus-inbox-downloads';
-const handleDownloads=await createAPKDownloads({directory:downloadDirectory,releaseManifestFile:join(downloadDirectory,'releases.json'),stateFile:join(stateDirectory,'apk-download-usage.json'),signingSecret:env.CAMPUS_ACCESS_TOKEN,publicOrigin:'https://123.57.30.129'});
+const handleDownloads=await createAPKDownloads({directory:downloadDirectory,releaseManifestFile:join(downloadDirectory,'releases.json'),stateFile:join(stateDirectory,'apk-download-usage.json'),signingSecret:env.CAMPUS_ACCESS_TOKEN,
+  publicOrigin:env.APK_DOWNLOAD_PUBLIC_ORIGIN||'https://123.57.30.129',
+  publicOriginAliases:(env.APK_DOWNLOAD_PUBLIC_ORIGIN_ALIASES||'').split(',').map(value=>value.trim()).filter(Boolean)});
 const handle=(request,ip)=>{const path=new URL(request.url).pathname;return path.startsWith('/site-transfer')?handleTransfer(request,ip):path.startsWith('/admin')?handleAdmin(request):path.startsWith('/auth/')?auth.handle(request,ip):path.startsWith('/sync')?sync.handle(request,ip):handleAI(request,ip);};
 const server=http.createServer(async(req,res)=>{
   try{

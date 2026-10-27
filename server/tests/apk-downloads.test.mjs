@@ -22,12 +22,12 @@ async function fixture(extra={}){
   let time=initial,clock=0,handler,server;const sleeps=[];
   await writeFile(join(assets,filename),bytes);await writeFile(releaseManifestFile,JSON.stringify({schemaVersion:1,releases:[release]}));
   if(extra.state)await writeFile(stateFile,typeof extra.state==='string'?extra.state:JSON.stringify(extra.state));
-  const config={directory:assets,releaseManifestFile,stateFile,signingSecret:secret,publicOrigin:origin};
+  const config={directory:assets,releaseManifestFile,stateFile,signingSecret:secret,publicOrigin:origin,...extra.config};
   const options={now:()=>time,monotonicNow:()=>clock,imageCaptcha:id=>createImageCaptcha(id,()=>2468),sleep:async(ms,signal)=>{if(signal.aborted)throw new Error('closed');sleeps.push(ms);clock+=ms;await immediate();if(signal.aborted)throw new Error('closed');},...extra.options};
   const start=async()=>{handler=await createAPKDownloads(config,options);server=http.createServer((req,res)=>{void handler(req,res,req.headers['x-test-verified-ip']||'203.0.113.7');});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));};
   await start();
   const request=(url=path,{method='GET',body,ip='203.0.113.7',headers={}}={})=>new Promise((resolve,reject)=>{
-    const req=http.request({hostname:'127.0.0.1',port:server.address().port,path:url,method,headers:{'X-Test-Verified-IP':ip,...headers,...(body===undefined?{}:{'Content-Length':Buffer.byteLength(body)})}},res=>{
+    const req=http.request({hostname:'127.0.0.1',port:server.address().port,path:url,method,headers:{Host:new URL(config.publicOrigin).host,'X-Test-Verified-IP':ip,...headers,...(body===undefined?{}:{'Content-Length':Buffer.byteLength(body)})}},res=>{
       const chunks=[];res.on('data',chunk=>chunks.push(chunk));res.once('end',()=>resolve({status:res.statusCode,headers:res.headers,bytes:Buffer.concat(chunks),text:Buffer.concat(chunks).toString('utf8')}));res.once('error',reject);
     });req.once('error',reject);req.end(body);
   });
@@ -94,7 +94,7 @@ test('rate pacing streams bounded chunks and keeps the IP slot until response fi
   blocked.resolve();assert.deepEqual((await running).bytes,s.bytes);assert.equal(waits.length,3);assert(waits.every(ms=>Math.abs(ms-32.768)<0.0001));assert(Math.abs(waits.reduce((a,b)=>a+b,0)-s.bytes.length/2_000_000*1000)<0.0001);
   // A stopped connection cannot obtain a partial-refund budget or an extra hourly slot.
   const waiting=gate(),begun=gate();const canceled=await fixture({size:131072,options:{sleep:async(_ms,signal)=>{begun.resolve();await waiting.promise;if(signal.aborted)throw new Error('closed');}}});t.after(canceled.close);
-  const cancelURL=await canceled.ticket();const request=http.get({hostname:'127.0.0.1',port:canceled.port(),path:cancelURL,headers:{'X-Test-Verified-IP':'203.0.113.7'}});request.on('error',()=>{});await begun.promise;request.destroy();await immediate();waiting.resolve();await immediate();const saved=await canceled.state();assert.equal(saved.reservedBytes,canceled.bytes.length);assert.equal(Object.values(saved.downloads)[0].length,1);
+  const cancelURL=await canceled.ticket();const request=http.get({hostname:'127.0.0.1',port:canceled.port(),path:cancelURL,headers:{Host:new URL(origin).host,'X-Test-Verified-IP':'203.0.113.7'}});request.on('error',()=>{});await begun.promise;request.destroy();await immediate();waiting.resolve();await immediate();const saved=await canceled.state();assert.equal(saved.reservedBytes,canceled.bytes.length);assert.equal(Object.values(saved.downloads)[0].length,1);
 });
 
 test('global eight active streams and per-IP guards prevent concurrent overspend',async t=>{
@@ -161,4 +161,94 @@ test('latest metadata stays independent of exhausted/corrupt traffic state but f
   }
   await rename(s.releaseManifestFile,s.releaseManifestFile+'.missing');assert.equal((await s.request(url)).status,503);
   const corrupt=await fixture({state:'{bad-state'});t.after(corrupt.close);assert.equal((await corrupt.request()).status,503);assert.equal(JSON.parse((await corrupt.request(url)).text).version,version);
+});
+
+const japanOrigin='https://kemou.top',previewOrigin='https://kemou.top:8443';
+const aliasHeaders=publicOrigin=>({Host:new URL(publicOrigin).host});
+const aliasProof=async(s,publicOrigin,ip)=>{
+  const page=await s.request(path,{ip,headers:aliasHeaders(publicOrigin)});
+  assert.equal(page.status,200,page.text);
+  const token=page.text.match(/name="challenge" value="([^"]+)"/)?.[1];assert(token);
+  return {token,page};
+};
+const aliasVerify=(s,publicOrigin,ip,token,formOrigin=publicOrigin)=>s.request(path,{ip,method:'POST',headers:{...aliasHeaders(publicOrigin),Origin:formOrigin,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({challenge:token,answer:'2468'}).toString()});
+const aliasTicket=async(s,publicOrigin,ip)=>{
+  const {token}=await aliasProof(s,publicOrigin,ip),response=await aliasVerify(s,publicOrigin,ip,token);
+  assert.equal(response.status,303,response.text);assert(response.headers.location.startsWith(publicOrigin+path+'?ticket='));
+  return response.headers.location.slice(publicOrigin.length);
+};
+
+test('explicit HTTPS aliases keep forms, CSP, latest metadata and redirects on the requested approved host',async t=>{
+  const s=await fixture({config:{publicOrigin:japanOrigin,publicOriginAliases:[origin,previewOrigin]}});t.after(s.close);
+  for(const [index,publicOrigin] of [origin,japanOrigin,previewOrigin].entries()){
+    const ip='203.0.113.'+(100+index),{token,page}=await aliasProof(s,publicOrigin,ip);
+    assert(page.text.includes('action="'+publicOrigin+path+'"'));
+    assert(page.headers['content-security-policy'].includes('; form-action '+publicOrigin+';'));
+    const metadata=await s.request('/downloads/android-latest.json',{headers:aliasHeaders(publicOrigin)});
+    assert.equal(JSON.parse(metadata.text).aliyun,publicOrigin+path);
+    const otherOrigin=publicOrigin===origin?japanOrigin:origin;
+    assert.equal((await aliasVerify(s,publicOrigin,ip,token,otherOrigin)).status,403,'even an approved foreign Origin is not same-origin');
+    assert.equal((await aliasVerify(s,otherOrigin,ip,token)).status,400,'captcha capability is bound to its issuing origin');
+    const accepted=await aliasVerify(s,publicOrigin,ip,token);assert.equal(accepted.status,303);
+    assert(accepted.headers.location.startsWith(publicOrigin+path+'?ticket='));
+    const url=accepted.headers.location.slice(publicOrigin.length);
+    assert.equal((await s.request(url,{ip,headers:aliasHeaders(otherOrigin)})).status,403,'ticket cannot move to another alias');
+    assert.deepEqual((await s.request(url,{ip,headers:aliasHeaders(publicOrigin)})).bytes,s.bytes);
+    assert.equal((await s.request(url,{ip,headers:aliasHeaders(publicOrigin)})).status,403);
+  }
+  const state=await s.state();assert.equal(state.reservedBytes,s.bytes.length*3);assert.equal(Object.keys(state.downloads).length,3);
+});
+
+test('malformed, duplicated or unapproved Host never reflects into public URLs or issues a captcha',async t=>{
+  const s=await fixture({config:{publicOriginAliases:[japanOrigin,previewOrigin]}});t.after(s.close);
+  for(const host of ['attacker.example','kemou.top.attacker.example','kemou.top:443','kemou.top:08443','kemou.top.','kemou.top/path','user@kemou.top','kemou.top,123.57.30.129','kemou.top?x','kemou.top#x','kemou.top%2f','[::1]']){
+    for(const url of [path,'/downloads/android-latest.json']){
+      const response=await s.request(url,{headers:{Host:host,Origin:japanOrigin,'X-Forwarded-Host':'kemou.top'}});
+      assert.equal(response.status,400,String(host));assert.equal(response.headers.location,undefined);assert(!response.text.includes('action="'));
+      assert(response.headers['content-security-policy'].includes('; form-action '+origin+';'));
+    }
+  }
+  const duplicate=await new Promise((resolve,reject)=>{
+    const req=http.request({hostname:'127.0.0.1',port:s.port(),path,headers:['Host','kemou.top','Host','123.57.30.129']},res=>{res.resume();res.once('end',()=>resolve(res.statusCode));});
+    req.once('error',reject);req.end();
+  });
+  assert.equal(duplicate,400,'raw duplicate Host must not use Node first-value normalization');
+  await assert.rejects(readFile(s.stateFile),{code:'ENOENT'});
+  assert.equal((await s.request(path,{headers:{Host:'KEMOU.TOP'}})).status,200,'DNS case is normalized without accepting a different authority');
+});
+
+test('public alias configuration rejects non-exact, insecure or ambiguous origins before opening the ledger',async t=>{
+  const s=await fixture();t.after(s.close);
+  for(const value of ['http://kemou.top','https://kemou.top/','https://kemou.top/inbox/','https://kemou.top:443','https://user@kemou.top','https://kemou.top?x','https://kemou.top#x','https://kemou..top','https://kemou.top.','https://kemou.top:0','https://*.kemou.top','https://KEMOU.TOP',null]){
+    await assert.rejects(createAPKDownloads({...s.config,publicOriginAliases:[value]}),/public origin/);
+  }
+  await assert.rejects(createAPKDownloads({...s.config,publicOriginAliases:japanOrigin}),/bounded array/);
+  await assert.rejects(createAPKDownloads({...s.config,publicOriginAliases:Array(17).fill(japanOrigin)}),/bounded array/);
+  await assert.rejects(createAPKDownloads({...s.config,publicOrigin:'http://127.0.0.1',publicOriginAliases:['https://127.0.0.1']}),/distinct hosts/);
+});
+
+test('aliases share captcha cooldown, one-use capabilities and the final daily byte allowance',async t=>{
+  const s=await fixture({config:{publicOriginAliases:[japanOrigin,previewOrigin]},state:{version:1,day:'2026-10-23',reservedBytes:200_000_000-4096,downloads:{},captchaRequests:{}}});t.after(s.close);
+  const ip='203.0.113.110',{token}=await aliasProof(s,origin,ip);
+  assert.equal((await s.request(path,{ip,headers:aliasHeaders(japanOrigin)})).status,429,'another alias cannot mint an extra captcha during cooldown');
+  assert.equal(Object.values((await s.state()).captchaRequests)[0].length,1);
+  const accepted=await aliasVerify(s,origin,ip,token);assert.equal(accepted.status,303);
+  assert.equal((await aliasVerify(s,origin,ip,token)).status,400,'verification is single use');
+  const a=accepted.headers.location.slice(origin.length),b=await aliasTicket(s,japanOrigin,'203.0.113.111');
+  const responses=await Promise.all([s.request(a,{ip,headers:aliasHeaders(origin)}),s.request(b,{ip:'203.0.113.111',headers:aliasHeaders(japanOrigin)})]);
+  assert.deepEqual(responses.map(value=>value.status).sort(),[200,429]);assert.equal((await s.state()).reservedBytes,200_000_000);assert.equal(Object.keys((await s.state()).downloads).length,1);
+});
+
+test('one active IP slot and the rolling hourly limit stay shared across aliases',async t=>{
+  const wait=gate(),started=gate();let block=true;
+  const s=await fixture({config:{publicOriginAliases:[japanOrigin]},options:{sleep:async(_ms,signal)=>{if(block){started.resolve();await wait.promise;}if(signal.aborted)throw new Error('closed');}}});t.after(s.close);
+  const ip='203.0.113.120',first=await aliasTicket(s,origin,ip),running=s.request(first,{ip,headers:aliasHeaders(origin)});await started.promise;
+  s.advance(15_000);const second=await aliasTicket(s,japanOrigin,ip);
+  assert.equal((await s.request(second,{ip,headers:aliasHeaders(japanOrigin)})).status,429);
+  assert.equal((await s.state()).reservedBytes,s.bytes.length,'a second alias cannot obtain a second active slot');
+  block=false;wait.resolve();assert.equal((await running).status,200);
+  assert.equal((await s.request(second,{ip,headers:aliasHeaders(japanOrigin)})).status,200,'capacity refusal retains its original ticket');
+  for(let index=0;index<3;index++){s.advance(15_000);const publicOrigin=index%2?origin:japanOrigin,url=await aliasTicket(s,publicOrigin,ip);assert.equal((await s.request(url,{ip,headers:aliasHeaders(publicOrigin)})).status,200);}
+  s.advance(15_000);const blocked=await aliasTicket(s,origin,ip);assert.equal((await s.request(blocked,{ip,headers:aliasHeaders(origin)})).status,429);
+  assert.equal((await s.state()).reservedBytes,s.bytes.length*5);assert.equal(Object.values((await s.state()).downloads)[0].length,5);
 });

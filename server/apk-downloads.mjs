@@ -21,6 +21,21 @@ const shanghaiDay=time=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai
 const midnightWait=time=>Math.max(1,Math.ceil((86_400_000-((time+8*3_600_000)%86_400_000))/1000));
 const githubFor=version=>'https://github.com/Kemou2333/campus-inbox/releases/download/android-v'+version+'/campus-inbox-'+version+'.apk';
 const pathnameFor=release=>'/downloads/android-v'+release.version+'/'+release.filename;
+function publicOriginsFor(config){
+  const aliases=config.publicOriginAliases??[];
+  if(!Array.isArray(aliases)||aliases.length>16)throw new Error('APK download public aliases must be a bounded array');
+  const byHost=new Map();
+  for(const [index,value] of [config.publicOrigin,...aliases].entries()){
+    let url;try{url=new URL(value);}catch{throw new Error('APK download public origin must be exact HTTPS');}
+    const hostname=url.hostname.startsWith('[')?url.hostname.slice(1,-1):url.hostname;
+    const validHost=isIP(hostname)||hostname.length<=253&&hostname.split('.').every(label=>/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label));
+    // Keep the existing loopback-only development origin; aliases are HTTPS only.
+    if(typeof value!=='string'||url.origin!==value||!validHost||url.port==='0'||!(url.protocol==='https:'||index===0&&url.protocol==='http:'&&hostname==='127.0.0.1'))throw new Error('APK download public origin must be exact HTTPS');
+    if(byHost.has(url.host)&&byHost.get(url.host)!==value)throw new Error('APK download public origins must have distinct hosts');
+    byHost.set(url.host,value);
+  }
+  return byHost;
+}
 function validIP(value){
   if(typeof value!=='string'||value.includes('%')||!isIP(value))return null;
   if(value.toLowerCase().startsWith('::ffff:')&&isIP(value.slice(7))===4)return value.slice(7);
@@ -80,8 +95,15 @@ const finishResponse=res=>new Promise((resolve,reject)=>{
 /** A separate, single-process download gate. It never reads accounts or invokes AI. */
 export async function createAPKDownloads(config,options={}){
   if(!config||!['directory','releaseManifestFile','stateFile'].every(key=>typeof config[key]==='string'&&isAbsolute(config[key]))||typeof config.signingSecret!=='string'||config.signingSecret.length<20)throw new Error('APK download configuration is incomplete');
-  const publicURL=new URL(config.publicOrigin);
-  if(publicURL.origin!==config.publicOrigin||!(publicURL.protocol==='https:'||publicURL.protocol==='http:'&&publicURL.hostname==='127.0.0.1'))throw new Error('APK download public origin must be exact HTTPS');
+  const publicOrigins=publicOriginsFor(config);
+  function publicOriginFor(req){
+    const host=req.headers.host;
+    // Exact configured authorities only. Never derive a redirect from Origin or
+    // forwarded headers; reject duplicated Host before Node's first-value view.
+    if(typeof host!=='string'||host.length>259||!/^[A-Za-z0-9.:[\]-]+$/.test(host))return null;
+    if(Array.isArray(req.rawHeaders)&&req.rawHeaders.filter((_,index)=>index%2===0&&req.rawHeaders[index].toLowerCase()==='host').length!==1)return null;
+    return publicOrigins.get(host.toLowerCase())||null;
+  }
   const now=options.now||Date.now,monotonicNow=options.monotonicNow||(()=>performance.now()),sleep=options.sleep||((ms,signal)=>delay(ms,undefined,{signal})),imageCaptcha=options.imageCaptcha||createImageCaptcha;
   const sign=value=>createHmac('sha256',config.signingSecret).update(value).digest('base64url');
   const challenges=new Map(),tickets=new Map(),active=new Map(),verifiedAssets=new Map();
@@ -101,42 +123,43 @@ export async function createAPKDownloads(config,options={}){
   function ledger(action){const run=queue.catch(()=>{}).then(async()=>{if(unavailable||closed)throw new Error('APK downloads unavailable');prune(now());return action();});queue=run.catch(()=>{});return run;}
   async function releases(){return validateManifest(await readSmallJSON(config.releaseManifestFile,65536));}
   async function releaseFor(version){return (await releases()).get(version);}
-  async function latest(req,res){
+  async function latest(req,res,publicOrigin){
     if(!['GET','HEAD'].includes(req.method)){res.setHeader('Allow','GET, HEAD');return html(req,res,405,'请使用浏览器读取更新信息。');}
     try{
       const approved=[...(await releases()).values()];
       approved.sort((left,right)=>{const a=left.version.split('.').map(Number),b=right.version.split('.').map(Number);for(let i=0;i<3;i++)if(a[i]!==b[i])return b[i]-a[i];return 0;});
-      const release=approved[0],body=JSON.stringify({version:release.version,aliyun:config.publicOrigin+pathnameFor(release),github:release.github,lanzou:null,sizeBytes:release.size,sha256:release.sha256});
-      securityHeaders(res);res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Content-Length',Buffer.byteLength(body));res.end(req.method==='HEAD'?undefined:body);
+      const release=approved[0],body=JSON.stringify({version:release.version,aliyun:publicOrigin+pathnameFor(release),github:release.github,lanzou:null,sizeBytes:release.size,sha256:release.sha256});
+      securityHeaders(res,undefined,publicOrigin);res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Content-Length',Buffer.byteLength(body));res.end(req.method==='HEAD'?undefined:body);
     }catch{html(req,res,503,'更新信息暂时不可用，请稍后再试。');}
   }
-  const tokenFor=(kind,value)=>value.id+'.'+sign('apk:'+kind+':'+value.id+':'+value.ipKey+':'+value.version+':'+value.expires);
-  function tokenRecord(kind,token,map,ipKey,version){
+  const tokenFor=(kind,value)=>value.id+'.'+sign('apk:'+kind+':'+value.id+':'+value.ipKey+':'+value.version+':'+value.expires+':'+value.publicOrigin);
+  function tokenRecord(kind,token,map,ipKey,version,publicOrigin){
     if(typeof token!=='string'||!tokenPattern.test(token))return null;
-    const value=map.get(token.split('.')[0]);if(!value||value.ipKey!==ipKey||value.version!==version||value.expires<=now())return null;
+    const value=map.get(token.split('.')[0]);if(!value||value.ipKey!==ipKey||value.version!==version||value.publicOrigin!==publicOrigin||value.expires<=now())return null;
     const expected=tokenFor(kind,value);return timingSafeEqual(Buffer.from(token),Buffer.from(expected))?value:null;
   }
-  function securityHeaders(res,nonce){
+  function securityHeaders(res,nonce,publicOrigin=config.publicOrigin){
     res.setHeader('Cache-Control','no-store, private');res.setHeader('Pragma','no-cache');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-Frame-Options','DENY');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('Cross-Origin-Resource-Policy','same-origin');res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()');
-    res.setHeader('Content-Security-Policy',"default-src 'none'; img-src data:; style-src "+(nonce?"'nonce-"+nonce+"'":"'none'")+"; form-action "+config.publicOrigin+"; base-uri 'none'; frame-ancestors 'none'");
+    res.setHeader('Content-Security-Policy',"default-src 'none'; img-src data:; style-src "+(nonce?"'nonce-"+nonce+"'":"'none'")+"; form-action "+publicOrigin+"; base-uri 'none'; frame-ancestors 'none'");
   }
   function html(req,res,status,message,release,challenge,retry){
     for(const name of ['Content-Disposition','Accept-Ranges','X-Download-Options'])res.removeHeader(name);
     // A navigation POST gets Origin:null under no-referrer in Chrome. Preserve the
     // same-origin form source without sending referrers to the GitHub fallback.
-    const nonce=randomBytes(16).toString('base64');securityHeaders(res,nonce);res.setHeader('Referrer-Policy','same-origin');res.statusCode=status;res.setHeader('Content-Type','text/html; charset=utf-8');if(retry)res.setHeader('Retry-After',String(retry));
-    const path=release?pathnameFor(release):'/downloads/',action=config.publicOrigin+path;
+    const publicOrigin=publicOriginFor(req)||config.publicOrigin;
+    const nonce=randomBytes(16).toString('base64');securityHeaders(res,nonce,publicOrigin);res.setHeader('Referrer-Policy','same-origin');res.statusCode=status;res.setHeader('Content-Type','text/html; charset=utf-8');if(retry)res.setHeader('Retry-After',String(retry));
+    const path=release?pathnameFor(release):'/downloads/',action=publicOrigin+path;
     const form=challenge?'<form method="post" action="'+htmlEscape(action)+'"><label for="answer">图中的四位数字</label><img src="'+htmlEscape(challenge.image)+'" width="240" height="88" alt="四位数字验证码"><input type="hidden" name="challenge" value="'+htmlEscape(tokenFor('challenge',challenge))+'"><input id="answer" name="answer" inputmode="numeric" autocomplete="off" maxlength="4" pattern="[0-9]{4}" required aria-label="四位数字验证码"><button type="submit">验证并下载</button></form>':'';
     const links=release?'<p><a href="'+htmlEscape(action)+'">'+(challenge?'换一张验证码':'重新获取验证码')+'</a><span class="muted"> · 换图需间隔15秒</span></p><p class="backup"><a href="'+htmlEscape(release.github)+'" rel="noopener noreferrer">GitHub 备用下载</a></p>':'';
     const body='<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>拾笺 · Note Inbox · 安卓下载</title><style nonce="'+nonce+'">*{box-sizing:border-box}body{margin:0;background:#f4f7f6;color:#193a37;font:16px/1.7 system-ui,sans-serif}main{max-width:480px;margin:32px auto;padding:24px;background:#fff;border:1px solid #dce8e4;border-radius:20px}h1{font-size:25px;line-height:1.3}p{overflow-wrap:anywhere}label{display:block;font-weight:600;margin-top:20px}img{display:block;max-width:100%;object-fit:contain;margin:8px 0}input,button{font:inherit;border-radius:12px;min-height:48px;padding:10px 14px}input:not([type=hidden]){width:100%;border:1px solid #a9c4bd;font-size:22px;letter-spacing:.3em}button{width:100%;margin-top:14px;border:0;background:#087f71;color:white;font-weight:600;cursor:pointer}a{color:#087f71;text-underline-offset:3px}.muted,small{color:#627b74;font-size:14px}.backup{border-top:1px solid #e1ebe7;padding-top:18px}@media(max-width:520px){main{margin:12px;padding:20px}}</style></head><body><main><h1>拾笺 · Note Inbox 安卓下载</h1>'+(release?'<p class="muted">版本 '+htmlEscape(release.version)+' · '+(release.size/1_000_000).toFixed(2)+' MB</p>':'')+'<p role="status">'+htmlEscape(message)+'</p>'+form+links+'<small>每次下载前验证。阿里云每日总量200 MB，每个网络每小时最多5次下载、同时1次；单条最高2 MB/s。额度用完时可选择GitHub备用下载。</small></main></body></html>';
     res.setHeader('Content-Length',Buffer.byteLength(body));res.end(req.method==='HEAD'?undefined:body);
   }
-  function apkHeaders(res,release){securityHeaders(res);res.statusCode=200;res.setHeader('Content-Type','application/vnd.android.package-archive');res.setHeader('Content-Disposition','attachment; filename="'+release.filename+'"');res.setHeader('Content-Length',String(release.size));res.setHeader('Accept-Ranges','none');res.setHeader('X-Download-Options','noopen');}
-  async function issueChallenge(ipKey,version){
+  function apkHeaders(res,release,publicOrigin){securityHeaders(res,undefined,publicOrigin);res.statusCode=200;res.setHeader('Content-Type','application/vnd.android.package-archive');res.setHeader('Content-Disposition','attachment; filename="'+release.filename+'"');res.setHeader('Content-Length',String(release.size));res.setHeader('Accept-Ranges','none');res.setHeader('X-Download-Options','noopen');}
+  async function issueChallenge(ipKey,version,publicOrigin){
     return ledger(async()=>{
       const time=now(),times=state.captchaRequests[ipKey]||[],previous=[...challenges.values()].find(value=>value.ipKey===ipKey);
       if(times.length&&time-times.at(-1)<REFRESH_INTERVAL){
-        if(previous?.version===version&&previous.attempts<5)return {challenge:previous};
+        if(previous?.version===version&&previous.publicOrigin===publicOrigin&&previous.attempts<5)return {challenge:previous};
         return {status:429,message:'请稍候再更换验证码。',retry:Math.max(1,Math.ceil((times.at(-1)+REFRESH_INTERVAL-time)/1000))};
       }
       if(times.length>=MAX_CAPTCHAS_PER_HOUR)return {status:429,message:'验证码请求较多，请稍后再试，或使用GitHub备用下载。',retry:Math.max(1,Math.ceil((times[0]+HOUR-time)/1000))};
@@ -145,7 +168,7 @@ export async function createAPKDownloads(config,options={}){
       if(previous)challenges.delete(previous.id);
       const id=randomBytes(16).toString('hex'),image=imageCaptcha(id);
       if(typeof image?.image!=='string'||!/^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(image.image)||image.image.length>100000||!hashPattern.test(image.answerHash))throw new Error('Invalid APK image challenge');
-      const value={id,ipKey,version,expires:time+CAPTCHA_LIFETIME,attempts:0,answerHash:image.answerHash,image:image.image};challenges.set(id,value);return {challenge:value};
+      const value={id,ipKey,version,publicOrigin,expires:time+CAPTCHA_LIFETIME,attempts:0,answerHash:image.answerHash,image:image.image};challenges.set(id,value);return {challenge:value};
     });
   }
   async function checkAsset(handle,release,signal){
@@ -156,7 +179,7 @@ export async function createAPKDownloads(config,options={}){
     if(hash.digest('hex')!==release.sha256)throw new Error('APK asset digest mismatch');
     if(verifiedAssets.size>=32)verifiedAssets.delete(verifiedAssets.keys().next().value);verifiedAssets.set(release.filename,fingerprint);
   }
-  async function download(req,res,release,ticket,ipKey){
+  async function download(req,res,release,ticket,ipKey,publicOrigin){
     if(active.has(ipKey))return html(req,res,429,'此网络已有下载正在进行，请等待完成。',release,null,3);
     if(active.size>=MAX_ACTIVE)return html(req,res,503,'当前下载较多，请稍后再试，或使用GitHub备用下载。',release,null,5);
     const controller=new AbortController(),abort=()=>controller.abort();active.set(ipKey,{controller,res});res.once('close',abort);res.once('error',abort);
@@ -175,7 +198,7 @@ export async function createAPKDownloads(config,options={}){
       });
       if(admitted)return html(req,res,admitted.status,admitted.message,release,null,admitted.retry);
       await checkAsset(handle,release,controller.signal);if(controller.signal.aborted)throw new Error('Download closed');
-      apkHeaders(res,release);
+      apkHeaders(res,release,publicOrigin);
       let nextAt=monotonicNow(),sent=0;
       for await(const chunk of assetChunks(handle,release.size,controller.signal)){
         if(controller.signal.aborted)throw new Error('Download closed');if(sent+chunk.length>release.size)throw new Error('APK asset grew');
@@ -190,9 +213,11 @@ export async function createAPKDownloads(config,options={}){
   const handle=async(req,res,verifiedIP)=>{
     let release;
     try{
+      const publicOrigin=publicOriginFor(req);
+      if(!publicOrigin)return html(req,res,400,'下载站点地址不正确，请使用正式下载入口。');
       // Release discovery is public, bounded and independent of the download
       // traffic ledger. It remains available after the day's bytes are spent.
-      if(req.url==='/downloads/android-latest.json')return await latest(req,res);
+      if(req.url==='/downloads/android-latest.json')return await latest(req,res,publicOrigin);
       if(typeof req.url==='string'&&req.url.startsWith('/downloads/android-latest.json?'))return html(req,res,400,'更新信息地址不接受参数。');
       const ip=validIP(verifiedIP);if(!ip)return html(req,res,400,'无法确认下载网络，请稍后再试。');
       if(typeof req.url!=='string'||req.url.length>2048||!req.url.startsWith('/')||req.url.includes('#'))return html(req,res,404,'下载地址不存在。');
@@ -201,33 +226,33 @@ export async function createAPKDownloads(config,options={}){
       if(!release||release.filename!==match[2])return html(req,res,404,'此版本尚未提供下载。');
       if(closed||unavailable)return html(req,res,503,'下载服务暂时不可用，请使用GitHub备用下载。',release);
       if(!['GET','HEAD','POST'].includes(req.method)){res.setHeader('Allow','GET, HEAD, POST');return html(req,res,405,'请使用浏览器打开下载地址。',release);}
-      const query=new URL(req.url,config.publicOrigin).searchParams;
+      const query=new URL(req.url,publicOrigin).searchParams;
       if([...query.keys()].some(key=>key!=='ticket')||query.getAll('ticket').length>1)return html(req,res,400,'下载地址参数不正确，请重新打开下载页。',release);
       if(req.headers.range||req.headers['if-range'])return html(req,res,416,'请从验证页开始一次完整下载。',release);
       const ipKey=sign('apk:ip:'+ip);
       if(req.method==='POST'){
-        if(query.size||req.headers.origin!==config.publicOrigin||req.headers['sec-fetch-site']==='cross-site')return html(req,res,403,'请从本站下载页完成验证。',release);
+        if(query.size||req.headers.origin!==publicOrigin||req.headers['sec-fetch-site']==='cross-site')return html(req,res,403,'请从本站下载页完成验证。',release);
         if(!/^application\/x-www-form-urlencoded(?:;\s*charset=utf-8)?$/i.test(req.headers['content-type']||'')||req.headers['content-encoding']&&req.headers['content-encoding']!=='identity')return html(req,res,415,'验证表单格式不正确，请重新打开下载页。',release);
         const length=req.headers['content-length'];if(length!==undefined&&(!/^\d+$/.test(length)||Number(length)>1024)){res.setHeader('Connection','close');html(req,res,413,'验证内容过长，请重新打开下载页。',release);res.once('finish',()=>req.destroy());return;}
         let form;try{form=await parseForm(req);}catch(error){res.setHeader('Connection','close');html(req,res,error.status||400,'验证内容不正确，请重新打开下载页。',release);res.once('finish',()=>req.destroy());return;}
-        const value=tokenRecord('challenge',form.token,challenges,ipKey,release.version);
+        const value=tokenRecord('challenge',form.token,challenges,ipKey,release.version,publicOrigin);
         if(!value||value.attempts>=5)return html(req,res,400,'验证码已失效，请重新获取。',release);
         value.attempts++;
         if(typeof form.answer!=='string'||!/^\d{4}$/.test(form.answer)||!timingSafeEqual(Buffer.from(captchaAnswerHash(value.id,form.answer),'hex'),Buffer.from(value.answerHash,'hex')))return html(req,res,400,value.attempts>=5?'验证码尝试次数已用完，请稍后换一张。':'数字不正确，请再试一次。',release,value.attempts<5?value:null);
         challenges.delete(value.id);
         if(tickets.size>=256)return html(req,res,503,'下载验证暂时繁忙，请稍后再试。',release);
         for(const [id,previous] of tickets)if(previous.ipKey===ipKey&&previous.version===release.version)tickets.delete(id);
-        const ticket={id:randomBytes(16).toString('hex'),ipKey,version:release.version,expires:now()+TICKET_LIFETIME};tickets.set(ticket.id,ticket);
-        securityHeaders(res);res.statusCode=303;res.setHeader('Location',config.publicOrigin+pathnameFor(release)+'?ticket='+tokenFor('ticket',ticket));res.setHeader('Content-Length','0');res.end();return;
+        const ticket={id:randomBytes(16).toString('hex'),ipKey,version:release.version,publicOrigin,expires:now()+TICKET_LIFETIME};tickets.set(ticket.id,ticket);
+        securityHeaders(res,undefined,publicOrigin);res.statusCode=303;res.setHeader('Location',publicOrigin+pathnameFor(release)+'?ticket='+tokenFor('ticket',ticket));res.setHeader('Content-Length','0');res.end();return;
       }
       if(query.has('ticket')){
-        const ticket=tokenRecord('ticket',query.get('ticket'),tickets,ipKey,release.version);
+        const ticket=tokenRecord('ticket',query.get('ticket'),tickets,ipKey,release.version,publicOrigin);
         if(!ticket)return html(req,res,403,'本次下载验证已失效，请重新获取验证码。',release);
-        if(req.method==='HEAD'){apkHeaders(res,release);res.end();return;}
-        return await download(req,res,release,ticket,ipKey);
+        if(req.method==='HEAD'){apkHeaders(res,release,publicOrigin);res.end();return;}
+        return await download(req,res,release,ticket,ipKey,publicOrigin);
       }
       if(req.method==='HEAD')return html(req,res,200,'请打开下载页完成四位数字验证。',release);
-      const issued=await issueChallenge(ipKey,release.version);
+      const issued=await issueChallenge(ipKey,release.version,publicOrigin);
       return html(req,res,issued.status||200,issued.message||'完成四位数字验证，即可下载安卓安装包。',release,issued.challenge,issued.retry);
     }catch{if(!res.destroyed&&!res.headersSent)return html(req,res,503,'下载服务暂时不可用，请稍后再试。',release);if(!res.destroyed)res.destroy();}
   };

@@ -6,16 +6,16 @@
 
 | 部分 | 位置与用途 |
 | --- | --- |
-| 网页 | `https://kemou2333.github.io/campus-inbox/`；GitHub Actions 构建后发布 `dist/`。 |
+| 网页 | 主站 `https://kemou.top:88` 位于日本节点；GitHub 新旧 Pages 和原阿里云入口继续兼容。GitHub Actions 构建后发布 `dist/`。 |
 | Android | APK 内置同一份网页成品，支持离线查看；原生适配器负责分享、文件和系统日历。 |
-| API | 初始地址 `https://123.57.30.129` 下的 `/analysis-jobs`、`/auth/`、`/sync`；旧客户端 `/analyze` 保留。健康检查为 `/health`，客户端优先读取 Pages 的 `runtime-config.json`。 |
+| API | 日本主站使用同源 `/analysis-jobs`、`/auth/`、`/sync` 等接口，经固定目标、严格证书验证的转发桥接到阿里云单一后台；旧客户端继续使用 `https://123.57.30.129`，不迁移或复制数据库。健康检查为 `/health`。 |
 | 服务源码 | `/opt/campus-inbox/current` 指向当前发行目录。 |
 | Node 运行时 | `/opt/campus-inbox/runtime/node`，本应用独立的 Node 24，不替换系统 Node 或 QQBot 的运行环境。 |
 | 环境与密钥 | `/etc/campus-inbox/backend.env`，权限 600，不在仓库。 |
 | 登录数据 | `/var/lib/campus-inbox/auth.sqlite`，保存邀请码哈希、账号、密码哈希和设备会话。 |
 | 同步数据 | `/var/lib/campus-inbox/sync.sqlite`，保存账号对应的通知文字、状态、笔记、删除记录及整理任务；任务保存来源正文、状态和结果快照，用于离开后完成及失败恢复。 |
 | 用量文件 | `/var/lib/campus-inbox/usage.json`，保存匿名化计数，不保存通知正文。 |
-| TLS | 宿主 Nginx 负责现有 IP HTTPS 证书及续期。 |
+| TLS | 两端宿主 Nginx 分别负责域名及原 IP 的 HTTPS。日本网页只占 80/88，原预览 8443 转到 88；既有服务的 443 保持不变。 |
 
 每个设备先保存本地数据，登录后同步文字、笔记和状态。附件仅保存在添加它的设备与用户导出的备份中，不上传服务器。退出登录不删除本地通知。日常使用邮箱或用户名加密码登录；配置现有发信邮箱后，注册时验证一次邮箱。旧邀请码账号继续用原密码，绑定邮箱不会迁移或合并数据；尚未设密码的旧邮箱账号可验证后设置首次密码。发信默认关闭，不自动创建付费资源。邀请发行见 [INVITE-LOGIN.md](INVITE-LOGIN.md)，发信配置见 [EMAIL-LOGIN.md](EMAIL-LOGIN.md)。
 
@@ -131,4 +131,4 @@ docker compose -f server/compose.yaml up -d
 5. 更新 Pages 的 `runtime-config.json` 中公开 API 地址，以及 GitHub SSH 主机 Secrets，固定核对新主机公钥。2.26.0 起 APK 联网时可从 Pages 读取配置；API 来源必须在 `src/app/network-policy.ts` 的精确允许列表中，生产 CSP 同时从这里生成。换到列表之外的 IP/域名须先发布兼容 APK，不能只改 JSON；旧 APK 不能凭远程配置突破其内置 CSP。读取失败或来源不受信任时回退内置地址。切换时须验证实际请求。
 6. 保留旧环境与上个代码版本作为回滚。切换后检查网页、一个 APK 和证书续期；不要同时让新旧服务各自使用独立付费计数。确认后再决定是否停用旧机器，不自动删除用户数据。
 
-若以后使用稳定 API 域名，搬家只改 DNS/TLS 便可减少客户端发版。GitHub Pages 继续托管网页，不能直接运行此后端；本轮不购买域名或新的服务器。
+当前主站使用已购域名 kemou.top 的 88 端口，沿用现有日本节点与阿里云后台，没有另购服务器或开通 CDN。旧 APK 的来源允许列表保持兼容，不能只用远程 JSON 把旧包切到未经内置批准的域名。GitHub Pages 继续提供备用网页，不能直接运行此后端。

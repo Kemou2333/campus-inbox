@@ -2,7 +2,7 @@
 
 把大学群里的长通知拆成清楚的待办卡片，边看要求边记进度。
 
-[打开网页版](https://123.57.30.129/) · [GitHub 备用网页](https://kemou2333.github.io/note-inbox/) · [安卓下载](https://123.57.30.129/downloads/android-v2.28.2/campus-inbox-2.28.2.apk) · [GitHub备用下载](https://github.com/Kemou2333/campus-inbox/releases/latest)
+[打开网页版](https://kemou.top:88) · [GitHub 备用网页](https://kemou2333.github.io/note-inbox/) · [安卓下载](https://kemou.top:88/downloads/android-v2.28.2/campus-inbox-2.28.2.apk) · [GitHub备用下载](https://github.com/Kemou2333/campus-inbox/releases/latest)
 
 大学群里的课程、报名和材料通知常常很长，看完容易忘，回头找截止时间和群号又得翻半天聊天记录。把通知粘贴进拾笺，服务端会调用 DeepSeek 理出简短说明、时间、适用人群和办理步骤。展开卡片就能打勾记进度、贴彩色便签写备注，底部留着整条原文方便核对，也能围绕通知提问或导出长图。
 
