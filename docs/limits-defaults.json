@@ -1,6 +1,6 @@
 {
   "kind": "source-default-baseline",
-  "configurationChecked": true,
+  "configurationChecked": false,
   "runtimeEndpointLiveVerified": false,
   "productionVerified": false,
   "productionEnvKeysToVerify": [
@@ -11,27 +11,27 @@
     "MAIL_LOGIN_ENABLED"
   ],
   "schemaVersion": 1,
-  "generatedAt": "2026-10-27T08:39:43.989Z",
+  "generatedAt": "2026-10-27T09:01:25.208Z",
   "readOnly": true,
   "timeZone": "Asia/Shanghai",
   "status": "source-baseline",
   "notice": "这是当前服务的实际限额，尚未放宽。滚动窗口在每条记录满时长后释放，上海自然日按零点重置。不同入口共用同一后台计数。",
   "effective": {
     "ai": {
-      "dailyOrganize": 50,
-      "dailyQuestions": 40,
+      "dailyOrganize": 100,
+      "dailyQuestions": 80,
       "dailyBudgetRmb": 3,
-      "organizeAccountFiveHours": 5,
-      "organizeAccount72Hours": 20,
-      "organizeIPFiveHours": 5,
-      "questionAccountFiveHours": 5,
+      "organizeAccountFiveHours": 10,
+      "organizeAccount72Hours": 30,
+      "organizeIPFiveHours": 10,
+      "questionAccountFiveHours": 10,
       "questionAccount72Hours": 15,
-      "questionIPFiveHours": 5,
+      "questionIPFiveHours": 10,
       "rateWindowMs": 180000,
       "accountBurst": 5,
       "authenticatedIPBurst": 20,
       "anonymousIPBurst": 5,
-      "imageRefreshMs": 15000,
+      "imageRefreshMs": 10000,
       "imageLifetimeMs": 120000,
       "imageAttempts": 5,
       "imageRequestThreshold": 3,
@@ -45,13 +45,13 @@
       "organizeOutputTokens": 32768
     },
     "download": {
-      "dailyBytes": 200000000,
+      "dailyBytes": 500000000,
       "bytesPerSecond": 2000000,
       "hourMs": 3600000,
       "captchaLifetimeMs": 300000,
       "ticketLifetimeMs": 120000,
-      "captchaRefreshMs": 15000,
-      "ipDownloadsPerHour": 5,
+      "captchaRefreshMs": 10000,
+      "ipDownloadsPerHour": 8,
       "globalConcurrent": 8,
       "ipConcurrent": 1,
       "captchasPerIPHour": 20,
@@ -69,7 +69,7 @@
       "challengeIPMinute": 60,
       "challengeIPHour": 300,
       "imageEnabled": true,
-      "imageRefreshMs": 15000,
+      "imageRefreshMs": 10000,
       "imageLifetimeMs": 300000,
       "imageAttempts": 5,
       "imagePending": 1000,
@@ -143,55 +143,55 @@
         {
           "id": "organize-account-5h",
           "label": "整理次数",
-          "value": 5,
+          "value": 10,
           "unit": "次",
           "scope": "每账号",
           "window": "滚动五小时",
-          "display": "5 次",
+          "display": "10 次",
           "notes": "",
           "changeControl": "代码配置"
         },
         {
           "id": "organize-account-72h",
           "label": "整理次数",
-          "value": 20,
+          "value": 30,
           "unit": "次",
           "scope": "每账号",
           "window": "滚动三天（72小时）",
-          "display": "20 次",
+          "display": "30 次",
           "notes": "",
           "changeControl": "代码配置"
         },
         {
           "id": "organize-ip-5h",
           "label": "整理次数",
-          "value": 5,
+          "value": 10,
           "unit": "次",
           "scope": "每 IP",
           "window": "滚动五小时",
-          "display": "5 次",
+          "display": "10 次",
           "notes": "",
           "changeControl": "代码配置"
         },
         {
           "id": "organize-site-day",
           "label": "整理次数",
-          "value": 50,
+          "value": 100,
           "unit": "次",
           "scope": "全站",
           "window": "上海自然日",
-          "display": "50 次",
+          "display": "100 次",
           "notes": "",
           "changeControl": "部署配置 DAILY_REQUEST_LIMIT"
         },
         {
           "id": "question-account-5h",
           "label": "提问次数",
-          "value": 5,
+          "value": 10,
           "unit": "次",
           "scope": "每账号",
           "window": "滚动五小时",
-          "display": "5 次",
+          "display": "10 次",
           "notes": "",
           "changeControl": "代码配置"
         },
@@ -209,22 +209,22 @@
         {
           "id": "question-ip-5h",
           "label": "提问次数",
-          "value": 5,
+          "value": 10,
           "unit": "次",
           "scope": "每 IP",
           "window": "滚动五小时",
-          "display": "5 次",
+          "display": "10 次",
           "notes": "",
           "changeControl": "代码配置"
         },
         {
           "id": "question-site-day",
           "label": "提问次数",
-          "value": 40,
+          "value": 80,
           "unit": "次",
           "scope": "全站",
           "window": "上海自然日",
-          "display": "40 次",
+          "display": "80 次",
           "notes": "",
           "changeControl": "代码配置"
         },
@@ -308,11 +308,11 @@
         {
           "id": "ai-image-refresh",
           "label": "AI 换图间隔",
-          "value": 15,
+          "value": 10,
           "unit": "秒",
           "scope": "同一验证范围",
           "window": "两次换图之间",
-          "display": "15 秒",
+          "display": "10 秒",
           "notes": "",
           "changeControl": "代码配置"
         },
@@ -336,12 +336,12 @@
         {
           "id": "download-day",
           "label": "每日预留下载总量",
-          "value": 200,
+          "value": 500,
           "unit": "MB",
           "scope": "主站及阿里云兼容入口共用",
           "window": "上海自然日",
-          "display": "200 MB",
-          "notes": "200 MB = 200,000,000 字节；不是服务器套餐余额；失败、取消不退预留。",
+          "display": "500 MB",
+          "notes": "500 MB = 500,000,000 字节；不是服务器套餐余额；失败、取消不退预留。",
           "changeControl": "代码配置"
         },
         {
@@ -380,11 +380,11 @@
         {
           "id": "download-ip-hour",
           "label": "开始下载次数",
-          "value": 5,
+          "value": 8,
           "unit": "次",
           "scope": "每 IP",
           "window": "滚动一小时",
-          "display": "5 次",
+          "display": "8 次",
           "notes": "",
           "changeControl": "代码配置"
         },
@@ -424,11 +424,11 @@
         {
           "id": "download-image-refresh",
           "label": "下载换图间隔",
-          "value": 15,
+          "value": 10,
           "unit": "秒",
           "scope": "每 IP",
           "window": "两次换图之间",
-          "display": "15 秒",
+          "display": "10 秒",
           "notes": "",
           "changeControl": "代码配置"
         },
@@ -529,11 +529,11 @@
         {
           "id": "auth-image-refresh",
           "label": "登录／注册换图间隔",
-          "value": 15,
+          "value": 10,
           "unit": "秒",
           "scope": "每客户端",
           "window": "两次换图之间",
-          "display": "15 秒",
+          "display": "10 秒",
           "notes": "",
           "changeControl": "代码配置"
         },
@@ -1124,13 +1124,5 @@
         }
       ]
     }
-  ],
-  "configurationCheckedAt": "2026-10-27",
-  "productionEnvironment": {
-    "DAILY_REQUEST_LIMIT": "50",
-    "AI_DAILY_BUDGET_RMB": "3",
-    "AI_THINKING_MODE": "low",
-    "MAIL_LOGIN_ENABLED": "true",
-    "CAPTCHA_MODE": "unset; defaults to image"
-  }
+  ]
 }

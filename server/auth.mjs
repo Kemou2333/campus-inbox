@@ -8,7 +8,7 @@ import {createEmailAuth} from './email-auth.mjs';
 import {canonicalLoginEmail} from './contracts/email-policy.mjs';
 import {createImageCaptcha,captchaAnswerHash} from './image-captcha.mjs';
 
-const scrypt=promisify(derive),DAY=86400000,SESSION_TTL=30*DAY,IMAGE_REFRESH_MS=15000;
+const scrypt=promisify(derive),DAY=86400000,SESSION_TTL=30*DAY,IMAGE_REFRESH_MS=10000;
 const IMAGE_LIFETIME_MS=5*60000,IMAGE_ATTEMPTS=5,IMAGE_MAX_PENDING=1000,HASH_CONCURRENT=4,AUTH_BODY_BYTES=4096,MAX_DEVICE_SESSIONS=20;
 export const AUTH_DEFAULT_LIMITS=Object.freeze({accountLimit:500,registerIPDay:5,registerIPMinute:5,loginIPMinute:10,loginUserMinute:5,loginIPHour:100,loginUserHour:20,challengeClientMinute:10,challengeIPMinute:60,challengeIPHour:300});
 const ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

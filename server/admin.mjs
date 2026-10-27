@@ -47,7 +47,7 @@ export function limitStandards({ai,auth,now=Date.now}){
       row('ai-cache','免费整理缓存',a.cacheEntries,'条','服务内存','最长 '+a.cacheTTLms/60000+' 分钟','重启后缓存可丢失；已保存任务和同请求编号仍按原规则恢复。')
     ]},
     {id:'download',title:'安卓主下载',rows:[
-      row('download-day','每日预留下载总量',d.dailyBytes/1_000_000,'MB','主站及阿里云兼容入口共用','上海自然日','200 MB = 200,000,000 字节；不是服务器套餐余额；失败、取消不退预留。'),
+      row('download-day','每日预留下载总量',d.dailyBytes/1_000_000,'MB','主站及阿里云兼容入口共用','上海自然日',`${d.dailyBytes/1_000_000} MB = ${d.dailyBytes.toLocaleString('en-US')} 字节；不是服务器套餐余额；失败、取消不退预留。`),
       row('download-speed','单条最高速度',d.bytesPerSecond/1_000_000,'MB/秒','每条下载','传输期间'),
       row('download-ip-concurrency','下载并发',d.ipConcurrent,'条','每 IP','同时进行'),
       row('download-site-concurrency','下载并发',d.globalConcurrent,'条','全站','同时进行'),

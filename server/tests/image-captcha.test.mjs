@@ -162,11 +162,11 @@ test('cancel and resubmit reuses the same image and remaining guesses; correct s
   assert.equal((await f.handler(request('下一条正常通知',{token:fresh.token,answer:'0123'}),'203.0.113.1')).status,200);assert.equal(f.calls(),4);
 });
 
-test('image replacement waits 15 seconds across text, account, origin and network changes, then invalidates the old image',async()=>{
+test('image replacement waits 10 seconds across text, account, origin and network changes, then invalidates the old image',async()=>{
   for(const [text,ip,extra] of [['不同文字','203.0.113.1',{}],['消息三','203.0.113.2',{}],['消息三','203.0.113.1',{origin:otherOrigin}]]){
     const f=await fixture(),old=await f.challenge();
-    const blocked=await f.handler(request(text,undefined,extra),ip);assert.equal(blocked.status,429);assert.equal((await blocked.json()).code,'CAPTCHA_REFRESH_LIMIT');assert.equal(blocked.headers.get('Retry-After'),'15');assert.equal(f.images(),1);
-    f.advance(14999);assert.equal((await f.handler(request(text,undefined,extra),ip)).headers.get('Retry-After'),'1');
+    const blocked=await f.handler(request(text,undefined,extra),ip);assert.equal(blocked.status,429);assert.equal((await blocked.json()).code,'CAPTCHA_REFRESH_LIMIT');assert.equal(blocked.headers.get('Retry-After'),'10');assert.equal(f.images(),1);
+    f.advance(9999);assert.equal((await f.handler(request(text,undefined,extra),ip)).headers.get('Retry-After'),'1');
     f.advance(1);const refreshed=await f.handler(request(text,undefined,extra),ip);assert.equal(refreshed.status,428);assert.equal(f.images(),2);
     const fresh=(await refreshed.json()).challenge;assert.notEqual(fresh.token,old.token);
     assert.equal((await f.handler(request('消息三',old),'203.0.113.1')).status,400);
@@ -179,11 +179,11 @@ test('image replacement waits 15 seconds across text, account, origin and networ
   assert.equal((await sharedIP.json()).code,'CAPTCHA_REFRESH_LIMIT');assert.equal(f.images(),1);assert.equal(f.calls(),4);
 });
 
-test('five wrong guesses cannot mint another image inside 15 seconds or reset the guess counter',async()=>{
+test('five wrong guesses cannot mint another image inside 10 seconds or reset the guess counter',async()=>{
   const f=await fixture(),proof=await f.challenge();
   for(let i=0;i<5;i++)assert.equal((await f.handler(request('消息三',{...proof,answer:'9999'}),'203.0.113.1')).status,400);
   const blocked=await f.handler(request('消息三'),'203.0.113.1');assert.equal((await blocked.json()).code,'CAPTCHA_REFRESH_LIMIT');assert.equal(f.images(),1);
-  f.advance(15000);const response=await f.handler(request('消息三'),'203.0.113.1');assert.equal(response.status,428);
+  f.advance(10000);const response=await f.handler(request('消息三'),'203.0.113.1');assert.equal(response.status,428);
   const fresh=(await response.json()).challenge;assert.equal(f.images(),2);
   assert.equal((await f.handler(request('消息三',{token:fresh.token,answer:'0123'}),'203.0.113.1')).status,200);assert.equal(f.calls(),3);
 });

@@ -4,7 +4,7 @@ import {analyze,answerNoticeQuestion,boundedText,ServiceError,modelInput,modelPa
 import {createImageCaptcha,captchaAnswerHash} from './image-captcha.mjs';
 import {createRollingQuota,pruneRollingQuota,checkRollingQuota,reserveRollingQuota,remainingRollingAccount,createSplitQuota} from './ai-quota.mjs';
 const D=globalThis.CampusData;
-const RATE_WINDOW_MS=180000,RATE_LIMIT=5,AUTHENTICATED_IP_RATE_LIMIT=20,IMAGE_REFRESH_MS=15000;
+const RATE_WINDOW_MS=180000,RATE_LIMIT=5,AUTHENTICATED_IP_RATE_LIMIT=20,IMAGE_REFRESH_MS=10000;
 const AI_BODY_BYTES=64000,AI_CACHE_TTL_MS=15*60000,AI_CACHE_SIZE=50,AI_IMAGE_TTL_MS=120000,AI_IMAGE_ATTEMPTS=5,AI_IMAGE_THRESHOLD=3;
 export const AI_OPERATION_LIMITS=Object.freeze({rateWindowMs:RATE_WINDOW_MS,accountBurst:RATE_LIMIT,authenticatedIPBurst:AUTHENTICATED_IP_RATE_LIMIT,anonymousIPBurst:RATE_LIMIT,imageRefreshMs:IMAGE_REFRESH_MS,imageLifetimeMs:AI_IMAGE_TTL_MS,imageAttempts:AI_IMAGE_ATTEMPTS,imageRequestThreshold:AI_IMAGE_THRESHOLD,bodyBytes:AI_BODY_BYTES,cacheTTLms:AI_CACHE_TTL_MS,cacheEntries:AI_CACHE_SIZE,modelConcurrent:1});
 // Peak list prices translated at a conservative 8 RMB/USD; cached input is
@@ -253,7 +253,7 @@ export async function createService(config,options={}){
         const existing=recentImages.find(challenge=>!challenge.exhausted&&challenge.hash===hash&&challenge.origin===origin&&challenge.account===accountKey&&challenge.ip===ipKey);
         if(existing&&recentImages.length===1)return reply({code:'VERIFICATION_REQUIRED',challenge:existing.publicChallenge},428);
         const seconds=Math.max(1,Math.ceil((Math.max(...recentImages.map(challenge=>challenge.created))+IMAGE_REFRESH_MS-t)/1000));
-        return reply({error:`更换图形验证码需间隔 15 秒，请 ${seconds} 秒后再试。`,code:'CAPTCHA_REFRESH_LIMIT',retryAfterSeconds:seconds},429,{'Retry-After':String(seconds)});
+        return reply({error:`更换图形验证码需间隔 ${IMAGE_REFRESH_MS/1000} 秒，请 ${seconds} 秒后再试。`,code:'CAPTCHA_REFRESH_LIMIT',retryAfterSeconds:seconds},429,{'Retry-After':String(seconds)});
       }
       if(verificationMode==='image')for(const [id,challenge] of challenges)if(imageScopes(challenge))challenges.delete(id);
       if(challenges.size>=2000)return reply({error:'服务繁忙，请稍后再试。'},503);

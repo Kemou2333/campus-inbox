@@ -222,8 +222,8 @@ test('limits are administrator-only, read-only and use active service values wit
   const result=await s.request('/admin/limits');assert.equal(result.status,200);assert.equal(result.headers.get('Cache-Control'),'no-store');assert.equal(result.body.readOnly,true);
   assert.equal(result.body.status,'effective');assert(result.body.groups.length>=6);
   assert.equal(result.body.effective.ai.dailyOrganize,s.ai.adminSummary().dailyRequestLimit);
-  assert.equal(result.body.effective.download.dailyBytes,200000000);
-  assert.equal(result.body.effective.auth.imageRefreshMs,15000);
+  assert.equal(result.body.effective.download.dailyBytes,500000000);
+  assert.equal(result.body.effective.auth.imageRefreshMs,10000);
   assert.equal(result.body.effective.auth.email.emailSendDay,6);
   const text=JSON.stringify(result.body);
   for(const secretValue of [secret,'fake-provider-key',s.sessions[0].key,'password_hash','signingSecret','private-original-sentinel'])assert.equal(text.includes(secretValue),false);

@@ -52,7 +52,7 @@ export default function NoticeQuestionDialog({notice,app,onClose,onLogin}:{notic
  }
  const sampleQuestion=!!sample&&question.trim()===sample.question;
  return <Dialog open={!!notice} onClose={close} aria-labelledby="question-heading"><DialogTitle id="question-title-row" component="div" sx={{display:'flex',alignItems:'center',gap:1}}><Typography id="question-heading" component="h2" variant="h5" sx={{flex:1}}>问这条通知</Typography><IconButton aria-label="关闭提问" onClick={close}><Close/></IconButton></DialogTitle>
-  <DialogContent>{showHint&&<Alert severity="info" onClose={()=>setShowHint(false)} sx={{mb:2}}>只围绕当前通知提问，回答附原文依据。</Alert>}<Typography sx={{fontWeight:700,mb:.5}}>{notice?.title}</Typography><Typography variant="body2" color="text.secondary" sx={{mb:2}}>{sampleQuestion?'示例问答 · 可直接体验':'仅依据这条原文 · 五小时 5 问，三天 15 问'}</Typography>
+  <DialogContent>{showHint&&<Alert severity="info" onClose={()=>setShowHint(false)} sx={{mb:2}}>只围绕当前通知提问，回答附原文依据。</Alert>}<Typography sx={{fontWeight:700,mb:.5}}>{notice?.title}</Typography><Typography variant="body2" color="text.secondary" sx={{mb:2}}>{sampleQuestion?'示例问答 · 可直接体验':'仅依据这条原文 · 五小时 10 问，三天 15 问'}</Typography>
    {!!notice&&notice.originalText.length>4000&&<Alert severity="info" sx={{mb:2}}>原文超过4,000字，暂不能提问。</Alert>}
    <TextField autoFocus multiline minRows={2} maxRows={5} label="想问什么？" placeholder="例如：我要交什么材料？" value={question} disabled={busy} onChange={e=>{setQuestion(e.target.value);setAnswer(null);setError('');}} slotProps={{htmlInput:{maxLength:240}}} helperText={question.length>=200?`${question.length}/240`:undefined}/>
    {busy&&<Stack role="status" direction="row" sx={{gap:1,alignItems:'center',mt:2}}><CircularProgress size={18}/><Typography>正在看原文…</Typography></Stack>}

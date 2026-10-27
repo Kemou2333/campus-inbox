@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import {createHash} from 'node:crypto';
+import {createHash,createHmac} from 'node:crypto';
 import {mkdtemp,mkdir,readFile,writeFile,rm,stat,symlink,rename} from 'node:fs/promises';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
@@ -52,14 +52,14 @@ test('captcha form, bound single-use ticket and HEAD deliver exact approved byte
   assert.equal((await s.request(url)).status,403);assert.equal((await s.request(url,{method:'HEAD'})).status,403);assert.equal((await s.state()).reservedBytes,s.bytes.length);
 });
 
-test('five guesses, 15-second refresh, hourly captcha issuance, expiry, origin and IP binding reject bypasses',async t=>{
+test('five guesses, 10-second refresh, hourly captcha issuance, expiry, origin and IP binding reject bypasses',async t=>{
   const s=await fixture();t.after(s.close);const {token}=await s.challenge();
   assert.equal((await s.challenge()).token,token,'reload within cooldown reuses the image');
   assert.equal((await s.verify(token,'203.0.113.8')).status,400);
   for(const headers of [{Origin:'https://untrusted.example', 'Content-Type':'application/x-www-form-urlencoded'},{'Content-Type':'application/x-www-form-urlencoded'},{Origin:origin,'Sec-Fetch-Site':'cross-site','Content-Type':'application/x-www-form-urlencoded'}])assert.equal((await s.request(path,{method:'POST',headers,body:new URLSearchParams({challenge:token,answer:'2468'}).toString()})).status,403);
   for(const answer of ['','12','12a4','9999','12345'])assert.equal((await s.verify(token,undefined,answer)).status,400);
-  assert.equal((await s.verify(token)).status,400);const cooldown=await s.request();assert.equal(cooldown.status,429);assert.equal(cooldown.headers['retry-after'],'15');
-  s.advance(14_999);assert.equal((await s.request()).headers['retry-after'],'1');s.advance(1);const replacement=await s.challenge();assert.notEqual(replacement.token,token);
+  assert.equal((await s.verify(token)).status,400);const cooldown=await s.request();assert.equal(cooldown.status,429);assert.equal(cooldown.headers['retry-after'],'10');
+  s.advance(9_999);assert.equal((await s.request()).headers['retry-after'],'1');s.advance(1);const replacement=await s.challenge();assert.notEqual(replacement.token,token);
   s.advance(300_000);assert.equal((await s.verify(replacement.token)).status,400);assert.equal((await s.state()).reservedBytes,0);
   const fresh=await s.challenge();const accepted=await s.verify(fresh.token);assert.equal(accepted.status,303);const url=accepted.headers.location.slice(origin.length);
   assert.equal((await s.request(url,{ip:'203.0.113.8'})).status,403);s.advance(120_000);assert.equal((await s.request(url)).status,403);
@@ -67,19 +67,19 @@ test('five guesses, 15-second refresh, hourly captcha issuance, expiry, origin a
   const q=await fixture();t.after(q.close);for(let i=0;i<20;i++){await q.challenge();q.advance(30_000);}assert.equal((await q.request()).status,429);await q.restart();assert.equal((await q.request()).status,429);assert.equal((await q.state()).reservedBytes,0);
 });
 
-test('five downloads per rolling hour survive restart and expire at the exact one-hour boundary',async t=>{
+test('eight downloads per rolling hour survive restart and expire at the exact one-hour boundary',async t=>{
   const s=await fixture();t.after(s.close);
-  for(let i=0;i<5;i++){const url=await s.ticket();assert.equal((await s.request(url)).status,200);if(i<4)s.advance(30_000);}
-  s.advance(30_000);const url=await s.ticket(),blocked=await s.request(url);assert.equal(blocked.status,429);assert.equal(blocked.headers['retry-after'],'3450');assert.equal((await s.state()).reservedBytes,s.bytes.length*5);
+  for(let i=0;i<8;i++){const url=await s.ticket();assert.equal((await s.request(url)).status,200);if(i<7)s.advance(30_000);}
+  s.advance(30_000);const url=await s.ticket(),blocked=await s.request(url);assert.equal(blocked.status,429);assert.equal(blocked.headers['retry-after'],'3360');assert.equal((await s.state()).reservedBytes,s.bytes.length*8);
   await s.restart();s.advance(30_000);const restartedURL=await s.ticket();assert.equal((await s.request(restartedURL)).status,429);
   s.setTime(initial+hour-1);const before=await s.ticket();assert.equal((await s.request(before,{method:'HEAD'})).status,200);
-  s.advance(1);assert.equal((await s.request(before)).status,200,'first paid timestamp expires at precisely one hour');assert.equal((await s.state()).reservedBytes,s.bytes.length*6);
+  s.advance(1);assert.equal((await s.request(before)).status,200,'first paid timestamp expires at precisely one hour');assert.equal((await s.state()).reservedBytes,s.bytes.length*9);
 });
 
-test('Shanghai day 200MB budget is pre-reserved, survives restart and midnight retains the independent IP window',async t=>{
-  const state={version:1,day:'2026-10-23',reservedBytes:200_000_000-4096,downloads:{},captchaRequests:{}};
+test('Shanghai day 500MB budget is pre-reserved, survives restart and midnight retains the independent IP window',async t=>{
+  const state={version:1,day:'2026-10-23',reservedBytes:500_000_000-4096,downloads:{},captchaRequests:{}};
   const s=await fixture({state});t.after(s.close);s.setTime(Date.parse('2026-10-23T15:59:59Z'));
-  const url=await s.ticket(),last=await s.request(url);assert.equal(last.status,200);assert.equal((await s.state()).reservedBytes,200_000_000);
+  const url=await s.ticket(),last=await s.request(url);assert.equal(last.status,200);assert.equal((await s.state()).reservedBytes,500_000_000);
   const other=await s.ticket('203.0.113.8'),blocked=await s.request(other,{ip:'203.0.113.8'});assert.equal(blocked.status,429);assert.equal(blocked.headers['retry-after'],'1');
   await s.restart();const restarted=await s.ticket('203.0.113.9');assert.equal((await s.request(restarted,{ip:'203.0.113.9'})).status,429);
   s.advance(1000);const renewed=await s.ticket('203.0.113.10');assert.equal((await s.request(renewed,{ip:'203.0.113.10'})).status,200);const after=await s.state();assert.equal(after.day,'2026-10-24');assert.equal(after.reservedBytes,4096);assert.equal(Object.keys(after.downloads).length,2);
@@ -129,10 +129,10 @@ test('missing or malformed hot manifest, symlink assets, size/hash mismatch and 
 
 
 test('simultaneous different IPs cannot spend the final shared daily allowance twice',async t=>{
-  const s=await fixture({state:{version:1,day:'2026-10-23',reservedBytes:200_000_000-4096,downloads:{},captchaRequests:{}}});t.after(s.close);
+  const s=await fixture({state:{version:1,day:'2026-10-23',reservedBytes:500_000_000-4096,downloads:{},captchaRequests:{}}});t.after(s.close);
   const a=await s.ticket('203.0.113.70'),b=await s.ticket('203.0.113.71');
   const responses=await Promise.all([s.request(a,{ip:'203.0.113.70'}),s.request(b,{ip:'203.0.113.71'})]);assert.deepEqual(responses.map(response=>response.status).sort(),[200,429]);
-  const state=await s.state();assert.equal(state.reservedBytes,200_000_000);assert.equal(Object.keys(state.downloads).length,1);
+  const state=await s.state();assert.equal(state.reservedBytes,500_000_000);assert.equal(Object.keys(state.downloads).length,1);
 });
 
 test('an atomically replaced approved release index hot-loads a new version without a backend restart',async t=>{
@@ -155,7 +155,7 @@ test('latest metadata reads the highest numeric approved final version, HEAD is 
 });
 
 test('latest metadata stays independent of exhausted/corrupt traffic state but fails closed for empty, preview or corrupt indexes',async t=>{
-  const s=await fixture({state:{version:1,day:'2026-10-23',reservedBytes:200_000_000,downloads:{},captchaRequests:{}}});t.after(s.close);const url='/downloads/android-latest.json',before=await readFile(s.stateFile,'utf8');assert.equal((await s.request(url)).status,200);assert.equal(await readFile(s.stateFile,'utf8'),before);
+  const s=await fixture({state:{version:1,day:'2026-10-23',reservedBytes:500_000_000,downloads:{},captchaRequests:{}}});t.after(s.close);const url='/downloads/android-latest.json',before=await readFile(s.stateFile,'utf8');assert.equal((await s.request(url)).status,200);assert.equal(await readFile(s.stateFile,'utf8'),before);
   for(const value of [{schemaVersion:1,releases:[]},{schemaVersion:1,releases:[{...s.release,version:'2.28.0-beta'}]},'{broken']){
     await writeFile(s.releaseManifestFile,typeof value==='string'?value:JSON.stringify(value));assert.equal((await s.request(url)).status,503);
   }
@@ -228,7 +228,7 @@ test('public alias configuration rejects non-exact, insecure or ambiguous origin
 });
 
 test('aliases share captcha cooldown, one-use capabilities and the final daily byte allowance',async t=>{
-  const s=await fixture({config:{publicOriginAliases:[japanOrigin,previewOrigin]},state:{version:1,day:'2026-10-23',reservedBytes:200_000_000-4096,downloads:{},captchaRequests:{}}});t.after(s.close);
+  const s=await fixture({config:{publicOriginAliases:[japanOrigin,previewOrigin]},state:{version:1,day:'2026-10-23',reservedBytes:500_000_000-4096,downloads:{},captchaRequests:{}}});t.after(s.close);
   const ip='203.0.113.110',{token}=await aliasProof(s,origin,ip);
   assert.equal((await s.request(path,{ip,headers:aliasHeaders(japanOrigin)})).status,429,'another alias cannot mint an extra captcha during cooldown');
   assert.equal(Object.values((await s.state()).captchaRequests)[0].length,1);
@@ -236,21 +236,21 @@ test('aliases share captcha cooldown, one-use capabilities and the final daily b
   assert.equal((await aliasVerify(s,origin,ip,token)).status,400,'verification is single use');
   const a=accepted.headers.location.slice(origin.length),b=await aliasTicket(s,japanOrigin,'203.0.113.111');
   const responses=await Promise.all([s.request(a,{ip,headers:aliasHeaders(origin)}),s.request(b,{ip:'203.0.113.111',headers:aliasHeaders(japanOrigin)})]);
-  assert.deepEqual(responses.map(value=>value.status).sort(),[200,429]);assert.equal((await s.state()).reservedBytes,200_000_000);assert.equal(Object.keys((await s.state()).downloads).length,1);
+  assert.deepEqual(responses.map(value=>value.status).sort(),[200,429]);assert.equal((await s.state()).reservedBytes,500_000_000);assert.equal(Object.keys((await s.state()).downloads).length,1);
 });
 
 test('one active IP slot and the rolling hourly limit stay shared across aliases',async t=>{
   const wait=gate(),started=gate();let block=true;
   const s=await fixture({config:{publicOriginAliases:[japanOrigin]},options:{sleep:async(_ms,signal)=>{if(block){started.resolve();await wait.promise;}if(signal.aborted)throw new Error('closed');}}});t.after(s.close);
   const ip='203.0.113.120',first=await aliasTicket(s,origin,ip),running=s.request(first,{ip,headers:aliasHeaders(origin)});await started.promise;
-  s.advance(15_000);const second=await aliasTicket(s,japanOrigin,ip);
+  s.advance(10_000);const second=await aliasTicket(s,japanOrigin,ip);
   assert.equal((await s.request(second,{ip,headers:aliasHeaders(japanOrigin)})).status,429);
   assert.equal((await s.state()).reservedBytes,s.bytes.length,'a second alias cannot obtain a second active slot');
   block=false;wait.resolve();assert.equal((await running).status,200);
   assert.equal((await s.request(second,{ip,headers:aliasHeaders(japanOrigin)})).status,200,'capacity refusal retains its original ticket');
-  for(let index=0;index<3;index++){s.advance(15_000);const publicOrigin=index%2?origin:japanOrigin,url=await aliasTicket(s,publicOrigin,ip);assert.equal((await s.request(url,{ip,headers:aliasHeaders(publicOrigin)})).status,200);}
-  s.advance(15_000);const blocked=await aliasTicket(s,origin,ip);assert.equal((await s.request(blocked,{ip,headers:aliasHeaders(origin)})).status,429);
-  assert.equal((await s.state()).reservedBytes,s.bytes.length*5);assert.equal(Object.values((await s.state()).downloads)[0].length,5);
+  for(let index=0;index<6;index++){s.advance(10_000);const publicOrigin=index%2?origin:japanOrigin,url=await aliasTicket(s,publicOrigin,ip);assert.equal((await s.request(url,{ip,headers:aliasHeaders(publicOrigin)})).status,200);}
+  s.advance(10_000);const blocked=await aliasTicket(s,origin,ip);assert.equal((await s.request(blocked,{ip,headers:aliasHeaders(origin)})).status,429);
+  assert.equal((await s.state()).reservedBytes,s.bytes.length*8);assert.equal(Object.values((await s.state()).downloads)[0].length,8);
 });
 
 
@@ -266,4 +266,15 @@ test('canonical Note Inbox metadata remains compatible with old Aliyun clients',
  const bad={...s.release,github:latest.github.replace('/note-inbox/','/note-inbox-untrusted/')};
  await writeFile(s.releaseManifestFile,JSON.stringify({schemaVersion:1,releases:[bad]}));
  assert.equal((await s.request('/downloads/android-latest.json')).status,503);
+});
+
+
+test('raising the APK limits retains old200MB reservations and five prior IP starts across restart',async t=>{
+ const ip='203.0.113.7',ipKey=createHmac('sha256',secret).update('apk:ip:'+ip).digest('base64url');
+ const oldTimes=Array.from({length:5},(_,i)=>initial-5000+i*1000);
+ const state={version:1,day:new Date(initial+8*3600000).toISOString().slice(0,10),reservedBytes:200000000,downloads:{[ipKey]:oldTimes},captchaRequests:{}};
+ const s=await fixture({state});t.after(s.close);
+ for(let i=0;i<3;i++){const url=await s.ticket(ip);assert.equal((await s.request(url,{ip})).status,200);s.advance(10000);}
+ assert.equal((await s.state()).reservedBytes,200000000+3*s.bytes.length);assert.equal((await s.state()).downloads[ipKey].length,8);
+ await s.restart();const url=await s.ticket(ip),blocked=await s.request(url,{ip});assert.equal(blocked.status,429);assert.equal((await s.state()).reservedBytes,200000000+3*s.bytes.length);assert.equal((await s.state()).downloads[ipKey].length,8);
 });
