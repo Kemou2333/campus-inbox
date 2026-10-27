@@ -1,6 +1,6 @@
 # 文档
 
-[打开产品](https://kemou2333.github.io/note-inbox/) · [项目首页](../README.md)
+[打开产品](https://kemou.top:88) · [项目首页](../README.md)
 
 ## 使用与下载
 
@@ -9,14 +9,9 @@
 - [安卓更新](ANDROID-UPDATES.md) · [下载规则](APK-DOWNLOADS.md)
 - [网页入口](WEB-ENTRIES.md)
 
-## 维护资料
+## 开发与维护
 
 - [部署](DEPLOYMENT.md) · [账号与管理](ADMIN-AND-LOGIN.md)
-- [长期维护](LONG-TERM-OPERATIONS.md)
-- [当前验证范围](VALIDATION.md)
-
-## 历史记录
-
-- [版本验证归档](archive/validation/README.md)
-- [模型整理质量记录](archive/quality/README.md)
-- [旧接口示例](archive/examples/README.md)
+- [限额标准](LIMITS.md) · [限额调整记录](LIMITS-CHANGELOG.md)
+- [AI处理边界](AI-SAFETY-BOUNDARY.md)
+- [检查与发布](VALIDATION.md)

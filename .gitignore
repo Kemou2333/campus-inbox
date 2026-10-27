@@ -12,3 +12,20 @@ dist/
 *.apk
 __pycache__/
 .DS_Store
+
+# Local credentials, database state and private operation evidence
+*.pem
+*.key
+*.p12
+*.pfx
+*.p8
+*.db
+*.db-wal
+*.db-shm
+*.log
+private/
+work/
+backups/
+coverage/
+playwright-report/
+test-results/
