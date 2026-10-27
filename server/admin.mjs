@@ -126,7 +126,7 @@ export function limitStandards({ai,auth,now=Date.now}){
     ]},
     {id:'admin',title:'后台读取',rows:[row('admin-reads','后台读取频率',ADMIN_READS_PER_MINUTE,'次','每管理员账号','滚动一分钟','后台当前只读；不开放在线改额度或权限。')]}
   ];
-  return {schemaVersion:1,generatedAt:new Date(now()).toISOString(),readOnly:true,timeZone:'Asia/Shanghai',status:'effective',notice:'这是当前服务的实际限额，尚未放宽。滚动窗口在每条记录满时长后释放，上海自然日按零点重置。不同入口共用同一后台计数。',effective,groups};
+  return {schemaVersion:1,generatedAt:new Date(now()).toISOString(),readOnly:true,timeZone:'Asia/Shanghai',status:'effective',notice:'按下表当前生效值执行。滚动窗口按每条记录到期释放，上海自然日零点重置；不同入口共用计数。',effective,groups};
 }
 
 /** Only deployment configuration grants this read-only capability. User input,

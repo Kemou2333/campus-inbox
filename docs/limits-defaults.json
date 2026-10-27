@@ -1,21 +1,13 @@
 {
-  "kind": "source-default-baseline",
-  "configurationChecked": false,
+  "kind": "deployed-configuration-snapshot",
+  "configurationChecked": true,
   "runtimeEndpointLiveVerified": false,
-  "productionVerified": false,
-  "productionEnvKeysToVerify": [
-    "DAILY_REQUEST_LIMIT",
-    "AI_DAILY_BUDGET_RMB",
-    "AI_THINKING_MODE",
-    "CAPTCHA_MODE",
-    "MAIL_LOGIN_ENABLED"
-  ],
   "schemaVersion": 1,
   "generatedAt": "2026-10-27T09:01:25.208Z",
   "readOnly": true,
   "timeZone": "Asia/Shanghai",
-  "status": "source-baseline",
-  "notice": "这是当前服务的实际限额，尚未放宽。滚动窗口在每条记录满时长后释放，上海自然日按零点重置。不同入口共用同一后台计数。",
+  "status": "deployed-configuration",
+  "notice": "按下表当前生效值执行。滚动窗口按每条记录到期释放，上海自然日零点重置；不同入口共用计数。",
   "effective": {
     "ai": {
       "dailyOrganize": 100,
@@ -1124,5 +1116,10 @@
         }
       ]
     }
-  ]
+  ],
+  "runtimeProcessConfigurationVerified": true,
+  "sourceCommit": "bcb12b6a75319fb796b6df6174e26283283e8d88",
+  "effectiveAt": "2026-10-27T21:29:04+08:00",
+  "observedAt": "2026-10-27T21:33:03.191951+08:00",
+  "verificationScope": "active process environment and deployed policy source; live download gate and auth image timing; no signed-in admin session"
 }
