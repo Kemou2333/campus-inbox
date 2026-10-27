@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {fallbackAndroidDownload,parseAndroidDownload} from './android-download';
+import {fallbackAndroidDownload,parseAndroidDownload,initialAndroidDownload} from './android-download';
 
 describe('public Android download choices',()=>{
  it('accepts only the corresponding release and owned Bluecloud file',()=>{
@@ -50,4 +50,13 @@ it('accepts canonical Note Inbox and legacy release URLs only for the exact APK'
  }
  const base=`https://github.com/Kemou2333/note-inbox/releases/download/android-v${version}/${filename}`;
  for(const github of [base+'?redirect=x',base.replace('/note-inbox/','/note-inbox-copy/'),base.replace('github.com','github.com.evil.test'),base.replace('https://','https://user@')])expect(parseAndroidDownload({version,github,lanzou:null})).toBeNull();
+});
+
+
+it('first paint shows the approved primary before the GitHub fallback',async()=>{
+ const {renderToStaticMarkup}=await import('react-dom/server');const {createElement}=await import('react');const {AndroidDownloads}=await import('../shared/ui/AndroidDownloads');
+ const html=renderToStaticMarkup(createElement(AndroidDownloads));
+ expect(initialAndroidDownload.primary).toBe(`https://kemou.top:88/downloads/android-v${initialAndroidDownload.version}/campus-inbox-${initialAndroidDownload.version}.apk`);
+ expect(html.indexOf('href=\"'+initialAndroidDownload.primary+'\"')).toBeGreaterThan(-1);
+ expect(html.indexOf('href=\"'+initialAndroidDownload.primary+'\"')).toBeLessThan(html.indexOf('href=\"'+initialAndroidDownload.github+'\"'));
 });

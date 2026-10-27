@@ -2,10 +2,10 @@ import {useEffect,useState} from 'react';
 import {Box,Button,IconButton,Stack,Tooltip,Typography} from '@mui/material';
 import DownloadOutlined from '@mui/icons-material/DownloadOutlined';
 import ContentCopyOutlined from '@mui/icons-material/ContentCopyOutlined';
-import {fallbackAndroidDownload,loadAndroidDownload} from '../../infrastructure/android-download';
+import {initialAndroidDownload,loadAndroidDownload} from '../../infrastructure/android-download';
 
 export function AndroidDownloads({compact=false}:{compact?:boolean}){
- const [release,setRelease]=useState(fallbackAndroidDownload);
+ const [release,setRelease]=useState(initialAndroidDownload);
  const [copyMessage,setCopyMessage]=useState('');
  useEffect(()=>{let alive=true;void loadAndroidDownload().then(value=>{if(alive)setRelease(value);});return()=>{alive=false;};},[]);
  async function copyCode(){try{if(!navigator.clipboard?.writeText)throw new Error();await navigator.clipboard.writeText(release.extractionCode!);setCopyMessage('已复制');}catch{setCopyMessage('请长按提取码复制');}}

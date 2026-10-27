@@ -23,7 +23,7 @@ import {effectiveNotice} from '../../domain/corrections';
 import {SearchQueryContext,HighlightedText} from '../../shared/ui/SearchHighlight';
 import {noticeSearchMatches} from './search-matches';
 import {useSearchNavigation} from './useSearchNavigation';
-import {groupExampleNotices,isExampleNotice,readExamplesHidden,writeExamplesHidden} from '../../domain/examples';
+import {groupExampleNotices,isExampleNotice,readExamplesHidden,writeExamplesHidden,sortExampleNotices} from '../../domain/examples';
 import {InboxCharm} from '../../shared/ui/InboxCharm';
 import GitHub from '@mui/icons-material/GitHub';
 import DownloadOutlined from '@mui/icons-material/DownloadOutlined';
@@ -93,7 +93,7 @@ export function FeedPage({sampleNudge=false,onSamplesOpened,app,actions,onCompos
  const allGroups=useMemo(()=>groupExampleNotices(readingNotices),[readingNotices]);
  const catalogExamples=allGroups.examples.filter(n=>!isLocalDemoNotice(n));
  function changeExamplesHidden(hidden:boolean){setExamplesHidden(hidden);try{writeExamplesHidden(localStorage,hidden);}catch{app.report(new Error('示例显示偏好未能保存。'));}}
- async function showCatalogExamples(){onSamplesOpened?.();setView(previous=>({...previous,tab:0}));try{if(!catalogExamples.length)await app.loadExamples();changeExamplesHidden(false);}catch(error){app.report(error);}}
+ async function showCatalogExamples(){setView(previous=>({...previous,tab:0}));try{if(!catalogExamples.length)await app.loadExamples();changeExamplesHidden(false);if(sampleNudge)app.tell('点开示例通知里的「提问」，可以直接看示例回答。');onSamplesOpened?.();}catch(error){app.report(error);}}
  const {tab,query,sort,expandedIDs,expandedTaskIDs,favoritesOnly=false,relevantOnly=false,manualPriorities=[],pastSevenDaysOnly=false}=viewState??localView;const setView=onViewStateChange??setLocalView;
  const setTab=(value:FeedViewState['tab'])=>setView(previous=>({...previous,tab:value}));
  const setQuery=(value:string)=>setView(previous=>({...previous,query:value}));
@@ -125,7 +125,7 @@ export function FeedPage({sampleNudge=false,onSamplesOpened,app,actions,onCompos
   const status=tab===0?'pending':tab===1?'reminder':'completed';const needle=query.trim().toLocaleLowerCase();
   const matching=readingNotices.filter(n=>matchesFilters(n)&&(!relevant||matchNoticeProfile(n,app.preferences.profile)!=='unmatched')&&(!examplesHidden||!isExampleNotice(n)||isLocalDemoNotice(n))&&(!favoritesOnly||n.favorite)&&(status==='completed'?['completed','dismissed'].includes(getNoticeStatus(n)):getNoticeStatus(n)===status)&&(!needle||[n.title,n.summary,n.originalText,n.note,n.deadlineText,...n.materials,...n.warnings,...n.timeline.flatMap(t=>[t.label,t.timeText,t.location]),...n.tasks.flatMap(t=>[t.text,t.assignee,t.condition,t.timeText,t.location,t.note,...t.details,...t.steps.flatMap(s=>[s.text,s.note,...s.details])]),...n.reminders.flatMap(r=>[r.text,r.note])].join('\n').toLocaleLowerCase().includes(needle)));
   const groups=groupExampleNotices(matching);
-  return [...sortNotices(groups.personal,sort,now),...sortNotices(groups.examples,sort,now)];
+  return [...sortNotices(groups.personal,sort,now),...sortExampleNotices(groups.examples,sort,now)];
  },[readingNotices,app.preferences.profile,relevant,tab,query,sort,now,favoritesOnly,examplesHidden,manualPriorities.join(','),pastSevenDaysOnly]);
  const customFilters=!!(manualPriorities.length||pastSevenDaysOnly||relevant);
  const [animationEmpty,setAnimationEmpty]=useState(records.length===0);

@@ -7,6 +7,8 @@ const approvedBundle=parseAndroidDownload(publishedDownload);
 // rather than inventing a download for the web package version. Native update
 // checks use their separate installed-version and latest-metadata policy.
 export const fallbackAndroidDownload:AndroidDownload=approvedBundle?{version:approvedBundle.version,github:approvedBundle.github,lanzou:null}:{version,github:`https://github.com/Kemou2333/note-inbox/releases/download/android-v${version}/campus-inbox-${version}.apk`,lanzou:null};
+// Keep approved primary links visible in the first paint while the small manifest refreshes.
+export const initialAndroidDownload:AndroidDownload=approvedBundle?{...approvedBundle,lanzou:null}:fallbackAndroidDownload;
 export function parseAndroidDownload(value:unknown):AndroidDownload|null{
  if(!value||typeof value!=='object')return null;
  const v=value as Record<string,unknown>;

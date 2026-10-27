@@ -1,7 +1,7 @@
 import {describe,expect,test} from 'vitest';
 import {readFile} from 'node:fs/promises';
 import {auditPublicExamples} from '../scripts/verify-example-privacy.mjs';
-import {exampleFingerprint,mergeExamples,selectExampleBatch,TUTORIAL_EXAMPLE_ID} from '../src/domain/examples';
+import {exampleFingerprint,mergeExamples,selectExampleBatch,sortExampleNotices,TUTORIAL_EXAMPLE_ID} from '../src/domain/examples';
 import {createNotice,parseBackup} from '../src/domain/notice';
 import type {Notice,NoticeAnalysis} from '../src/domain/types';
 
@@ -227,4 +227,16 @@ test('new catalog selections exclude only the tutorial ID while retaining saved 
  const merged=await mergeExamples([edited,personal],first.records,await registry(tutorial));
  expect(merged.notices).toContain(edited);expect(merged.notices).toContain(personal);
  const all=selectExampleBatch([],catalog,100);expect(all.records).toHaveLength(catalog.length-1);expect(all.records.some(n=>n.id===TUTORIAL_EXAMPLE_ID)).toBe(false);
+});
+
+
+test('showcase starts with clear course and step examples without changing personal order or source records',async()=>{
+ const catalog=parseBackup(JSON.parse(await readFile(new URL('../public/examples.json',import.meta.url),'utf8')));const before=JSON.stringify(catalog);
+ const batch=selectExampleBatch([],catalog);expect(batch.records).toHaveLength(7);
+ expect(batch.records[0].id).toBe('example-reading-v213-0');
+ expect(batch.records.some(n=>n.id==='example-reading-v25-2'||n.id===TUTORIAL_EXAMPLE_ID)).toBe(false);
+ const old=catalog.find(n=>n.id==='example-reading-v25-2')!,course=catalog.find(n=>n.id==='example-reading-v213-0')!;
+ expect(sortExampleNotices([old,course],'priority',Date.parse('2026-10-27T00:00:00Z'))[0].id).toBe(course.id);
+ expect(sortExampleNotices([old,course],'newest').map(n=>n.id)).toEqual([course.id,old.id]);
+ expect(JSON.stringify(catalog)).toBe(before);
 });

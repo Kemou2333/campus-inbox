@@ -1,6 +1,15 @@
 import type {Notice} from './types';
 import exampleIDs from './example-ids.json';
 import {isLocalDemoNotice} from './local-demo';
+import {sortNotices} from './notice';
+import type {SortOrder} from './types';
+
+// Showcase order changes presentation only; reviewed text, dates and user progress stay intact.
+const showcaseIDs=['example-reading-v213-0','example-reading-v211-3','example-reading-v25-11','example-reading-v211-4','example-reading-v212-0','example-reading-v25-3','example-reading-v212-2'];
+const showcaseRanks=new Map(showcaseIDs.map((id,index)=>[id,index]));
+function showcaseOrder<T extends Pick<Notice,'id'>>(notices:T[]):T[]{return [...notices].sort((a,b)=>(showcaseRanks.get(a.id)??999)-(showcaseRanks.get(b.id)??999));}
+export function sortExampleNotices(notices:Notice[],order:SortOrder,now=Date.now()):Notice[]{const sorted=sortNotices(notices,order,now);return order==='priority'?showcaseOrder(sorted):sorted;}
+
 
 // Exact, reviewed catalog IDs, including legacy built-ins. Progress, notes and
 // corrections never change identity, and a similarly prefixed personal ID is
@@ -84,7 +93,7 @@ export async function mergeExamples(current:Notice[],incoming:Notice[],legacyReg
 
 /** Refresh only loaded built-ins and add a small batch; a partial catalog must never remove unrelated examples. */
 export function selectExampleBatch(current:Notice[],catalog:Notice[],limit=7){
- catalog=selectableExamples(catalog);
+ catalog=showcaseOrder(selectableExamples(catalog));
  const catalogIDs=new Set(catalog.map(n=>n.id));
  const existing=current.filter(isExampleNotice);
  const ids=new Set(existing.map(n=>n.id));
