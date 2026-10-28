@@ -1,11 +1,10 @@
 import {lazy,Suspense,useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
-import {Alert,AppBar,BottomNavigation,BottomNavigationAction,Box,Button,CircularProgress,Container,CssBaseline,Dialog,DialogActions,DialogContent,DialogTitle,Divider,IconButton,Paper,Snackbar,Stack,Toolbar,Tooltip,Typography,useMediaQuery} from '@mui/material';
+import {Alert,AppBar,BottomNavigation,BottomNavigationAction,Box,Button,CircularProgress,Container,CssBaseline,Dialog,DialogActions,DialogContent,Divider,IconButton,Paper,Snackbar,Stack,Toolbar,Tooltip,Typography,useMediaQuery} from '@mui/material';
 import {ThemeProvider} from '@mui/material/styles';
 import Inbox from '@mui/icons-material/Inbox';
 import AddCircleOutline from '@mui/icons-material/AddCircleOutlineOutlined';
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
 import HelpOutline from '@mui/icons-material/HelpOutlineOutlined';
-import DownloadOutlined from '@mui/icons-material/DownloadOutlined';
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import Close from '@mui/icons-material/Close';
 import PlayCircleOutline from '@mui/icons-material/PlayCircleOutlined';
@@ -28,7 +27,6 @@ import {useHumanVerification} from '../features/security/useHumanVerification';
 import {HumanVerificationDialog} from '../features/security/HumanVerificationDialog';
 import type {Notice} from '../domain/types';
 import {SearchQueryContext} from '../shared/ui/SearchHighlight';
-import {AndroidDownloads} from '../shared/ui/AndroidDownloads';
 import {installOperationSounds,playOperationSound} from '../shared/operation-sounds';
 import {createFirstEntryMotion} from '../shared/first-entry-motion';
 import {useGuideSession} from '../features/onboarding/useGuideSession';
@@ -53,7 +51,6 @@ export default function App(){
  function unlockDeveloper(){try{localStorage.setItem('campus-inbox:developer:v1','enabled');}catch{}setDeveloperUnlocked(true);app.tell('开发者设置已开启');}
  const guide=useGuideSession(app,help||launchStage!=='idle'),viewApp=guide.controller;
  const [guideStep,setGuideStep]=useState(0);
- const [downloadsOpen,setDownloadsOpen]=useState(false);
  const [promoOpen,setPromoOpen]=useState(false);
  const firstEntry=useRef<ReturnType<typeof createFirstEntryMotion>|null>(null);
  const reducedMotion=useMediaQuery('(prefers-reduced-motion: reduce)');
@@ -97,7 +94,7 @@ export default function App(){
  useEffect(()=>{if(app.latestAddedID&&!help){setPage(0);setFocusID(app.latestAddedID);}},[app.latestAddedID]);
  const dark=app.theme==='system'?(app.capabilities?.theme?.dark??systemDark):app.theme==='dark';const theme=makeTheme(dark,app.capabilities?.theme??null);
  useEffect(()=>{document.documentElement.dataset.platform=app.platform.kind;document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.style.colorScheme=dark?'dark':'light';document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme.palette.background.default);if(app.platform.setAppearance)void app.platform.setAppearance(dark).catch(app.report);},[app.platform,dark]);
- const modalRef=useRef(false);modalRef.current=login||help||launchStage!=='idle'||about||downloadsOpen||promoOpen||!!note||!!details||!!calendar||!!correction||!!share||!!questionID||settingsDialog||!!verification.request;
+ const modalRef=useRef(false);modalRef.current=login||help||launchStage!=='idle'||about||promoOpen||!!note||!!details||!!calendar||!!correction||!!share||!!questionID||settingsDialog||!!verification.request;
  const lastNotices=useRef(app.notices);
  const unreadReminders=app.notices.filter(n=>app.unreadNoticeIDs.includes(n.id)&&getNoticeStatus(n)==='reminder');
  function clearNewReminders(){app.clearUnreadNotices(unreadReminders.map(n=>n.id));}
@@ -154,9 +151,9 @@ export default function App(){
    {app.bootError?<Alert severity="error" action={<Button onClick={()=>void rescue().catch(app.report)}>保存原始数据</Button>}>原来的通知无法读取：{app.bootError}。数据仍在本机，暂未覆盖。</Alert>:
     split&&page!==2?<Box className="workspace" sx={{display:'grid',gridTemplateColumns:'minmax(280px, 320px) minmax(0, 1fr)',gap:3,flex:1,minHeight:160}}>
      <ScrollPane id="compose-pane" label="添加" onFocus={()=>setPage(1)}><ComposerPage app={viewApp} embedded onDone={()=>setPage(0)} onLogin={()=>setLogin(true)}/></ScrollPane>
-     <ScrollPane id="feed-pane" label="已保存通知" onFocus={()=>setPage(0)}><FeedPage sampleNudge={!help&&practiceNudge} onSamplesOpened={()=>setPracticeNudge(false)} onDownload={()=>setDownloadsOpen(true)} app={viewApp} embedded actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} focusID={help?null:focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView} editingID={correction?.noticeID} onEditingClose={()=>setCorrection(null)}/></ScrollPane>
+     <ScrollPane id="feed-pane" label="已保存通知" onFocus={()=>setPage(0)}><FeedPage sampleNudge={!help&&practiceNudge} onSamplesOpened={()=>setPracticeNudge(false)} app={viewApp} embedded actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} focusID={help?null:focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView} editingID={correction?.noticeID} onEditingClose={()=>setCorrection(null)}/></ScrollPane>
     </Box>:
-    page===0?<FeedPage sampleNudge={!help&&practiceNudge} onSamplesOpened={()=>setPracticeNudge(false)} onDownload={()=>setDownloadsOpen(true)} app={viewApp} actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} focusID={help?null:focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView} editingID={correction?.noticeID} onEditingClose={()=>setCorrection(null)}/>:
+    page===0?<FeedPage sampleNudge={!help&&practiceNudge} onSamplesOpened={()=>setPracticeNudge(false)} app={viewApp} actions={actions} onCompose={()=>navigate(1)} onSettings={openCampusSettings} focusID={help?null:focusID} onFocusHandled={consumeFocus} viewState={feedView} onViewStateChange={setFeedView} editingID={correction?.noticeID} onEditingClose={()=>setCorrection(null)}/>:
     page===1?<ComposerPage app={viewApp} onDone={()=>navigate(0)} onLogin={()=>setLogin(true)}/>:
     <SettingsPage developerEnabled={developerUnlocked} app={app} onLogin={()=>setLogin(true)} onHelp={showWelcome} onAbout={()=>setAbout(true)} onDialogChange={setSettingsDialog} expandCampus={expandCampus} onFilterNotices={enabled=>{setFeedView(previous=>({...previous,tab:0,query:'',favoritesOnly:false,relevantOnly:enabled}));navigate(0);}} onShowNotices={()=>{setFeedView(createFeedViewState());setFocusID(null);navigate(0);}}/>}
   </Container>
@@ -173,7 +170,6 @@ export default function App(){
   <LoginDialog open={login} app={app} onClose={()=>setLogin(false)}/>
   <HumanVerificationDialog request={verification.request} onComplete={verification.complete} onCancel={()=>{app.cancel();verification.cancel();}}/>
   <HelpDialog dismissible={!tutorialRequired} open={help} onClose={closeHelp} step={guideStep} onStep={changeGuideStep} progress={guideProgress} expanded={!!guide.state.notice&&feedView.expandedIDs.has(guide.state.notice.id)} onFinished={finishHelp}/><AboutDialog firstUse={tutorialRequired} dismissible={!tutorialRequired} onDeveloperUnlock={unlockDeveloper} open={about||launchStage==='intro'} introduction={launchStage==='intro'||launchStage==='leaving'} onStart={startWelcome} onExited={()=>{if(launchStage==='leaving')setLaunchStage('entry');}} onClose={()=>{setAbout(false);if(launchStage==='intro')setLaunchStage('idle');}}/>
-  <Dialog open={downloadsOpen} onClose={()=>setDownloadsOpen(false)} maxWidth="xs" fullWidth><DialogTitle>安卓手机版</DialogTitle><DialogContent><AndroidDownloads compact/></DialogContent><DialogActions><Button onClick={()=>setDownloadsOpen(false)}>关闭</Button></DialogActions></Dialog>
   {promoOpen&&<Suspense fallback={<Dialog open onClose={()=>setPromoOpen(false)} maxWidth="sm" fullWidth aria-label="正在打开介绍视频"><DialogContent sx={{display:'flex',justifyContent:'center',py:5}}><CircularProgress size={28}/></DialogContent><DialogActions><Button onClick={()=>setPromoOpen(false)}>关闭</Button></DialogActions></Dialog>}><PromoVideoDialog onClose={()=>setPromoOpen(false)}/></Suspense>}
   <Snackbar open={!!app.toast&&!help&&launchStage==='idle'} key={app.toast?.id} autoHideDuration={app.toast?.undo?6500:2400} onClose={(_,reason)=>{if(reason!=='clickaway')app.setToast(null);}} message={app.toast?.text} action={app.toast?.undo?<Button color="inherit" onClick={()=>{const undo=app.toast?.undo;app.setToast(null);undo?.();}}>撤销</Button>:undefined} anchorOrigin={{vertical:split?'bottom':'top',horizontal:'center'}} sx={{...(split?{bottom:24}:{top:{xs:'calc(64px + var(--safe-top))',sm:'calc(64px + var(--safe-top))'},bottom:'auto'}),...(!app.toast?.undo?{pointerEvents:'none',left:{xs:'50%',sm:'50%'},right:'auto',transform:'translateX(-50%)',width:'max-content',maxWidth:'calc(100% - 24px)','& .MuiSnackbarContent-root':{minWidth:0,borderRadius:'24px',py:.25,'& .MuiSnackbarContent-message':{py:.5}}}:{})}}/>
   <Snackbar open={!!app.error} onClose={()=>app.setError('')} anchorOrigin={{vertical:'top',horizontal:'center'}}><Alert severity="error" onClose={()=>app.setError('')} variant="filled" sx={{maxWidth:560}}>{app.error}</Alert></Snackbar>

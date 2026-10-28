@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {runInNewContext} from 'node:vm';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {createHash,createHmac} from 'node:crypto';
@@ -289,6 +290,22 @@ test('permanent download entry resolves the newest stable release without bypass
  await writeFile(s.releaseManifestFile,JSON.stringify({schemaVersion:1,releases:[entry('3.0.0'),s.release]}));
  const next=await s.request('/downloads/',{method:'HEAD'});assert.equal(next.status,303);assert.equal(next.headers.location,origin+'/downloads/android-v3.0.0/campus-inbox-3.0.0.apk');assert.equal(next.bytes.length,0);
  assert.equal((await s.request('/downloads/',{method:'POST'})).status,405);
- const verification=await s.request(path);assert.equal(verification.status,200);assert.match(verification.text,/四位数字验证码/);assert.notEqual(verification.headers['content-type'],'application/vnd.android.package-archive');
+ const verification=await s.request(path);assert.equal(verification.status,200);assert.match(verification.text,/验证码：<\/label>/);assert.match(verification.text,/name="challenge"/);assert.notEqual(verification.headers['content-type'],'application/vnd.android.package-archive');
  await writeFile(s.releaseManifestFile,'{"schemaVersion":1,"releases":[]}');assert.equal((await s.request('/downloads/')).status,503);
+});
+
+
+test('minimal download page enables only complete captcha input and counts down actual refresh cooldown',async t=>{
+  const s=await fixture();t.after(s.close);const {page}=await s.challenge();
+  assert(page.text.includes('>验证码：</label>'));assert(page.text.includes('id="download-button" type="submit" disabled'));
+  for(const text of ['完成四位数字验证','图中的四位数字','换一张验证码','换图需间隔','主下载每日总量','每次下载前验证'])assert(!page.text.includes(text));
+  const match=page.text.match(/<script nonce="([^"]+)">([\s\S]*?)<\/script>/);assert(match);assert(page.headers['content-security-policy'].includes("script-src 'nonce-"+match[1]+"'"));
+  const node=()=>({value:'',disabled:true,textContent:'',attrs:{},events:{},addEventListener(name,fn){this.events[name]=fn;},setAttribute(k,v){this.attrs[k]=v;},removeAttribute(k){delete this.attrs[k];},getAttribute(k){return this.attrs[k];}});
+  const elements=Object.fromEntries(['answer','download-button','download-form','refresh','refresh-countdown'].map(id=>[id,node()]));
+  let clock=0,tick;runInNewContext(match[2],{document:{getElementById:id=>elements[id]},window:{addEventListener(){}},Date:{now:()=>clock},setInterval:fn=>(tick=fn,1),clearInterval(){}});
+  const input=elements.answer,button=elements['download-button'];assert.equal(button.disabled,true);assert.equal(elements['refresh-countdown'].textContent,'10s');
+  for(const [value,disabled] of [['12',true],['12a4',true],['2468',false],['',true]]){input.value=value;input.events.input();assert.equal(button.disabled,disabled);}
+  let prevented=false;elements.refresh.events.click({preventDefault(){prevented=true;}});assert(prevented);
+  clock=10000;tick();assert.equal(elements['refresh-countdown'].textContent,'');assert.equal(elements.refresh.getAttribute('aria-disabled'),undefined);
+  s.advance(6000);const reused=await s.challenge();assert(reused.page.text.includes('>4s</span>'),'reload shows only remaining cooldown');
 });
