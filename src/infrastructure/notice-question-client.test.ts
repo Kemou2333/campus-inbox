@@ -12,6 +12,12 @@ describe('single notice question boundary',()=>{
   expect(await askNoticeQuestion({...input,profile:'ignore',notes:'private'} as typeof input,{...settings,endpoint:'https://api.example.test/analyze',fetcher})).toEqual(result);
   expect(fetcher).toHaveBeenCalledTimes(1);const [url,options]=fetcher.mock.calls[0] as unknown as [string,RequestInit];expect(url).toBe('https://api.example.test/notice-question');expect(JSON.parse(options.body as string)).toEqual(input);
  });
+ test('accepts configured quota on first answer and same-ID recovery',async()=>{
+  const fetcher=vi.fn().mockResolvedValueOnce(reply({...result,remainingQuestions:9})).mockResolvedValueOnce(reply({...result,remainingQuestions:10})).mockResolvedValueOnce(reply({...result,remainingQuestions:0}));
+  for(const remainingQuestions of [9,10,0])expect(await askNoticeQuestion(input,{...settings,fetcher})).toEqual({...result,remainingQuestions});
+  expect(fetcher).toHaveBeenCalledTimes(3);
+  for(const [,options] of fetcher.mock.calls)expect(JSON.parse(options.body)).toEqual(input);
+ });
  test('rejects overlong or anonymous requests before dispatch',async()=>{
   const fetcher=vi.fn();await expect(askNoticeQuestion({...input,question:'问'.repeat(241)},{...settings,fetcher})).rejects.toMatchObject({code:'INVALID_INPUT'});
   await expect(askNoticeQuestion(input,{fetcher})).rejects.toMatchObject({code:'AUTH_REQUIRED'});expect(fetcher).not.toHaveBeenCalled();
@@ -19,7 +25,7 @@ describe('single notice question boundary',()=>{
  test('rejects invented citations and unbounded answers',()=>{
   expect(()=>parseQuestionAnswer({...result,evidence:['原文没有这句']},input.sourceText)).toThrow();
   expect(()=>parseQuestionAnswer({...result,answer:'字'.repeat(1001)},input.sourceText)).toThrow();
-  expect(()=>parseQuestionAnswer({...result,remainingQuestions:6},input.sourceText)).toThrow();
+  for(const remainingQuestions of [-1,NaN,0.5,Number.MAX_SAFE_INTEGER+1])expect(()=>parseQuestionAnswer({...result,remainingQuestions},input.sourceText)).toThrow();
  });
  test('network or paid failures never retry automatically',async()=>{
   const fetcher=vi.fn(async()=>{throw new TypeError('network');});await expect(askNoticeQuestion(input,{...settings,fetcher})).rejects.toMatchObject({code:'NETWORK_ERROR'});expect(fetcher).toHaveBeenCalledTimes(1);

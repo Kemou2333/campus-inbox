@@ -5,7 +5,7 @@ export interface NoticeQuestionInput {sourceText:string;question:string;requestI
 export interface NoticeQuestionAnswer {answer:string;evidence:string[];remainingQuestions:number}
 export function parseQuestionAnswer(value:unknown,sourceText:string):NoticeQuestionAnswer {
  const v=value as NoticeQuestionAnswer|null;
- if(!v||typeof v.answer!=='string'||!v.answer.trim()||v.answer.length>1000||!Array.isArray(v.evidence)||v.evidence.length>2||v.evidence.some(q=>typeof q!=='string'||!q||q.length>500||!sourceText.includes(q))||!Number.isInteger(v.remainingQuestions)||v.remainingQuestions<0||v.remainingQuestions>5)throw new AnalysisError('回答格式异常，请稍后查看本次结果。','INVALID_RESPONSE');
+ if(!v||typeof v.answer!=='string'||!v.answer.trim()||v.answer.length>1000||!Array.isArray(v.evidence)||v.evidence.length>2||v.evidence.some(q=>typeof q!=='string'||!q||q.length>500||!sourceText.includes(q))||!Number.isSafeInteger(v.remainingQuestions)||v.remainingQuestions<0)throw new AnalysisError('回答格式异常，请稍后查看本次结果。','INVALID_RESPONSE');
  return {answer:v.answer,evidence:v.evidence,remainingQuestions:v.remainingQuestions};
 }
 /** One notice and one question only; no history, identity profile, notes or attachments. */
