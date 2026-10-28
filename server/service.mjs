@@ -6,7 +6,7 @@ import {createRollingQuota,pruneRollingQuota,checkRollingQuota,reserveRollingQuo
 const D=globalThis.CampusData;
 const RATE_WINDOW_MS=180000,RATE_LIMIT=5,AUTHENTICATED_IP_RATE_LIMIT=20,IMAGE_REFRESH_MS=10000;
 const AI_BODY_BYTES=64000,AI_CACHE_TTL_MS=15*60000,AI_CACHE_SIZE=50,AI_IMAGE_TTL_MS=120000,AI_IMAGE_ATTEMPTS=5,AI_IMAGE_THRESHOLD=3;
-export const AI_OPERATION_LIMITS=Object.freeze({rateWindowMs:RATE_WINDOW_MS,accountBurst:RATE_LIMIT,authenticatedIPBurst:AUTHENTICATED_IP_RATE_LIMIT,anonymousIPBurst:RATE_LIMIT,imageRefreshMs:IMAGE_REFRESH_MS,imageLifetimeMs:AI_IMAGE_TTL_MS,imageAttempts:AI_IMAGE_ATTEMPTS,imageRequestThreshold:AI_IMAGE_THRESHOLD,bodyBytes:AI_BODY_BYTES,cacheTTLms:AI_CACHE_TTL_MS,cacheEntries:AI_CACHE_SIZE,modelConcurrent:1});
+export const AI_OPERATION_LIMITS=Object.freeze({rateWindowMs:RATE_WINDOW_MS,accountBurst:RATE_LIMIT,authenticatedIPBurst:AUTHENTICATED_IP_RATE_LIMIT,anonymousIPBurst:RATE_LIMIT,imageRefreshMs:IMAGE_REFRESH_MS,imageLifetimeMs:AI_IMAGE_TTL_MS,imageAttempts:AI_IMAGE_ATTEMPTS,imageRequestThreshold:AI_IMAGE_THRESHOLD,bodyBytes:AI_BODY_BYTES,cacheTTLms:AI_CACHE_TTL_MS,cacheEntries:AI_CACHE_SIZE,modelConcurrent:3});
 // Peak list prices translated at a conservative 8 RMB/USD; cached input is
 // deliberately priced as a miss. These estimates are not provider invoices.
 // Update both values when the provider's prices change.
@@ -34,6 +34,7 @@ export async function createService(config,options={}){
   if(!Number.isSafeInteger(dailyLimit)||dailyLimit<1)throw new Error('Daily AI budget must be a positive integer');
   const questionDailyLimit=config.questionDailyLimit===undefined?40:config.questionDailyLimit;
   if(!Number.isSafeInteger(questionDailyLimit)||questionDailyLimit<1)throw new Error('Daily question limit must be a positive integer');
+  const dailyBudgetEnabled=config.dailyBudgetEnabled!==false;
   const dailyBudgetRmb=config.dailyBudgetRmb===undefined?3:config.dailyBudgetRmb;
   const dailyBudgetMicro=Math.floor(dailyBudgetRmb*1_000_000);
   if(typeof dailyBudgetRmb!=='number'||!Number.isFinite(dailyBudgetRmb)||!Number.isSafeInteger(dailyBudgetMicro)||dailyBudgetMicro<1)throw new Error('Daily AI currency budget must be a positive number');
@@ -45,7 +46,7 @@ export async function createService(config,options={}){
   const questionRollingLimits={accountFiveHourLimit:rollingLimit(config.questionAccountFiveHourLimit,5),accountThreeDayLimit:rollingLimit(config.questionAccountThreeDayLimit,15),ipFiveHourLimit:rollingLimit(config.questionIPFiveHourLimit,5)};
   const bits=16,sign=value=>createHmac('sha256',config.accessToken).update(value).digest('base64url');
   const day=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(now());
-  let usage=null,busy=false,persistQueue=Promise.resolve(),currencyMigration=false;
+  let usage=null,activeModels=0,persistQueue=Promise.resolve(),currencyMigration=false;
   if(config.stateFile){try{
     usage=JSON.parse(await readFile(config.stateFile,'utf8'));
     if(!usage||typeof usage.day!=='string'||!Number.isSafeInteger(usage.requests)||usage.requests<0||['input','output','reasoning'].some(key=>usage[key]!==undefined&&(!Number.isSafeInteger(usage[key])||usage[key]<0)))throw new Error('Invalid quota state');
@@ -167,8 +168,8 @@ export async function createService(config,options={}){
     // Questions reuse only their durable request ID, never another account's
     // response or a different paid request's allowance.
     const saved=questionRoute?undefined:cache.get(hash);
-    if(busy&&!saved)return reply({error:'AI 正在处理另一条请求，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
-    if(busy&&usage?.day!==day())return reply({error:'AI 正在处理另一条请求，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
+    if(activeModels>=AI_OPERATION_LIMITS.modelConcurrent&&!saved)return reply({error:'AI 正在处理另一条请求，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
+    if(activeModels>0&&usage?.day!==day())return reply({error:'AI 正在处理另一条请求，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
     if(!usage||usage.day!==day()){
       const rolling=createRollingQuota(usage,t),splitQuota=createSplitQuota(usage,t);
       usage={day:day(),requests:0,input:0,output:0,reasoning:0,costMicro:0,rolling,
@@ -221,7 +222,7 @@ export async function createService(config,options={}){
       return null;
     };
     // Paid failures consume their route's count and the shared currency budget. Cache reuse is free.
-    if(!saved&&usage.costMicro>dailyBudgetMicro-reservedCostMicro)return currencyLimited();
+    if(dailyBudgetEnabled&&!saved&&usage.costMicro>dailyBudgetMicro-reservedCostMicro)return currencyLimited();
     if(!saved){const blocked=dailyLimited();if(blocked)return blocked;}
     if(publicMode&&!saved&&client.requests>=ipLimit)return limited('此网络今日整理次数已达上限，明天再试。','IP_DAILY_LIMIT');
     if(accountKey&&!saved&&(usage.accounts?.[accountKey]||0)>=accountLimit)return limited('此账号今日整理次数已达上限，明天再试。','ACCOUNT_DAILY_LIMIT');
@@ -266,16 +267,18 @@ export async function createService(config,options={}){
       challenges.set(id,{type,expires,attempts:0,...(image?{answerHash:image.answerHash,created:t,hash,origin,account:accountKey,ip:ipKey,owner:rollingKeys.accountKey,network:rollingKeys.ipKey,publicChallenge}:{})});
       return reply({code:'VERIFICATION_REQUIRED',challenge:publicChallenge},428);
     }
-    // Recheck after asynchronous persistence; two arrivals must never start two model calls.
-    if(busy)return reply({error:'AI 正在处理另一条请求，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
+    // Recheck after persistence, then reserve the slot and budget synchronously.
+    if(activeModels>=AI_OPERATION_LIMITS.modelConcurrent)return reply({error:'AI 正在处理另一条请求，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
     {const blocked=dailyLimited();if(blocked)return blocked;}
-    if(usage.costMicro>dailyBudgetMicro-reservedCostMicro)return currencyLimited();
+    if(dailyBudgetEnabled&&usage.costMicro>dailyBudgetMicro-reservedCostMicro)return currencyLimited();
     if(publicMode&&client.requests>=ipLimit)return limited('此网络今日整理次数已达上限，明天再试。','IP_DAILY_LIMIT');
     if(accountKey&&(usage.accounts?.[accountKey]||0)>=accountLimit)return limited('此账号今日整理次数已达上限，明天再试。','ACCOUNT_DAILY_LIMIT');
     {const blocked=rollingLimited();if(blocked)return blocked;}
     if(request.signal.aborted)return reply({error:'整理已取消，请重新提交。',code:'CANCELLED'},499);
     const admittedUsage=usage;
-    busy=true;let tokensRecorded=false,acceptedJob,acceptedQuestion=false;
+    activeModels++;let slotReleased=false,slotTransferred=false;
+    const releaseSlot=()=>{if(!slotReleased){slotReleased=true;activeModels--;}};
+    let tokensRecorded=false,acceptedJob,acceptedQuestion=false;
     const recordTokens=async(stats,finishReason,failureCode,usageAvailable)=>{
       // Settle against the exact day/object that reserved this call. Never
       // release an old-day reservation from a replacement day's allowance.
@@ -332,9 +335,9 @@ export async function createService(config,options={}){
             if(error instanceof ServiceError&&error.usage&&!tokensRecorded){try{await recordTokens(error.usage,error.finishReason,error.failureCode,error.usageAvailable);}catch{}}
             const code=outputReceived?'JOB_SAVE_FAILED':error.failureCode==='CONTENT_BOUNDARY'?'CONTENT_BOUNDARY':publicAIErrorCode(error)||'SERVICE_UNAVAILABLE';
             try{options.jobs.fail(account,job.id,code);}catch{}
-          }finally{busy=false;}
+          }finally{releaseSlot();}
         })();
-        pendingJobs.add(worker);worker.finally(()=>pendingJobs.delete(worker)).catch(()=>{});
+        pendingJobs.add(worker);slotTransferred=true;worker.finally(()=>pendingJobs.delete(worker)).catch(()=>{});
         return reply({job:options.jobs.findRequest(account,requestID,hash)},202);
       }
       if(request.signal.aborted)throw new ServiceError('整理已取消，请重新提交。',499);
@@ -351,7 +354,7 @@ export async function createService(config,options={}){
         return reply(body,e.status||503);
       }
       return reply({error:e instanceof ServiceError?e.message:'整理服务暂时不可用，请稍后重试。',...(code?{code}:{})},e.status||503);
-    }finally{if(!jobRoute||!pendingJobs.size)busy=false;}
+    }finally{if(!slotTransferred)releaseSlot();}
     }catch(error){
       // Every in-memory admission waiter must receive a finite response even if
       // preflight fails unexpectedly before the durable task can be accepted.
@@ -360,6 +363,6 @@ export async function createService(config,options={}){
   };
   handle.limitSummary=()=>({...AI_OPERATION_LIMITS,captchaMode:verificationMode,thinkingMode:config.thinkingMode==='low'?'low':'none',modelTimeoutMs:config.timeoutMs||(config.thinkingMode==='low'?ANALYSIS_LIMITS.lowTimeoutMs:ANALYSIS_LIMITS.fastTimeoutMs),organizeOutputTokens:config.thinkingMode==='low'?ANALYSIS_LIMITS.lowTokens:ANALYSIS_LIMITS.fastTokens});
   handle.drain=()=>Promise.allSettled([...pendingJobs]);
-  handle.adminSummary=()=>({day:usage?.day||day(),requests:usage?.requests||0,inputTokens:usage?.input||0,outputTokens:usage?.output||0,reasoningTokens:usage?.reasoning||0,estimatedCostRmb:(usage?.costMicro||0)/1_000_000,costIsEstimate:true,dailyRequestLimit:dailyLimit,dailyQuestionLimit:questionDailyLimit,organizingRequests:usage?.splitQuota?.organizeRequests||0,questionRequests:usage?.splitQuota?.questionRequests||0,dailyBudgetRmb,...rollingLimits,questionAccountFiveHourLimit:questionRollingLimits.accountFiveHourLimit,questionAccountThreeDayLimit:questionRollingLimits.accountThreeDayLimit,questionIPFiveHourLimit:questionRollingLimits.ipFiveHourLimit,processing:busy});
+  handle.adminSummary=()=>({day:usage?.day||day(),requests:usage?.requests||0,inputTokens:usage?.input||0,outputTokens:usage?.output||0,reasoningTokens:usage?.reasoning||0,estimatedCostRmb:(usage?.costMicro||0)/1_000_000,costIsEstimate:true,dailyRequestLimit:dailyLimit,dailyQuestionLimit:questionDailyLimit,organizingRequests:usage?.splitQuota?.organizeRequests||0,questionRequests:usage?.splitQuota?.questionRequests||0,dailyBudgetEnabled,dailyBudgetRmb:dailyBudgetEnabled?dailyBudgetRmb:null,...rollingLimits,questionAccountFiveHourLimit:questionRollingLimits.accountFiveHourLimit,questionAccountThreeDayLimit:questionRollingLimits.accountThreeDayLimit,questionIPFiveHourLimit:questionRollingLimits.ipFiveHourLimit,processing:activeModels>0});
   return handle;
 }

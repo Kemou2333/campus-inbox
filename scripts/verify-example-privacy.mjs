@@ -42,7 +42,7 @@ export function auditPublicExamples(backup,provenance){
   const add=(path,category)=>findings.push({path,category});
   if(!Array.isArray(backup?.notices)||!Array.isArray(provenance?.results))return [{path:'catalog',category:'invalid_catalog'}];
   const review=provenance.privacyReview;
-  if(review?.manualReview!==true||review.policyVersion!==2||!review.disclosure?.includes('脱敏')||review.contentCorrections!==false||review.publicBodyDisclosureRequired!==false)add('privacyReview','missing_manual_review');
+  if(review?.manualReview!==true||review.policyVersion!==2||!review.disclosure?.includes('脱敏')||typeof review.contentCorrections!=='boolean'||review.publicBodyDisclosureRequired!==false)add('privacyReview','missing_manual_review');
   // Identity verification is a human attestation tied to the reviewed record
   // hash. A regex cannot distinguish an unfamiliar real name from a role.
   if(review?.manualIdentityReview!==true||!Array.isArray(review.identityCategoriesReviewed)||!['personal_names','student_identifiers'].every(category=>review.identityCategoriesReviewed.includes(category)))add('privacyReview','missing_identity_review');
@@ -63,7 +63,8 @@ export function auditPublicExamples(backup,provenance){
     scan(notice,path);
     if(typeof notice.originalText!=='string'||!notice.originalText.trim())add(`${path}.originalText`,'missing_original');
     if(notice.originalText?.startsWith('【脱敏示例】'))add(`${path}.originalText`,'redundant_body_disclosure');
-    if(source?.manualPrivacyEdits!==true||source.manualWordEdits!==true||source.manualContentCorrections!==false)add(path,'undisclosed_privacy_edits');
+    if(source?.manualPrivacyEdits!==true||source.manualWordEdits!==true||typeof source.manualContentCorrections!=='boolean')add(path,'undisclosed_privacy_edits');
+    if(source?.manualContentCorrections===true&&(source.sourceKind!=='human-curated-public-example'||source.manualCorrectionReview!==true||typeof source.manualCorrectionScope!=='string'||!source.manualCorrectionScope.trim()))add(path,'missing_correction_review');
     if(source?.manualIdentityReview!==true)add(path,'missing_record_identity_review');
     if(source?.sourceKind!=='human-curated-public-example')add(path,'missing_curated_source_disclosure');
     if(!source||source.publishedOriginalSha256!==createHash('sha256').update(notice.originalText??'').digest('hex')||source.publishedRecordSha256!==publicExampleHash(notice))add(path,'reviewed_content_changed');

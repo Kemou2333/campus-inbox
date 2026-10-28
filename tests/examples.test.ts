@@ -157,7 +157,7 @@ describe('safe built-in example upgrades',()=>{
     expect(provenance.manualPresentationRefinement20261020).toMatchObject({reviewedRecords:24,providerCallsForCatalogRefinement:0,originalTextUnchanged:true,manualPresentationEdits:true});
     for(const notice of examples){
       const source=provenance.results.find((row:{exampleId:string})=>row.exampleId===notice.id);
-      expect(source.manualPresentationEdits).toBe(true);expect(source.manualContentCorrections).toBe(false);
+      expect(source.manualPresentationEdits).toBe(true);expect(source.manualContentCorrections).toBe(['example-reading-v211-1','example-reading-v211-5','example-reading-v25-4'].includes(notice.id));
       expect(notice.sourceRefs).toBeUndefined();expect(notice.summary.length).toBeLessThanOrEqual(36);expect(notice.title.length).toBeLessThanOrEqual(16);
       for(const task of notice.tasks)expect(task.text.length).toBeLessThanOrEqual(16);
     }
@@ -220,13 +220,13 @@ test('seven-at-a-time refresh never removes unrelated legacy records or overwrit
  const second=selectExampleBatch(first.records,catalog);expect(second.records).toHaveLength(11);expect(second.remaining).toBe(0);
  expect(selectExampleBatch(first.records,catalog,0).records).toEqual(first.records);
 });
-test('new catalog selections exclude only the tutorial ID while retaining saved evaluation records and personal edits',async()=>{
+test('new catalog selections exclude the tutorial and duplicate IDs while retaining saved records and personal edits',async()=>{
  const catalog=parseBackup(JSON.parse(await readFile(new URL('../public/examples.json',import.meta.url),'utf8')));
  const tutorial=catalog.find(n=>n.id===TUTORIAL_EXAMPLE_ID)!,edited={...tutorial,note:'我已保存的笔记',completed:true},personal={...tutorial,id:'personal-evaluation',note:'真实的评教通知'};
- const first=selectExampleBatch([edited,personal],catalog);expect(first.records).toHaveLength(7);expect(first.records.some(n=>n.id===TUTORIAL_EXAMPLE_ID)).toBe(false);expect(first.remaining).toBe(catalog.length-1-7);
+ const first=selectExampleBatch([edited,personal],catalog);expect(first.records).toHaveLength(7);expect(first.records.some(n=>n.id===TUTORIAL_EXAMPLE_ID)).toBe(false);expect(first.remaining).toBe(catalog.length-5-7);
  const merged=await mergeExamples([edited,personal],first.records,await registry(tutorial));
  expect(merged.notices).toContain(edited);expect(merged.notices).toContain(personal);
- const all=selectExampleBatch([],catalog,100);expect(all.records).toHaveLength(catalog.length-1);expect(all.records.some(n=>n.id===TUTORIAL_EXAMPLE_ID)).toBe(false);
+ const all=selectExampleBatch([],catalog,100);expect(all.records).toHaveLength(catalog.length-5);expect(all.records.some(n=>n.id===TUTORIAL_EXAMPLE_ID)).toBe(false);
 });
 
 

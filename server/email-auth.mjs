@@ -4,7 +4,7 @@ import {ServiceError} from './analyze.mjs';
 
 const MINUTE=60000,HOUR=60*MINUTE,DAY=24*HOUR,CODE_TTL=5*MINUTE,CODE_ATTEMPTS=5;
 export const EMAIL_CODE_LIMITS=Object.freeze({lifetimeMs:CODE_TTL,resendMs:MINUTE,attempts:CODE_ATTEMPTS,newClientDigits:4,legacyDigits:6});
-export const EMAIL_DEFAULT_LIMITS=Object.freeze({emailSendHour:3,emailSendDay:6,emailSendIPHour:20,emailSendIPDay:40,emailSendGlobalDay:50,emailSendFailureDay:5,emailVerifyIPMinute:10,emailSendConcurrency:2,emailRegisterIPMinute:5,emailRegisterIPDay:10,emailRegisterGlobalDay:20});
+export const EMAIL_DEFAULT_LIMITS=Object.freeze({emailSendHour:3,emailSendDay:6,emailSendIPHour:20,emailSendIPDay:40,emailSendGlobalDay:50,emailSendFailureDay:5,emailVerifyIPMinute:10,emailSendConcurrency:2,emailRegisterIPMinute:5,emailRegisterIPDay:10,emailRegisterGlobalDay:30});
 
 /** Email is another credential for the existing account UUID, never a new cloud owner. */
 export function createEmailAuth({db,signingSecret,now=Date.now,limits={},sendCode,getIdentity,sessionFor,createUser,prepareCredentials,setPassword}){

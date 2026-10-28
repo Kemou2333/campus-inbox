@@ -54,6 +54,13 @@ export interface GuestDemoDraft {text:string;attachments:string[];demo?:typeof G
 export function isGuestDemoDraft(draft:GuestDemoDraft):boolean{
  return draft.demo===GUEST_DEMO_MARKER&&!!reviewedDemoForSource(draft.text)&&draft.attachments.length===0;
 }
+/** Keep explicit untouched samples out of model requests, even in mixed batches. */
+export function partitionGuestDemoDrafts<T extends GuestDemoDraft>(drafts:readonly T[]){
+ const samples:T[]=[],personal:T[]=[];
+ for(const draft of drafts){if(draft.text.trim())(isGuestDemoDraft(draft)?samples:personal).push(draft);}
+ const modelTextLength=personal.reduce((length,draft)=>length+draft.text.length,0);
+ return {samples,personal,textLength:personal.length?modelTextLength:samples.reduce((length,draft)=>length+draft.text.length,0)};
+}
 export function createGuestDemoNotice(draftID:string=crypto.randomUUID(),source=GUEST_DEMO_SOURCE){
  // Previously filled, exact built-in text stays a free sample after a release.
  // Only the known sample alias upgrades to the current curated display; any

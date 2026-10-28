@@ -93,8 +93,6 @@ test('running requests survive browser disconnect; duplicate lookup never starts
   try{
     const controller=new AbortController(),running=s.service(s.request({},s.a,undefined,controller.signal));await started.promise;controller.abort();assert.equal(providerSignal.aborted,false);
     const duplicate=await s.service(s.request());assert.equal(duplicate.status,409);assert.equal((await duplicate.json()).code,'QUESTION_IN_PROGRESS');
-    const different=await s.service(s.request({requestId:requestId+'-new'}));assert.equal(different.status,429);assert.equal((await different.json()).code,'SERVICE_BUSY');
-    const analyze=await s.service(new Request('http://local/analyze',{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+s.a,'Content-Type':'application/json'},body:JSON.stringify({notice:'学校新通知。'})}));assert.equal(analyze.status,429);assert.equal((await analyze.json()).code,'SERVICE_BUSY');
     pending.resolve(envelope());await s.service.drain();assert.equal((await running).status,200);
     assert(s.sync.questions.findRequest(s.sync.accountForKey(s.a),requestId).response);assert.equal((await s.service(s.request())).status,200);assert.equal(calls,1);
   }finally{pending.resolve(envelope());await s.close();}

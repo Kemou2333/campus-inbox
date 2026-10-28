@@ -9,7 +9,7 @@ import {friendlyErrorMessage} from '../shared/error-message';
 import {playOperationSound} from '../shared/operation-sounds';
 import {triggerOperationHaptic} from '../shared/operation-haptics';
 import {isNewCompletion} from '../features/notices/completion-feedback';
-import {createGuestDemoNotice,GUEST_DEMO_MARKER,nextGuestDemoSource,isGuestDemoDraft,waitForGuestDemo} from '../infrastructure/guest-demo';
+import {createGuestDemoNotice,GUEST_DEMO_MARKER,nextGuestDemoSource,isGuestDemoDraft,partitionGuestDemoDrafts,waitForGuestDemo} from '../infrastructure/guest-demo';
 import {createCloudSync,recordHash,automaticConflictChoice, type CloudSync, type SyncState} from '../infrastructure/sync-client';
 import {installEventSync} from '../infrastructure/event-sync';
 import {createPendingJobPolling,type PendingJobPolling} from '../infrastructure/pending-job-polling';
@@ -434,12 +434,24 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   if(legacyRecords.length)throw new Error('旧版还有整理结果未保存，请先恢复它。');
   const context=jobContext();
   if(context.journal.all().some(s=>!s.jobId))throw new Error('还有一次提交状态未确认，请先确认它，避免重复整理。');
-  const sources=structuredClone(draftRef.current.filter(d=>d.text.trim()));
-  if(!sources.length||sources.some(d=>!d.text.trim())||sources.reduce((n,d)=>n+d.text.length,0)>4000)throw new Error('通知总字数需在 1–4,000 之间。');
+  const plan=partitionGuestDemoDrafts(draftRef.current);
+  if(!plan.personal.length)return analyzeDemo();
+  const sources=structuredClone(plan.personal);
+  if(sources.reduce((n,d)=>n+d.text.length,0)>4000)throw new Error('通知总字数需在 1–4,000 之间。');
   if(draftRef.current.some(d=>!d.text.trim()&&d.attachments.length))throw new Error('有附件的通知还没填写原文，请补上后再整理。');
+  // Samples finish locally; only personal sources enter the durable paid submission.
+  if(plan.samples.length)commitDemoSources(plan.samples,false);
   const submission:LocalAnalysisSubmission={requestId:newID(),sources,jobId:null,createdAt:new Date().toISOString()};
   // Persist the intent before sending. Reload recovery is read-only until the user explicitly confirms an unknown ACK.
   context.journal.put(submission);return sendJobSubmission(submission,context);
+ }
+ function commitDemoSources(sources:Draft[],notify=true){
+  if(!sources.length||!sources.every(source=>isGuestDemoDraft(source)&&draftRef.current.some(d=>d.id===source.id&&d.text===source.text&&isGuestDemoDraft(d))))throw new Error('示例已修改，请重新整理。');
+  const notices=sources.map(source=>createGuestDemoNotice(source.id,source.text)),current=repository.load();
+  const additions=notices.filter(n=>!current.some(old=>old.id===n.id));if(additions.length)save([...current,...additions]);
+  // Fixed sample IDs permit recovery without replacing an existing sample's progress.
+  consumeJobDrafts(sources);setLatestAddedID(notices[0].id);
+  if(notify)tell(notices.length>1?`已整理 ${notices.length} 条示例`:'示例已整理');
  }
  async function analyzeDemo(){
   if(analyzing.current||busy)return false;
@@ -450,10 +462,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   try{
    await waitForGuestDemo(controller.signal);
    if(!sources.every(source=>draftRef.current.some(d=>d.id===source.id&&d.text===source.text&&isGuestDemoDraft(d))))throw new Error('示例已修改，请重新整理。');
-   const notices=sources.map(source=>createGuestDemoNotice(source.id,source.text)),current=repository.load();
-   const additions=notices.filter(n=>!current.some(old=>old.id===n.id));if(additions.length)save([...current,...additions]);
-   // Only this explicit sample is consumed. Personal drafts and attachments remain intact.
-   consumeJobDrafts(sources);setLatestAddedID(notices[0].id);tell(notices.length>1?`已整理 ${notices.length} 条示例`:'示例已整理');playOperationSound('organized');triggerOperationHaptic(platform,'organized');return true;
+   commitDemoSources(sources);playOperationSound('organized');triggerOperationHaptic(platform,'organized');return true;
   }catch(error){if(controller.signal.aborted){tell('已停止，示例原文仍在。');return false;}throw error;}
   finally{analyzing.current=false;setBusy(false);setStage('');if(abort.current===controller)abort.current=null;}
  }

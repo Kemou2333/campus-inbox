@@ -147,19 +147,18 @@ test('new networks rejected by the global cap cannot grow the retained client ma
  }finally{await rm(fixture.directory,{recursive:true,force:true});}
 });
 
-test('simultaneous public arrivals before quota persistence can dispatch only one paid call',async()=>{
- const fixture=await stateFixture();let calls=0,finish;
+test('simultaneous public arrivals before persistence stay within three paid slots',async()=>{
+ const fixture=await stateFixture();let calls=0,rejected=0,finish;let pending=[];
  const gate=new Promise(resolve=>finish=resolve);
  try{
   const handler=await createService({...config,stateFile:fixture.stateFile},{modelFetch:async()=>{calls++;await gate;return modelResponse();}});
-  const pending=Array.from({length:12},(_,i)=>handler(request('并发通知'+i),'network-'+i));
-  // Let asynchronous quota persistence reach the model; the gate is explicitly released below.
-  for(let i=0;i<1000&&calls===0;i++)await new Promise(resolve=>setTimeout(resolve,2));
-  assert.equal(calls,1);
+  pending=Array.from({length:12},(_,i)=>handler(request('并发通知'+i),'network-'+i).then(r=>{if(r.status===429)rejected++;return r;}));
+  for(let i=0;i<1000&&(calls<3||rejected<9);i++)await new Promise(resolve=>setTimeout(resolve,2));
+  assert.equal(calls,3);assert.equal(rejected,9);
   finish();const responses=await Promise.all(pending),statuses=responses.map(x=>x.status);
-  assert.equal(statuses.filter(x=>x===200).length,1);assert.equal(statuses.filter(x=>x===429).length,11);assert.equal(calls,1);
-  const state=JSON.parse(await readFile(fixture.stateFile,'utf8'));assert.equal(state.requests,1);assert.equal(Object.values(state.clients).reduce((sum,x)=>sum+x.requests,0),1);
- }finally{finish?.();await rm(fixture.directory,{recursive:true,force:true});}
+  assert.equal(statuses.filter(x=>x===200).length,3);assert.equal(statuses.filter(x=>x===429).length,9);assert.equal(calls,3);
+  const state=JSON.parse(await readFile(fixture.stateFile,'utf8'));assert.equal(state.requests,3);assert.equal(Object.values(state.clients).reduce((sum,x)=>sum+x.requests,0),3);
+ }finally{finish?.();await Promise.allSettled(pending);await rm(fixture.directory,{recursive:true,force:true});}
 });
 
 test('simultaneous replay of one solved proof dispatches exactly one paid request',async()=>{

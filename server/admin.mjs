@@ -23,7 +23,7 @@ const ADMIN_READS_PER_MINUTE=60;
 /** Public policy only: never include credentials, identities, paths or raw config. */
 export function limitStandards({ai,auth,now=Date.now}){
   const usage=ai.adminSummary(),operation=ai.limitSummary(),login=auth.adminReader.limitSummary(),mail=login.email;
-  const effective={ai:{dailyOrganize:usage.dailyRequestLimit,dailyQuestions:usage.dailyQuestionLimit,dailyBudgetRmb:usage.dailyBudgetRmb,organizeAccountFiveHours:usage.accountFiveHourLimit,organizeAccount72Hours:usage.accountThreeDayLimit,organizeIPFiveHours:usage.ipFiveHourLimit,questionAccountFiveHours:usage.questionAccountFiveHourLimit,questionAccount72Hours:usage.questionAccountThreeDayLimit,questionIPFiveHours:usage.questionIPFiveHourLimit,...operation},download:{...APK_DOWNLOAD_LIMITS},auth:login,sync:{...SYNC_LIMITS},input:{...ANALYSIS_LIMITS},admin:{readsPerMinute:ADMIN_READS_PER_MINUTE}};
+  const effective={ai:{dailyOrganize:usage.dailyRequestLimit,dailyQuestions:usage.dailyQuestionLimit,dailyBudgetRmb:usage.dailyBudgetRmb,dailyBudgetEnabled:usage.dailyBudgetEnabled,organizeAccountFiveHours:usage.accountFiveHourLimit,organizeAccount72Hours:usage.accountThreeDayLimit,organizeIPFiveHours:usage.ipFiveHourLimit,questionAccountFiveHours:usage.questionAccountFiveHourLimit,questionAccount72Hours:usage.questionAccountThreeDayLimit,questionIPFiveHours:usage.questionIPFiveHourLimit,...operation},download:{...APK_DOWNLOAD_LIMITS},auth:login,sync:{...SYNC_LIMITS},input:{...ANALYSIS_LIMITS},admin:{readsPerMinute:ADMIN_READS_PER_MINUTE}};
   const row=(id,label,value,unit,scope,window,notes='',changeControl='代码配置')=>({id,label,value,unit,scope,window,display:String(value)+(unit?' '+unit:''),notes,changeControl});
   const a=effective.ai,d=effective.download,c=effective.input,s=effective.sync;
   const groups=[
@@ -36,7 +36,7 @@ export function limitStandards({ai,auth,now=Date.now}){
       row('question-account-72h','提问次数',a.questionAccount72Hours,'次','每账号','滚动三天（72小时）'),
       row('question-ip-5h','提问次数',a.questionIPFiveHours,'次','每 IP','滚动五小时'),
       row('question-site-day','提问次数',a.dailyQuestions,'次','全站','上海自然日'),
-      row('ai-money-day','整理与提问共用预算',a.dailyBudgetRmb,'元','全站','上海自然日','保守估算，不是模型平台账单；单次调用先预留预算。','部署配置 AI_DAILY_BUDGET_RMB'),
+      row('ai-money-day','整理与提问金额上限',a.dailyBudgetEnabled?a.dailyBudgetRmb:'未设置',a.dailyBudgetEnabled?'元':'','全站','上海自然日',a.dailyBudgetEnabled?'保守估算，不是模型平台账单；单次调用先预留预算。':'金额不限制请求；继续记录保守估算费用，不是模型平台账单。','部署配置 AI_DAILY_BUDGET_ENABLED / AI_DAILY_BUDGET_RMB'),
       row('ai-account-burst','AI 请求频率',a.accountBurst,'次','每账号','滚动三分钟','整理与提问共用短时频率；缓存及同请求重放不重复收费。'),
       row('ai-ip-burst','已登录 AI 请求频率',a.authenticatedIPBurst,'次','每 IP','滚动三分钟'),
       row('ai-concurrency','模型并发',a.modelConcurrent,'条','全站','同时处理','忙时请稍后再试，不自动发起付费重试。'),

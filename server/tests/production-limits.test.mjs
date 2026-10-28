@@ -25,7 +25,7 @@ async function fixture(){
  return {ai,request,advance:ms=>{now+=ms;},calls:()=>calls};
 }
 test('production settings retain the approved new thresholds and unchanged shared safety budgets',async()=>{
- assert.deepEqual(configured,{accountFiveHourLimit:10,accountThreeDayLimit:30,ipFiveHourLimit:10,questionAccountFiveHourLimit:10,questionAccountThreeDayLimit:15,questionIPFiveHourLimit:10,questionDailyLimit:80,dailyLimit:100});
+ assert.deepEqual(configured,{accountFiveHourLimit:10,accountThreeDayLimit:30,ipFiveHourLimit:30,questionAccountFiveHourLimit:10,questionAccountThreeDayLimit:15,questionIPFiveHourLimit:30,questionDailyLimit:80,dailyLimit:100});
  const auth=await createAuthService({stateFile:':memory:',signingSecret:secret},{sendCode:async()=>{throw Error('no mail');}}),f=await fixture();
  try{const policy=limitStandards({ai:f.ai,auth});assert.equal(policy.groups.flatMap(x=>x.rows).length,86);assert.equal(policy.effective.ai.dailyBudgetRmb,3);assert.equal(policy.effective.ai.imageRefreshMs,10000);assert.equal(policy.effective.auth.imageRefreshMs,10000);assert.equal(policy.effective.auth.email.resendMs,60000);assert.equal(policy.effective.download.captchaRefreshMs,10000);assert.equal(APK_DOWNLOAD_LIMITS.dailyBytes,500000000);assert.equal(APK_DOWNLOAD_LIMITS.ipDownloadsPerHour,8);assert.equal(APK_DOWNLOAD_LIMITS.ipConcurrent,1);assert.equal(APK_DOWNLOAD_LIMITS.globalConcurrent,8);assert.equal(APK_DOWNLOAD_LIMITS.bytesPerSecond,2000000);assert.equal(APK_DOWNLOAD_LIMITS.captchaLifetimeMs,300000);assert.equal(f.calls(),0);}finally{auth.close();await f.ai.drain();}
 });
@@ -38,9 +38,9 @@ test('production organizing admits ten per five hours and thirty per72h without 
  }
  const r=await f.request('organize','blocked-31');assert.equal(r.status,429);assert.equal(r.body.code,'ACCOUNT_THREE_DAY_LIMIT');assert.equal(f.calls(),30);
 });
-test('different accounts still share the production ten perIP five-hour limit',async()=>{
- const f=await fixture();for(let i=0;i<10;i++){const key=String(i).padStart(43,'a');const r=await f.request('organize',i,key);assert.equal(r.status,200);f.advance(180001);}
- const r=await f.request('organize','blocked-other-account','z'.repeat(43));assert.equal(r.status,429);assert.equal(r.body.code,'IP_FIVE_HOUR_LIMIT');assert.equal(f.calls(),10);
+test('different accounts still share the production thirty perIP five-hour limit',async()=>{
+ const f=await fixture();for(let i=0;i<30;i++){const key=String(i).padStart(43,'a');const r=await f.request('organize',i,key);assert.equal(r.status,200);f.advance(180001);}
+ const r=await f.request('organize','blocked-other-account','z'.repeat(43));assert.equal(r.status,429);assert.equal(r.body.code,'IP_FIVE_HOUR_LIMIT');assert.equal(f.calls(),30);
 });
 test('production question allowance permits ten then only five more within72h',async()=>{
  const f=await fixture();for(let i=0;i<10;i++){const r=await f.request('question',i);assert.equal(r.status,200,JSON.stringify(r.body));f.advance(180001);}

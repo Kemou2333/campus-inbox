@@ -1,24 +1,24 @@
 {
-  "kind": "deployed-configuration-snapshot",
-  "configurationChecked": true,
+  "kind": "candidate-configuration-snapshot",
+  "configurationChecked": false,
   "runtimeEndpointLiveVerified": false,
   "schemaVersion": 1,
-  "generatedAt": "2026-10-27T09:01:25.208Z",
+  "generatedAt": "2026-10-28T06:35:29.891529+00:00",
   "readOnly": true,
   "timeZone": "Asia/Shanghai",
-  "status": "deployed-configuration",
-  "notice": "按下表当前生效值执行。滚动窗口按每条记录到期释放，上海自然日零点重置；不同入口共用计数。",
+  "status": "pending-deployment",
+  "notice": "2026-10-28 用户新标准候选，线上以后台实际运行值为准。",
   "effective": {
     "ai": {
       "dailyOrganize": 100,
       "dailyQuestions": 80,
-      "dailyBudgetRmb": 3,
+      "dailyBudgetRmb": null,
       "organizeAccountFiveHours": 10,
       "organizeAccount72Hours": 30,
-      "organizeIPFiveHours": 10,
+      "organizeIPFiveHours": 30,
       "questionAccountFiveHours": 10,
       "questionAccount72Hours": 15,
-      "questionIPFiveHours": 10,
+      "questionIPFiveHours": 30,
       "rateWindowMs": 180000,
       "accountBurst": 5,
       "authenticatedIPBurst": 20,
@@ -30,11 +30,12 @@
       "bodyBytes": 64000,
       "cacheTTLms": 900000,
       "cacheEntries": 50,
-      "modelConcurrent": 1,
+      "modelConcurrent": 3,
       "captchaMode": "image",
       "thinkingMode": "low",
       "modelTimeoutMs": 180000,
-      "organizeOutputTokens": 32768
+      "organizeOutputTokens": 32768,
+      "dailyBudgetEnabled": false
     },
     "download": {
       "dailyBytes": 500000000,
@@ -80,7 +81,7 @@
         "emailSendConcurrency": 2,
         "emailRegisterIPMinute": 5,
         "emailRegisterIPDay": 10,
-        "emailRegisterGlobalDay": 20,
+        "emailRegisterGlobalDay": 30,
         "lifetimeMs": 300000,
         "resendMs": 60000,
         "attempts": 5,
@@ -157,11 +158,11 @@
         {
           "id": "organize-ip-5h",
           "label": "整理次数",
-          "value": 10,
+          "value": 30,
           "unit": "次",
           "scope": "每 IP",
           "window": "滚动五小时",
-          "display": "10 次",
+          "display": "30 次",
           "notes": "",
           "changeControl": "代码配置"
         },
@@ -201,11 +202,11 @@
         {
           "id": "question-ip-5h",
           "label": "提问次数",
-          "value": 10,
+          "value": 30,
           "unit": "次",
           "scope": "每 IP",
           "window": "滚动五小时",
-          "display": "10 次",
+          "display": "30 次",
           "notes": "",
           "changeControl": "代码配置"
         },
@@ -222,14 +223,14 @@
         },
         {
           "id": "ai-money-day",
-          "label": "整理与提问共用预算",
-          "value": 3,
-          "unit": "元",
+          "label": "整理与提问金额上限",
+          "value": "未设置",
+          "unit": "",
           "scope": "全站",
           "window": "上海自然日",
-          "display": "3 元",
-          "notes": "保守估算，不是模型平台账单；单次调用先预留预算。",
-          "changeControl": "部署配置 AI_DAILY_BUDGET_RMB"
+          "display": "未设置",
+          "notes": "金额不限制请求；继续记录保守估算费用，不是模型平台账单。",
+          "changeControl": "部署配置 AI_DAILY_BUDGET_ENABLED / AI_DAILY_BUDGET_RMB"
         },
         {
           "id": "ai-account-burst",
@@ -256,11 +257,11 @@
         {
           "id": "ai-concurrency",
           "label": "模型并发",
-          "value": 1,
+          "value": 3,
           "unit": "条",
           "scope": "全站",
           "window": "同时处理",
-          "display": "1 条",
+          "display": "3 条",
           "notes": "忙时请稍后再试，不自动发起付费重试。",
           "changeControl": "代码配置"
         },
@@ -791,11 +792,11 @@
         {
           "id": "mail-register-site-day",
           "label": "邮箱注册账号",
-          "value": 20,
+          "value": 30,
           "unit": "个",
           "scope": "全站",
           "window": "滚动24小时",
-          "display": "20 个",
+          "display": "30 个",
           "notes": "",
           "changeControl": "代码配置"
         }

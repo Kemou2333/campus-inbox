@@ -1,3 +1,4 @@
+import {GUEST_DEMO_MARKER,GUEST_DEMO_SOURCE,partitionGuestDemoDrafts,createGuestDemoNotice} from './guest-demo';
 import {describe,it,expect,vi} from 'vitest';
 import {AnalysisJobsClient,AnalysisJobJournal,submitAnalysisJob,parseAnalysisJob,attachJobFiles,withoutSubmittedDrafts,pendingAnalysisFiles,type AnalysisJob,type LocalAnalysisSubmission} from './analysis-jobs';
 import {createNotice} from '../domain/notice';
@@ -14,6 +15,29 @@ class MemoryStorage {
 }
 
 describe('cloud analysis jobs',()=>{
+ it('sends only personal drafts from a mixed batch and keeps samples local',async()=>{
+  const untouched={id:'sample',text:GUEST_DEMO_SOURCE,attachments:[],demo:GUEST_DEMO_MARKER};
+  const edited={id:'edited',text:GUEST_DEMO_SOURCE+'\n我的补充',attachments:[],demo:GUEST_DEMO_MARKER};
+  const attached={...untouched,id:'attached',attachments:['personal-file']};
+  const real={id:'real',text:'周五前交课程报告。',attachments:['report-file']};
+  const copied={id:'copied',text:GUEST_DEMO_SOURCE,attachments:[]};
+  const plan=partitionGuestDemoDrafts([untouched,real,edited,attached,copied,{id:'empty',text:' ',attachments:[]}]);
+  expect(plan.samples).toEqual([untouched]);expect(plan.personal).toEqual([real,edited,attached,copied]);
+  const fetcher=vi.fn(async()=>Response.json({job:metadata()},{status:202}));
+  const local=plan.samples.map(d=>createGuestDemoNotice(d.id,d.text));
+  await submitAnalysisJob(plan.personal,requestId,{endpoint:'https://example.test/analyze',sessionKey:'session',fetcher});
+  expect(local).toHaveLength(1);expect(fetcher).toHaveBeenCalledTimes(1);
+  const [,init]=fetcher.mock.calls[0] as unknown as [string,RequestInit];
+  expect(JSON.parse(String(init.body))).toEqual({requestId,sources:plan.personal.map(d=>({text:d.text}))});
+  expect(plan.textLength).toBe(plan.personal.reduce((n,d)=>n+d.text.length,0));
+ });
+ it('does not let untouched samples consume the personal model text allowance',()=>{
+  const sample={id:'sample',text:GUEST_DEMO_SOURCE,attachments:[],demo:GUEST_DEMO_MARKER};
+  const personal={id:'own',text:'字'.repeat(4000),attachments:[]};
+  expect(partitionGuestDemoDrafts([sample,personal]).textLength).toBe(4000);
+  expect(partitionGuestDemoDrafts([sample]).personal).toEqual([]);
+ });
+
  it('submits one stable request and excludes local attachments, notes and credentials from the body',async()=>{
   const fetcher=vi.fn(async()=>Response.json({job:metadata()},{status:202}));
   const sources=[{text:'原文',attachments:['file'],note:'private'}];

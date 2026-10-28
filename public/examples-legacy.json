@@ -558,5 +558,17 @@
   {
     "id": "example-reading-v213-1",
     "fingerprint": "39a1a48774298fc303e25913fe7074230ec827e877f35ea6e42741d0cc547cf2"
+  },
+  {
+    "id": "example-reading-v211-1",
+    "fingerprint": "50257f38d688f90a12cae550e3d3c2c38298f55e0f05917d032eab72b6208bae"
+  },
+  {
+    "id": "example-reading-v25-4",
+    "fingerprint": "e7b498a3fe4a182476affaab2ccbe39b8804621d34c4c264beaf282ffa0fadee"
+  },
+  {
+    "id": "example-reading-v211-5",
+    "fingerprint": "5269c28f6009cb30befc1468c4972539540887c5ca16912cfd49022028dac3b2"
   }
 ]

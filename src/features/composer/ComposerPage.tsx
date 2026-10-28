@@ -7,6 +7,7 @@ import AutoAwesomeOutlined from '@mui/icons-material/AutoAwesomeOutlined';
 import type {CampusController,Draft,DraftSelection} from '../../app/useCampus';
 import {AttachmentList} from '../attachments/AttachmentList';
 import {readTransfer,type ClipboardImport} from '../../infrastructure/clipboard-import';
+import {partitionGuestDemoDrafts} from '../../infrastructure/guest-demo';
 
 export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusController;onDone:()=>void;onLogin:()=>void;embedded?:boolean}){
  const compactWeb=app.platform.kind==='browser';
@@ -46,7 +47,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
  useEffect(()=>{setClock(Date.now());if(app.retryAt<=Date.now())return;const timer=setInterval(()=>{const value=Date.now();setClock(value);if(value>=app.retryAt)clearInterval(timer);},1000);return()=>clearInterval(timer);},[app.retryAt]);
  const retrySeconds=Math.max(0,Math.ceil((app.retryAt-clock)/1000));
  const retryText=retrySeconds>3600?'稍后再试':retrySeconds>=60?`${Math.ceil(retrySeconds/60)} 分钟后`:`${retrySeconds} 秒后`;
- const total=app.drafts.reduce((n,d)=>n+d.text.length,0);const hasContent=app.drafts.some(d=>d.text.trim());
+ const total=partitionGuestDemoDrafts(app.drafts).textLength;const hasContent=app.drafts.some(d=>d.text.trim());
  async function analyze(){try{if(await app.analyze())onDone();}catch(e){app.report(e);}}
  async function submit(){if(app.demoDraftID){try{if(await app.analyzeDemo())onDone();}catch(e){app.report(e);}return;}if(hasShortNotice&&shortApproval.current!==draftSignature){setShortNotice(true);return;}if(!app.cloud?.getKey()){onLogin();return;}await analyze();}
  function fillDemo(draftID:string,replaceShort=false){const id=app.fillDemoDraft(draftID,replaceShort);if(id)requestAnimationFrame(()=>{const element=draftElements.current.get(id);element?.scrollIntoView({block:'nearest',behavior:reducedMotion?'instant':'smooth'});element?.querySelector<HTMLTextAreaElement>('textarea:not([aria-hidden="true"])')?.focus({preventScroll:true});});}

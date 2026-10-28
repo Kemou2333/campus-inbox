@@ -18,7 +18,10 @@ const exampleIDSet=new Set(exampleIDs);
 // This exact built-in is already used by the tutorial. Do not title-match or
 // remove saved copies: user edits and unrelated evaluation notices must stay.
 export const TUTORIAL_EXAMPLE_ID='example-reading-v25-5';
-export function selectableExamples<T extends Pick<Notice,'id'>>(catalog:T[]):T[]{return catalog.filter(notice=>notice.id!==TUTORIAL_EXAMPLE_ID);}
+// Earlier published IDs remain registered for existing records and drafts.
+// These IDs duplicate a selected card, while other shared-source cards are distinct.
+const duplicateCatalogIDs=new Set(['example-reading-v211-0','example-reading-v212-1','example-reading-v26-12','example-reading-v211-2']);
+export function selectableExamples<T extends Pick<Notice,'id'>>(catalog:T[]):T[]{return catalog.filter(notice=>notice.id!==TUTORIAL_EXAMPLE_ID&&!duplicateCatalogIDs.has(notice.id));}
 export const EXAMPLES_HIDDEN_KEY='campus-inbox:examples-hidden:v1';
 export function isExampleNotice(notice:Pick<Notice,'id'>):boolean{return isLocalDemoNotice(notice)||exampleIDSet.has(notice.id);}
 export function groupExampleNotices<T extends Pick<Notice,'id'>>(notices:T[]):{personal:T[];examples:T[]}{

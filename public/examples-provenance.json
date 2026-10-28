@@ -59,10 +59,10 @@
       "manualWordEdits": true,
       "manualPrivacyEdits": true,
       "manualIdentityReview": true,
-      "manualContentCorrections": false,
+      "manualContentCorrections": true,
       "privacyPreparation": "The browser submitted the existing manually-redacted public original. Every returned field was manually checked; no additional semantic or privacy wording edits were needed.",
       "publishedOriginalSha256": "5b4c056f59ef4a2a62beeb29e0a5fbda3b8303aa1ec345d40c311279dd49655a",
-      "publishedRecordSha256": "98c6af0ba13215f22d096d0fcad4078a39d6ba1caad9050a0a6a7503e138b312",
+      "publishedRecordSha256": "4a1ec3f4bac28bd1183417b3427b6d83cf993233fbb2a90eb5262e7a03a7bea0",
       "providerCalled": true,
       "cacheReuse": false,
       "realProviderCalls": 1,
@@ -93,7 +93,9 @@
       "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
       "sourceKind": "human-curated-public-example",
       "manualSourcePresentationEdits": true,
-      "previousPublishedOriginalSha256": "ee612cb808a9daa2de5b4ab18757b5fb31a34aefd7e251d841ca722fe7f1bc17"
+      "previousPublishedOriginalSha256": "ee612cb808a9daa2de5b4ab18757b5fb31a34aefd7e251d841ca722fe7f1bc17",
+      "manualCorrectionReview": true,
+      "manualCorrectionScope": "Remove unsupported form platform attribution; the original identifies the form but not its platform."
     },
     {
       "exampleId": "example-reading-v213-0",
@@ -176,16 +178,18 @@
       "reasoningEffort": null,
       "promptSha256": "86c1484fff5ce1c0b0f55524995b5e6601fa2c1774438e8b1f30481597cc5112",
       "manualPrivacyEdits": true,
-      "manualContentCorrections": false,
+      "manualContentCorrections": true,
       "publishedOriginalSha256": "eb28c0ccedd119610fddd9a8c221ea311534e85526e6f8d9967bd2b9a07d19f6",
-      "publishedRecordSha256": "81a98aeaf6528b6259a053f5b6ce475bf60da36524329f1822ff4ba10cedad11",
+      "publishedRecordSha256": "1fca2a099b00ee4c344107938d79ba47d1888da743bab51b3b606944f6d0f986",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
       "presentationRevision": "2026-10-23-polished-examples",
       "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
       "sourceKind": "human-curated-public-example",
       "manualSourcePresentationEdits": true,
-      "previousPublishedOriginalSha256": "9e7b5853ccadc824ae4f3353d9677c9bb92db82986ba8001a60e09f8f8ae8e40"
+      "previousPublishedOriginalSha256": "9e7b5853ccadc824ae4f3353d9677c9bb92db82986ba8001a60e09f8f8ae8e40",
+      "manualCorrectionReview": true,
+      "manualCorrectionScope": "Limit the summary to dormitory safety, matching the original."
     },
     {
       "exampleId": "example-reading-v212-0",
@@ -717,9 +721,9 @@
       "firstProviderContentSha256": "236d9e0ed7d7f72536963a4bc03e18cca1300f4f6bd43d5f2576c541d6bb3f38",
       "manualWordEdits": true,
       "manualPrivacyEdits": true,
-      "manualContentCorrections": false,
+      "manualContentCorrections": true,
       "publishedOriginalSha256": "1975dc6d9dd9c8bb489352bdbd45220e8bd3f5469ca7e5cb5660f7af0f2d410d",
-      "publishedRecordSha256": "6a2fe445a860969e15ed2ea4954b00c038fce064e31f752dd23899d0418f6e97",
+      "publishedRecordSha256": "3bc13139935599b3b60c50069274b2ce33d62291d5e4c4b0ce938426d7610f6c",
       "firstResponseValidation": "accepted_by_backend; offline revalidated without provider request",
       "providerElapsedMs": 13310,
       "tokens": {
@@ -737,7 +741,9 @@
       "privacyRevision": "2026-10-21-natural-placeholders",
       "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
       "sourceKind": "human-curated-public-example",
-      "manualSourcePresentationEdits": false
+      "manualSourcePresentationEdits": false,
+      "manualCorrectionReview": true,
+      "manualCorrectionScope": "Restore the original deadline for obtaining the stated language test result."
     },
     {
       "exampleId": "example-reading-v212-1",
@@ -925,7 +931,7 @@
   ],
   "privacyReview": {
     "policyVersion": 2,
-    "reviewedAt": "2026-10-23",
+    "reviewedAt": "2026-10-28",
     "manualReview": true,
     "disclosure": "公开示例已脱敏：使用常见化名、含X的号码和example.com示例网址；这些联系方式与入口不能用于报名。正文不重复解释隐私处理。",
     "redactedCategories": [
@@ -935,7 +941,7 @@
       "specific_links",
       "identifiable_cohort"
     ],
-    "contentCorrections": false,
+    "contentCorrections": true,
     "untouchedLegacyPolicy": "Only complete fingerprint matches are replaced. User notes, progress, attachments and edits remain intact.",
     "reviewedNotices": 24,
     "manualSourceRefReanchoring": false,
@@ -958,7 +964,8 @@
       "王老师"
     ],
     "publicBodyDisclosureRequired": false,
-    "manualPresentationEdits": true
+    "manualPresentationEdits": true,
+    "latestCorrectionScope": "Three curated output corrections reviewed against the existing public originals: form platform attribution, dormitory safety summary and language result deadline. Originals and legacy fill-in aliases unchanged."
   },
   "paidCallsIn20261012Experiment": 12,
   "selectedNewFirstResponses": 6,

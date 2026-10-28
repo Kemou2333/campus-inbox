@@ -51,15 +51,17 @@ test('rolling limit frees only expired requests, not the whole window at a fixed
   const remainder=await handler(request(),'a');assert.equal(remainder.status,429);assert.equal(remainder.headers.get('Retry-After'),'30');
 });
 
-test('one in-flight request blocks a second address without calling upstream',async()=>{
+test('three in-flight requests use three slots and a fourth address waits',async()=>{
   let started,finish,calls=0;
   const announced=new Promise(resolve=>started=resolve),gate=new Promise(resolve=>finish=resolve);
-  const handler=await createService(config,{modelFetch:async()=>{calls++;started();await gate;return response();}});
-  const first=handler(request('第一条'),'address-a');
-  await announced;
-  const blocked=await handler(request('第二条'),'address-b');assert.equal(blocked.status,429);assert.equal((await blocked.json()).code,'SERVICE_BUSY');assert.equal(blocked.headers.get('Retry-After'),'3');
-  assert.equal(calls,1);
-  finish();assert.equal((await first).status,200);
+  const handler=await createService(config,{modelFetch:async()=>{calls++;if(calls===3)started();await gate;return response();}});
+  const pending=[0,1,2].map(i=>handler(request('第'+i+'条'),'address-'+i));
+  try{
+    await announced;
+    const blocked=await handler(request('第四条'),'address-next');assert.equal(blocked.status,429);assert.equal((await blocked.json()).code,'SERVICE_BUSY');assert.equal(blocked.headers.get('Retry-After'),'3');assert.equal(calls,3);
+  }finally{finish();}
+  assert.deepEqual((await Promise.all(pending)).map(r=>r.status),[200,200,200]);
+  assert.equal((await handler(request('释放后的新通知'),'released-address')).status,200);assert.equal(calls,4);
 });
 
 test('failed upstream is not retried or cached and still consumes the daily cap',async()=>{

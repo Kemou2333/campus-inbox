@@ -86,7 +86,7 @@
             {
               "text": "填写预选报名表",
               "details": [
-                "腾讯文档“重大杯本科生院篮球队预选信息收集表”：www.example.com/forms/basketball-signup。"
+                "“重大杯本科生院篮球队预选信息收集表”：www.example.com/forms/basketball-signup。"
               ],
               "id": "example-reading-v211-1-task-0-step-1",
               "completed": false,
@@ -248,7 +248,7 @@
       "schemaVersion": 5,
       "kind": "reminder",
       "title": "军训宿舍安全",
-      "summary": "军训期间的宿舍用电与外出安全提醒。",
+      "summary": "军训期间的宿舍安全提醒。",
       "deadline": null,
       "deadlineText": "",
       "timeline": [],
@@ -1775,7 +1775,7 @@
         },
         {
           "id": "example-reading-v211-5-reminder-3",
-          "text": "**雅思6.5（小分6）**或**PTE 64分以上**；原文另提“两年内雅思成绩更好”。",
+          "text": "**2026年11月10日前**获得**雅思6.5（小分6）**或**PTE 64分以上**；原文另提“两年内雅思成绩更好”。",
           "note": ""
         },
         {

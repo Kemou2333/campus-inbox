@@ -217,3 +217,29 @@ test('bounded valid provider output keeps a compact durable snapshot when repeat
     const first=await s.exchange(),second=await s.exchange([],first.body.cursor);assert.equal(first.body.hasMore,true);assert.equal(first.body.updates.length+second.body.updates.length,20);
   }finally{await s.close();}
 });
+
+test('three durable workers reserve independent slots; a fourth waits for one worker to finish',async()=>{
+ const gates=[deferred(),deferred(),deferred(),deferred()];let calls=0;
+ const s=await setup(async()=>gates[calls++].promise,{dailyBudgetEnabled:false,dailyBudgetRmb:0.001});
+ const ids=Array.from({length:4},(_,i)=>`123e4567-e89b-42d3-a456-4266141740${10+i}`);
+ try{
+  const responses=await Promise.all(ids.slice(0,3).map((id,i)=>s.service(s.jobRequest(id,[{text:`第${i}条独立通知。`}],i===1?s.b:s.a),`net-${i}`)));
+  assert.deepEqual(responses.map(x=>x.status),[202,202,202]);assert.equal(calls,3);
+  const blocked=await s.service(s.jobRequest(ids[3],[{text:'第四条独立通知。'}],s.b),'net-3');assert.equal((await blocked.json()).code,'SERVICE_BUSY');assert.equal(calls,3);
+  gates[0].resolve(envelope([info('已完成',1)]));
+  for(let i=0;i<100&&s.service.adminSummary().processing;i++){if((await s.service(s.get('/analysis-jobs/'+(await responses[0].json()).job.id))).status===200)break;}
+  // The worker's settlement includes persistence, so wait for its terminal state.
+  for(let i=0;i<100;i++){await new Promise(resolve=>setTimeout(resolve,2));const r=await s.service(s.jobRequest(ids[3],[{text:'第四条独立通知。'}],s.b),'net-3');if(r.status===202)break;if(i===99)assert.fail('slot did not release');}
+  assert.equal(calls,4);assert.equal(s.service.adminSummary().dailyBudgetEnabled,false);assert.equal(s.service.adminSummary().dailyBudgetRmb,null);
+ }finally{for(const gate of gates)gate.resolve(envelope([info('完成',1)]));await s.close();}
+});
+
+test('concurrent finite-budget admissions reserve money before dispatch',async()=>{
+ const gate=deferred();let calls=0;const s=await setup(async()=>{calls++;return gate.promise;},{dailyBudgetRmb:0.2});
+ try{
+  const a=s.service(s.jobRequest('123e4567-e89b-42d3-a456-426614174020',[{text:'第一条独立通知。'}],s.a),'one');
+  const b=s.service(s.jobRequest('123e4567-e89b-42d3-a456-426614174021',[{text:'第二条独立通知。'}],s.b),'two');
+  const results=await Promise.all([a,b]);assert.deepEqual(results.map(r=>r.status).sort(),[202,429]);assert.equal(calls,1);
+  const rejected=results.find(r=>r.status===429);assert.equal((await rejected.json()).code,'DAILY_COST_LIMIT');
+ }finally{gate.resolve(envelope([info('完成',1)]));await s.close();}
+});

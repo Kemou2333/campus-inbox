@@ -77,7 +77,7 @@ test('concurrent arrivals cannot overrun the final allowance, and paid failures 
   let calls=0,started,finish;const ready=new Promise(resolve=>{started=resolve;}),gate=new Promise(resolve=>{finish=resolve;});
   const service=await createService({...s.config,accountFiveHourLimit:1},{...s.options,modelFetch:async()=>{calls++;started();await gate;return new Response('fake provider failure',{status:503});}});
   const first=service(s.request('第一条'),'network-a');await ready;
-  const blocked=await service(s.request('并发第二条'),'network-b');assert.equal((await blocked.json()).code,'SERVICE_BUSY');assert.equal(calls,1);
+  const blocked=await service(s.request('并发第二条'),'network-b');assert.equal((await blocked.json()).code,'ACCOUNT_FIVE_HOUR_LIMIT');assert.equal(calls,1);
   finish();assert.equal((await first).status,502);
   const restarted=await createService({...s.config,accountFiveHourLimit:1},s.options);
   assert.equal((await (await restarted(s.request('失败后新请求'),'network-c')).json()).code,'ACCOUNT_FIVE_HOUR_LIMIT');assert.equal(s.calls(),0);
