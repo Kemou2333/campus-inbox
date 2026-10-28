@@ -30,12 +30,23 @@ export async function askNoticeQuestion(input:NoticeQuestionInput,options:Analyz
   options.onStage?.('requesting');let {response,value}=await send();
   if(response.status===428&&value.code==='VERIFICATION_REQUIRED'){
    options.onStage?.('verifying');
-   const challenge=parseHumanVerificationRequest(value.challenge);
+   let challenge=parseHumanVerificationRequest(value.challenge);
    if(challenge){
     if(!options.onHumanVerification)throw new AnalysisError('请更新应用后完成验证码。','HUMAN_VERIFICATION_REQUIRED',428);
+    const refresh=async()=>{
+     if(controller.signal.aborted)throw new DOMException('Aborted','AbortError');
+     const updated=await send(JSON.stringify({token:challenge!.token,refresh:true}));
+     if(updated.response.status!==428||updated.value.code!=='VERIFICATION_REQUIRED'){
+      const seconds=Number(updated.value.retryAfterSeconds??updated.response.headers.get('Retry-After'));
+      throw new AnalysisError(typeof updated.value.error==='string'?updated.value.error:'暂时无法换图，请稍后再试。',typeof updated.value.code==='string'?updated.value.code:'INVALID_CHALLENGE',updated.response.status,Number.isFinite(seconds)&&seconds>0?seconds:0);
+     }
+     const next=parseHumanVerificationRequest(updated.value.challenge);
+     if(!next||next.token===challenge!.token)throw new AnalysisError('验证码信息异常，请重新提交。','INVALID_CHALLENGE');
+     challenge=next;remaining=5;error=undefined;return {...next,refresh};
+    };
     let remaining=5,error:string|undefined;
     for(let attempt=0;attempt<5;attempt++){
-     const answer=await options.onHumanVerification({...challenge,...(error?{error}:{})},controller.signal);
+     const answer=await options.onHumanVerification({...challenge,...(error?{error}:{}),refresh},controller.signal);
      if(controller.signal.aborted)throw new DOMException('Aborted','AbortError');
      if(Date.now()>=challenge.expires)throw new AnalysisError('验证码已过期，请重新提交。','VERIFICATION_EXPIRED');
      if(!/^\d{4}$/.test(answer.trim()))throw new AnalysisError('请输入4位验证码。','INVALID_HUMAN_ANSWER');

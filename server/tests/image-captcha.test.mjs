@@ -27,7 +27,7 @@ async function fixture(options={}){
     const body=await response.json();latest=body.challenge;
     assert.equal(body.code,'VERIFICATION_REQUIRED');assert.equal(latest.type,'image');
     assert.match(latest.image,/^data:image\/png;base64,iVBORw0KGgo/);
-    assert.deepEqual(Object.keys(latest).sort(),['expires','image','token','type']);
+    assert.deepEqual(Object.keys(latest).sort(),['expires','image','refreshAfter','token','type']);
     const context=JSON.parse(Buffer.from(latest.token.split('.')[0],'base64url'));
     assert.deepEqual(Object.keys(context).sort(),['account','expires','hash','id','ip','origin','type']);
     assert.equal(context.type,'image');
@@ -194,4 +194,34 @@ test('simultaneous first image requests share one challenge after asynchronous p
   const responses=await Promise.all([f.handler(request('消息三'),'203.0.113.1'),f.handler(request('消息三'),'203.0.113.1')]);
   assert.deepEqual(responses.map(response=>response.status),[428,428]);
   const [a,b]=await Promise.all(responses.map(response=>response.json()));assert.equal(a.challenge.token,b.challenge.token);assert.equal(f.images(),1);assert.equal(f.calls(),2);
+});
+
+
+test('explicit signed image refresh obeys ten seconds, keeps quota and never dispatches a model',async()=>{
+  const f=await fixture(),old=await f.challenge(),refresh={token:old.token,refresh:true};
+  const before=f.handler.adminSummary();
+  const early=await f.handler(request('消息三',refresh),'203.0.113.1');assert.equal(early.status,429);assert.equal(early.headers.get('Retry-After'),'10');assert.equal(f.images(),1);assert.equal(f.calls(),2);
+  f.advance(9999);assert.equal((await f.handler(request('消息三',refresh),'203.0.113.1')).headers.get('Retry-After'),'1');
+  f.advance(1);const response=await f.handler(request('消息三',refresh),'203.0.113.1');assert.equal(response.status,428);
+  const fresh=(await response.json()).challenge;assert.notEqual(fresh.token,old.token);assert.equal(fresh.refreshAfter+110000,fresh.expires);assert.equal(f.images(),2);assert.equal(f.calls(),2);
+  assert.deepEqual(f.handler.adminSummary(),before,'refresh reserves no model quota or cost');
+  assert.equal((await f.handler(request('消息三',old),'203.0.113.1')).status,400);
+  assert.equal((await f.handler(request('消息三',{token:fresh.token,answer:'0123'}),'203.0.113.1')).status,200);assert.equal(f.calls(),3);
+});
+
+test('refresh remains verification-only after the original frequency threshold falls away',async()=>{
+  const f=await fixture();assert.equal((await f.handler(request('第一条'),'203.0.113.1')).status,200);f.advance(60000);
+  assert.equal((await f.handler(request('第二条'),'203.0.113.1')).status,200);f.advance(60000);
+  const initial=await f.handler(request('第三条'),'203.0.113.1');assert.equal(initial.status,428);const challenge=(await initial.json()).challenge;
+  f.advance(60000);const next=await f.handler(request('第三条',{token:challenge.token,refresh:true}),'203.0.113.1');
+  assert.equal(next.status,428);assert.equal(f.calls(),2);assert.equal(f.handler.adminSummary().requests,2);
+});
+
+test('refresh is signed and bound to original text, account, origin and IP and retains burst limits',async()=>{
+  const f=await fixture(),old=await f.challenge();f.advance(10000);
+  for(const [text,ip,extra,token] of [['其他文字','203.0.113.1',{},old.token],['消息三','203.0.113.2',{},old.token],['消息三','203.0.113.1',{key:otherSession},old.token],['消息三','203.0.113.1',{origin:otherOrigin},old.token],['消息三','203.0.113.1',{},old.token+'x']])assert.equal((await f.handler(request(text,{token,refresh:true},extra),ip)).status,400);
+  assert.equal(f.images(),1);assert.equal(f.calls(),2);
+  let token=old.token;
+  for(let i=0;i<2;i++){const next=await f.handler(request('消息三',{token,refresh:true}),'203.0.113.1');assert.equal(next.status,428);token=(await next.json()).challenge.token;f.advance(10000);}
+  const blocked=await f.handler(request('消息三',{token,refresh:true}),'203.0.113.1');assert.equal(blocked.status,429);assert.equal((await blocked.json()).code,'ACCOUNT_RATE_LIMIT');assert.equal(f.calls(),2);
 });

@@ -77,8 +77,20 @@ test('job history is read once while idle; only pending work keeps polling',asyn
  const refresh=vi.fn(async()=>{}),polling=createPendingJobPolling({refresh,visible:()=>visible,windowEvents,documentEvents});polling.start();await vi.advanceTimersByTimeAsync(0);
  expect(refresh).toHaveBeenCalledTimes(1);await vi.advanceTimersByTimeAsync(600_000);
  for(const kind of ['focus','online'])windowEvents.dispatchEvent(new Event(kind));documentEvents.dispatchEvent(new Event('visibilitychange'));await vi.advanceTimersByTimeAsync(0);expect(refresh).toHaveBeenCalledTimes(1);
- polling.setPending(true);await vi.advanceTimersByTimeAsync(5_000);expect(refresh).toHaveBeenCalledTimes(2);
+ polling.setPending(true);await vi.advanceTimersByTimeAsync(1_000);expect(refresh).toHaveBeenCalledTimes(2);
  visible=false;documentEvents.dispatchEvent(new Event('visibilitychange'));await vi.advanceTimersByTimeAsync(60_000);expect(refresh).toHaveBeenCalledTimes(2);
  visible=true;refresh.mockImplementationOnce(async()=>{polling.setPending(false);});documentEvents.dispatchEvent(new Event('visibilitychange'));await vi.advanceTimersByTimeAsync(0);expect(refresh).toHaveBeenCalledTimes(3);
  await vi.advanceTimersByTimeAsync(600_000);expect(refresh).toHaveBeenCalledTimes(3);polling.dispose();
+});
+
+
+test('pending results refresh quickly first and then back off without a background loop',async()=>{
+ vi.useFakeTimers();vi.setSystemTime(0);
+ const windowEvents=new EventTarget(),documentEvents=new EventTarget(),refresh=vi.fn(async()=>{});
+ const polling=createPendingJobPolling({refresh,visible:()=>true,windowEvents,documentEvents});polling.start();await vi.advanceTimersByTimeAsync(0);
+ polling.setPending(true);await vi.advanceTimersByTimeAsync(999);expect(refresh).toHaveBeenCalledTimes(1);await vi.advanceTimersByTimeAsync(1);expect(refresh).toHaveBeenCalledTimes(2);
+ vi.setSystemTime(20_000);polling.setPending(true);await vi.advanceTimersByTimeAsync(1_999);expect(refresh).toHaveBeenCalledTimes(2);await vi.advanceTimersByTimeAsync(1);expect(refresh).toHaveBeenCalledTimes(3);
+ vi.setSystemTime(60_000);polling.setPending(true);await vi.advanceTimersByTimeAsync(4_999);expect(refresh).toHaveBeenCalledTimes(3);await vi.advanceTimersByTimeAsync(1);expect(refresh).toHaveBeenCalledTimes(4);
+ polling.setPending(false);await vi.advanceTimersByTimeAsync(60_000);expect(refresh).toHaveBeenCalledTimes(4);
+ polling.setPending(true);await vi.advanceTimersByTimeAsync(1_000);expect(refresh).toHaveBeenCalledTimes(5);polling.dispose();
 });

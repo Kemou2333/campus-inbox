@@ -10,6 +10,7 @@ import {createNotice} from '../src/domain/notice';
 import type {Notice,NoticeAnalysis} from '../src/domain/types';
 import exampleIDs from '../src/domain/example-ids.json';
 import {EMPTY_CAMPUS_PREFERENCES} from '../src/domain/campus-preferences';
+import type {AnalysisJob} from '../src/infrastructure/analysis-jobs';
 
 // Exercise the actual feed selection/grouping/counts without depending on card
 // markup. Browser checks separately cover click animations and persistence.
@@ -21,8 +22,8 @@ beforeEach(()=>{local=storage();vi.stubGlobal('localStorage',local);});
 afterEach(()=>vi.unstubAllGlobals());
 const analysis:NoticeAnalysis={schemaVersion:4,kind:'task',title:'办理事项',summary:'通知摘要',deadline:null,deadlineText:'',timeline:[],tasks:[{text:'提交材料',assignee:null,scope:'all',condition:'',details:[],steps:[],time:null,timeText:'',location:null}],materials:[],warnings:[],reminders:[]};
 function notice(id:string,createdAt='2026-10-01T00:00:00Z',extra:Partial<Notice>={}):Notice{return {...createNotice(analysis,'通知原文',createdAt),id,...extra};}
-function feed(notices:Notice[],view:Partial<FeedViewState>={}){
-  const app={platform:{kind:"browser"},notices,unreadNoticeIDs:[],markNoticeRead:vi.fn(),localDataScope:'device',preferences:structuredClone(EMPTY_CAMPUS_PREFERENCES),report:vi.fn(),loadExamples:vi.fn()} as unknown as CampusController;
+function feed(notices:Notice[],view:Partial<FeedViewState>={},analysisJobs:AnalysisJob[]=[]){
+  const app={analysisJobs,platform:{kind:"browser"},notices,unreadNoticeIDs:[],markNoticeRead:vi.fn(),localDataScope:'device',preferences:structuredClone(EMPTY_CAMPUS_PREFERENCES),report:vi.fn(),loadExamples:vi.fn()} as unknown as CampusController;
   const html=renderToStaticMarkup(createElement(FeedPage,{app,actions:{} as NoticeActions,onCompose:()=>{},focusID:null,viewState:{...createFeedViewState(),...view}}));
   return {html,ids:[...html.matchAll(/data-notice-id="([^"]+)"/g)].map(match=>match[1]),text:html.replace(/<style[^>]*>[\s\S]*?<\/style>/g,'').replace(/<[^>]+>/g,'')};
 }
@@ -86,4 +87,17 @@ describe('feed keeps examples behind personal records',()=>{
     expect(feed(records).text).toContain('待办 2');
     writeExamplesHidden(local,true);const hidden=feed(records);expect(hidden.ids).toEqual([]);expect(hidden.text).toContain('待办 0');expect(hidden.text).toContain('显示示例');
   });
+});
+
+
+describe('pending analysis cards',()=>{
+ const job=(extra:Partial<AnalysisJob>={}):AnalysisJob=>({id:'pending-job',requestId:'request-one',status:'running',createdAt:'2026-10-28T00:00:00Z',updatedAt:'2026-10-28T00:00:00Z',noticeIds:[],...extra});
+ test('running work occupies the list without empty-state text or a second explanation',()=>{
+  const result=feed([],{},[job()]);expect(result.html).toContain('data-pending-job-id="pending-job"');expect(result.html).toContain('aria-busy="true"');expect(result.text).not.toContain('暂时没有待办');expect(result.text).not.toContain('复杂通知可能超过一分钟');
+ });
+ test('completed work keeps its slot until its actual records exist, while failed work does not look active',()=>{
+  const completed=job({status:'completed',noticeIds:['new-record']});expect(feed([],{},[completed]).html).toContain('data-pending-job-id="pending-job"');
+  const saved=feed([notice('new-record')],{},[completed]);expect(saved.html).not.toContain('data-pending-job-id');expect(saved.ids).toEqual(['new-record']);
+  const failed=feed([],{},[job({status:'failed'})]);expect(failed.html).not.toContain('data-pending-job-id');expect(failed.text).toContain('暂时没有待办');
+ });
 });

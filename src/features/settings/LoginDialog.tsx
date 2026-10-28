@@ -1,4 +1,4 @@
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {Alert,Box,Button,Checkbox,Dialog,DialogActions,DialogContent,DialogTitle,FormControlLabel,IconButton,InputAdornment,MenuItem,Stack,TextField,Typography} from '@mui/material';
 import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined';
 import VisibilityOffOutlined from '@mui/icons-material/VisibilityOffOutlined';
@@ -20,7 +20,11 @@ export function LoginDialog({open,app,onClose}:Props){
  const [working,setWorking]=useState(false),[sending,setSending]=useState(false),[error,setError]=useState(''),[info,setInfo]=useState('');
  const [retryAt,setRetryAt]=useState(0),[clock,setClock]=useState(Date.now());
  const [imageAnswer,setImageAnswer]=useState('');
- const binding=app.sync.connected;
+ const bindingAtOpen=useRef(app.sync.connected),wasOpen=useRef(false);
+ if(open&&!wasOpen.current)bindingAtOpen.current=app.sync.connected;
+ wasOpen.current=open;
+ const [bindingAfterLogin,setBindingAfterLogin]=useState(false),[resendingEmail,setResendingEmail]=useState(false);
+ const binding=bindingAtOpen.current||bindingAfterLogin;
  const emailEnabled=!!app.authOptions?.emailEnabled;
  const registering=!binding&&mode==='register',settingPassword=!binding&&mode==='password';
  const emailForm=binding||settingPassword||registering;
@@ -33,7 +37,8 @@ export function LoginDialog({open,app,onClose}:Props){
  const busy=working||sending;
  const imageEnabled=app.authOptions?.imageCaptchaEnabled===true;
  const imagePurpose=emailForm?'email':'login';
- const {challenge:imageChallenge,loading:imageLoading,error:imageError,waiting:imageWaiting,refresh:loadImage,invalidate:clearImage}=useAuthImageChallenge(app.auth,open&&imageEnabled,imagePurpose);
+ const imageNeeded=imageEnabled&&(!emailForm||!challenge||resendingEmail);
+ const {challenge:imageChallenge,loading:imageLoading,error:imageError,waiting:imageWaiting,refresh:loadImage,invalidate:clearImage}=useAuthImageChallenge(app.auth,open&&imageNeeded,imagePurpose);
  // A verified older account may use a provider no longer offered for new accounts.
  const oldDomain=app.email?.split('@')[1];
  const emailDomains=ALLOWED_EMAIL_DOMAINS.filter(domain=>!app.authOptions?.domains?.length||app.authOptions.domains.includes(domain));
@@ -45,7 +50,7 @@ export function LoginDialog({open,app,onClose}:Props){
   if(emailDomains.includes(domain)){setEmailLocal(local);setEmailDomain(domain);}
   else {setEmailLocal(value);setError('请选择列表中的邮箱后缀。');}
  }
- function changeEmail(value:string){fillEmail(value);setChallenge(null);setCode('');}
+ function changeEmail(value:string){fillEmail(value);setChallenge(null);setCode('');setResendingEmail(false);}
  function captcha():AuthCaptcha|undefined{
   if(!imageEnabled)return undefined;
   if(!imageChallenge||Date.parse(imageChallenge.expiresAt)<=Date.now()||!/^\d{4}$/.test(imageAnswer))throw new Error('请填写有效的四位图形验证码。');
@@ -53,16 +58,17 @@ export function LoginDialog({open,app,onClose}:Props){
  }
  useEffect(()=>{setImageAnswer('');},[imageChallenge?.id,imagePurpose]);
  useEffect(()=>{
-  if(!open){setMode('register');setLegacyLogin(false);setPassword('');setCode('');return;}
-  setMode('register');setLegacyLogin(false);setUsername(app.username);setEmailLocal(app.email?.split('@')[0]||'');setEmailDomain(app.email?.split('@')[1]||'qq.com');setCode('');setChallenge(null);setError('');setInfo('');setPendingSession(null);setTransferApproved(false);setShowPassword(false);
+  if(!open)return;
+  setBindingAfterLogin(false);setResendingEmail(false);setMode('register');setLegacyLogin(false);setUsername(app.username);setEmailLocal(app.email?.split('@')[0]||'');setEmailDomain(app.email?.split('@')[1]||'qq.com');setCode('');setChallenge(null);setError('');setInfo('');setPendingSession(null);setTransferApproved(false);setShowPassword(false);
  },[open]);
  useEffect(()=>{
   if(!open||retryAt<=Date.now())return;
   setClock(Date.now());const timer=setInterval(()=>{const t=Date.now();setClock(t);if(t>=retryAt)clearInterval(timer);},1000);return()=>clearInterval(timer);
  },[open,retryAt]);
+ function resetClosed(){setMode('register');setLegacyLogin(false);setPassword('');setCode('');setChallenge(null);setBindingAfterLogin(false);setResendingEmail(false);}
  function close(){if(busy)return;if(pendingSession)void app.auth?.logout(pendingSession.key).catch(()=>{});setPendingSession(null);onClose();}
  function changeMode(value:'login'|'register'|'password'){
-  if(busy)return;setMode(value);setLegacyLogin(false);setError('');setInfo('');setChallenge(null);setCode('');setTransferApproved(false);
+  if(busy)return;setMode(value);setLegacyLogin(false);setError('');setInfo('');setChallenge(null);setCode('');setResendingEmail(false);setTransferApproved(false);
  }
  function fail(issue:unknown){
   setError(friendlyErrorMessage(issue));
@@ -71,19 +77,20 @@ export function LoginDialog({open,app,onClose}:Props){
  function validatePassword(){if(password.length<8||password.length>128)throw new Error('密码需为 8–128 个字符。');}
  async function send(){
   if(busy||waiting||!app.auth)return;setError('');
+  if(imageEnabled&&emailForm&&challenge&&!resendingEmail){setResendingEmail(true);setImageAnswer('');return;}
   let address:string;try{address=settingPassword?canonicalLoginEmail(email):canonicalEmail(email);if(!binding)validatePassword();}catch(issue){fail(issue);return;}
   setSending(true);
   try{
    const purpose=binding?'bind':settingPassword?'password':'register';
    const value=await app.auth.requestEmail(address,purpose,binding?app.cloud?.getKey()||undefined:undefined,captcha());
-   clearImage();setImageAnswer('');fillEmail(address);setChallenge(value);setCode('');setRetryAt(Date.now()+value.retryAfterSeconds*1000);setClock(Date.now());
+   clearImage();setImageAnswer('');setResendingEmail(false);fillEmail(address);setChallenge(value);setCode('');setRetryAt(Date.now()+value.retryAfterSeconds*1000);setClock(Date.now());
   }catch(issue){fail(issue);}
   finally{setSending(false);}
  }
  async function finish(session:AuthSession){
   if(app.username&&normalUsername(session.username)!==normalUsername(app.username)&&app.notices.length>0&&!transferApproved){setPendingSession(session);return;}
   await app.login(session);setPendingSession(null);setPassword('');setCode('');
-  if(!session.email){setInfo('已登录。绑定邮箱后，下次就能用邮箱登录。');setChallenge(null);return;}
+  if(!session.email){setBindingAfterLogin(true);setInfo('已登录。绑定邮箱后，下次就能用邮箱登录。');setChallenge(null);return;}
   onClose();
  }
  async function submit(){
@@ -103,7 +110,7 @@ export function LoginDialog({open,app,onClose}:Props){
    if(settingPassword)session=await app.auth.setEmailPassword(challenge!.challengeId,code,password);
    else if(registering)session=await app.auth.registerEmail(challenge!.challengeId,code,password);
    else session=await app.auth.login(legacyLogin?username:email,password,captcha());
-   accountCreated=registering;setChallenge(null);await finish(session);
+   accountCreated=registering;await finish(session);
   }catch(issue){
    if(accountCreated||issue instanceof AuthError&&['ACCOUNT_CREATED_LOGIN_PENDING','EMAIL_LOGIN_PENDING'].includes(issue.code||'')){
     setMode('login');setLegacyLogin(false);setChallenge(null);setCode('');
@@ -112,7 +119,7 @@ export function LoginDialog({open,app,onClose}:Props){
   }finally{setWorking(false);}
  }
  const title=binding?'绑定邮箱':settingPassword?'设置密码':registering?'注册':'登录';
- return <Dialog open={open} onClose={close} fullWidth maxWidth="xs">
+ return <Dialog open={open} onClose={close} fullWidth maxWidth="xs" slotProps={{transition:{onExited:resetClosed}}}>
   <DialogTitle>{title}</DialogTitle>
   <DialogContent>
    <Box component="form" id="campus-login-form" sx={{pt:1}} onSubmit={event=>{event.preventDefault();void submit();}}>
@@ -123,14 +130,14 @@ export function LoginDialog({open,app,onClose}:Props){
      {pendingSession?<Typography sx={{overflowWrap:'anywhere'}}>{pendingSession.email||'旧账号'}</Typography>:<>
       {!binding&&!registering&&!settingPassword&&legacyLogin?<TextField label="旧账号" helperText="填写原来的用户名或邮箱。" required value={username} disabled={busy} onChange={event=>setUsername(event.target.value)} slotProps={{htmlInput:{maxLength:254,autoComplete:'username',autoCapitalize:'none'}}}/>:<Stack direction="row" spacing={1} sx={{alignItems:'flex-start'}}>
        <TextField label="邮箱" required value={emailLocal} disabled={busy||emailForm&&!emailEnabled} onChange={event=>changeEmail(event.target.value)} sx={{flex:1,minWidth:0}} slotProps={{htmlInput:{maxLength:254,autoComplete:'username',autoCapitalize:'none',spellCheck:false}}}/>
-       <TextField select label="后缀" value={emailDomain} disabled={busy||emailForm&&!emailEnabled} onChange={event=>{setEmailDomain(event.target.value);setChallenge(null);setCode('');}} sx={{width:184,maxWidth:'60%','& .MuiSelect-select':{fontSize:14,pl:1.25}}}>{emailDomains.map(domain=><MenuItem key={domain} value={domain}>@{domain}</MenuItem>)}</TextField>
+       <TextField select label="后缀" value={emailDomain} disabled={busy||emailForm&&!emailEnabled} onChange={event=>{setEmailDomain(event.target.value);setChallenge(null);setCode('');setResendingEmail(false);}} sx={{width:184,maxWidth:'60%','& .MuiSelect-select':{fontSize:14,pl:1.25}}}>{emailDomains.map(domain=><MenuItem key={domain} value={domain}>@{domain}</MenuItem>)}</TextField>
       </Stack>}
       {passwordForm&&<TextField label="密码" required type={showPassword?'text':'password'} value={password} disabled={busy} onChange={event=>setPassword(event.target.value)} slotProps={{htmlInput:{maxLength:128,autoComplete:registering||settingPassword?'new-password':'current-password'},input:{endAdornment:<InputAdornment position="end"><IconButton disabled={busy} aria-label={showPassword?'隐藏密码':'显示密码'} onMouseDown={event=>event.preventDefault()} onClick={()=>setShowPassword(!showPassword)}>{showPassword?<VisibilityOffOutlined/>:<VisibilityOutlined/>}</IconButton></InputAdornment>}}}/>}
-      {imageEnabled&&<Stack spacing={1}>{imageError&&<Alert severity="warning">{imageError}</Alert>}<Stack direction="row" spacing={1} sx={{alignItems:'center'}}>{imageChallenge&&<Box component="img" src={imageChallenge.image} alt="四位图形验证码" sx={{width:160,height:56,objectFit:'contain',bgcolor:'#fff',borderRadius:1}}/>}{!imageChallenge&&<Typography variant="body2" color="text.secondary">{imageLoading?'正在获取验证码…':imageWaiting?'倒计时结束后自动获取':'验证码暂未获取'}</Typography>}<Button disabled={busy||imageLoading||!!imageWaiting} onClick={()=>void loadImage()}>{imageLoading?'载入中':imageWaiting?`${imageWaiting}s`:imageChallenge?'换一张':'获取验证码'}</Button></Stack><TextField label="图形验证码" value={imageAnswer} disabled={busy||imageLoading||!imageChallenge} onChange={event=>setImageAnswer(event.target.value.replace(/\D/g,'').slice(0,4))} slotProps={{htmlInput:{maxLength:4,inputMode:'numeric',autoComplete:'off'}}}/></Stack>}
+      {imageNeeded&&<Stack spacing={1}>{imageError&&<Alert severity="warning">{imageError}</Alert>}<Stack direction="row" spacing={1} sx={{alignItems:'center'}}>{imageChallenge&&<Box component="img" src={imageChallenge.image} alt="四位图形验证码" sx={{width:160,height:56,objectFit:'contain',bgcolor:'#fff',borderRadius:1}}/>}{!imageChallenge&&<Typography variant="body2" color="text.secondary">{imageLoading?'正在获取验证码…':imageWaiting?'倒计时结束后自动获取':'验证码暂未获取'}</Typography>}<Button disabled={busy||imageLoading||!!imageWaiting} onClick={()=>void loadImage()}>{imageLoading?'载入中':imageWaiting?`${imageWaiting}s`:imageChallenge?'换一张':'获取验证码'}</Button></Stack><TextField label="图形验证码" value={imageAnswer} disabled={busy||imageLoading||!imageChallenge} onChange={event=>setImageAnswer(event.target.value.replace(/\D/g,'').slice(0,4))} slotProps={{htmlInput:{maxLength:4,inputMode:'numeric',autoComplete:'off'}}}/></Stack>}
       {emailForm&&<>
        <Stack direction="row" spacing={1} sx={{alignItems:'flex-start'}}>
         <TextField label="邮箱验证码" required value={code} disabled={busy||!challenge} onChange={event=>setCode(event.target.value.replace(/\D/g,'').slice(0,codeLength))} slotProps={{htmlInput:{maxLength:codeLength,inputMode:'numeric',autoComplete:'one-time-code'}}}/>
-        <Button variant="outlined" disabled={busy||!!waiting||!emailLocal.trim()||!emailEnabled} onClick={()=>void send()} sx={{height:56,flexShrink:0,whiteSpace:'nowrap',px:1.5}}>{sending?'发送中':waiting?waitLabel:'获取验证码'}</Button>
+        <Button variant="outlined" disabled={busy||!!waiting||!emailLocal.trim()||!emailEnabled} onClick={()=>void send()} sx={{height:56,flexShrink:0,whiteSpace:'nowrap',px:1.5}}>{sending?'发送中':waiting?waitLabel:challenge?'重新发送':'获取验证码'}</Button>
        </Stack>
        <Typography variant="body2" color="text.secondary">{challenge?'五分钟内有效。没收到？检查垃圾邮件。':settingPassword?'适用于之前未设置密码的邮箱账号。':binding?'绑定后可用邮箱和原密码登录。':'验证邮箱后，使用密码登录。'}</Typography>
       </>}

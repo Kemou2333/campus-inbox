@@ -326,10 +326,12 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
      if(!submission.jobId){submission.jobId=job.id;context.journal.put(submission);consumeJobDrafts(submission.sources);}
     }
     if(!context.current())return;
-    const visible=[...jobs.values()].filter(j=>j.status==='accepted'||j.status==='running'||j.status==='failed'&&!context.journal.dismissed(j.id));
+    const localIDs=new Set(repository.load().map(notice=>notice.id));
+    const awaitingRecords=new Set([...jobs.values()].filter(j=>j.status==='completed'&&local.some(submission=>submission.requestId===j.requestId)&&j.noticeIds.some(id=>!localIDs.has(id))).map(j=>j.id));
+    const visible=[...jobs.values()].filter(j=>j.status==='accepted'||j.status==='running'||awaitingRecords.has(j.id)||j.status==='failed'&&!context.journal.dismissed(j.id));
     const unconfirmed=context.journal.all().filter(s=>!s.jobId);
     setAnalysisJobs(visible);setUnconfirmedSubmissions(unconfirmed);setJobStatusError('');
-    jobPolling.current?.setPending(visible.some(j=>j.status==='accepted'||j.status==='running')||unconfirmed.length>0);
+    jobPolling.current?.setPending(visible.some(j=>j.status==='accepted'||j.status==='running')||awaitingRecords.size>0||unconfirmed.length>0);
     const completed=[...jobs.values()].filter(j=>j.status==='completed');
     if(completed.some(j=>!jobSeenCompleted.current.has(j.id)||context.journal.all().some(s=>s.requestId===j.requestId))){
      const state=await context.cloud.syncNow();if(!context.current())return;
@@ -345,6 +347,7 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
        if(first&&Date.now()-Date.parse(submission.createdAt)<120_000){playOperationSound('organized');triggerOperationHaptic(platform,'organized');}
       }
       for(const job of completed)jobSeenCompleted.current.add(job.id);
+      setAnalysisJobs(previous=>previous.filter(job=>job.status!=='completed'||!completed.some(done=>done.id===job.id)));
      }else jobPolling.current?.setPending(true);
     }
    }catch(e){

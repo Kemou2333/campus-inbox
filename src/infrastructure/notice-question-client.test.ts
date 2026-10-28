@@ -67,3 +67,14 @@ describe('pre-admission errors',()=>{
   const retry=await prepareQuestion(storage,'one','n',input.sourceText,input.question);expect(retry.requestId).toBe(first.requestId);expect(retry.rejectedBeforeAdmission).toBe(false);
  });
 });
+
+
+test('question image refresh uses only the explicit challenge protocol and keeps its request ID',async()=>{
+ const challenge={type:'image' as const,image:'data:image/png;base64,iVBORw0KGgoAAA=',token:'old-question-token',expires:Date.now()+120000};
+ const updated={...challenge,token:'new-question-token'};
+ const fetcher=vi.fn().mockResolvedValueOnce(reply({code:'VERIFICATION_REQUIRED',challenge},428)).mockResolvedValueOnce(reply({code:'VERIFICATION_REQUIRED',challenge:updated},428)).mockResolvedValueOnce(reply(result));
+ expect(await askNoticeQuestion(input,{...settings,fetcher,onHumanVerification:async request=>{expect((await request.refresh!()).token).toBe(updated.token);return '0123';}})).toEqual(result);
+ expect(fetcher.mock.calls.map(call=>JSON.parse(call[1].body))).toEqual([input,input,input]);
+ expect(JSON.parse(fetcher.mock.calls[1][1].headers['X-Campus-Proof'])).toEqual({token:challenge.token,refresh:true});
+ expect(JSON.parse(fetcher.mock.calls[2][1].headers['X-Campus-Proof'])).toEqual({token:updated.token,answer:'0123'});
+});

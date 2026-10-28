@@ -77,6 +77,7 @@ export async function createService(config,options={}){
       if(value.ip!==ipKey||value.hash!==hash||value.origin!==origin||value.account!==accountKey||value.expires<=t||!challenge||challenge.exhausted)throw 0;
       if(value.type==='image'){
         if(verificationMode!=='image'||challenge.type!=='image')throw 0;
+        if(p.refresh===true&&Object.keys(p).every(key=>['token','refresh'].includes(key)))return {refresh:true,id:value.id,challenge};
         if(Object.keys(p).some(key=>!['token','answer'].includes(key)))throw 0;
         challenge.attempts++;
         const matches=typeof p.answer==='string'&&/^\d{4}$/.test(p.answer)
@@ -85,11 +86,22 @@ export async function createService(config,options={}){
         // Synchronous consume happens before any persistence/model await, including simultaneous submissions.
         challenges.delete(value.id);return true;
       }
+      if(p.refresh!==undefined)throw 0;
       if(verificationMode!=='pow'||value.type!=='pow'||challenge.type!=='pow'||value.bits!==bits||p.type&&p.type!=='pow'
         ||!Number.isSafeInteger(p.nonce)||p.nonce<0||p.nonce>10000000)throw 0;
       const digest=createHash('sha256').update(p.token+':'+p.nonce).digest();if(digest[0]!==0||digest[1]!==0)throw 0;
       challenges.delete(value.id);return true;
     }catch{return false;}
+  };
+  const issueChallenge=(type,ipKey,hash,origin,t,accountKey,rollingKeys)=>{
+    const id=randomBytes(16).toString('hex'),expires=t+AI_IMAGE_TTL_MS;
+    const image=type==='image'?imageCaptcha(id):null;
+    const payload=Buffer.from(JSON.stringify({id,ip:ipKey,hash,origin,expires,account:accountKey,type,
+      ...(type==='pow'?{bits}:{})})).toString('base64url');
+    const token=payload+'.'+sign(payload);
+    const publicChallenge=image?{type,token,image:image.image,expires,refreshAfter:t+IMAGE_REFRESH_MS}:{type,token,bits,expires};
+    challenges.set(id,{type,expires,attempts:0,...(image?{answerHash:image.answerHash,created:t,hash,origin,account:accountKey,ip:ipKey,owner:rollingKeys.accountKey,network:rollingKeys.ipKey,publicChallenge}:{})});
+    return publicChallenge;
   };
   const handle=async function handle(request,ip='unknown'){
     const origin=request.headers.get('Origin'),accepted=!!origin&&(config.allowedOrigins||[]).includes(origin),url=new URL(request.url);
@@ -193,15 +205,21 @@ export async function createService(config,options={}){
     const imageScopes=challenge=>challenge.type==='image'&&(challenge.network===rollingKeys.ipKey||account&&challenge.owner===rollingKeys.accountKey);
     const findRecentImages=()=>publicMode&&!proof&&!saved&&verificationMode==='image'?[...challenges.values()].filter(challenge=>imageScopes(challenge)&&now()-challenge.created<IMAGE_REFRESH_MS&&challenge.expires>now()):[];
     let recentImages=findRecentImages();
+    let refreshRequest;
     if(proof){
       const verified=publicMode?verify(proof,ipKey,hash,origin,t,accountKey):false;
-      if(verified!==true){
+      if(verified?.refresh)refreshRequest=verified;
+      else if(verified!==true){
         if(verified&&typeof verified==='object')return reply({error:verified.remainingAttempts>0?'数字不正确，请再试一次。':'验证码尝试次数已用完，请重新提交。',
           code:'CAPTCHA_INCORRECT',remainingAttempts:verified.remainingAttempts},400);
         return reply({error:verificationMode==='image'?'验证码已过期，请重新提交。':'安全验证已失效，请重新提交。',code:'INVALID_PROOF'},400);
       }
     }
-    else if(!recentImages.length||(accountEntries||entries).length<3){
+    if(refreshRequest){
+      const wait=Math.ceil((refreshRequest.challenge.created+IMAGE_REFRESH_MS-t)/1000);
+      if(wait>0)return reply({error:'请稍后再换一张。',code:'CAPTCHA_REFRESH_LIMIT',retryAfterSeconds:wait},429,{'Retry-After':String(wait)});
+    }
+    if((!proof||refreshRequest)&&(!recentImages.length||(accountEntries||entries).length<3)){
       if(accountEntries?.length>=RATE_LIMIT){const seconds=Math.max(1,Math.ceil((accountEntries[0]+RATE_WINDOW_MS-t)/1000));return reply({error:`每个账号每 3 分钟最多发起 ${RATE_LIMIT} 次 AI 请求，请 ${seconds} 秒后再试。`,code:'ACCOUNT_RATE_LIMIT',retryAfterSeconds:seconds},429,{'Retry-After':String(seconds)});}
       if(entries.length>=networkRateLimit){const seconds=Math.max(1,Math.ceil((entries[0]+RATE_WINDOW_MS-t)/1000));return reply({error:`此网络每 3 分钟最多发起 ${networkRateLimit} 次 AI 请求，请 ${seconds} 秒后再试。`,code:'IP_RATE_LIMIT',retryAfterSeconds:seconds},429,{'Retry-After':String(seconds)});}
       entries.push(t);
@@ -239,6 +257,15 @@ export async function createService(config,options={}){
       try{await persist();}catch{return reply({error:'整理服务暂时不可用，请稍后重试。'},503);}
     }
     if(requestUsage!==usage||usage.day!==day())return reply({error:'整理服务时间已更新，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});
+    // An explicit refresh is verified against the existing signed image context.
+    // It can never fall through to a cache result, job acceptance or model call,
+    // even when the original short frequency window has elapsed.
+    if(refreshRequest){
+      if(challenges.get(refreshRequest.id)!==refreshRequest.challenge)return reply({error:'验证码已更新，请重新提交。',code:'INVALID_PROOF'},400);
+      for(const [id,challenge] of challenges)if(challenge.expires<=t||imageScopes(challenge))challenges.delete(id);
+      if(challenges.size>=2000)return reply({error:'服务繁忙，请稍后再试。'},503);
+      return reply({code:'VERIFICATION_REQUIRED',challenge:issueChallenge('image',ipKey,hash,origin,t,accountKey,rollingKeys)},428);
+    }
     if(saved){
       if(!jobRoute)return reply(saved.result);
       let job;
@@ -258,14 +285,7 @@ export async function createService(config,options={}){
       }
       if(verificationMode==='image')for(const [id,challenge] of challenges)if(imageScopes(challenge))challenges.delete(id);
       if(challenges.size>=2000)return reply({error:'服务繁忙，请稍后再试。'},503);
-      const id=randomBytes(16).toString('hex'),expires=t+AI_IMAGE_TTL_MS,type=verificationMode;
-      const image=type==='image'?imageCaptcha(id):null;
-      const payload=Buffer.from(JSON.stringify({id,ip:ipKey,hash,origin,expires,account:accountKey,type,
-        ...(type==='pow'?{bits}:{})})).toString('base64url');
-      const token=payload+'.'+sign(payload);
-      const publicChallenge=image?{type,token,image:image.image,expires}:{type,token,bits,expires};
-      challenges.set(id,{type,expires,attempts:0,...(image?{answerHash:image.answerHash,created:t,hash,origin,account:accountKey,ip:ipKey,owner:rollingKeys.accountKey,network:rollingKeys.ipKey,publicChallenge}:{})});
-      return reply({code:'VERIFICATION_REQUIRED',challenge:publicChallenge},428);
+      return reply({code:'VERIFICATION_REQUIRED',challenge:issueChallenge(verificationMode,ipKey,hash,origin,t,accountKey,rollingKeys)},428);
     }
     // Recheck after persistence, then reserve the slot and budget synchronously.
     if(activeModels>=AI_OPERATION_LIMITS.modelConcurrent)return reply({error:'AI 正在处理另一条请求，请稍后再试。',code:'SERVICE_BUSY',retryAfterSeconds:3},429,{'Retry-After':'3'});

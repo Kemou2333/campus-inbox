@@ -61,7 +61,7 @@ describe('AI transport', () => {
     expect(await analyzeSources([{ text: '请提交申请' }], { fetcher, sessionKey: 'device-key',
       onHumanVerification, onStage: stage => stages.push(stage) })).toEqual(batch);
     expect(onHumanVerification).toHaveBeenCalledTimes(1);
-    expect(onHumanVerification).toHaveBeenCalledWith(challenge, expect.any(AbortSignal));
+    expect(onHumanVerification).toHaveBeenCalledWith(expect.objectContaining({...challenge,refresh:expect.any(Function)}), expect.any(AbortSignal));
     expect(fetcher).toHaveBeenCalledTimes(2);
     expect(fetcher.mock.calls[0][1]?.body).toBe(fetcher.mock.calls[1][1]?.body);
     expect(fetcher.mock.calls[1][1]?.headers).toMatchObject({ Authorization: 'Bearer device-key' });
@@ -138,7 +138,7 @@ describe('AI transport', () => {
     const onHumanVerification = vi.fn(async () => attempt ? '0123' : '9999');
     expect(await analyzeSources([{ text: '通知' }], { fetcher, onHumanVerification })).toEqual(batch);
     expect(paid).toBe(1); expect(fetcher).toHaveBeenCalledTimes(3); expect(onHumanVerification).toHaveBeenCalledTimes(2);
-    expect(onHumanVerification.mock.calls[1]).toEqual([{ ...challenge, error: '数字不正确，请再试一次。' }, expect.any(AbortSignal)]);
+    expect(onHumanVerification.mock.calls[1]).toEqual([expect.objectContaining({ ...challenge, error: '数字不正确，请再试一次。',refresh:expect.any(Function) }), expect.any(AbortSignal)]);
     expect(fetcher.mock.calls.map(call => call[1]?.body)).toEqual(Array(3).fill(JSON.stringify({ sources: [{ text: '通知' }] })));
   });
 
@@ -264,4 +264,35 @@ describe('AI transport', () => {
     expect(onHumanVerification.mock.calls[0][1].aborted).toBe(true);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
+});
+
+
+it('refreshes an AI image explicitly before dispatch and submits only the replacement token',async()=>{
+ const first={type:'image' as const,image:'data:image/png;base64,iVBORw0KGgoAAA==',token:'first-token',expires:Date.now()+120000,refreshAfter:Date.now()-1};
+ const second={...first,token:'second-token',expires:Date.now()+120000,refreshAfter:Date.now()+10000};
+ const proofs:unknown[]=[];let paid=0;
+ const fetcher=vi.fn(async(_url:RequestInfo|URL,init?:RequestInit)=>{const raw=(init?.headers as Record<string,string>)['X-Campus-Proof'];const proof=raw?JSON.parse(raw):undefined;proofs.push(proof);if(!proof)return json({code:'VERIFICATION_REQUIRED',challenge:first},428);if(proof.refresh===true)return json({code:'VERIFICATION_REQUIRED',challenge:second},428);paid++;return json(batch);});
+ await expect(analyzeSources([{text:'新通知'}],{fetcher,onHumanVerification:async request=>{const next=await request.refresh!();expect(next.token).toBe('second-token');return '0123';}})).resolves.toEqual(batch);
+ expect(proofs).toEqual([undefined,{token:'first-token',refresh:true},{token:'second-token',answer:'0123'}]);expect(paid).toBe(1);
+ expect(fetcher.mock.calls.map(call=>call[1]?.body)).toEqual(Array(3).fill(JSON.stringify({sources:[{text:'新通知'}]})));
+});
+
+it('does not reinterpret refresh failure as model retry or lose the original challenge',async()=>{
+ const challenge={type:'image' as const,image:'data:image/png;base64,iVBORw0KGgoAAA==',token:'original-token',expires:Date.now()+120000};
+ const fetcher=vi.fn().mockResolvedValueOnce(json({code:'VERIFICATION_REQUIRED',challenge},428)).mockResolvedValueOnce(json({code:'CAPTCHA_REFRESH_LIMIT',error:'请稍后再换一张。',retryAfterSeconds:5},429)).mockResolvedValueOnce(json(batch));
+ await expect(analyzeSources([{text:'通知'}],{fetcher,onHumanVerification:async request=>{await expect(request.refresh!()).rejects.toMatchObject({code:'CAPTCHA_REFRESH_LIMIT',retryAfterSeconds:5});return '0123';}})).resolves.toEqual(batch);
+ expect(JSON.parse(fetcher.mock.calls[2][1].headers['X-Campus-Proof'])).toEqual({token:'original-token',answer:'0123'});expect(fetcher).toHaveBeenCalledTimes(3);
+});
+
+
+it('retains bounded wrong-answer retries after an explicit image refresh',async()=>{
+ const first={type:'image' as const,image:'data:image/png;base64,iVBORw0KGgoAAA==',token:'before-refresh',expires:Date.now()+120000};
+ const next={...first,token:'after-refresh'};
+ const fetcher=vi.fn().mockResolvedValueOnce(json({code:'VERIFICATION_REQUIRED',challenge:first},428))
+  .mockResolvedValueOnce(json({code:'CAPTCHA_INCORRECT',remainingAttempts:4,error:'数字不正确'},400))
+  .mockResolvedValueOnce(json({code:'VERIFICATION_REQUIRED',challenge:next},428))
+  .mockResolvedValueOnce(json({code:'CAPTCHA_INCORRECT',remainingAttempts:4,error:'数字不正确'},400)).mockResolvedValueOnce(json(batch));
+ let dialogs=0;
+ await expect(analyzeSources([{text:'通知'}],{fetcher,onHumanVerification:async request=>{dialogs++;if(dialogs===2)await request.refresh!();return dialogs<3?'9999':'0123';}})).resolves.toEqual(batch);
+ expect(dialogs).toBe(3);expect(fetcher).toHaveBeenCalledTimes(5);
 });

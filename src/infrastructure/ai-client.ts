@@ -122,9 +122,23 @@ export async function analyzeSources(sources: AnalysisSource[], options: Analyze
     if (response.status === 428 && value.code === 'VERIFICATION_REQUIRED') {
       options.onStage?.('verifying');
       if (value.challenge && typeof value.challenge === 'object' && (value.challenge as Record<string, unknown>).type === 'image') {
-        const challenge = parseHumanVerificationRequest(value.challenge);
+        let challenge = parseHumanVerificationRequest(value.challenge);
         if (!challenge) throw new AnalysisError('安全验证信息不完整，请重新提交。', 'INVALID_CHALLENGE');
         if (!options.onHumanVerification) throw new AnalysisError('请打开新版网页或更新应用，完成验证码后再整理。', 'HUMAN_VERIFICATION_REQUIRED', 428);
+        const refresh=async():Promise<HumanVerificationRequest>=>{
+          if(controller.signal.aborted)throw new DOMException('Aborted','AbortError');
+          try{
+            const updated=await send(JSON.stringify({token:challenge!.token,refresh:true}));
+            if(updated.response.status!==428||updated.value.code!=='VERIFICATION_REQUIRED'){
+              const seconds=Number(updated.value.retryAfterSeconds??updated.response.headers.get('Retry-After'));
+              throw new AnalysisError(typeof updated.value.error==='string'?updated.value.error:'暂时无法换图，请稍后再试。',typeof updated.value.code==='string'?updated.value.code:'INVALID_CHALLENGE',updated.response.status,Number.isFinite(seconds)&&seconds>0?seconds:0);
+            }
+            const next=parseHumanVerificationRequest(updated.value.challenge);
+            if(!next||next.token===challenge!.token)throw new AnalysisError('验证码信息异常，请重新提交。','INVALID_CHALLENGE');
+            challenge=next;remaining=5;error=undefined;
+            return {...next,refresh};
+          }finally{if(!controller.signal.aborted)limitWait(challenge!.expires-Date.now(),'VERIFICATION_EXPIRED');}
+        };
         let error: string | undefined, remaining = 5;
         for (let attempt = 0; attempt < 5; attempt++) {
           if (Date.now() >= challenge.expires) throw new AnalysisError('验证码已过期，请重新提交。', 'VERIFICATION_EXPIRED');
@@ -132,7 +146,7 @@ export async function analyzeSources(sources: AnalysisSource[], options: Analyze
           limitWait(challenge.expires - Date.now(), 'VERIFICATION_EXPIRED');
           let input: string;
           try {
-            input = await humanResponse({ ...challenge, ...(error ? { error } : {}) }, options.onHumanVerification, controller.signal);
+            input = await humanResponse({ ...challenge, ...(error ? { error } : {}), refresh }, options.onHumanVerification, controller.signal);
           } finally { clearTimeout(timeout); }
           const answer = typeof input === 'string' ? input.trim() : '';
           if (!/^\d{4}$/.test(answer)) throw new AnalysisError('请填写图片中的 4 位数字。', 'INVALID_HUMAN_ANSWER');

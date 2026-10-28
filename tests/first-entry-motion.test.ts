@@ -22,9 +22,9 @@ test('all visible groups start hidden and enter at the default 1.5 speed in inte
  const stop=motion.play(root(feed,organize,input),false,settled);
  expect(motion.pending).toBe(false);
  expect(input.animate.mock.calls[0]?.[0][0]).toEqual({opacity:0,transform:'translateY(8px) scale(.985)'});
- expect(input.animate.mock.calls[0]?.[1]).toMatchObject({delay:253,duration:833,easing:'cubic-bezier(.35,0,.2,1)',fill:'backwards'});
- expect(organize.animate.mock.calls[0]?.[1]).toMatchObject({delay:440});
- expect(feed.animate.mock.calls[0]?.[1]).toMatchObject({delay:627});
+ expect(input.animate.mock.calls[0]?.[1]).toMatchObject({delay:227,duration:713,easing:'cubic-bezier(.35,0,.2,1)',fill:'backwards'});
+ expect(organize.animate.mock.calls[0]?.[1]).toMatchObject({delay:387});
+ expect(feed.animate.mock.calls[0]?.[1]).toMatchObject({delay:547});
  expect(saved.setItem).toHaveBeenCalledExactlyOnceWith('campus-inbox:first-entry:v1','seen');
  expect(settled).not.toHaveBeenCalled();
  stop();expect(feed.cancel).toHaveBeenCalledOnce();expect(settled).toHaveBeenCalledOnce();
@@ -43,8 +43,8 @@ test('a later mobile page, new group or reload cannot play a second entry',()=>{
 test('first entry reads a saved entry speed directly before any settings hook mounts',()=>{
  const raw=JSON.stringify({entry:2,notice:1.25}),saved=storage({[MOTION_PREFERENCES_KEY]:raw}),input=surface('composer-input'),action=surface('composer-action');
  const stop=createFirstEntryMotion(saved).play(root(input,action),false);
- expect(input.animate.mock.calls[0]?.[1]).toMatchObject({duration:625,delay:190});
- expect(action.animate.mock.calls[0]?.[1]).toMatchObject({duration:625,delay:330});
+ expect(input.animate.mock.calls[0]?.[1]).toMatchObject({duration:535,delay:170});
+ expect(action.animate.mock.calls[0]?.[1]).toMatchObject({duration:535,delay:290});
  expect(saved.values.get(MOTION_PREFERENCES_KEY)).toBe(raw);stop();
 });
 test('an explicit introduction can play its entrance even after an older tutorial was seen',()=>{
@@ -71,7 +71,7 @@ test('a WebView completion timeout releases the page even if finished never reso
  vi.useFakeTimers();
  const element=surface('composer-input'),settled=vi.fn();
  createFirstEntryMotion(storage()).play(root(element),false,settled);
- vi.advanceTimersByTime(1205);expect(settled).not.toHaveBeenCalled();
+ vi.advanceTimersByTime(1059);expect(settled).not.toHaveBeenCalled();
  vi.advanceTimersByTime(1);expect(element.cancel).toHaveBeenCalledOnce();expect(settled).toHaveBeenCalledOnce();
 });
 test('existing users, reduced motion and empty screens settle immediately without animation',()=>{
@@ -97,4 +97,13 @@ test('unavailable animation support cancels earlier groups rather than leaving a
  const motion=createFirstEntryMotion(storage());
  expect(()=>motion.play(root(input,older),false,settled)).not.toThrow();
  expect(input.cancel).toHaveBeenCalledOnce();expect(settled).toHaveBeenCalledOnce();expect(motion.pending).toBe(false);
+});
+
+
+test('seven groups keep staggered entry and finish in 1.9 seconds at the default speed',()=>{
+ const elements=['masthead','composer-title','composer-input','composer-action','feed-tools','feed-results','home-nav'].map(surface);
+ const stop=createFirstEntryMotion(storage()).play(root(...elements),false);
+ const options=elements.map(element=>element.animate.mock.calls[0]![1]);
+ expect(options.map(value=>value.delay)).toEqual([227,387,547,707,867,1027,1187]);
+ expect(Number(options.at(-1)!.delay)+Number(options.at(-1)!.duration)).toBe(1900);stop();
 });

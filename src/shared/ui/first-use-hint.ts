@@ -1,4 +1,4 @@
-export type FirstUseHint='notice-question'|'share-image';
+export type FirstUseHint='notice-question'|'share-image'|'ai-organize-privacy';
 type HintStorage=Pick<Storage,'getItem'|'setItem'>;
 const key=(hint:FirstUseHint)=>`campus-inbox:first-use-hint:${hint}:v1`;
 const seenInSession=new Set<FirstUseHint>();

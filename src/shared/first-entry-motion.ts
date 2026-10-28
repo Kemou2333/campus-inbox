@@ -36,7 +36,7 @@ export function createFirstEntryMotion(storage:EntryStorage|null,{force=false}:{
       const animation=element.animate([
        {opacity:0,transform:'translateY(8px) scale(.985)'},
        {opacity:1,transform:'translateY(0) scale(1)'}
-      ],{duration:scaled(1250),delay:scaled(380+stage*280),easing:'cubic-bezier(.35,0,.2,1)',fill:'backwards'});
+      ],{duration:scaled(1070),delay:scaled(340+stage*240),easing:'cubic-bezier(.35,0,.2,1)',fill:'backwards'});
       animations.push(animation);
       // Without reliable completion support, show the static page immediately.
       if(!animation.finished||typeof animation.finished.then!=='function')throw new Error('Animation completion is unavailable');
@@ -49,7 +49,7 @@ export function createFirstEntryMotion(storage:EntryStorage|null,{force=false}:{
    // Resolve on finish or cancellation. A safety deadline also releases the UI hint
    // on older WebViews whose finished promise can remain pending in the background.
    void Promise.allSettled(finished).then(settle);
-   timer=setTimeout(stop,scaled(380+(stage-1)*280)+scaled(1250)+120);
+   timer=setTimeout(stop,scaled(340+(stage-1)*240)+scaled(1070)+120);
    return stop;
   }
  };

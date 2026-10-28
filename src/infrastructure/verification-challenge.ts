@@ -5,6 +5,9 @@ export interface HumanVerificationRequest {
   token: string;
   expires: number;
   error?: string;
+  refreshAfter?: number;
+  /** Only requests a replacement signed image; it must never dispatch a model. */
+  refresh?: () => Promise<HumanVerificationRequest>;
 }
 
 export type HumanVerificationHandler = (request: HumanVerificationRequest, signal: AbortSignal) => Promise<string>;
@@ -17,6 +20,7 @@ export function parseHumanVerificationRequest(value: unknown): HumanVerification
     || !/^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/=]+$/.test(challenge.image)
     || typeof challenge.token !== 'string' || !challenge.token || challenge.token.length > 1800
     || typeof challenge.expires !== 'number' || !Number.isSafeInteger(challenge.expires)
-    || challenge.expires <= Date.now() || challenge.expires > Date.now() + 125_000) return null;
-  return { type: 'image', image: challenge.image, token: challenge.token, expires: challenge.expires };
+    || challenge.expires <= Date.now() || challenge.expires > Date.now() + 125_000
+    || challenge.refreshAfter!==undefined&&(typeof challenge.refreshAfter!=='number'||!Number.isSafeInteger(challenge.refreshAfter)||challenge.refreshAfter<0||challenge.refreshAfter>challenge.expires)) return null;
+  return { type: 'image', image: challenge.image, token: challenge.token, expires: challenge.expires, ...(typeof challenge.refreshAfter==='number'?{refreshAfter:challenge.refreshAfter}:{}) };
 }

@@ -8,6 +8,8 @@ import type {CampusController,Draft,DraftSelection} from '../../app/useCampus';
 import {AttachmentList} from '../attachments/AttachmentList';
 import {readTransfer,type ClipboardImport} from '../../infrastructure/clipboard-import';
 import {partitionGuestDemoDrafts} from '../../infrastructure/guest-demo';
+import {AI_PRIVACY_FIRST_USE} from '../../shared/ui/AIPrivacy';
+import {hasSeenFirstUseHint,markFirstUseHintSeen} from '../../shared/ui/first-use-hint';
 
 export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusController;onDone:()=>void;onLogin:()=>void;embedded?:boolean}){
  const compactWeb=app.platform.kind==='browser';
@@ -15,6 +17,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
  const importLock=useRef(false);const [dragTarget,setDragTarget]=useState<string|null>(null);
  const [importWarnings,setImportWarnings]=useState<Record<string,string>>({});
  const [shortNotice,setShortNotice]=useState(false);
+ const [privacyOpen,setPrivacyOpen]=useState(false);
  const shortApproval=useRef<string|null>(null);
  const draftSignature=JSON.stringify(app.drafts.map(d=>[d.id,d.text]));
  const hasShortNotice=app.drafts.some(d=>!d.demo&&d.text.trim()&&Array.from(d.text.replace(/\s/g,'')).length<=20);
@@ -48,7 +51,10 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
  const retrySeconds=Math.max(0,Math.ceil((app.retryAt-clock)/1000));
  const retryText=retrySeconds>3600?'稍后再试':retrySeconds>=60?`${Math.ceil(retrySeconds/60)} 分钟后`:`${retrySeconds} 秒后`;
  const total=partitionGuestDemoDrafts(app.drafts).textLength;const hasContent=app.drafts.some(d=>d.text.trim());
- async function analyze(){try{if(await app.analyze())onDone();}catch(e){app.report(e);}}
+ async function analyze(){
+  if(partitionGuestDemoDrafts(app.drafts).personal.length&&!hasSeenFirstUseHint('ai-organize-privacy')){setPrivacyOpen(true);return;}
+  try{if(await app.analyze())onDone();}catch(e){app.report(e);}
+ }
  async function submit(){if(app.demoDraftID){try{if(await app.analyzeDemo())onDone();}catch(e){app.report(e);}return;}if(hasShortNotice&&shortApproval.current!==draftSignature){setShortNotice(true);return;}if(!app.cloud?.getKey()){onLogin();return;}await analyze();}
  function fillDemo(draftID:string,replaceShort=false){const id=app.fillDemoDraft(draftID,replaceShort);if(id)requestAnimationFrame(()=>{const element=draftElements.current.get(id);element?.scrollIntoView({block:'nearest',behavior:reducedMotion?'instant':'smooth'});element?.querySelector<HTMLTextAreaElement>('textarea:not([aria-hidden="true"])')?.focus({preventScroll:true});});}
  async function picked(files:FileList|null){const id=target;if(!files||!id||importLock.current)return;importLock.current=true;setAdding(true);try{await app.attach(id,Array.from(files));setImportWarnings(old=>({...old,[id]:''}));}catch(e){app.report(e);}finally{importLock.current=false;setAdding(false);if(input.current)input.current.value='';}}
@@ -123,6 +129,7 @@ export function ComposerPage({app,onDone,onLogin,embedded=false}:{app:CampusCont
      {app.busy&&<Button sx={{flexShrink:0,whiteSpace:'nowrap'}} onClick={app.cancel}>停止等待</Button>}
    </Stack>
   </Box>
+  <Dialog open={privacyOpen} onClose={()=>setPrivacyOpen(false)} aria-labelledby="ai-privacy-heading"><DialogTitle id="ai-privacy-heading">整理前提醒</DialogTitle><DialogContent><Typography>{AI_PRIVACY_FIRST_USE}</Typography></DialogContent><DialogActions><Button onClick={()=>setPrivacyOpen(false)}>返回编辑</Button><Button variant="contained" onClick={()=>{markFirstUseHintSeen('ai-organize-privacy');setPrivacyOpen(false);void analyze();}}>继续整理</Button></DialogActions></Dialog>
   <Dialog open={shortNotice} onClose={()=>{shortApproval.current=draftSignature;setShortNotice(false);}} aria-labelledby="short-notice-heading"><DialogTitle id="short-notice-heading">这条通知比较短</DialogTitle><DialogContent><Typography>可以继续整理原文，也可以补充完整通知。</Typography></DialogContent><DialogActions><Button onClick={()=>{shortApproval.current=draftSignature;setShortNotice(false);}}>返回编辑</Button><Button variant="contained" onClick={()=>{shortApproval.current=draftSignature;setShortNotice(false);if(!app.cloud?.getKey()){onLogin();return;}void analyze();}}>继续整理原文</Button><Button onClick={()=>{const draft=app.drafts.find(d=>!d.demo&&d.text.trim()&&Array.from(d.text.replace(/\s/g,'')).length<=20);setShortNotice(false);if(draft)fillDemo(draft.id,true);}}>填入示例</Button></DialogActions></Dialog>
  </Stack>;
 }
