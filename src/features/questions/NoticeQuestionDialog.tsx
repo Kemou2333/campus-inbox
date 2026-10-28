@@ -20,16 +20,21 @@ export default function NoticeQuestionDialog({notice,app,onClose,onLogin}:{notic
  const [question,setQuestion]=useState(''),[answer,setAnswer]=useState<DisplayedAnswer|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[sample,setSample]=useState<ReviewedExampleQuestion|null>(null);
  const [showHint,setShowHint]=useState(()=>!hasSeenFirstUseHint('notice-question'));
  const active=useRef<AbortController|null>(null),context=useRef(0);
+ const loginQuestion=useRef<{noticeID:string;originalText:string;username:string;question:string}|null>(null);
  useEffect(()=>{if(notice)markFirstUseHintSeen('notice-question');},[notice?.id]);
- useEffect(()=>{const generation=++context.current;active.current?.abort();active.current=null;setBusy(false);setQuestion('');setAnswer(null);setError('');setSample(null);
-  if(notice)void (async()=>{
+ useEffect(()=>{const generation=++context.current;active.current?.abort();active.current=null;setBusy(false);setAnswer(null);setError('');setSample(null);
+  const pending=loginQuestion.current;
+  const preserve=!!pending&&!!notice&&pending.noticeID===notice.id&&pending.originalText===notice.originalText&&(!pending.username||pending.username===app.username);
+  if(preserve){setQuestion(pending.question);if(app.sync.connected)loginQuestion.current=null;}
+  else{loginQuestion.current=null;setQuestion('');}
+  if(notice&&!preserve)void (async()=>{
    const example=await findReviewedExampleQuestion(notice);
    if(context.current!==generation)return;
    if(example){setSample(example);setQuestion(example.question);return;}
    if(app.sync.connected&&app.username){const record=await readQuestion(localStorage,app.username,notice.id,notice.originalText);if(context.current!==generation||!record)return;setQuestion(record.question);setAnswer(record.result?{...record.result,origin:'provider'}:null);}
   })().catch(()=>{});
   return()=>{context.current++;active.current?.abort();};
- },[notice,app.username,app.sync.connected]);
+ },[notice?.id,notice?.originalText,app.username,app.sync.connected]);
  function close(){active.current?.abort();onClose();}
  async function send(){
   if(!notice||!question.trim()||busy)return;
@@ -42,7 +47,7 @@ export default function NoticeQuestionDialog({notice,app,onClose,onLogin}:{notic
     if(reviewed){await waitForGuestDemo(controller.signal,1300);if(context.current!==generation||controller.signal.aborted)return;setAnswer({answer:reviewed.answer,evidence:reviewed.evidence,origin:reviewed.origin});return;}
     setSample(null);
    }
-   if(!app.sync.connected){onLogin();return;}
+   if(!app.sync.connected){loginQuestion.current={noticeID:notice.id,originalText:notice.originalText,username:app.username,question};onLogin();return;}
    record=await prepareQuestion(localStorage,app.username,notice.id,notice.originalText,question);
    const result=record.result??await app.askQuestion(notice.id,record.question,record.requestId,controller.signal);
    saveQuestionResult(localStorage,record,result);
@@ -54,7 +59,7 @@ export default function NoticeQuestionDialog({notice,app,onClose,onLogin}:{notic
  return <Dialog open={!!notice} onClose={close} aria-labelledby="question-heading"><DialogTitle id="question-title-row" component="div" sx={{display:'flex',alignItems:'center',gap:1}}><Typography id="question-heading" component="h2" variant="h5" sx={{flex:1}}>问这条通知</Typography><IconButton aria-label="关闭提问" onClick={close}><Close/></IconButton></DialogTitle>
   <DialogContent>{showHint&&<Alert severity="info" onClose={()=>setShowHint(false)} sx={{mb:2}}>只围绕当前通知提问，回答附原文依据。</Alert>}<Typography sx={{fontWeight:700,mb:.5}}>{notice?.title}</Typography><Typography variant="body2" color="text.secondary" sx={{mb:2}}>{sampleQuestion?'示例问答 · 可直接体验':'仅依据这条原文 · 五小时 10 问，三天 15 问'}</Typography>
    {!!notice&&notice.originalText.length>4000&&<Alert severity="info" sx={{mb:2}}>原文超过4,000字，暂不能提问。</Alert>}
-   <TextField autoFocus multiline minRows={2} maxRows={5} label="想问什么？" placeholder="例如：我要交什么材料？" value={question} disabled={busy} onChange={e=>{setQuestion(e.target.value);setAnswer(null);setError('');}} slotProps={{htmlInput:{maxLength:240}}} helperText={question.length>=200?`${question.length}/240`:undefined}/>
+   <TextField autoFocus multiline minRows={2} maxRows={5} label="想问什么？" placeholder="例如：我要交什么材料？" value={question} disabled={busy} onChange={e=>{loginQuestion.current=null;setQuestion(e.target.value);setAnswer(null);setError('');}} slotProps={{htmlInput:{maxLength:240}}} helperText={question.length>=200?`${question.length}/240`:undefined}/>
    {busy&&<Stack role="status" direction="row" sx={{gap:1,alignItems:'center',mt:2}}><CircularProgress size={18}/><Typography>正在看原文…</Typography></Stack>}
    {error&&<Alert severity="warning" sx={{mt:2}}>{error}</Alert>}
    {answer&&<Box className="notice-question-answer" role="status" data-answer-origin={answer.origin} sx={{mt:2,p:2,bgcolor:'action.hover',borderLeft:'3px solid',borderColor:'primary.main',borderRadius:1,'& .rich-text > p + p':{mt:1.5},'& .rich-text li + li':{mt:.75}}}>{answer.origin==='human-reviewed-example'&&<Typography variant="caption" color="text.secondary" sx={{display:'block',fontWeight:700,mb:1}}>示例回答</Typography>}<RichText text={readableQuestionAnswer(answer.answer)}/>{!!answer.evidence.length&&<Box component="details" className="question-evidence" sx={{mt:2,pt:.75,borderTop:'1px solid',borderColor:'divider'}}><Box component="summary" sx={{color:'primary.main',fontSize:14,fontWeight:700,cursor:'pointer',py:.75}}>原文依据 {answer.evidence.length}</Box>{answer.evidence.map((quote,i)=><Typography key={i} component="blockquote" sx={{m:0,mt:1,fontSize:14,lineHeight:1.7,color:'text.secondary',whiteSpace:'pre-wrap'}}>{quote}</Typography>)}</Box>}</Box>}

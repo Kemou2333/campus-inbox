@@ -61,13 +61,15 @@ export default function App(){
  // before the dimmer appears; changing guide pages never replays the entrance.
  useLayoutEffect(()=>{
   if(launchStage!=='entry')return;
+  // The staged entrance belongs to the first visit, not a tutorial replay.
+  if(!tutorialRequired){setLaunchStage('idle');setHelp(true);return;}
   let active=true,pause:ReturnType<typeof setTimeout>|undefined;
   playOperationSound('welcome');
   const stop=firstEntry.current?.play(document,reducedMotion,()=>{
    if(active)pause=setTimeout(()=>{if(active){setLaunchStage('idle');setHelp(true);}},reducedMotion?0:120);
   });
   return()=>{active=false;if(pause)clearTimeout(pause);stop?.();};
- },[launchStage,reducedMotion]);
+ },[launchStage,reducedMotion,tutorialRequired]);
  const [celebration,setCelebration]=useState<{x:number;y:number;key:number}|null>(null),celebrationTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
  function clearCelebration(){if(celebrationTimer.current)clearTimeout(celebrationTimer.current);celebrationTimer.current=null;setCelebration(null);}
  function completionChanged(_id:string,anchor?:HTMLElement){const bounds=anchor?.getBoundingClientRect();if(!bounds)return;clearCelebration();setCelebration({x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2,key:performance.now()});celebrationTimer.current=setTimeout(clearCelebration,reducedMotion?850:1700);}
