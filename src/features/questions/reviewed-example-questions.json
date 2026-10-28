@@ -16,7 +16,7 @@
   {
     "catalogId": "example-reading-v211-1",
     "sourceSha256": "5b4c056f59ef4a2a62beeb29e0a5fbda3b8303aa1ec345d40c311279dd49655a",
-    "contentSha256": "56c6bf84e03a3ff2b001dfcfdef1498fda2a89edfecd68d3291f7a8875097fa9",
+    "contentSha256": "2fdfa96915c444b802e0d49bce66b455159c6739241cd6ed6bf7a29c726cfed0",
     "question": "谁可以参加，怎么报名？",
     "answer": "**2026级有篮球爱好的男女同学均可参与。**\n\n1. 先加入纳新QQ群。\n2. 再填写“重大杯本科生院篮球队预选信息收集表”。\n\n报名截止为原文的 **10月14日23:59**。男女同学赛制不同；群号和报名入口见原通知。",
     "evidence": [
@@ -44,7 +44,7 @@
   {
     "catalogId": "example-reading-v25-4",
     "sourceSha256": "eb28c0ccedd119610fddd9a8c221ea311534e85526e6f8d9967bd2b9a07d19f6",
-    "contentSha256": "08ad79f704be6d428d2a7fb96169f8d53c46cad063c883feb6f3811e4e6987a4",
+    "contentSha256": "259c86abcaca01dd8c752346fd2f99cac3c70cf069b8492d6dce22535375de26",
     "question": "离开宿舍前要检查什么？",
     "answer": "**出门前检查三件事：**\n\n- **水电**：关闭排插电源、拔掉电器插头，关紧水龙头等阀门。\n- **门窗**：反锁宿舍门，关闭并锁好窗户，低层宿舍尤其注意。\n- **物品**：贵重物品和证件随身携带，清理易变质食品，收好其余物品。",
     "evidence": [
@@ -281,7 +281,7 @@
   {
     "catalogId": "example-reading-v211-5",
     "sourceSha256": "1975dc6d9dd9c8bb489352bdbd45220e8bd3f5469ca7e5cb5660f7af0f2d410d",
-    "contentSha256": "ef53a6b5879dc2420bf655396f718c5a51036b7114f21a7133f1f774490f0120",
+    "contentSha256": "08aa1f904c9e40aeac97973a7daa7f228e2282ec204041622ac53fc8d6a554ad",
     "question": "选拔对成绩和语言有什么要求？",
     "answer": "**面向全校理工类普通招生类别的大一新生：**\n\n- 第一学期绩点 **3.2以上**，且无补考课程。\n- **2026年11月10日前**获得雅思6.5（小分6分）或PTE 64分以上成绩。\n- 能入选所述昆士兰大学计算机专业交换项目的同学优先。\n\n通知另提到“两年内雅思成绩更好”，未说明具体优先规则；疑问可按原通知联系老师。",
     "evidence": [

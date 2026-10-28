@@ -1,13 +1,13 @@
 {
-  "kind": "candidate-configuration-snapshot",
-  "configurationChecked": false,
+  "kind": "deployed-configuration-snapshot",
+  "configurationChecked": true,
   "runtimeEndpointLiveVerified": false,
   "schemaVersion": 1,
-  "generatedAt": "2026-10-28T06:35:29.891529+00:00",
+  "generatedAt": "2026-10-28T14:41:12.082774+08:00",
   "readOnly": true,
   "timeZone": "Asia/Shanghai",
-  "status": "pending-deployment",
-  "notice": "2026-10-28 用户新标准候选，线上以后台实际运行值为准。",
+  "status": "deployed-configuration",
+  "notice": "按下表当前生效值执行。金额不再拦截，次数和其他限制继续保留。",
   "effective": {
     "ai": {
       "dailyOrganize": 100,
@@ -1122,5 +1122,6 @@
   "sourceCommit": "bcb12b6a75319fb796b6df6174e26283283e8d88",
   "effectiveAt": "2026-10-27T21:29:04+08:00",
   "observedAt": "2026-10-27T21:33:03.191951+08:00",
-  "verificationScope": "active process environment and deployed policy source; live download gate and auth image timing; no signed-in admin session"
+  "verificationScope": "active process environment and deployed policy source; live download gate and auth image timing; no signed-in admin session",
+  "deploymentCommit": "cd07cf526b31d9febbb74323890d3fb959297a59"
 }
