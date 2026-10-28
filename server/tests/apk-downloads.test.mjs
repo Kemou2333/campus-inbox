@@ -278,3 +278,17 @@ test('raising the APK limits retains old200MB reservations and five prior IP sta
  assert.equal((await s.state()).reservedBytes,200000000+3*s.bytes.length);assert.equal((await s.state()).downloads[ipKey].length,8);
  await s.restart();const url=await s.ticket(ip),blocked=await s.request(url,{ip});assert.equal(blocked.status,429);assert.equal((await s.state()).reservedBytes,200000000+3*s.bytes.length);assert.equal((await s.state()).downloads[ipKey].length,8);
 });
+
+
+test('permanent download entry resolves the newest stable release without bypassing verification',async t=>{
+ const s=await fixture();t.after(s.close);
+ const entry=v=>({...s.release,version:v,filename:'campus-inbox-'+v+'.apk',github:'https://github.com/Kemou2333/note-inbox/releases/download/android-v'+v+'/campus-inbox-'+v+'.apk'});
+ await writeFile(s.releaseManifestFile,JSON.stringify({schemaVersion:1,releases:[entry('2.9.0'),entry('2.10.0'),s.release]}));
+ const first=await s.request('/downloads/');assert.equal(first.status,303);assert.equal(first.headers.location,origin+'/downloads/android-v2.27.1/campus-inbox-2.27.1.apk');assert.equal(first.headers['cache-control'],'no-store, private');assert.equal(first.bytes.length,0);
+ await assert.rejects(readFile(s.stateFile),{code:'ENOENT'});
+ await writeFile(s.releaseManifestFile,JSON.stringify({schemaVersion:1,releases:[entry('3.0.0'),s.release]}));
+ const next=await s.request('/downloads/',{method:'HEAD'});assert.equal(next.status,303);assert.equal(next.headers.location,origin+'/downloads/android-v3.0.0/campus-inbox-3.0.0.apk');assert.equal(next.bytes.length,0);
+ assert.equal((await s.request('/downloads/',{method:'POST'})).status,405);
+ const verification=await s.request(path);assert.equal(verification.status,200);assert.match(verification.text,/四位数字验证码/);assert.notEqual(verification.headers['content-type'],'application/vnd.android.package-archive');
+ await writeFile(s.releaseManifestFile,'{"schemaVersion":1,"releases":[]}');assert.equal((await s.request('/downloads/')).status,503);
+});

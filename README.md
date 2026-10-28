@@ -2,7 +2,7 @@
 
 粘贴大学群通知，让AI自动拆成待办卡片并形成个人待办清单，从此告别反复翻群消息。
 
-[打开网页版](https://kemou.top:88) · [GitHub 备用网页](https://kemou2333.github.io/note-inbox/) · [安卓下载](https://kemou.top:88/downloads/android-v2.28.2/campus-inbox-2.28.2.apk)
+[打开网页版](https://kemou.top:88) · [GitHub 备用网页](https://kemou2333.github.io/note-inbox/) · [安卓下载](https://kemou.top:88/downloads/)
 
 刚上大一，班群、学院群和课程群每天都有大段通知。当时扫一眼觉得记住了，过两天真要办的时候，又得往上翻半天聊天记录找截止时间和详细要点。于是，我做了“拾笺 · Note Inbox”这个项目，想帮自己和身边的同学省掉反复翻群消息的麻烦。
 

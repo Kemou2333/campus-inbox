@@ -127,12 +127,22 @@ export async function createAPKDownloads(config,options={}){
   function ledger(action){const run=queue.catch(()=>{}).then(async()=>{if(unavailable||closed)throw new Error('APK downloads unavailable');prune(now());return action();});queue=run.catch(()=>{});return run;}
   async function releases(){return validateManifest(await readSmallJSON(config.releaseManifestFile,65536));}
   async function releaseFor(version){return (await releases()).get(version);}
+  async function newestRelease(){
+    const approved=[...(await releases()).values()];
+    approved.sort((left,right)=>{const a=left.version.split('.').map(Number),b=right.version.split('.').map(Number);for(let i=0;i<3;i++)if(a[i]!==b[i])return b[i]-a[i];return 0;});
+    return approved[0];
+  }
+  async function latestEntry(req,res,publicOrigin){
+    if(!['GET','HEAD'].includes(req.method)){res.setHeader('Allow','GET, HEAD');return html(req,res,405,'请使用浏览器打开下载地址。');}
+    try{
+      const release=await newestRelease();securityHeaders(res,undefined,publicOrigin);
+      res.statusCode=303;res.setHeader('Location',publicOrigin+pathnameFor(release));res.setHeader('Content-Length','0');res.end();
+    }catch{html(req,res,503,'下载目录暂时不可用，请稍后再试。');}
+  }
   async function latest(req,res,publicOrigin){
     if(!['GET','HEAD'].includes(req.method)){res.setHeader('Allow','GET, HEAD');return html(req,res,405,'请使用浏览器读取更新信息。');}
     try{
-      const approved=[...(await releases()).values()];
-      approved.sort((left,right)=>{const a=left.version.split('.').map(Number),b=right.version.split('.').map(Number);for(let i=0;i<3;i++)if(a[i]!==b[i])return b[i]-a[i];return 0;});
-      const release=approved[0],body=JSON.stringify({version:release.version,aliyun:publicOrigin+pathnameFor(release),github:githubForOrigin(release.version,publicOrigin),lanzou:null,sizeBytes:release.size,sha256:release.sha256});
+      const release=await newestRelease(),body=JSON.stringify({version:release.version,aliyun:publicOrigin+pathnameFor(release),github:githubForOrigin(release.version,publicOrigin),lanzou:null,sizeBytes:release.size,sha256:release.sha256});
       securityHeaders(res,undefined,publicOrigin);res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Content-Length',Buffer.byteLength(body));res.end(req.method==='HEAD'?undefined:body);
     }catch{html(req,res,503,'更新信息暂时不可用，请稍后再试。');}
   }
@@ -221,6 +231,7 @@ export async function createAPKDownloads(config,options={}){
       if(!publicOrigin)return html(req,res,400,'下载站点地址不正确，请使用正式下载入口。');
       // Release discovery is public, bounded and independent of the download
       // traffic ledger. It remains available after the day's bytes are spent.
+      if(req.url==='/downloads/')return await latestEntry(req,res,publicOrigin);
       if(req.url==='/downloads/android-latest.json')return await latest(req,res,publicOrigin);
       if(typeof req.url==='string'&&req.url.startsWith('/downloads/android-latest.json?'))return html(req,res,400,'更新信息地址不接受参数。');
       const ip=validIP(verifiedIP);if(!ip)return html(req,res,400,'无法确认下载网络，请稍后再试。');

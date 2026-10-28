@@ -12,8 +12,8 @@ export function AndroidDownloads({compact=false}:{compact?:boolean}){
  return <Box className="android-downloads" sx={{mt:compact?1.5:2.5,p:compact?1.5:2,bgcolor:'action.hover',borderRadius:2}}>
   <Stack direction="row" sx={{alignItems:'baseline',gap:1,mb:1,flexWrap:'wrap'}}><Typography sx={{fontWeight:700}}>安卓手机版</Typography><Typography variant="caption" color="text.secondary">{release.version}{release.sizeBytes?` · ${(release.sizeBytes/1048576).toFixed(1)} MB`:''}</Typography></Stack>
   <Stack direction="row" sx={{gap:1,flexWrap:'wrap'}}>
-   {release.primary&&<Button component="a" variant="contained" href={release.primary} target="_blank" rel="noopener noreferrer" startIcon={<DownloadOutlined/>}>主下载</Button>}
-   {release.aliyun&&<Button component="a" variant={release.primary?'outlined':'contained'} href={release.aliyun} target="_blank" rel="noopener noreferrer" startIcon={release.primary?undefined:<DownloadOutlined/>}>{release.primary?'阿里云备用':'阿里云下载'}</Button>}
+   {release.primary&&<Button component="a" variant="contained" href="https://kemou.top:88/downloads/" target="_blank" rel="noopener noreferrer" startIcon={<DownloadOutlined/>}>主下载</Button>}
+   {release.aliyun&&<Button component="a" variant={release.primary?'outlined':'contained'} href="https://123.57.30.129/downloads/" target="_blank" rel="noopener noreferrer" startIcon={release.primary?undefined:<DownloadOutlined/>}>{release.primary?'阿里云备用':'阿里云下载'}</Button>}
    {!release.aliyun&&release.lanzou&&<Button component="a" variant="contained" href={release.lanzou} target="_blank" rel="noopener noreferrer" startIcon={<DownloadOutlined/>}>蓝奏下载</Button>}
    <Button component="a" variant={release.primary||release.aliyun||release.lanzou?'outlined':'contained'} href={release.github} target="_blank" rel="noopener noreferrer" startIcon={release.primary||release.aliyun||release.lanzou?undefined:<DownloadOutlined/>}>{release.primary||release.aliyun||release.lanzou?'GitHub 备用':'下载安卓版'}</Button>
   </Stack>
