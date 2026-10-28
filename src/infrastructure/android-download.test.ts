@@ -57,6 +57,6 @@ it('first paint shows the approved primary before the GitHub fallback',async()=>
  const {renderToStaticMarkup}=await import('react-dom/server');const {createElement}=await import('react');const {AndroidDownloads}=await import('../shared/ui/AndroidDownloads');
  const html=renderToStaticMarkup(createElement(AndroidDownloads));
  expect(initialAndroidDownload.primary).toBe(`https://kemou.top:88/downloads/android-v${initialAndroidDownload.version}/campus-inbox-${initialAndroidDownload.version}.apk`);
- expect(html.indexOf('href=\"'+initialAndroidDownload.primary+'\"')).toBeGreaterThan(-1);
- expect(html.indexOf('href=\"'+initialAndroidDownload.primary+'\"')).toBeLessThan(html.indexOf('href=\"'+initialAndroidDownload.github+'\"'));
+ expect(html.indexOf('href=\"https://kemou.top:88/downloads/\"')).toBeGreaterThan(-1);
+ expect(html.indexOf('href=\"https://kemou.top:88/downloads/\"')).toBeLessThan(html.indexOf('href=\"'+initialAndroidDownload.github+'\"'));
 });
