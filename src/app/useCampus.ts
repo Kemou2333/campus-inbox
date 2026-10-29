@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {createLocalRepository} from '../infrastructure/local-repository';
 import {createLocalDemoRepository} from '../infrastructure/local-demo-repository';
 import {NoticeTrash,TRASH_KEY_PREFIX} from '../infrastructure/notice-trash';
@@ -20,7 +20,7 @@ import {AnalysisJobsClient,AnalysisJobJournal,submitAnalysisJob,withoutSubmitted
 import {addFiles, cleanupFiles, exportFiles, getFile, MAX_NOTICE_FILES, MAX_NOTICE_FILE_BYTES} from '../infrastructure/attachment-store';
 import {importNoticeBackup} from '../infrastructure/backup-import';
 import {createNotice, exportBackup, exportTextBackup, newID, parseAnalysisBatch, parseNotices} from '../domain/notice';
-import {mergeExamples,selectExampleBatch,writeExamplesHidden} from '../domain/examples';
+import {mergeExamples,refreshLoadedExamples,selectExampleBatch,writeExamplesHidden} from '../domain/examples';
 import {createExampleCatalog} from '../infrastructure/example-catalog';
 import {planExampleReset} from '../domain/reset-examples';
 import {keepFirstPractice} from '../features/onboarding/keep-practice';
@@ -472,6 +472,15 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
  function recoverResult(){try{const raw=localStorage.getItem(RESULT_KEY);const value=resultRef.current||(raw?JSON.parse(raw):null);if(value)commitResult(value);}catch(e){report(e);}}
  function recoverLegacyResult(){try{const current=repository.load();save([...current,...legacyRecords.filter(n=>!current.some(old=>old.id===n.id))]);finishLegacyResult(localStorage,sessionStorage);setLegacyRecords([]);tell('旧版整理结果已保存');}catch(e){report(e);}}
  async function exportLegacyWork(){const result=await platform.saveFile(new Blob([legacyWork.text],{type:'text/plain;charset=utf-8'}),'campus-inbox-old-drafts.txt');if(result.status!=='cancelled')tell('旧版草稿已导出');}
+ const prefetchExamples=useCallback(async()=>{
+  const scope=localDataScopeRef.current;
+  const {records,registry}=await exampleCatalog.load();
+  if(scope!==localDataScopeRef.current)return;
+  const current=repository.load(),merged=await refreshLoadedExamples(current,records,registry);
+  // No new examples are imported, and edits/account changes during hashing win.
+  if(!merged.replaced||scope!==localDataScopeRef.current||JSON.stringify(repository.load())!==JSON.stringify(current))return;
+  repository.save(merged.notices);setNotices(merged.notices);
+ },[exampleCatalog,repository]);
  async function loadExamples(limit=7,quiet=false){
   const scope=localDataScopeRef.current;
   const {records,registry}=await exampleCatalog.load();
@@ -549,6 +558,6 @@ export function useCampus(options:Pick<AnalyzeOptions,'onHumanVerification'>={})
   return result;
  }
  return {notices,drafts,remainingExamples,localDataScope,trashItems,restoreTrash,deleteTrashEntry,emptyTrash,unreadNoticeIDs,markNoticeRead,clearUnreadNotices,demoDraftID:drafts.some(d=>d.text.trim())&&drafts.filter(d=>d.text.trim()).every(isGuestDemoDraft)?drafts.find(isGuestDemoDraft)?.id??null:null,busy,stage,retryAt,error,setError,toast,setToast,pending,recoverResult,latestAddedID,analysisJobs,unconfirmedSubmissions,jobStatusError,refreshAnalysisJobs,restoreAnalysisJob,saveAnalysisJob,confirmAnalysisSubmission,legacyWork,legacyRecords,legacyMissingFiles,setLegacyMissingFiles,recoverLegacyResult,exportLegacyWork,config,platform,capabilities,cloud,auth,authOptions,email,sync,username,theme,setTheme,preferences,setPreferences,bootError:boot.error,
-  report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,fillDemoDraft,keepGuidePractice,attach,detach,removeDraft,analyze,analyzeDemo,askQuestion,cancel:()=>abort.current?.abort(),loadExamples,prefetchExamples:exampleCatalog.prefetch,resetExamples,loadModelTests,modelTestMode,setModelTestMode,modelTestFailureCount,backup,importBackup,login,logout,bindEmail,receiveShare};
+  report,tell,update,act,remove,changeDraft,pasteDraft,insertDraft,addDraft,fillDemoDraft,keepGuidePractice,attach,detach,removeDraft,analyze,analyzeDemo,askQuestion,cancel:()=>abort.current?.abort(),loadExamples,prefetchExamples,resetExamples,loadModelTests,modelTestMode,setModelTestMode,modelTestFailureCount,backup,importBackup,login,logout,bindEmail,receiveShare};
 }
 export type CampusController=ReturnType<typeof useCampus>;

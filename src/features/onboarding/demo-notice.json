@@ -14,14 +14,14 @@
         "scope": "conditional",
         "condition": "本科生",
         "details": [
-          "**课程结束前**完成，评价**匿名**。"
+          "在**课程结束前**完成；评价以**匿名**方式反馈。"
         ],
         "steps": [
           {
             "text": "进入评教系统",
             "details": [
-              "微信关注 **重庆大学服务号** → **功能 → 评教**。",
-              "用统一认证号和密码登录，也可扫码。"
+              "微信关注 **重庆大学服务号**，依次进入 **功能 → 评教**。",
+              "使用**统一认证号和密码**登录，也可扫码进入。"
             ],
             "id": "4d4eb3c9-9d25-43d7-b938-510cf793d5bc",
             "completed": false,
@@ -40,13 +40,13 @@
     ],
     "materials": [],
     "warnings": [
-      "忘记密码时，在统一认证页点“忘记密码”找回。"
+      "忘记密码时，在统一认证页面点**忘记密码**找回。"
     ],
     "reminders": [],
     "id": "example-reading-v25-5",
     "originalText": "本科生评教已开放，请在课程结束前完成。2026—2027学年第一学期评教通知见QQ群文件。\n\n微信关注“重庆大学服务号” → 功能 → 评教，使用统一认证号和密码登录，也可扫码进入。\n忘记密码可在统一认证页面找回。评价以匿名方式反映，请放心填写。",
     "createdAt": "2026-10-08T16:16:59.589Z",
-    "updatedAt": "2026-10-23T00:00:00.000Z",
+    "updatedAt": "2026-10-29T00:30:28.596Z",
     "completed": false,
     "dismissed": false,
     "note": "",
@@ -70,11 +70,11 @@
     "manualPrivacyEdits": true,
     "manualContentCorrections": false,
     "publishedOriginalSha256": "07ea43798eb595f66afa711fb6fba7eba3aed393b1b1cc2713174b21798d638e",
-    "publishedRecordSha256": "4c2e3a2b858fed0ebdb6ae19de6838e722a3d725b17aafb309f85afa1f65fc4d",
+    "publishedRecordSha256": "c5c01bbd48518a391df55413a5c9b61e3fd3096943244ab3b77a856ff60bb608",
     "manualIdentityReview": true,
     "manualPresentationEdits": true,
-    "presentationRevision": "2026-10-23-polished-examples",
-    "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+    "presentationRevision": "2026-10-29-clear-copy",
+    "presentationEditScope": "Display copy manually reorganized into brief audience labels, short points and selective Markdown emphasis. Original inputs, dates, roles, IDs and state remain unchanged.",
     "sourceKind": "human-curated-public-example",
     "manualSourcePresentationEdits": true,
     "previousPublishedOriginalSha256": "2427577d4c6eec8bd1595742ff0518b4ccfcf85cff6d66d4b334a9db1364817b"

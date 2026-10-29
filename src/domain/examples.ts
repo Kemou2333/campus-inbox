@@ -94,6 +94,12 @@ export async function mergeExamples(current:Notice[],incoming:Notice[],legacyReg
   return {notices:[...retained,...additions],added:additions.length,replaced:removable.size};
 }
 
+/** Quiet copy updates can replace only already loaded, exact built-in IDs. */
+export function refreshLoadedExamples(current:Notice[],catalog:Notice[],legacyRegistry:unknown){
+ const loaded=new Set(current.filter(isExampleNotice).map(notice=>notice.id));
+ return mergeExamples(current,catalog.filter(notice=>loaded.has(notice.id)),legacyRegistry);
+}
+
 /** Refresh only loaded built-ins and add a small batch; a partial catalog must never remove unrelated examples. */
 export function selectExampleBatch(current:Notice[],catalog:Notice[],limit=7){
  catalog=showcaseOrder(selectableExamples(catalog));

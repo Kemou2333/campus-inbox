@@ -1,7 +1,7 @@
 import {describe,expect,test} from 'vitest';
 import {readFile} from 'node:fs/promises';
 import {auditPublicExamples} from '../scripts/verify-example-privacy.mjs';
-import {exampleFingerprint,mergeExamples,selectExampleBatch,sortExampleNotices,TUTORIAL_EXAMPLE_ID} from '../src/domain/examples';
+import {exampleFingerprint,mergeExamples,refreshLoadedExamples,selectExampleBatch,sortExampleNotices,TUTORIAL_EXAMPLE_ID} from '../src/domain/examples';
 import {createNotice,parseBackup} from '../src/domain/notice';
 import type {Notice,NoticeAnalysis} from '../src/domain/types';
 
@@ -239,4 +239,28 @@ test('showcase starts with clear course and step examples without changing perso
  expect(sortExampleNotices([old,course],'priority',Date.parse('2026-10-27T00:00:00Z'))[0].id).toBe(course.id);
  expect(sortExampleNotices([old,course],'newest').map(n=>n.id)).toEqual([course.id,old.id]);
  expect(JSON.stringify(catalog)).toBe(before);
+});
+
+
+test('quiet copy refresh replaces untouched loaded examples without importing unseen ones or changing edits',async()=>{
+ const a={...old(),id:'example-reading-v25-0',originalText:'第一条原文'},b={...old(),id:'example-reading-v25-1',originalText:'第二条原文'};
+ const edited={...b,note:'我的笔记'},personal={...old(),id:'my-notice',originalText:'我的原文'};
+ const incoming=[fresh(a.originalText,a.id),fresh(b.originalText,b.id),fresh('尚未载入','example-reading-v25-2')];
+ const signatures=[...await registry(a),...await registry(b)];
+ const result=await refreshLoadedExamples([a,edited,personal],incoming,signatures);
+ expect(result.replaced).toBe(1);expect(result.notices).toContainEqual(incoming[0]);
+ expect(result.notices).toContainEqual(edited);expect(result.notices).toContainEqual(personal);
+ expect(result.notices.map(n=>n.id).sort()).toEqual([a.id,b.id,personal.id].sort());
+ expect(await refreshLoadedExamples([],incoming,signatures)).toEqual({notices:[],added:0,replaced:0});
+ const completed=structuredClone(a);completed.tasks[0].completed=true;
+ expect(await refreshLoadedExamples([completed],incoming,signatures)).toEqual({notices:[completed],added:0,replaced:0});
+});
+
+test('curated copy keeps audience labels brief and leaves Markdown emphasis in rich-text fields',async()=>{
+ const rows=parseBackup(JSON.parse(await readFile(new URL('../public/examples.json',import.meta.url),'utf8')));
+ for(const notice of rows){
+  for(const task of notice.tasks){expect(Array.from(task.condition).length).toBeLessThanOrEqual(24);expect(task.condition).not.toContain('**');}
+  const body=[...notice.tasks.flatMap(task=>[...task.details,...task.steps.flatMap(step=>step.details)]),...notice.materials,...notice.warnings,...notice.reminders.map(reminder=>reminder.text)].join('\n');
+  expect(body,notice.id).toContain('**');
+ }
 });

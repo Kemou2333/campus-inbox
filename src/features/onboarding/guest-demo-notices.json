@@ -13,13 +13,13 @@
           "text": "完成报名",
           "assignee": "2026级新同学",
           "scope": "conditional",
-          "condition": "2026级新同学，男女均可，有篮球爱好",
+          "condition": "2026级新生（有篮球爱好）",
           "details": [],
           "steps": [
             {
               "text": "加入纳新群",
               "details": [
-                "QQ群：1234XXXX。"
+                "**纳新QQ群**：1234XXXX，可先入群咨询。"
               ],
               "id": "example-reading-v211-1-task-0-step-0",
               "completed": false,
@@ -28,7 +28,7 @@
             {
               "text": "填写预选报名表",
               "details": [
-                "“重大杯本科生院篮球队预选信息收集表”：www.example.com/forms/basketball-signup。"
+                "填写**重大杯本科生院篮球队预选信息收集表**：\nwww.example.com/forms/basketball-signup"
               ],
               "id": "example-reading-v211-1-task-0-step-1",
               "completed": false,
@@ -47,7 +47,7 @@
       ],
       "materials": [],
       "warnings": [
-        "男女均可参加，**赛制不同**；可先入群咨询。"
+        "**男女均可参加**，男、女生的**赛制不同**。"
       ],
       "reminders": [],
       "deadlineSpec": {
@@ -63,7 +63,7 @@
       "id": "example-reading-v211-1",
       "originalText": "【2026重大杯本科生院篮球队招新】\n面向2026级有篮球爱好的新同学，男女均可参加，赛制不同。\n\n报名步骤：\n1. 加入纳新QQ群：1234XXXX，可先入群咨询。\n2. 填写“重大杯本科生院篮球队预选信息收集表”：\nwww.example.com/forms/basketball-signup\n\n截止时间：10 月14日23:59。请在截止前完成报名。",
       "createdAt": "2026-10-12T06:08:05.588Z",
-      "updatedAt": "2026-10-23T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:30:28.596Z",
       "completed": false,
       "dismissed": false,
       "note": "",
@@ -90,7 +90,7 @@
       "manualContentCorrections": true,
       "privacyPreparation": "The browser submitted the existing manually-redacted public original. Every returned field was manually checked; no additional semantic or privacy wording edits were needed.",
       "publishedOriginalSha256": "5b4c056f59ef4a2a62beeb29e0a5fbda3b8303aa1ec345d40c311279dd49655a",
-      "publishedRecordSha256": "4a1ec3f4bac28bd1183417b3427b6d83cf993233fbb2a90eb5262e7a03a7bea0",
+      "publishedRecordSha256": "38d79abbc380a029b618f601e1d435e20c499bd59b7f87fa25c5d2deb66c9218",
       "providerCalled": true,
       "cacheReuse": false,
       "realProviderCalls": 1,
@@ -115,8 +115,8 @@
         "Browser completion includes polling and sync delay; it differs from server/provider elapsed time."
       ],
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-23-polished-examples",
-      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "presentationRevision": "2026-10-29-clear-copy",
+      "presentationEditScope": "Display copy manually reorganized into brief audience labels, short points and selective Markdown emphasis. Original inputs, dates, roles, IDs and state remain unchanged.",
       "privacyRevision": "2026-10-21-natural-placeholders",
       "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
       "sourceKind": "human-curated-public-example",
@@ -148,10 +148,10 @@
           "text": "申报SRTP项目",
           "assignee": null,
           "scope": "conditional",
-          "condition": "2026级申报SRTP项目的同学",
+          "condition": "2026级申报同学",
           "details": [
-            "平台：新版重庆大学大学生创新创业项目管理平台 www.example.com/projects/srtp。",
-            "**二选一**：选老师已有项目，自行找队友；或自己拟题，联系指导老师并招募队友。"
+            "**申报平台**：新版重庆大学大学生创新创业项目管理平台\nwww.example.com/projects/srtp",
+            "**组队方式二选一**\n1. 选择老师发布的现有项目，自找队友。\n2. 自己拟题，联系指导老师并招募队友。"
           ],
           "steps": [],
           "time": null,
@@ -166,13 +166,13 @@
       ],
       "materials": [],
       "warnings": [
-        "通知入口需用**校园网**；结题可获**2个创新学分**，满足毕业创新学分要求。",
-        "原则上完成校级SRTP后，大二才可申报国家级、市级大创。"
+        "**通知入口需校园网**：www.example.com/notices/srtp-2026\n\n结题可获**2个创新学分**，满足毕业创新学分要求。",
+        "**后续申报资格**：原则上完成校级SRTP后，大二才可申报国家级、市级大创。"
       ],
       "reminders": [
         {
           "id": "54b2533d-add3-4468-b4c3-323990e89d00",
-          "text": "可获得基础科研训练经历，为后续竞赛、保研、进课题组打基础。",
+          "text": "**科研训练**：可为后续竞赛、保研和进入课题组打基础。",
           "note": ""
         }
       ],
@@ -188,7 +188,7 @@
       "id": "example-reading-v25-2",
       "originalText": "【2026级SRTP项目申报】\n申报已启动，截止：2026年10月20日24:00。\n通知：www.example.com/notices/srtp-2026（需校园网）\n平台：新版重庆大学大学生创新创业项目管理平台\nwww.example.com/projects/srtp\n\n组队方式二选一：选老师发布的现有项目，自找队友；或自己拟题、联系指导老师并招募队友。\n\n结题可获2个创新学分，满足毕业创新学分要求。科研训练可为竞赛、保研和进课题组打基础；原则上完成校级SRTP后，大二才有资格申报国家级、市级大创。",
       "createdAt": "2026-10-08T16:16:56.211Z",
-      "updatedAt": "2026-10-23T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:30:28.596Z",
       "completed": false,
       "dismissed": false,
       "note": "",
@@ -215,11 +215,11 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "7412540aa2f1f92b55d958a580b9f7802032670d224c783d525375d1d345c8bc",
-      "publishedRecordSha256": "0960e823169449520b9bcdc4b0797706599a99eaa7444d567cd985af3bc6fc20",
+      "publishedRecordSha256": "d1053256dec8f66fd3b8491a6ce62eb6a10dbb303ca56c9d1e674f727e566902",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-23-polished-examples",
-      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "presentationRevision": "2026-10-29-clear-copy",
+      "presentationEditScope": "Display copy manually reorganized into brief audience labels, short points and selective Markdown emphasis. Original inputs, dates, roles, IDs and state remain unchanged.",
       "privacyRevision": "2026-10-21-natural-placeholders",
       "privacyEditScope": "Human privacy-only substitutions: familiar fictional names, X-masked contact/group numbers and reserved example.com addresses with distinct semantic paths. Historical provider/source hashes are preserved; dates, requirements and the conflicting platform entrypoints are not repaired.",
       "sourceKind": "human-curated-public-example",
@@ -250,24 +250,24 @@
       "reminders": [
         {
           "id": "7e8683c9-e980-4ba0-9ed7-275ab28a8ec9",
-          "text": "关闭排插、拔掉电器插头，关紧水龙头等阀门。",
+          "text": "**断电关水**：关闭排插、拔掉电器插头，关紧水龙头等阀门。",
           "note": ""
         },
         {
           "id": "9d02a2e6-431c-453b-8ae3-514142713374",
-          "text": "反锁门、锁好窗；低层宿舍尤其注意。",
+          "text": "**锁好门窗**：反锁宿舍门，锁好窗；**低层宿舍尤其注意**。",
           "note": ""
         },
         {
           "id": "3e2f1f90-c8b6-4af4-b68e-e2301bd87aed",
-          "text": "贵重物品和证件随身带；清理易变质食品，其余物品有序收纳。",
+          "text": "**收好物品**：贵重物品、证件随身携带；清理易变质食品，其余物品有序收纳。",
           "note": ""
         }
       ],
       "id": "example-reading-v25-4",
       "originalText": "【军训期间宿舍安全提醒】\n宿舍长期无人，离开前请检查：\n1. 关闭排插、拔掉电器插头，关紧水龙头等阀门。\n2. 反锁门、锁好窗，低层宿舍尤其注意。\n3. 贵重物品和证件随身带，清理易变质食品，其余物品有序收纳。",
       "createdAt": "2026-10-08T16:16:59.589Z",
-      "updatedAt": "2026-10-23T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:30:28.596Z",
       "completed": false,
       "dismissed": false,
       "note": "",
@@ -296,11 +296,11 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": true,
       "publishedOriginalSha256": "eb28c0ccedd119610fddd9a8c221ea311534e85526e6f8d9967bd2b9a07d19f6",
-      "publishedRecordSha256": "1fca2a099b00ee4c344107938d79ba47d1888da743bab51b3b606944f6d0f986",
+      "publishedRecordSha256": "5d61989e9bc8ddb0dd594b44e9edae341eec46b7ef1a1e15a9c45f323d856b43",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-23-polished-examples",
-      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "presentationRevision": "2026-10-29-clear-copy",
+      "presentationEditScope": "Display copy manually reorganized into brief audience labels, short points and selective Markdown emphasis. Original inputs, dates, roles, IDs and state remain unchanged.",
       "sourceKind": "human-curated-public-example",
       "manualSourcePresentationEdits": true,
       "previousPublishedOriginalSha256": "9e7b5853ccadc824ae4f3353d9677c9bb92db82986ba8001a60e09f8f8ae8e40",
@@ -344,14 +344,14 @@
       "tasks": [],
       "materials": [],
       "warnings": [
-        "到账短信**不等于学费已缴**，处理中显示欠费属正常；入账时一并结算新增学分学费。",
-        "回执录入后又自行缴纳学费或住宿费造成重复缴费的，入账完成后统一退至财务系统绑定银行卡。"
+        "**到账短信不等于学费已缴**：处理中仍显示欠费属正常情况；学校入账时一并结算本科生新增学分学费。",
+        "**重复缴费退款**：学校录入回执后又自行缴纳学费或住宿费的，入账完成后由财务处统一退至**财务系统绑定的银行卡**。"
       ],
       "reminders": [],
       "id": "example-reading-v25-3",
       "originalText": "【生源地助学贷款入账】\n国家开发银行贷款陆续发放。到账短信不等于学费已缴，仍显示欠费属正常情况。\n学校预计十月中旬完成入账，并一并结算本科生新增学分学费。\n\n若学校录入回执后又自行缴纳学费或住宿费，可能重复缴费。财务处将在入账完成后，统一退还至学生财务系统绑定的银行卡。",
       "createdAt": "2026-10-08T16:16:59.589Z",
-      "updatedAt": "2026-10-23T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:30:28.596Z",
       "completed": false,
       "dismissed": false,
       "note": "",
@@ -375,11 +375,11 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "9b20a6669bb1c4064c5d46b3f559dc90d31fcf6ee09f6d6d35ccb6889e07298e",
-      "publishedRecordSha256": "c8c1195983b67b355ab1285fdd14c1729e77d683c45a802090fbc9dd744d096d",
+      "publishedRecordSha256": "a399e00d4c17311973322fafcaa734fccb57850a30d53ed540026b355811a4ae",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-23-polished-examples",
-      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "presentationRevision": "2026-10-29-clear-copy",
+      "presentationEditScope": "Display copy manually reorganized into brief audience labels, short points and selective Markdown emphasis. Original inputs, dates, roles, IDs and state remain unchanged.",
       "sourceKind": "human-curated-public-example",
       "manualSourcePresentationEdits": true,
       "previousPublishedOriginalSha256": "6ba802cc228eb97fb93e1d73d66823d4e47629903caa8d367c732d869b0b8d69"
@@ -407,10 +407,11 @@
           "text": "报名操作系统训练营",
           "assignee": null,
           "scope": "conditional",
-          "condition": "面向所有大一新生以及对操作系统课程感兴趣的其他专业高年级同学",
+          "condition": "大一新生及感兴趣的高年级同学",
           "details": [
-            "主办：“101计划”操作系统课程虚拟教研室、全国大学生计算机系统能力大赛操作系统设计赛技术委员会。",
-            "特别欢迎**大一、大二**，不限计算机专业；为国赛和区域赛储备力量。"
+            "**报名范围**：所有大一新生；对操作系统感兴趣的其他专业高年级同学。",
+            "**专业不限**，特别欢迎**大一、大二**；为后续国赛和区域赛储备力量。",
+            "**主办单位**\n- “101计划”操作系统课程虚拟教研室。\n- 全国大学生计算机系统能力大赛操作系统设计赛技术委员会。"
           ],
           "steps": [],
           "time": null,
@@ -429,7 +430,7 @@
       "id": "example-reading-v211-3",
       "originalText": "【2026年操作系统基础训练营】\n“101计划”操作系统课程虚拟教研室与全国大学生计算机系统能力大赛操作系统设计赛技术委员会联合举办，欢迎报名。\n\n面向所有大一新生，以及对操作系统感兴趣的其他专业高年级同学；特别欢迎大一、大二，不限计算机专业，为国赛和区域赛储备力量。",
       "createdAt": "2026-10-12T06:08:52.961Z",
-      "updatedAt": "2026-10-23T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:30:28.596Z",
       "completed": false,
       "dismissed": false,
       "note": "",
@@ -453,7 +454,7 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "0b608ee419b86e196add0752db4f095a0472207436c48ca22d8e954a4bd2badc",
-      "publishedRecordSha256": "b5243791c0e5dc5cd55fa77754504304472a5d78763061e6f21cf60019e49288",
+      "publishedRecordSha256": "fdf1e4a5affd180d59174326921df782664d175fbe47aebfc863bc092e2c13c3",
       "firstResponseValidation": "accepted_by_backend; offline revalidated without provider request",
       "providerElapsedMs": 11104,
       "tokens": {
@@ -466,8 +467,8 @@
       "costBasis": "conservative estimate, not supplier invoice",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-23-polished-examples",
-      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "presentationRevision": "2026-10-29-clear-copy",
+      "presentationEditScope": "Display copy manually reorganized into brief audience labels, short points and selective Markdown emphasis. Original inputs, dates, roles, IDs and state remain unchanged.",
       "sourceKind": "human-curated-public-example",
       "manualSourcePresentationEdits": true,
       "previousPublishedOriginalSha256": "a3ccf48794db1252c9d6576fd9390cdbaae51e2fdf57ad6b181d5eb6115d8cda"
@@ -495,15 +496,17 @@
           "text": "参加竞选面试",
           "assignee": null,
           "scope": "conditional",
-          "condition": "2026级示例专业1-10班参与班干部竞选的同学",
+          "condition": "参加竞选的2026级同学",
           "details": [
-            "无领导小组讨论（群面）；准备**1分钟以内**自我介绍。"
+            "**范围**：示例专业1–10班参加班干部竞选的同学。",
+            "**形式**：无领导小组讨论（群面）。",
+            "**准备**：1分钟以内的自我介绍。"
           ],
           "steps": [
             {
               "text": "提前到场签到",
               "details": [
-                "提前**5分钟**到候场教室A8211。"
+                "提前**5分钟**到候场教室**A8211**签到。"
               ],
               "id": "5e6dedab-f12f-4ad9-b43a-ea525e14650f",
               "completed": false,
@@ -512,7 +515,7 @@
             {
               "text": "进入面试教室",
               "details": [
-                "面试教室：A8213、A8214；分组和教室安排见图片。"
+                "面试教室为**A8213、A8214**，具体分组与安排见原图。"
               ],
               "id": "f2893fe4-68b3-4370-b573-d88791cc427a",
               "completed": false,
@@ -540,13 +543,13 @@
       ],
       "materials": [],
       "warnings": [
-        "逾期未到或无故缺席，视为自动放弃竞选资格。"
+        "**逾期未到或无故缺席**，视为自动放弃竞选资格。"
       ],
       "reminders": [],
       "id": "example-reading-v25-11",
       "originalText": "【2026级示例专业1–10班班干部竞选面试】\n时间：2026年9月23日18:00–21:00。\n地点：重庆大学沙坪坝校区八教；候场A8211，面试A8213、A8214，具体分组见图片。\n\n请提前5分钟到候场教室签到，准备1分钟以内的自我介绍。面试采用无领导小组讨论，考察表达、协作、组织统筹与应变能力。\n\n提前规划出行、熟悉场地，遵守秩序、文明礼貌。逾期未到或无故缺席视为自动放弃竞选。",
       "createdAt": "2026-10-08T16:19:09.046Z",
-      "updatedAt": "2026-10-23T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:30:28.596Z",
       "completed": false,
       "dismissed": false,
       "note": "",
@@ -570,11 +573,11 @@
       "manualPrivacyEdits": true,
       "manualContentCorrections": false,
       "publishedOriginalSha256": "c4a9b23b9f4d66b8449d281f4adf15d92282f06d91f248e05b1f80129b9cbcf7",
-      "publishedRecordSha256": "f5755c26fe5a930bc60ffe69bb208a2b878db4e854edb10a0f89b97775835230",
+      "publishedRecordSha256": "2d32d3f37618ac6f57f97c89da00df38eca4b8ed16e3d3b6e4cec9fed8ec8c67",
       "manualIdentityReview": true,
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-23-polished-examples",
-      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "presentationRevision": "2026-10-29-clear-copy",
+      "presentationEditScope": "Display copy manually reorganized into brief audience labels, short points and selective Markdown emphasis. Original inputs, dates, roles, IDs and state remain unchanged.",
       "sourceKind": "human-curated-public-example",
       "manualSourcePresentationEdits": true,
       "previousPublishedOriginalSha256": "f0dc35b9ed053ecfa6b631c6d942038cfdceb00f2fe49804fb7dd54b60129d97"
@@ -620,15 +623,16 @@
           "scope": "conditional",
           "condition": "普通班学生",
           "details": [
-            "报到时核对学校、姓名、学号和**三位数字教学班号**。"
+            "报到时核对**重庆大学、姓名、学号、三位数字教学班号**。"
           ],
           "steps": [
             {
               "text": "完成学堂在线",
               "details": [
-                "电脑用 www.example.com/platforms/xuetangx，手机用学堂在线 APP，进入重庆大学《高等数学II-1》。",
-                "观看**前5章各第1个视频**，提交**1个**高数素材，经教师审核通过计分。",
-                "可交视频、音频、完整题解，或**50字以上**学习感悟与评价。"
+                "**进入课程**：电脑访问 www.example.com/platforms/xuetangx；手机用**学堂在线APP**，搜索重庆大学《高等数学II-1》。",
+                "**观看视频**：前5章，**每章第1个**教学视频；其余视频自选。",
+                "**提交素材**：1份本人原创高数素材，经**教师审核通过**后计分。",
+                "**可选形式**：视频、音频、带完整步骤的题解，或**50字以上**学习感悟与评价。"
               ],
               "id": "example-reading-v213-0-task-0-step-0",
               "completed": false,
@@ -637,9 +641,9 @@
             {
               "text": "完成智慧树检测",
               "details": [
-                "检索《高等数学II-1（高等数学上册）》并报到，进入“作业考试”。",
-                "**12套检测任选5套**提交，系统判分。",
-                "原通知的网址和 APP 有两种写法，请在课程平台**核实入口**。"
+                "**进入任务**：搜索《高等数学II-1（高等数学上册）》，报到后进入**作业考试**。",
+                "**完成检测**：12套中**任选5套**提交，由系统判分。",
+                "**先核实入口**：原通知有**两种写法**；操作说明列知到APP及 www.example.com/platforms/zhihuishu，总述与之不同，使用前请向助教或主讲教师核实。"
               ],
               "id": "example-reading-v213-0-task-0-step-1",
               "completed": false,
@@ -658,24 +662,24 @@
       ],
       "materials": [],
       "warnings": [
-        "**单开重修班**免做全部线上任务，不计该部分分数。",
-        "素材须**本人原创、合规**；抄袭、搬运、侵权或无关内容不计分。",
-        "到期平台关闭，**不接受补交**；建议提前分批完成。"
+        "**单开重修班免做**全部线上任务，也不计这一部分分数。",
+        "素材须**本人原创、合规**；不得抄袭、搬运、侵权或提交无关内容。",
+        "截止后平台关闭，**不接受补交**；建议提前分批完成。"
       ],
       "reminders": [
         {
           "id": "example-reading-v213-0-reminder-0",
-          "text": "两平台分别按百分制计分，综合折算为平时作业中的**5分**。学堂在线任务通过审核得**100分**；智慧树每合格单元**20分**，5个得**100分**。",
+          "text": "**线上计分**：两平台分别按百分制记录，再合计折算为平时作业中的**5分**。\n\n- **学堂在线**：规定任务审核通过，得100分。\n- **智慧树**：每个合格单元20分，完成5个得100分。",
           "note": ""
         },
         {
           "id": "example-reading-v213-0-reminder-1",
-          "text": "普通班：考勤**10%**＋平时作业**15%**（含线上5分）＋半期**20%**＋期末**55%**。\n\n单开重修班：考勤**10%**＋平时作业**10%**＋期末**80%**。",
+          "text": "**普通班**\n- 考勤10%\n- 平时作业15%（含线上5分）\n- 半期20%\n- 期末55%\n\n**单开重修班**\n- 考勤10%\n- 平时作业10%\n- 期末80%",
           "note": ""
         },
         {
           "id": "example-reading-v213-0-reminder-2",
-          "text": "平台有操作演示视频，二维码从官方课程页获取。问题联系本班助教或主讲教师。",
+          "text": "**操作帮助**：查看平台演示视频，登录二维码从**官方课程页**获取。\n\n有疑问联系**本班助教或主讲教师**。",
           "note": ""
         }
       ],
@@ -701,7 +705,7 @@
       "localDeadline": null,
       "audienceOverride": "",
       "attachments": [],
-      "updatedAt": "2026-10-23T00:00:00.000Z",
+      "updatedAt": "2026-10-29T00:30:28.596Z",
       "dismissed": false
     },
     "provenance": {
@@ -734,15 +738,15 @@
       "associatedPaths": 7,
       "unassociatedAfterPrivacy": [],
       "publishedOriginalSha256": "fa7094c3ef9fb808ff06ec30a6d959ab5792435b5c4626795f1f151f82b8e6a9",
-      "publishedRecordSha256": "cec4d8b2a8456960f51cefde86266eebb2a4800d71b935f194e95ce4b92c62cd",
+      "publishedRecordSha256": "710c026ac5586c8a5490e8a6611e04ee2a8355ff4ef31df0a62a763daaad31f4",
       "semanticLimitations": [
         "The source has contradictory Zhihuishu platform entrypoints; this response chooses the operating-guide entrypoint without retaining the explicit conflict warning.",
         "The XueTangX task no longer explicitly restates that completing the required videos and material yields 100 platform points.",
         "Originality requirements still recur in both task material details and cautions; the selected response is not a promise of zero repetition."
       ],
       "manualPresentationEdits": true,
-      "presentationRevision": "2026-10-23-polished-examples",
-      "presentationEditScope": "Human-curated titles, summaries, task details and reminders; repeated facts consolidated. Public input shortened where disclosed, without replacing historical provider evidence or developer real-test results.",
+      "presentationRevision": "2026-10-29-clear-copy",
+      "presentationEditScope": "Display copy manually reorganized into brief audience labels, short points and selective Markdown emphasis. Original inputs, dates, roles, IDs and state remain unchanged.",
       "currentGeneration": {
         "version": "2.24.0",
         "snapshotKind": "first-authenticated-production-service-record",
