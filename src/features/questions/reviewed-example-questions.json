@@ -2,7 +2,7 @@
   {
     "catalogId": "example-reading-v25-5",
     "sourceSha256": "07ea43798eb595f66afa711fb6fba7eba3aed393b1b1cc2713174b21798d638e",
-    "contentSha256": "f114e0c0f58623a630872c0b471955a11556989cd2afe07811294be293329226",
+    "contentSha256": "fb32fd5116b75afbc0c2e83f4dccb8c57e6d855e201e4fb43ef83f3f993a3ad2",
     "question": "怎么进入评教，什么时候完成？",
     "answer": "**在课程结束前完成评教。**\n\n1. 微信关注“重庆大学服务号”。\n2. 依次进入“功能 → 评教”，用统一认证号和密码登录；也可扫码进入。\n\n忘记密码可在统一认证页面找回。评价以**匿名**方式反映；原文没有给出统一的具体截止日期。",
     "evidence": [
@@ -16,7 +16,7 @@
   {
     "catalogId": "example-reading-v211-1",
     "sourceSha256": "5b4c056f59ef4a2a62beeb29e0a5fbda3b8303aa1ec345d40c311279dd49655a",
-    "contentSha256": "2fdfa96915c444b802e0d49bce66b455159c6739241cd6ed6bf7a29c726cfed0",
+    "contentSha256": "bcc8d7d9bd9dfdfcc41d8f9f8f6ad3f536cae07aa12d35b13575584e45573399",
     "question": "谁可以参加，怎么报名？",
     "answer": "**2026级有篮球爱好的男女同学均可参与。**\n\n1. 先加入纳新QQ群。\n2. 再填写“重大杯本科生院篮球队预选信息收集表”。\n\n报名截止为原文的 **10月14日23:59**。男女同学赛制不同；群号和报名入口见原通知。",
     "evidence": [
@@ -30,7 +30,7 @@
   {
     "catalogId": "example-reading-v213-0",
     "sourceSha256": "fa7094c3ef9fb808ff06ec30a6d959ab5792435b5c4626795f1f151f82b8e6a9",
-    "contentSha256": "ada7853a95fefbc90eee8901c1ce08b9d6edfe3cfe333093fabe59d54bd732ae",
+    "contentSha256": "696e7b522a4aa3dc369cfc07e380b0f12f2eaf44a3f3f648c83b45670ede6453",
     "question": "普通班要完成哪些网课任务？",
     "answer": "**普通班需要完成两个平台的三项任务：**\n\n- 学堂在线：观看前5章各章的第一个教学视频，提交1个本人原创的高数学习素材，经教师审核通过后计分。\n- 智慧树：从12套单元检测中任选5套完成并提交，由系统判分。\n\n统一截止为 **第16周周日24:00**，逾期不补交。两平台独立计分，综合折算为课程总成绩中的5分；**（单开）重修班免做全部线上任务**。",
     "evidence": [
@@ -44,7 +44,7 @@
   {
     "catalogId": "example-reading-v25-4",
     "sourceSha256": "eb28c0ccedd119610fddd9a8c221ea311534e85526e6f8d9967bd2b9a07d19f6",
-    "contentSha256": "259c86abcaca01dd8c752346fd2f99cac3c70cf069b8492d6dce22535375de26",
+    "contentSha256": "f17790ae029fc53c272a11e4ee8c50f6b092732282c349cd78209f90a6ab3b54",
     "question": "离开宿舍前要检查什么？",
     "answer": "**出门前检查三件事：**\n\n- **水电**：关闭排插电源、拔掉电器插头，关紧水龙头等阀门。\n- **门窗**：反锁宿舍门，关闭并锁好窗户，低层宿舍尤其注意。\n- **物品**：贵重物品和证件随身携带，清理易变质食品，收好其余物品。",
     "evidence": [
@@ -58,7 +58,7 @@
   {
     "catalogId": "example-reading-v212-0",
     "sourceSha256": "2bfd3fb334135dfc00caf6bff61d23081b482c94df5e2a8292bce4e3e23dfa56",
-    "contentSha256": "00160998f672975bad80d19a47ccc6c7e80f55ab886bf5777b220c0c542baba3",
+    "contentSha256": "7c7fb0720b84659c3250f5bf75f65c9653e9e05e78fe15c8aeabe1e180005ad1",
     "question": "线上学习和期中测验有什么要求？",
     "answer": "- **线上学习占5%**：需观看不少于20%的视频，并完成课程问答。\n- **期中测验占5%**：考查课程前三章；具体时间、地点会另行通知。\n- 作业每两周在QQ群收取一次；习题课每两周通过腾讯会议开展，回放会传到群里。\n\n线上资源可在学堂在线搜索“重庆大学线性代数”。",
     "evidence": [
@@ -72,7 +72,7 @@
   {
     "catalogId": "example-reading-v25-0",
     "sourceSha256": "8d5087654f37630585a7a73322a9baf77d72f98ace77f857bc400d6f4cb87597",
-    "contentSha256": "6cdaed5de94f7f2697c78009b4cc04a6696da9bc2b5eb6f06555ccb21a16d146",
+    "contentSha256": "5c71e0b8fabe339fe186617096d426a673f3146adf2bc705291b0817f99785e9",
     "question": "办理8号请假，要完成哪些步骤？",
     "answer": "**请在10月7日17:00前完善流程：**\n\n1. 由**家长**给老师发短信，再把截图发给通知发布者。\n2. 填写办事簿，并在智慧学工上请假。\n3. 写清请假事由和详细去向，不能只写省市、区县，可按“因xx事前往xx地点”填写。\n\n通知说会核对家长短信的手机号；17:00后先确认办事簿，再由老师审批。",
     "evidence": [
@@ -86,7 +86,7 @@
   {
     "catalogId": "example-reading-v25-1",
     "sourceSha256": "c69e50b1c29544c2b525fd313f5c664295c934e3c8ceebb3aa4645855ade869c",
-    "contentSha256": "f64490e6ad56fb0c70afcade5216000575dfccef37042a982972b452c78e36ba",
+    "contentSha256": "6b6b5943158e15ccaa458b3cbaa8276719a635c2b80ab94b4e88243e8e6f3492",
     "question": "军训期间什么情况可以请假外出？",
     "answer": "原文要求：**军训期间无特殊情况不能请假外出、夜不归宿。**\n\n通知列出的例外是**因病去医院检查、复查，并提交医院证明**；其他情况不允许。原文没有给出具体办理入口或审批时长。",
     "evidence": [
@@ -99,7 +99,7 @@
   {
     "catalogId": "example-reading-v25-2",
     "sourceSha256": "7412540aa2f1f92b55d958a580b9f7802032670d224c783d525375d1d345c8bc",
-    "contentSha256": "48b97104547d6e924041620c5d714a900ee6fbe1bc3e5886a109eeb23534d7c8",
+    "contentSha256": "d61334cba578af772ad832548d3bee1b1bab0428dc5ca51bddefb00cdb4f91ce",
     "question": "怎样组队申报，什么时候截止？",
     "answer": "**两种方式二选一：**\n\n- 选择老师发布的现有项目，自行找队友。\n- 自己拟题，联系指导老师并招募队友。\n\n在新版重庆大学大学生创新创业项目管理平台申报，截止为 **2026年10月20日24:00**。通知入口需校园网访问；项目结题后可获**2个创新学分**。",
     "evidence": [
@@ -113,7 +113,7 @@
   {
     "catalogId": "example-reading-v25-3",
     "sourceSha256": "9b20a6669bb1c4064c5d46b3f559dc90d31fcf6ee09f6d6d35ccb6889e07298e",
-    "contentSha256": "1ade6203c6aaa154a1ff7a9b723b0de0f94661bc1296bedbd6dd7993b6d048b6",
+    "contentSha256": "21afbca957dbcc677bca1c0e7dddd80198127460f74ba4fb3ba04539787f6981",
     "question": "收到贷款短信后还显示欠费，正常吗？",
     "answer": "**通知说这是正常情况，贷款到账短信不等于学费已缴。**\n\n学校把贷款转为学费入账需要处理时间，原文预计在**十月中旬**完成入账，并一并结算新增学分学费。\n\n若已自行缴费而出现重复缴费，财务处会在入账处理完毕后，统一退到学生财务系统绑定的银行卡。原文没有承诺具体退款日。",
     "evidence": [
@@ -127,7 +127,7 @@
   {
     "catalogId": "example-reading-v25-6",
     "sourceSha256": "b53f6f7efdca5f9e6ce327fcefa3d61ddaff718ca3e28adb2d671826c1a605a4",
-    "contentSha256": "8187b1c1445358004ffa8fe88318d0d8fa2ab970675d36a73019820f2a0211e3",
+    "contentSha256": "11eafcbf3945e3fae42abde90ec746d035d3907b038c7128aca7f012e8f41511",
     "question": "留校同学和查寝人员分别要做什么？",
     "answer": "- **留校同学**：不晚于23点回寝；需要晚归时，告知室友大致回寝时间，并给通知发布者留言。\n- **临时负责人**：分别安排1名男生、1名女生作为查寝工作人员。\n- **查寝工作人员**：每日查寝，23点前把情况报给各班班长。\n- **班长**：在工作群上报；班干部做好记录和查寝准备。",
     "evidence": [
@@ -141,7 +141,7 @@
   {
     "catalogId": "example-reading-v25-7",
     "sourceSha256": "7b45eca477f1aa27791c7239ae6aa735bcc48a2e97171b0d6b8a5bdedd0f12cd",
-    "contentSha256": "6a28aceed739b9a190a17215a7998ff7b611ff5d27e6c303b4942bf1e4eb5173",
+    "contentSha256": "35fe8ddc2b2d97643d7e714e59116c5b980197c66d9163c06df73c1c7e8e4606",
     "question": "返校时间填错了，应如何处理？",
     "answer": "- 填成**2027年返校**的同学，需要修改返校时间。\n- 填了**2026年10月8日返校**的同学，应按要求在**10月7日返校**；否则按请假流程办理手续。\n\n原文要求请假须有正当理由；具体离校准假名单见附件公示。",
     "evidence": [
@@ -155,7 +155,7 @@
   {
     "catalogId": "example-reading-v25-8",
     "sourceSha256": "4aa4b5a5ac2dca6948e6aee048bf0c1b724b390962ebda6bb8d5e4ca44ce9948",
-    "contentSha256": "4ef4d3a2766d85c4cb09f119fc4d68b3d55cc93727c74880540d00c3d887ca09",
+    "contentSha256": "9c871820364187993515b9d0523390819e70d56834237329f1e56a3616d52648",
     "question": "入党申请需要交什么，怎么提交？",
     "answer": "**纸质材料和线上信息都要留意：**\n\n- **纸质**：按文件要求撰写入党申请书和自传，9月20日前交给各班临时团支部负责人；通知预计9月20日统一收取。\n- **线上**：已交申请书的同学，9月19日17:00前填写入党申请人信息表。\n\n通知建议年满18周岁后尽早提交；团组织关系转接不影响交申请书。原文未注明这两个截止时间的年份。",
     "evidence": [
@@ -169,7 +169,7 @@
   {
     "catalogId": "example-reading-v25-9",
     "sourceSha256": "4aa4b5a5ac2dca6948e6aee048bf0c1b724b390962ebda6bb8d5e4ca44ce9948",
-    "contentSha256": "df0d44f5578deb7c7704f626cd77f6031c26bb9204546eb474caea7141ee5b24",
+    "contentSha256": "b58062cc4f3a9764487cb0b5c2b181e9ec67a90f3dbe3549eaae3e5f4f9ab4fe",
     "question": "困难认定要准备哪些材料？",
     "answer": "**纸质材料包括：**\n\n- 个人申请书，说明家庭情况和主要困难。\n- 家庭经济困难学生认定申请表。\n- 在校经济状况调查表。\n- 家庭其他成员信息调查表。\n\n低保证、贫困证明、残疾证等辅助材料**不是必须**。按通知在**9月22日前工作时间**装入信封，贴好班级、姓名、学号、联系方式，交理科楼117-3办公室；同时在智慧学工完成线上申请。",
     "evidence": [
@@ -183,7 +183,7 @@
   {
     "catalogId": "example-reading-v25-10",
     "sourceSha256": "4aa4b5a5ac2dca6948e6aee048bf0c1b724b390962ebda6bb8d5e4ca44ce9948",
-    "contentSha256": "26c5ca95ee8c7a141e7366c3aeffa37fa3cf68defe75dee0801ce406395027a0",
+    "contentSha256": "6ea2b3e76f5b273d9d949a382b8f614ea9d4d909b8dc5b6b81cedf2d6b4948ca",
     "question": "考试要带什么，需要耳机吗？",
     "answer": "**要带文具和有效证件，不需要自备耳机。**\n\n- 文具：2B铅笔、黑色中性笔或钢笔。\n- 证件：校园一卡通；未完成报到注册的同学可带身份证。\n- 听力采用IP广播。\n\n考试时间为**2026年9月9日18:30—20:30**。无证件不能入场，开考30分钟后禁止迟到考生入场；具体教室须看原通知的安排。",
     "evidence": [
@@ -197,7 +197,7 @@
   {
     "catalogId": "example-reading-v25-11",
     "sourceSha256": "c4a9b23b9f4d66b8449d281f4adf15d92282f06d91f248e05b1f80129b9cbcf7",
-    "contentSha256": "fbdbbb1cc32d2cd54acb80f34eeae5668549952a509014be001539214ec3dfb9",
+    "contentSha256": "4649d41dba982b804c172628d32371f1499d3d725be31d9144f39a51a702c7db",
     "question": "面试前需要准备什么，去哪候场？",
     "answer": "**准备1分钟以内的自我介绍，提前5分钟到场签到。**\n\n- 时间：**2026年9月23日18:00—21:00**。\n- 候场：沙坪坝校区八教 **A8211**。\n- 面试：**A8213、A8214**，具体分组看通知中的图片。\n- 形式：无领导小组讨论。\n\n通知明确，逾期未到或无故缺席视为自动放弃竞选。",
     "evidence": [
@@ -211,7 +211,7 @@
   {
     "catalogId": "example-reading-v26-12",
     "sourceSha256": "cbc1f7980f8210deb62d65ae5dcd524b35de654b1183a08fc0331213671d0f0f",
-    "contentSha256": "2d7a7453b5d75fc15e49792d1a4555f819a2afa86704e3213d0b332953dba2a2",
+    "contentSha256": "bc4f42ed4905681f695c5b8f208b7b9eefaf08f35bb73a80889df32b56ff9c0a",
     "question": "报名截止后能补报吗，还要注意什么？",
     "answer": "**2026年6月1日15:00截止报名，之后不接受补报名。**\n\n1. 扫描原通知对应二维码，完成相应赛项登记。\n2. 截止前加入对应赛项QQ群，后续赛情在群内发布。\n3. 根据所选赛项准备初选材料；例如演讲提交3分钟定题视频，短视频先交创意方案，“四新”专项先交500—1000词英文研究计划。\n\n线下赛项须遵循签到、抽签、比赛、观赛等全部环节安排。",
     "evidence": [
@@ -225,7 +225,7 @@
   {
     "catalogId": "example-reading-v211-0",
     "sourceSha256": "fa7094c3ef9fb808ff06ec30a6d959ab5792435b5c4626795f1f151f82b8e6a9",
-    "contentSha256": "ada7853a95fefbc90eee8901c1ce08b9d6edfe3cfe333093fabe59d54bd732ae",
+    "contentSha256": "696e7b522a4aa3dc369cfc07e380b0f12f2eaf44a3f3f648c83b45670ede6453",
     "question": "普通班要完成哪些网课任务？",
     "answer": "**普通班需要完成两个平台的三项任务：**\n\n- 学堂在线：观看前5章各章的第一个教学视频，提交1个本人原创的高数学习素材，经教师审核通过后计分。\n- 智慧树：从12套单元检测中任选5套完成并提交，由系统判分。\n\n统一截止为 **第16周周日24:00**，逾期不补交。两平台独立计分，综合折算为课程总成绩中的5分；**（单开）重修班免做全部线上任务**。",
     "evidence": [
@@ -239,7 +239,7 @@
   {
     "catalogId": "example-reading-v211-2",
     "sourceSha256": "976f88e1a2d02adaa043937da92e35c41f107e7aa121fc08415611a6aee6bd77",
-    "contentSha256": "5ccf2b9004467373ae457b75f471d67ecc6e82b5749afdb0b79c5434afa7cbd7",
+    "contentSha256": "04557d1ec1be9b6055a80a75820d9b84fe755dce5b0d0c7842030ea84fbff854",
     "question": "谁可以申请，困难等级怎么选？",
     "answer": "**经过家庭经济困难认定的同学可以申请；通知要求公示名单上的同学提交。**\n\n进入“智慧学工 → 学生资助 → 评奖助优 → 奖项申请 → 国家助学金”，按公示等级选择：\n\n- 特别困难 → 一档。\n- 困难 → 二档。\n- 一般困难 → 三档。\n\n原文说当时仍需等待学校审批，随后会在群里提醒；没有给出确定的提交截止时间。",
     "evidence": [
@@ -253,7 +253,7 @@
   {
     "catalogId": "example-reading-v211-3",
     "sourceSha256": "0b608ee419b86e196add0752db4f095a0472207436c48ca22d8e954a4bd2badc",
-    "contentSha256": "79fb311d3dcb3381ea00001d5fc4a4430373f7d9db6996e9269033d74b37668c",
+    "contentSha256": "6e02c010d5a9a9cda7c24a776f6e7ca27f9237054890c466306566a4eecc5280",
     "question": "不是计算机专业，也可以报名吗？",
     "answer": "**可以。通知特别欢迎一年级、二年级同学，且不限计算机专业。**\n\n训练营面向所有大一新生，也欢迎对操作系统课程感兴趣的其他专业高年级同学。原文没有提供报名入口、截止时间或具体课程安排。",
     "evidence": [
@@ -267,7 +267,7 @@
   {
     "catalogId": "example-reading-v211-4",
     "sourceSha256": "62133a717d602a280b49a82fc8c2afd2839276dc3c9ed6a73fff808f9d26976c",
-    "contentSha256": "e02d4932a4edd939350c11a79256f33d57dfc37fca4170fe08c0634a27580e35",
+    "contentSha256": "3281a49a60c24df89a1771b40d82f07178a89bd8a61c590e0f1d87e711d8fb5b",
     "question": "参加谈话要带什么，提前多久到？",
     "answer": "**带纸和笔，提前5分钟到场并找负责人签到。**\n\n谈话内容主要是入党动机、个人基本情况、对党的认识。原文列出 **10.10的14:00—21:30**、A研512谈话教室和A研514等候教室；个人具体时段、地点须查附件《入党谈话安排》。\n\n各班团支书负责签到、谈话表收集、材料复核，并在谈话前清点人数。原文的“本周刘”有文字异常，不能据此判断星期。",
     "evidence": [
@@ -281,7 +281,7 @@
   {
     "catalogId": "example-reading-v211-5",
     "sourceSha256": "1975dc6d9dd9c8bb489352bdbd45220e8bd3f5469ca7e5cb5660f7af0f2d410d",
-    "contentSha256": "08aa1f904c9e40aeac97973a7daa7f228e2282ec204041622ac53fc8d6a554ad",
+    "contentSha256": "ff1ca85569a95527d0a47c70f5710c5b8dad56c2feeb5aef50ad61083348bf35",
     "question": "选拔对成绩和语言有什么要求？",
     "answer": "**面向全校理工类普通招生类别的大一新生：**\n\n- 第一学期绩点 **3.2以上**，且无补考课程。\n- **2026年11月10日前**获得雅思6.5（小分6分）或PTE 64分以上成绩。\n- 能入选所述昆士兰大学计算机专业交换项目的同学优先。\n\n通知另提到“两年内雅思成绩更好”，未说明具体优先规则；疑问可按原通知联系老师。",
     "evidence": [
@@ -295,7 +295,7 @@
   {
     "catalogId": "example-reading-v212-1",
     "sourceSha256": "fa7094c3ef9fb808ff06ec30a6d959ab5792435b5c4626795f1f151f82b8e6a9",
-    "contentSha256": "ada7853a95fefbc90eee8901c1ce08b9d6edfe3cfe333093fabe59d54bd732ae",
+    "contentSha256": "696e7b522a4aa3dc369cfc07e380b0f12f2eaf44a3f3f648c83b45670ede6453",
     "question": "普通班要完成哪些网课任务？",
     "answer": "**普通班需要完成两个平台的三项任务：**\n\n- 学堂在线：观看前5章各章的第一个教学视频，提交1个本人原创的高数学习素材，经教师审核通过后计分。\n- 智慧树：从12套单元检测中任选5套完成并提交，由系统判分。\n\n统一截止为 **第16周周日24:00**，逾期不补交。两平台独立计分，综合折算为课程总成绩中的5分；**（单开）重修班免做全部线上任务**。",
     "evidence": [
@@ -309,7 +309,7 @@
   {
     "catalogId": "example-reading-v212-2",
     "sourceSha256": "976f88e1a2d02adaa043937da92e35c41f107e7aa121fc08415611a6aee6bd77",
-    "contentSha256": "5ccf2b9004467373ae457b75f471d67ecc6e82b5749afdb0b79c5434afa7cbd7",
+    "contentSha256": "04557d1ec1be9b6055a80a75820d9b84fe755dce5b0d0c7842030ea84fbff854",
     "question": "谁可以申请，困难等级怎么选？",
     "answer": "**经过家庭经济困难认定的同学可以申请；通知要求公示名单上的同学提交。**\n\n进入“智慧学工 → 学生资助 → 评奖助优 → 奖项申请 → 国家助学金”，按公示等级选择：\n\n- 特别困难 → 一档。\n- 困难 → 二档。\n- 一般困难 → 三档。\n\n原文说当时仍需等待学校审批，随后会在群里提醒；没有给出确定的提交截止时间。",
     "evidence": [
@@ -323,7 +323,7 @@
   {
     "catalogId": "example-reading-v213-1",
     "sourceSha256": "cbc1f7980f8210deb62d65ae5dcd524b35de654b1183a08fc0331213671d0f0f",
-    "contentSha256": "2d7a7453b5d75fc15e49792d1a4555f819a2afa86704e3213d0b332953dba2a2",
+    "contentSha256": "bc4f42ed4905681f695c5b8f208b7b9eefaf08f35bb73a80889df32b56ff9c0a",
     "question": "报名截止后能补报吗，还要注意什么？",
     "answer": "**2026年6月1日15:00截止报名，之后不接受补报名。**\n\n1. 扫描原通知对应二维码，完成相应赛项登记。\n2. 截止前加入对应赛项QQ群，后续赛情在群内发布。\n3. 根据所选赛项准备初选材料；例如演讲提交3分钟定题视频，短视频先交创意方案，“四新”专项先交500—1000词英文研究计划。\n\n线下赛项须遵循签到、抽签、比赛、观赛等全部环节安排。",
     "evidence": [
