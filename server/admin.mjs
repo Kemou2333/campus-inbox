@@ -150,7 +150,7 @@ export function createAdminService(config,{auth,sync,ai,now=Date.now}){
     if(url.pathname==='/admin'||url.pathname==='/admin/'){
       if(!['GET','HEAD'].includes(request.method))return reply({error:'请使用支持的请求方法。'},405);
       const nonce=randomBytes(24).toString('base64');
-      return new Response(request.method==='HEAD'?null:adminHtml(nonce),{headers:{...headers,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':`default-src 'none'; base-uri 'none'; frame-ancestors 'none'; frame-src https://kemou2333.github.io; form-action 'self'; img-src data:; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}'; connect-src 'self'`}});
+      return new Response(request.method==='HEAD'?null:adminHtml(nonce),{headers:{...headers,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':`default-src 'none'; base-uri 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'self'; img-src data:; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}'; connect-src 'self'`}});
     }
     if(!accepted)return reply({error:'此应用未获准访问后台。'},403);
     if(request.method==='OPTIONS')return reply({},204);
@@ -170,7 +170,7 @@ export function createAdminService(config,{auth,sync,ai,now=Date.now}){
       }
       if(url.pathname==='/admin/limits')return reply(limitStandards({ai,auth,now}));
       if(url.pathname==='/admin/summary')return reply({accounts:auth.adminReader.count(),...sync.adminReader.summary(),daily:sync.adminReader.daily(),usage:ai.adminSummary(),backup:await backupSummary(config.backupStateFile),readOnly:true});
-      if(url.pathname==='/admin/test-runs')return reply({records:adminTestRuns(),readOnly:true,includedInBusinessStatistics:false});
+      if(url.pathname==='/admin/test-runs')return reply({records:adminTestRuns().map(({id,date,sourceVersion,title,kind,elapsedMs,usage,estimatedRmb})=>({id,date,sourceVersion,title,kind,elapsedMs,usage:{input:usage.input,output:usage.output,reasoning:usage.reasoning},estimatedRmb})),readOnly:true,includedInBusinessStatistics:false});
       if(url.pathname==='/admin/accounts'){
         const raw=url.searchParams.get('offset')||'0';if(!/^\d{1,5}$/.test(raw))throw new ServiceError('分页位置不正确。',400);
         const offset=Number(raw),accounts=auth.adminReader.list({offset,limit:51}),hasMore=accounts.length>50;
@@ -199,7 +199,8 @@ export function createAdminService(config,{auth,sync,ai,now=Date.now}){
       }
       if(/^\/admin\/jobs\/[0-9a-f-]{36}$/.test(url.pathname)){
         const job=sync.adminReader.job(url.pathname.split('/').at(-1));
-        return job?reply({job}):reply({error:'任务不存在。'},404);
+        const account=job?auth.adminReader.list({limit:500}).find(account=>account.id===job.ownerSubject):null;
+        return job?reply({job:{...job,accountLabel:account?(account.email||'旧账号'):'已停用账号',...(account?.email?{email:account.email}:{})}}):reply({error:'任务不存在。'},404);
       }
       return reply({error:'接口不存在。'},404);
     }catch(error){return reply({error:error instanceof ServiceError?error.message:'后台暂时无法读取。'},error.status||503);}

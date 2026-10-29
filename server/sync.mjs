@@ -64,7 +64,7 @@ export async function createSyncService(config,options={}){
     CREATE TABLE IF NOT EXISTS notice_questions (account INTEGER NOT NULL REFERENCES accounts(id),request_id TEXT NOT NULL,input_hash TEXT NOT NULL,status TEXT NOT NULL,created INTEGER NOT NULL,response TEXT,PRIMARY KEY(account,request_id));`);
   const jobColumns=new Set(db.prepare('PRAGMA table_info(analysis_jobs)').all().map(column=>column.name));
   // Retain the legacy column without rewriting old user content or metadata.
-  for(const [name,type] of [['review_consent','INTEGER NOT NULL DEFAULT 0'],['provider_called','INTEGER'],['cache_reuse','INTEGER'],['token_usage','TEXT']])if(!jobColumns.has(name))db.exec(`ALTER TABLE analysis_jobs ADD COLUMN ${name} ${type}`);
+  for(const [name,type] of [['review_consent','INTEGER NOT NULL DEFAULT 0'],['provider_called','INTEGER'],['cache_reuse','INTEGER'],['token_usage','TEXT'],['started_at','TEXT'],['processed_at','TEXT'],['finished_at','TEXT']])if(!jobColumns.has(name))db.exec(`ALTER TABLE analysis_jobs ADD COLUMN ${name} ${type}`);
   db.exec('CREATE INDEX IF NOT EXISTS jobs_admin_created ON analysis_jobs(created DESC,id DESC)');
   if(file!==':memory:')await chmod(file,0o600);
   const stmt={
@@ -92,12 +92,12 @@ export async function createSyncService(config,options={}){
     globalJobUsage:db.prepare("SELECT COALESCE(SUM(bytes),0) AS bytes,COALESCE(SUM(CASE WHEN status IN ('accepted','running') THEN 1 ELSE 0 END),0) AS pending FROM analysis_jobs"),
     insertJob:db.prepare("INSERT INTO analysis_jobs(id,account,request_id,input_hash,sources,status,created,updated,bytes) VALUES(?,?,?,?,?,'accepted',?,?,?)"),
     jobMetrics:db.prepare('UPDATE analysis_jobs SET provider_called=?,cache_reuse=?,token_usage=? WHERE account=? AND id=?'),
-    startJob:db.prepare("UPDATE analysis_jobs SET status='running',updated=? WHERE account=? AND id=? AND status='accepted'"),
-    finishJob:db.prepare("UPDATE analysis_jobs SET status='completed',result=?,updated=?,bytes=?,error_code=NULL WHERE account=? AND id=? AND status IN ('accepted','running')"),
-    stageJob:db.prepare("UPDATE analysis_jobs SET result=?,updated=?,bytes=? WHERE account=? AND id=? AND status IN ('accepted','running')"),
-    restoreJob:db.prepare("UPDATE analysis_jobs SET status='running',updated=?,error_code=NULL WHERE account=? AND id=? AND status='failed' AND result IS NOT NULL"),
-    failJob:db.prepare("UPDATE analysis_jobs SET status='failed',error_code=?,updated=? WHERE account=? AND id=? AND status IN ('accepted','running')"),
-    recoverJobs:db.prepare("UPDATE analysis_jobs SET status='failed',error_code='SERVICE_RESTARTED',updated=? WHERE status IN ('accepted','running')")
+    startJob:db.prepare("UPDATE analysis_jobs SET status='running',updated=?1,started_at=COALESCE(started_at,?1),finished_at=NULL WHERE account=?2 AND id=?3 AND status='accepted'"),
+    finishJob:db.prepare("UPDATE analysis_jobs SET status='completed',result=?1,updated=?2,bytes=?3,processed_at=COALESCE(processed_at,?2),finished_at=?2,error_code=NULL WHERE account=?4 AND id=?5 AND status IN ('accepted','running')"),
+    stageJob:db.prepare("UPDATE analysis_jobs SET result=?1,updated=?2,bytes=?3,processed_at=COALESCE(processed_at,?2) WHERE account=?4 AND id=?5 AND status IN ('accepted','running')"),
+    restoreJob:db.prepare("UPDATE analysis_jobs SET status='running',updated=?,finished_at=NULL,error_code=NULL WHERE account=? AND id=? AND status='failed' AND result IS NOT NULL"),
+    failJob:db.prepare("UPDATE analysis_jobs SET status='failed',error_code=?1,updated=?2,finished_at=?2 WHERE account=?3 AND id=?4 AND status IN ('accepted','running')"),
+    recoverJobs:db.prepare("UPDATE analysis_jobs SET status='failed',error_code='SERVICE_RESTARTED',updated=?1,finished_at=?1 WHERE status IN ('accepted','running')")
   };
   const now=options.now||Date.now,rates=new Map();
   const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(now());
@@ -329,8 +329,24 @@ export async function createSyncService(config,options={}){
       return reply(exchange(account,body));
     }catch(error){return reply({error:error instanceof ServiceError?error.message:'同步暂时不可用，请稍后重试。'},error.status||503);}
   }
-  const jobMetadata=row=>({id:row.id,ownerSubject:row.identity.slice(7),status:row.status,createdAt:row.created,updatedAt:row.updated,bytes:row.bytes,providerCalled:row.provider_called===null?null:row.provider_called===1,cacheReuse:row.cache_reuse===null?null:row.cache_reuse===1,tokenUsage:row.token_usage?JSON.parse(row.token_usage):null,code:row.error_code||null});
-  const metadataColumns='j.id,j.status,j.created,j.updated,j.bytes,j.provider_called,j.cache_reuse,j.token_usage,j.error_code,a.identity';
+  const elapsed=(start,end)=>{
+    const a=Date.parse(start),b=Date.parse(end);return Number.isFinite(a)&&Number.isFinite(b)&&b>=a?b-a:null;
+  };
+  const jobMetadata=row=>{
+    const finishedAt=['completed','failed'].includes(row.status)?row.finished_at||row.updated:null;
+    const usage=row.token_usage?JSON.parse(row.token_usage):null;
+    const tokenUsage=usage&&['input','output','reasoning'].every(key=>Number.isSafeInteger(usage[key])&&usage[key]>=0)?{input:usage.input,output:usage.output,reasoning:usage.reasoning}:null;
+    const titles=JSON.parse(row.result_titles).filter(value=>typeof value==='string');
+    return {id:row.id,ownerSubject:row.identity.slice(7),status:row.status,createdAt:row.created,updatedAt:row.updated,
+      startedAt:row.started_at||null,processedAt:row.processed_at||null,finishedAt,inputCharacters:row.input_characters,sourceCount:row.source_count,titles,outputCount:titles.length,
+      durationMs:elapsed(row.created,finishedAt),processingMs:elapsed(row.started_at,row.processed_at||finishedAt),waitingMs:elapsed(row.created,row.started_at),
+      bytes:row.bytes,providerCalled:row.provider_called===null?null:row.provider_called===1,cacheReuse:row.cache_reuse===null?null:row.cache_reuse===1,tokenUsage,code:Object.hasOwn(JOB_ERRORS,row.error_code)?row.error_code:null};
+  };
+  const metadataColumns=`j.id,j.status,j.created,j.updated,j.bytes,j.started_at,j.processed_at,j.finished_at,j.provider_called,j.cache_reuse,j.token_usage,j.error_code,a.identity,
+    COALESCE((SELECT SUM(length(json_extract(value,'$.text'))) FROM json_each(j.sources)),0) AS input_characters,
+    (SELECT COUNT(*) FROM json_each(j.sources)) AS source_count,
+    (SELECT json_group_array(json_extract(value,'$.title')) FROM json_each(COALESCE(json_extract(j.result,'$.records'),json_extract(j.result,'$.notices'),'[]')) WHERE json_type(value,'$.title')='text') AS result_titles`;
+  const recordColumns="r.id,r.version,r.bytes,json_extract(r.json,'$.title') AS title,json_extract(r.json,'$.createdAt') AS createdAt,json_extract(r.json,'$.updatedAt') AS updatedAt";
   const adminReader={
     summary:()=>({...db.prepare("SELECT COUNT(*) AS jobs,COALESCE(SUM(status='completed'),0) AS completed,COALESCE(SUM(status='failed'),0) AS failed,COALESCE(SUM(status IN ('accepted','running')),0) AS pending,COALESCE(SUM(provider_called=1),0) AS knownProviderCalls,COALESCE(SUM(cache_reuse=1),0) AS knownCacheReuses,COALESCE(SUM(provider_called IS NULL),0) AS unknownProviderCalls,COALESCE(SUM(bytes),0) AS jobBytes FROM analysis_jobs").get(),...db.prepare('SELECT COUNT(json) AS notices,COALESCE(SUM(bytes),0) AS noticeBytes FROM records').get()}),
     daily:()=>{
@@ -352,20 +368,17 @@ export async function createSyncService(config,options={}){
     job:id=>{
       const row=db.prepare(`SELECT ${metadataColumns} FROM analysis_jobs j JOIN accounts a ON a.id=j.account WHERE j.id=?`).get(id);
       if(!row)return null;
-      const metadata=jobMetadata(row);
-      // HTTP administrators are already authenticated by exact account UUID.
-      const content=db.prepare('SELECT sources,result FROM analysis_jobs WHERE id=?').get(id);
-      return {...metadata,contentAvailable:true,sources:JSON.parse(content.sources),result:content.result?JSON.parse(content.result):null};
+      return jobMetadata(row);
     },
     records:({subject,before,limit=20})=>{
-      let sql="SELECT r.id,r.version,r.bytes,json_extract(r.json,'$.title') AS title,json_extract(r.json,'$.updatedAt') AS updatedAt,json_extract(r.json,'$.completed') AS completed FROM records r JOIN accounts a ON a.id=r.account WHERE a.identity=? AND r.json IS NOT NULL",args=['invite:'+subject];
+      let sql=`SELECT ${recordColumns} FROM records r JOIN accounts a ON a.id=r.account WHERE a.identity=? AND r.json IS NOT NULL`,args=['invite:'+subject];
       if(before){sql+=' AND (r.version<? OR (r.version=? AND r.id<?))';args.push(before[0],before[0],before[1]);}
       sql+=' ORDER BY r.version DESC,r.id DESC LIMIT ?';args.push(limit);
-      return db.prepare(sql).all(...args).map(row=>({...row,completed:row.completed===1}));
+      return db.prepare(sql).all(...args).map(row=>({...row}));
     },
     record:(subject,id)=>{
-      const row=db.prepare('SELECT r.id,r.version,r.json FROM records r JOIN accounts a ON a.id=r.account WHERE a.identity=? AND r.id=? AND r.json IS NOT NULL').get('invite:'+subject,id);
-      return row?{id:row.id,version:row.version,record:JSON.parse(row.json)}:null;
+      const row=db.prepare(`SELECT ${recordColumns} FROM records r JOIN accounts a ON a.id=r.account WHERE a.identity=? AND r.id=? AND r.json IS NOT NULL`).get('invite:'+subject,id);
+      return row?{id:row.id,version:row.version,record:{...row}}:null;
     }
   };
   return {handle,provision,jobs,questions,adminReader,accountForKey:key=>typeof key==='string'&&/^[A-Za-z0-9_-]{43}$/.test(key)?stmt.findAccount.get(sha(key))||null:null,close:()=>db.close()};
